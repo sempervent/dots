@@ -1,0 +1,195 @@
+#!/usr/bin/env bash
+# :set fdm=marker
+# :set tw=79
+# https://github.com/sempervent/dotfiles
+################################################################################
+# resolve to all symlinks the source directory
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do
+	DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
+	SOURCE="$(readlink "$SOURCE")"
+	[[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE" 
+done
+DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
+SRC_DIR=$DIR/../bash
+
+# General Settings {{{1
+# if not running interactively, don't do anything {{{2
+case $- in
+   *i*) ;;
+      *) return;;
+esac # 2}}}
+# start tmux if running interactively {{{2
+if [[ -z "$TMUX" ]] ;then
+    ID="$( tmux ls | grep -vm1 attached | cut -d: -f1 )" # get the id of a deattached session
+    if [[ -z "$ID" ]] ;then # if not available create a new one
+        tmux new-session
+    else
+        tmux attach-session -t "$ID" # if available attach to it
+    fi
+fi # 2}}}
+# autocomplete with sudo {{{2
+if [ "$PS1" ]; then
+   complete -cf sudo
+fi
+# give vim key-bindings
+set -o vi
+# enable bash completion if it exists
+if ! shopt -oq posix; then
+  if [ -f /usr/share/bash-completion/bash_completion ]; then
+    . /usr/share/bash-completion/bash_completion
+  elif [ -f /etc/bash_completion ]; then
+    . /etc/bash_completion
+  fi
+fi
+# correct minor spelling errors in cd
+shopt -s cdspell
+# include dotfiles in wildcard expansion and match case-insensitively
+shopt -s dotglob
+shopt -s nocaseglob
+# 2}}}
+# History {{{2
+###################
+# don't put duplicate lines or lines starting with space in history
+# see bash(1) for more options
+HISTCONTROL=ignoreboth
+
+# append to history file; don't overwrite it
+shopt -s histappend
+
+# set history length
+HISTSIZE=100000
+HISTFILESIZE=200000
+
+# check the window after each command and update
+# values of LINES and COLUMNS
+shopt -s checkwinsize
+
+# make less more friendly for non-text input files, see lesspipe(1)
+[ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
+# 2}}} 1}}}
+# Path {{{1
+#-----------------------------------
+export PATH=$PATH:/home/jngrant/scripts:$JAVA_HOME/bin:/home/jngrant/.local/bin
+export EDITOR='vim'
+# 1}}}
+
+# exported options {{{1
+export LS_OPTS='--color=auto'
+# 1}}}
+# Aesthetics {{{1
+# set variable identifying the chroot you work in {{{2
+# 2}}}
+# set a fancy propmt (non-color, unless we know we "want" color) {{{2
+case $XTERM in 
+   xterm-color) color_prompt=yes;;
+   screen) color_prompt=yes;;
+   tmux) color_prompt=yes;;
+   *) color_prompt=yes;;
+esac
+# 2}}}
+# colors {{{2
+force_color_prompt=yes
+source $SRC_DIR/colors.sh
+# 2}}}
+# 1}}}
+# Prompt, Greeting, etc {{{1
+# stuff to get git info {{{2
+parse_git_branch() {
+  git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/'
+}
+parse_git_remote() {
+  git for-each-ref --format='%(upstream:short)' $(git symbolic-ref --q HEAD 2> /dev/null) 2> /dev/null
+}
+render_git_info() {
+  branch=$(parse_git_branch)
+  if [ "$branch" ]; then
+    echo "─┤$LYEL$(parse_git_remote)->$(parse_git_branch)├─"
+  else
+    echo "─"
+  fi
+} # 2}}}
+# file information of directory {{{2
+file_count() {
+  /bin/ls -1 | /usr/bin/wc -l | /bin/sed 's: ::g'
+}
+file_size() {
+  /bin/ls -lah | /bin/grep -m 1 total | /bin/sed 's/total //'
+}
+# 2}}}
+# Prompt {{{2
+PS1="\[\n$NC\]┌──┤\[$GREEN\]\u\[$NC\]@\[$BLUE\]\h\[$NC\]├─┤\[$BPURP\]\@\[$NC\]├─┤\[$CYAN\]\d\[$NC\]├$(render_git_info)┤\[$LGREEN\]$(/bin/ls -1 | /usr/bin/wc -l | /bin/sed 's: ::g')ﬁ \[$LBLUE\]$(/bin/ls -lah | /bin/grep -m 1 total | /bin/sed 's/total //')b\[$NC\]│\n└─┤\[$YELLOW\]\w\[$NC\]│ "
+# 2}}}
+# greeting {{{2
+echo "Welcome, $(whoami)!"
+fortune | cowsay
+# 2}}}
+# Aliases {{{1
+#------------------------------------
+alias less='less --RAW-CONTROL-CHARS'
+alias ls='ls ${LS_OPTS}'
+# export GREP_OPTIONS='--color=auto'
+alias grep='grep --color=auto'
+alias stopcolors='sed "s/\[^[[0-9;]*[a-zA-Z]//gi"'
+alias aptinstall='sudo aptitude install'
+alias bullshit="curl -s http://cbsg.sourceforge.net/cgi-bin/live | grep -Eo '<li>(.*?)</li>' | sed -e 's/<[^>]*>//g' | shuf -n 1 | cowsay -f kosh"
+alias lstree="ls -R | grep ":$" | sed -e 's/:$//' -e 's/[^-][^\/]*\//--/g' -e 's/^/   /' -e 's/-/|/' | less"
+alias suspend="sudo systemctl suspend"
+alias trello="chromium --app=https://trello.com"
+alias rstudio="chromium --app=http://192.168.1.178:8787"
+alias google="chromium --app=https://google.com"
+alias reddit="chromium --app=https://www.reddit.com"
+alias gmail="chromium --app=https://mail.google.com"
+alias reboot="sudo shutdown -r now"
+alias python="python3"
+alias eaglei='ssh -p 2200 127.0.0.1'
+alias nebula='ssh 6ng@gistnebula'
+
+#------------------------------------
+# Custom {{{1
+#------------------------------------
+#source ~/.bin/tmuxinator.bash
+#------------------------------------
+# Custom Commands {{{2
+
+#------------------------------------
+# aptsearch () 
+# {
+   # # search and highlight keyword in the results
+   # export GREP_COLOR='1'
+   # # remove regexp patterns from the keyword to highlight
+   # keyword=`echo -n "$1" | sed -e 's/[^[:alnum:]|-]//g'`
+   # echo "Highlight keyword: $keyword"
+   # aptitude search "$1" --disable-columns | egrep --color "$keyword"
+
+   # # use the matching results to complete our install command
+   # matching=$(aptitude search --disable-columns -F "%p" "$1" | tr '\n' ' ')
+   # count=0
+   # for i in $matching ; do
+      # count=$((count + 1))
+   # done
+   # complete -W '$matching' aptinstall
+   # echo "(Matching packages: $count)"
+   # if ! [ -z $2 ] ; then
+      # echo -e "$matching" | egrep --color=always "$keyword"
+   # fi
+# }
+# markdown(){
+   # ~/scripts/Markdown_1.0.1/Markdown.pl $1 | lynx -stdin
+# }
+#wal -R
+# 1}}}
+
+alias home='cd /mnt/c/Users/6ng'
+alias dev='cd /mnt/c/Users/6ng/dev'
+alias weather='curl wttr.in'
+# Imports {{{1 
+source ~/dots/bash/aliases.sh
+source ~/dots/bash/colors.sh
+source ~/dots/bash/completion.sh
+source ~/dots/bash/exports.sh
+source ~/dots/bash/history.sh
+#source ~/dots/bash/vimsetup.sh
+make_bash_script() {
+wget -O "$1" https://gist.github.com/sempervent/4d94593e0d56f8fc1b43f92b9983d61f/raw/dfaed9bc4b9dc4f007f8b22072ec92eb94de7004/bash_skeleton.sh
+}

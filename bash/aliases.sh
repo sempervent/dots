@@ -1,0 +1,29 @@
+# Aliases {{{1
+#------------------------------------
+alias less='less --RAW-CONTROL-CHARS'
+alias ls='ls ${LS_OPTS}'
+# export GREP_OPTIONS='--color=auto'
+alias grep='grep --color=auto'
+alias fgrep='fgrep --color=auto'
+alias egrep='egrep --color=auto'
+alias stopcolors='sed "s/\[^[[0-9;]*[a-zA-Z]//gi"'
+alias aptinstall='sudo aptitude install'
+alias bullshit="curl -s http://cbsg.sourceforge.net/cgi-bin/live | grep -Eo '<li>(.*?)</li>' | sed -e 's/<[^>]*>//g' | shuf -n 1 | cowsay -f kosh"
+alias lstree="ls -R | grep \":$\" | sed -e 's/:$//' -e 's/[^-][^\/]*\//--/g' -e 's/^/   /' -e 's/-/|/' | less"
+alias suspend="sudo systemctl suspend"
+alias trello="chromium --app=https://trello.com"
+alias rstudio="chromium --app=http://192.168.1.178:8787"
+alias google="chromium --app=https://google.com"
+alias reddit="chromium --app=https://www.reddit.com"
+alias gmail="chromium --app=https://mail.google.com"
+alias reboot="sudo shutdown -r now"
+alias python="python3"
+alias tmux='TERM=xterm-256color tmux'
+# prevent use of nano everywhere
+alias nano=vim
+alias ffs='sudo "$BASH" -c "$(history -p !!)"'
+# 1}}}
+# if user .bash_aliases exists, respect them also
+if [ -f ~/.bash_aliases ]; then
+  . ~/.bash_aliases
+fi

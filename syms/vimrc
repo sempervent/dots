@@ -1,0 +1,73 @@
+"~/.vimrc
+" vundle settings {{{1
+set nocompatible
+filetype off
+
+set rtp+=~/.vim/bundle/Vundle.vim
+call vundle#begin()
+
+Plugin 'VundleVim/Vundle.vim'
+Plugin 'vim-airline/vim-airline'
+Plugin 'vim-airline/vim-airline-themes'
+Plugin 'ekalinin/Dockerfile.vim'
+Plugin 'godlygeek/tabular'
+Plugin 'plasticboy/vim-markdown'
+Plugin 'dense-analysis/ale'
+
+call vundle#end()
+" 1}}}
+" general settings {{{1
+filetype plugin indent on
+syntax on
+set hidden
+set wildmenu
+set showcmd
+" search commands {{{2
+set hlsearch
+set incsearch " 2}}}
+set more
+set history=10000
+set autoread
+set fdm=marker
+set tabstop=2 shiftwidth=2 softtabstop=0 noexpandtab smarttab
+set so=7
+set wildmenu
+set backspace=eol,start,indent
+set whichwrap=<,>,h,l
+set ignorecase
+set smartcase
+set hlsearch
+set incsearch
+set lazyredraw
+set magic
+set showmatch
+set mat=2
+set noerrorbells
+set novisualbell
+set t_vb=
+set tm=500
+set foldcolumn=1
+set number
+set ruler
+set autoindent
+set matchtime=2
+set cmdheight=2
+set notimeout ttimeout ttimeoutlen=200
+syntax enable
+set background=dark
+set encoding=utf8
+set t_Co=256
+try
+	colorscheme molokai
+catch
+endtry
+set ffs=unix,dos,mac
+let mapleader=','
+imap jj <ESC>
+imap kk <ESC>
+noremap j gj
+noremap k gk
+vnoremap j gj
+vnoremap k gk
+nmap <leader>w :w!<cr>
+command W w !sudo tee % > /dev/null
