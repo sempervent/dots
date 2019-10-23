@@ -22,3 +22,5 @@ move_sym() {
 move_sym $SYM_DIR/bashrc ~/.bashrc
 move_sym $SYM_DIR/vimrc ~/.vimrc
 move_sym $SYM_DIR/tmux.conf ~/.tmux.conf
+
+git clone https://github.com/gmarik/Vundle.vim.git ~/.vim/bundle/Vundle.vim

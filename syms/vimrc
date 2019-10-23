@@ -13,6 +13,8 @@ Plugin 'ekalinin/Dockerfile.vim'
 Plugin 'godlygeek/tabular'
 Plugin 'plasticboy/vim-markdown'
 Plugin 'dense-analysis/ale'
+Plugin 'scrooloose/nerdtree'
+Plugin 'scrooloose/nerdcommenter'
 
 call vundle#end()
 " 1}}}
@@ -57,11 +59,16 @@ syntax enable
 set background=dark
 set encoding=utf8
 set t_Co=256
+set splitbelow
+set splitright
+set fdm=marker
+set foldlevel=99
 try
 	colorscheme molokai
 catch
 endtry
 set ffs=unix,dos,mac
+" mappings {{{1 --------------------------------------------------------------
 let mapleader=','
 imap jj <ESC>
 imap kk <ESC>
@@ -69,5 +76,28 @@ noremap j gj
 noremap k gk
 vnoremap j gj
 vnoremap k gk
+nnoremap <space> za
 nmap <leader>w :w!<cr>
 command W w !sudo tee % > /dev/null
+" 1}}} -----------------------------------------------------------------------
+" file specific bindings {{{1 ------------------------------------------------
+" python specific things {{{2 ------------------------------------------------
+au BufNewFile,BufRead *.py
+	\ set tabstop=4
+	\ set softtabstop=4
+	\ set shiftwidth=4
+	\ set textwidth=79
+	\ set expandtab
+	\ set autoindent
+	\ set fileformat=unix
+" 2}}} -----------------------------------------------------------------------
+" R specific settings {{{1 ---------------------------------------------------
+au BufNewFile,BufRead *.R
+	\ set tabstop=2
+	\ set softtabstop=2
+	\ set shiftwidth=2
+	\ set autoindent
+	\ set expandtab
+	\ set fileformat=unix
+" 2}}} -----------------------------------------------------------------------
+" 1}}}------------------------------------------------------------------------

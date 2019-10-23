@@ -193,3 +193,38 @@ source ~/dots/bash/history.sh
 make_bash_script() {
 wget -O "$1" https://gist.github.com/sempervent/4d94593e0d56f8fc1b43f92b9983d61f/raw/dfaed9bc4b9dc4f007f8b22072ec92eb94de7004/bash_skeleton.sh
 }
+#!/usr/bin/env bash
+putScratch() {
+	smbclient //gistcloud.ornl.gov/scr0 -U 6ng -W ORNL -c "cd 6ng ; put $1"
+}
+getScratch() {
+	smbclient //gistcloud.ornl.gov/scr0 -U 6ng -W ORNL -c "cd 6ng ; get $1"
+}
+scratch() {
+	while :; do
+		case $1 in
+			-h|-\?|--help)
+				echo "scratch [OPTION] [FILE]"
+				echo "\t[OPTION]s"
+				echo "\t  -p|-put"
+				echo "\t\tput a file on the server."
+				echo "\t  -g|-get"
+				echo "\t\tget a file from the server"
+				exit
+				;;
+			-p|--put)
+				putScratch $2
+				exit
+				;;
+			-g|--get)
+				getScratch $2
+				exit
+				;;
+			-?*)
+				echo "Unsuppported command. Run scratch -h|--help to see syntax."
+				exit
+				;;
+		esac
+		shift
+	done
+}
