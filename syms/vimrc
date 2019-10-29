@@ -15,6 +15,11 @@ Plugin 'plasticboy/vim-markdown'
 Plugin 'dense-analysis/ale'
 Plugin 'scrooloose/nerdtree'
 Plugin 'scrooloose/nerdcommenter'
+Plugin 'jistr/vim-nerdtree-tabs'
+Plugin 'kien/ctrlp.vim'
+Plugin 'tpope/vim-fugitive'
+Plugin 'vim-syntastic/syntastic'
+Plugin 'nvie/vim-flake8'
 
 call vundle#end()
 " 1}}}
@@ -83,21 +88,26 @@ command W w !sudo tee % > /dev/null
 " file specific bindings {{{1 ------------------------------------------------
 " python specific things {{{2 ------------------------------------------------
 au BufNewFile,BufRead *.py
-	\ set tabstop=4
-	\ set softtabstop=4
-	\ set shiftwidth=4
-	\ set textwidth=79
-	\ set expandtab
-	\ set autoindent
+	\ set tabstop=4 |
+	\ set softtabstop=4 |
+	\ set shiftwidth=4 |
+	\ set textwidth=79 |
+	\ set expandtab |
+	\ set autoindent |
 	\ set fileformat=unix
 " 2}}} -----------------------------------------------------------------------
 " R specific settings {{{1 ---------------------------------------------------
 au BufNewFile,BufRead *.R
-	\ set tabstop=2
-	\ set softtabstop=2
-	\ set shiftwidth=2
-	\ set autoindent
-	\ set expandtab
+	\ set tabstop=2 |
+	\ set softtabstop=2 |
+	\ set shiftwidth=2 |
+	\ set autoindent |
+	\ set expandtab |
 	\ set fileformat=unix
 " 2}}} -----------------------------------------------------------------------
 " 1}}}------------------------------------------------------------------------
+" plugin settings {{{1 -------------------------------------------------------
+" python related {{{2 --------------------------------------------------------
+let python_highlight_all=1
+" 2}}} -----------------------------------------------------------------------
+" 1}}} -----------------------------------------------------------------------
