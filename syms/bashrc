@@ -128,7 +128,6 @@ fortune | cowsay
 #------------------------------------
 alias less='less --RAW-CONTROL-CHARS'
 alias ls='ls ${LS_OPTS}'
-# export GREP_OPTIONS='--color=auto'
 alias grep='grep --color=auto'
 alias stopcolors='sed "s/\[^[[0-9;]*[a-zA-Z]//gi"'
 alias aptinstall='sudo aptitude install'
