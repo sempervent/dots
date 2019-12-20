@@ -73,7 +73,6 @@ shopt -s checkwinsize
 export PATH=$PATH:/home/jngrant/scripts:$JAVA_HOME/bin:/home/jngrant/.local/bin
 export EDITOR='vim'
 # 1}}}
-
 # exported options {{{1
 export LS_OPTS='--color=auto'
 # 1}}}
@@ -143,6 +142,10 @@ alias reboot="sudo shutdown -r now"
 alias python="python3"
 alias eaglei='ssh -p 2200 127.0.0.1'
 alias nebula='ssh 6ng@gistnebula'
+alias home='cd /mnt/c/Users/6ng'
+alias dev='cd /mnt/c/Users/6ng/dev'
+alias weather='curl wttr.in'
+alias dco='docker-compose'
 
 #------------------------------------
 # Custom {{{1
@@ -179,9 +182,6 @@ alias nebula='ssh 6ng@gistnebula'
 #wal -R
 # 1}}}
 
-alias home='cd /mnt/c/Users/6ng'
-alias dev='cd /mnt/c/Users/6ng/dev'
-alias weather='curl wttr.in'
 # Imports {{{1 
 source ~/dots/bash/aliases.sh
 source ~/dots/bash/colors.sh
@@ -189,17 +189,16 @@ source ~/dots/bash/completion.sh
 source ~/dots/bash/exports.sh
 source ~/dots/bash/history.sh
 #source ~/dots/bash/vimsetup.sh
-make_bash_script() {
+make_bash_script() { # {{{2
 wget -O "$1" https://gist.github.com/sempervent/4d94593e0d56f8fc1b43f92b9983d61f/raw/dfaed9bc4b9dc4f007f8b22072ec92eb94de7004/bash_skeleton.sh
-}
-#!/usr/bin/env bash
-putScratch() {
+} # 2}}}
+putScratch() { # {{{2
 	smbclient //gistcloud.ornl.gov/scr0 -U 6ng -W ORNL -c "cd 6ng ; put $1"
-}
-getScratch() {
+} # 2}}}
+getScratch() { # {{{2
 	smbclient //gistcloud.ornl.gov/scr0 -U 6ng -W ORNL -c "cd 6ng ; get $1"
-}
-scratch() {
+} # 2}}}
+scratch() { # {{{2
 	while :; do
 		case $1 in
 			-h|-\?|--help)
@@ -226,4 +225,4 @@ scratch() {
 		esac
 		shift
 	done
-}
+} # 2}}}
