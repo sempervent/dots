@@ -1,9 +1,15 @@
 # Aliases {{{1
 #------------------------------------
 alias less='less --RAW-CONTROL-CHARS'
-alias ls='ls ${LS_OPTS}'
+if [[ "$OS" != "Mac" ]]; then
+	'not applying color to ls'
+	alias ls='ls ${LS_OPTS}'
+elif [[ "$OS" == 'Mac' ]]; then
+	alias ls="/usr/local/Cellar/coreutils/8.31/libexec/gnubin/ls $LS_OPTS"
+fi
 # export GREP_OPTIONS='--color=auto'
 alias grep='grep --color=auto'
+alias agrep='agrep --color=auto'
 alias fgrep='fgrep --color=auto'
 alias egrep='egrep --color=auto'
 alias stopcolors='sed "s/\[^[[0-9;]*[a-zA-Z]//gi"'
@@ -19,6 +25,8 @@ alias gmail="chromium --app=https://mail.google.com"
 alias reboot="sudo shutdown -r now"
 alias python="python3"
 alias tmux='TERM=xterm-256color tmux'
+alias dco='docker-compose'
+alias de='docker exec -it'
 # prevent use of nano everywhere
 alias nano=vim
 alias ffs='sudo "$BASH" -c "$(history -p !!)"'
