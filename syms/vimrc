@@ -137,4 +137,6 @@ if executable('fzf')
 	nnoremap <leader>j :call fzf#vim#tags("'".expand('<cword>'))<cr>
 else
 	nnoremap <leader>v :Ctrlp<space><cr>
+endif
+" 2}}} -----------------------------------------------------------------------
 " 1}}} -----------------------------------------------------------------------
