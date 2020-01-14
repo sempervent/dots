@@ -26,6 +26,7 @@ Plugin 'vim-syntastic/syntastic'
 Plugin 'nvie/vim-flake8'
 Plugin 'python-mode/python-mode'
 Plugin 'derekwyatt/vim-scala'
+Plugin 'ktvoelker/sbt-vim'
 
 call vundle#end()
 " 1}}}
@@ -46,6 +47,7 @@ set tabstop=2 shiftwidth=2 softtabstop=0 noexpandtab smarttab
 set so=7
 set wildmenu
 set backspace=eol,start,indent
+set cc=80
 set whichwrap=<,>,h,l
 set ignorecase
 set smartcase
@@ -78,6 +80,11 @@ try
 	colorscheme molokai
 catch
 endtry
+" tab settings {{{2
+set tabstop=2
+set shiftwidth=2
+set expandtab
+" 2}}}
 set ffs=unix,dos,mac
 " mappings {{{1 --------------------------------------------------------------
 let mapleader=','
