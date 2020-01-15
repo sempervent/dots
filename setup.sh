@@ -24,18 +24,26 @@ move_sym() { # {{{1 -----------------------------------------------------------
     echo "move_sym expects two arguments:"
     printf "\t%s\n\t%s\n" "source" "destination"
     exit 1
+  else
+    _SOURCE="$SYM_DIR/$1"
+    _DEST="$2"
+    _BACKUP="$OLD_DOTS/$1"
   fi
-  if [ -f "$2" ]; then
-		echo "moving \\e[33m$2\\e[39m to \\e[32m$OLD_DOTS/$2\\e[39m"
-    mv "$2" "$OLD_DOTS/"
-		echo "symlinking \\e[33m$1\\e[39m to \\e[32m$DIR/$2\\e[39m"
-    ln -s "$HOME/$1" "$DIR/$2"
+  if [ -f "$_DEST" ]; then
+    echo -e "moving \\e[33m$_DEST\\e[39m to \\e[32m$_BACKUP\\e[39m"
+    mv "$_DEST" "$_BACKUP"
+  fi
+  if [ ! -f "$_DEST" ] && [ -f "$_SOURCE" ]; then
+     ln -s "$_SOURCE" "$_DEST"
+  else
+     echo 'unknown error'
+     exit 1
   fi
 } # 1}}} ----------------------------------------------------------------------
 # iterate over the array and execute move_symn {{{1 ---------------------------
 for i in "${FILE_ARRAY[@]}"; do
 	echo "$i"
-	move_sym "$SYM_DIR/$i" "$HOME/.$i"
+	move_sym "$i" "$HOME/.$i"
 done
 # 1}}} ------------------------------------------------------------------------
 # install vundle into its directory unless it is already installed {{{1 -------
