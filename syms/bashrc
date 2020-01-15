@@ -74,7 +74,18 @@ export PATH=$PATH:/home/jngrant/scripts:$JAVA_HOME/bin:/home/jngrant/.local/bin
 export EDITOR='vim'
 # 1}}}
 # exported options {{{1
-export LS_OPTS='--color=auto'
+if [[ "$(uname -s)" =~ 'Darwin' ]]; then
+	echo 'Running in MacOS'
+	export PATH="/usr/local/opt/coreutils/libxec/gnubin:$PATH"
+	OS='Mac'
+elif [[ "$(uname -a)" =~ 'CYGWIN' ]]; then
+	echo 'Running in CYGWIN'
+	OS='Win'
+else
+	echo 'Running in *nix'
+	OS='Nix'
+	export LS_OPTS='--color=auto'
+fi
 # 1}}}
 # Aesthetics {{{1
 # set variable identifying the chroot you work in {{{2
@@ -116,19 +127,14 @@ file_size() {
   /bin/ls -lah | /bin/grep -m 1 total | /bin/sed 's/total //'
 }
 # 2}}}
-# Prompt {{{2
-PS1="\[\n$NC\]┌──┤\[$GREEN\]\u\[$NC\]@\[$BLUE\]\h\[$NC\]├─┤\[$BPURP\]\@\[$NC\]├─┤\[$CYAN\]\d\[$NC\]├$(render_git_info)┤\[$LGREEN\]$(/bin/ls -1 | /usr/bin/wc -l | /bin/sed 's: ::g')ﬁ \[$LBLUE\]$(/bin/ls -lah | /bin/grep -m 1 total | /bin/sed 's/total //')b\[$NC\]│\n└─┤\[$YELLOW\]\w\[$NC\]│ "
-# 2}}}
-# greeting {{{2
-echo "Welcome, $(whoami)!"
-fortune | cowsay
-# 2}}}
-# Aliases {{{1
-#------------------------------------
 alias less='less --RAW-CONTROL-CHARS'
-alias ls='ls ${LS_OPTS}'
+if [ "$OS" != "Mac" ]; then
+	echo "aliasing ls ${LS_OPTS}"
+	alias ls='ls ${LS_OPTS}'
+fi
+alias so='source ~/.bashrc'
 alias grep='grep --color=auto'
-alias stopcolors='sed "s/\[^[[0-9;]*[a-zA-Z]//gi"'
+alias stopcolors='sed "s/\[^[[0-9;]*[a-za-z]//gi"'
 alias aptinstall='sudo aptitude install'
 alias bullshit="curl -s http://cbsg.sourceforge.net/cgi-bin/live | grep -Eo '<li>(.*?)</li>' | sed -e 's/<[^>]*>//g' | shuf -n 1 | cowsay -f kosh"
 alias lstree="ls -R | grep ":$" | sed -e 's/:$//' -e 's/[^-][^\/]*\//--/g' -e 's/^/   /' -e 's/-/|/' | less"
@@ -148,6 +154,20 @@ alias weather='curl wttr.in'
 alias dco='docker-compose'
 alias git-ornl="chromium --app=http://code.ornl.gov"
 
+source ~/dots/bash/aliases.sh
+source ~/dots/bash/colors.sh
+source ~/dots/bash/completion.sh
+source ~/dots/bash/exports.sh
+source ~/dots/bash/history.sh
+# Prompt {{{2
+PS1="\[\n$NC\]┌──┤\[$GREEN\]\u\[$NC\]@\[$BLUE\]\h\[$NC\]├─┤\[$BPURP\]\@\[$NC\]├─┤\[$CYAN\]\d\[$NC\]├$(render_git_info)┤\[$NC\]│\n└─┤\[$YELLOW\]\w\[$NC\]│ "
+# 2}}}
+# greeting {{{2
+echo "Welcome, $(whoami)!"
+fortune | cowsay
+# 2}}}
+# Aliases {{{1
+#------------------------------------
 #------------------------------------
 # Custom {{{1
 #------------------------------------

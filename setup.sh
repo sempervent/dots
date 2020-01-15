@@ -52,3 +52,5 @@ if [ ! -d "$VUNDLE_DIR" ]; then
 	vim +BundleInstall
 fi
 # 1}}} ------------------------------------------------------------------------
+# have secrets
+mkdir "$DIR/secrets"
