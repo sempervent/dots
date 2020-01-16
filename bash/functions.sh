@@ -57,3 +57,18 @@ make_bash_script() {
 	wget -O "$1" https://gist.githubusercontent.com/sempervent/4d94593e0d56f8fc1b43f92b9983d61f/raw/dfaed9bc4b9dc4f007f8b22072ec92eb94de7004/bash_skeleton.sh
 }
 # 1}}}
+# git add and commit one-liner
+gac() {
+  if [[ "$#" -ne "2" ]]; then
+    echo -e "git-add-commit asserts 2 values, file to add & git commit msg"
+    exit 1
+  fi
+  if [[ "$(git status)" =~ .*$1.*  ]]; then
+    git add "$1"
+    git commit -m "$2"
+  else
+    echo -e "file is not in git status, proceeding anyway"
+    git add "$1"
+    git commit -m "$2"
+  fi
+}
