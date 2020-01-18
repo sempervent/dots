@@ -16,11 +16,17 @@ Plugin 'dense-analysis/ale'
 Plugin 'scrooloose/nerdtree'
 Plugin 'scrooloose/nerdcommenter'
 Plugin 'jistr/vim-nerdtree-tabs'
-Plugin 'kien/ctrlp.vim'
+if executable('fzf')
+	Plugin 'junegun/fzf'
+else
+	Plugin 'kien/ctrlp'
+endif
 Plugin 'tpope/vim-fugitive'
 Plugin 'vim-syntastic/syntastic'
 Plugin 'nvie/vim-flake8'
 Plugin 'python-mode/python-mode'
+Plugin 'derekwyatt/vim-scala'
+Plugin 'ktvoelker/sbt-vim'
 
 call vundle#end()
 " 1}}}
@@ -41,6 +47,7 @@ set tabstop=2 shiftwidth=2 softtabstop=0 noexpandtab smarttab
 set so=7
 set wildmenu
 set backspace=eol,start,indent
+set cc=80
 set whichwrap=<,>,h,l
 set ignorecase
 set smartcase
@@ -73,6 +80,11 @@ try
 	colorscheme molokai
 catch
 endtry
+" tab settings {{{2
+set tabstop=2
+set shiftwidth=2
+set expandtab
+" 2}}}
 set ffs=unix,dos,mac
 " mappings {{{1 --------------------------------------------------------------
 let mapleader=','
@@ -95,7 +107,8 @@ au BufNewFile,BufRead *.py
 	\ set textwidth=79 |
 	\ set expandtab |
 	\ set autoindent |
-	\ set fileformat=unix
+	\ set fileformat=unix |
+  \ set fdm=indent
 " 2}}} -----------------------------------------------------------------------
 " R specific settings {{{1 ---------------------------------------------------
 au BufNewFile,BufRead *.R
@@ -117,5 +130,21 @@ let g:pymode_lint_on_write = 1
 let g:pymode_lint_message = 1
 let g:pymode_lint_checkers = ['pep8', 'pyflakes', 'pep257', 'pylint']
 let g:pymode_syntax = 1
+" 2}}} -----------------------------------------------------------------------
+" scala related {{{2 ---------------------------------------------------------
+let g:scala_scaladoc_indent = 1
+" 2}}} -----------------------------------------------------------------------
+" file search settings {{{2 --------------------------------------------------
+if executable('rg')
+	let $FZF_DEFAULT_COMMAND = 'rg --files --no-messages "" .'
+endif
+let g:gzg_command_prefix = 'Fzf'
+if executable('fzf')
+	nnoremap <leader>v :FzfFiles<cr>
+	nnoremap <leader>u :FzfTags<cr>
+	nnoremap <leader>j :call fzf#vim#tags("'".expand('<cword>'))<cr>
+else
+	nnoremap <leader>v :Ctrlp<space><cr>
+endif
 " 2}}} -----------------------------------------------------------------------
 " 1}}} -----------------------------------------------------------------------
