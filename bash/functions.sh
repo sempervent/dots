@@ -54,6 +54,15 @@ cu() {
 } # 1}}}
 # create a bash skeleton script {{{1
 make_bash_script() {
-	wget -O "$1" https://gist.githubusercontent.com/sempervent/4d94593e0d56f8fc1b43f92b9983d61f/raw/dfaed9bc4b9dc4f007f8b22072ec92eb94de7004/bash_skeleton.sh
+	wget -O "$1" https://gist.githubusercontent.com/sempervent/4d94593e0d56f8fc1b43f92b9983d61f/raw/f4d761ad28ec20ceb45c4ae03f32628bb868946e/bash_skeleton.sh
 }
 # 1}}}
+# show external IP address 
+show_ip() {
+	dig +short myip.opendns.com @resolver.opendns.com
+}
+# set MY_IP env variable
+MY_IP=$(show_ip)
+export MY_IP
+# store(and optionally set the ~/dots/secrets
+alias myip='echo "$(show_ip)"'
