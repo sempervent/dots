@@ -30,6 +30,7 @@ alias de='docker exec -it'
 # prevent use of nano everywhere
 alias nano=vim
 alias ffs='sudo "$BASH" -c "$(history -p !!)"'
+alias osupgrade="yaourt -Syua --noconfirm"
 # 1}}}
 # if user .bash_aliases exists, respect them also
 if [ -f ~/.bash_aliases ]; then
