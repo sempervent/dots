@@ -2,8 +2,8 @@
 #------------------------------------
 alias less='less --RAW-CONTROL-CHARS'
 if [[ "$OS" != "Mac" ]]; then
-	'not applying color to ls'
-	alias ls='ls ${LS_OPTS}'
+	echo 'not applying color to ls'
+	alias ls='ls --color'
 elif [[ "$OS" == 'Mac' ]]; then
 	alias ls="/usr/local/Cellar/coreutils/8.31/libexec/gnubin/ls $LS_OPTS"
 fi
@@ -22,6 +22,7 @@ alias rstudio="chromium --app=http://192.168.1.178:8787"
 alias google="chromium --app=https://google.com"
 alias reddit="chromium --app=https://www.reddit.com"
 alias gmail="chromium --app=https://mail.google.com"
+alias heimdall="chromium --app=https://172.16.0.79/"
 alias reboot="sudo shutdown -r now"
 alias python="python3"
 alias tmux='TERM=xterm-256color tmux'
@@ -30,9 +31,9 @@ alias de='docker exec -it'
 # prevent use of nano everywhere
 alias nano=vim
 alias ffs='sudo "$BASH" -c "$(history -p !!)"'
-alias osupgrade="yaourt -Syua --noconfirm"
+alias osupgrade="yay -Syua --noconfirm"
 # 1}}}
 # if user .bash_aliases exists, respect them also
 if [ -f ~/.bash_aliases ]; then
-  . ~/.bash_aliases
+  source ~/.bash_aliases
 fi
