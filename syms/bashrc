@@ -13,6 +13,10 @@ done
 DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
 SRC_DIR=$DIR/../bash
 
+# give me trusty vim commands
+set -o vi
+set show-mode-in-prompt on
+
 # General Settings {{{1
 # if not running interactively, don't do anything {{{2
 case $- in
@@ -64,6 +68,9 @@ HISTFILESIZE=200000
 # check the window after each command and update
 # values of LINES and COLUMNS
 shopt -s checkwinsize
+
+# don't include duplicates or commands preceeded by space
+export HISTCONTROL=ignoreboth
 
 # make less more friendly for non-text input files, see lesspipe(1)
 [ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
