@@ -19,7 +19,7 @@ Plugin 'jistr/vim-nerdtree-tabs'
 if executable('fzf')
 	Plugin 'junegun/fzf'
 else
-	Plugin 'kien/ctrlp.vim'
+	Plugin 'ctrlpvim/ctrlp.vim'
 endif
 Plugin 'tpope/vim-fugitive'
 Plugin 'vim-syntastic/syntastic'
