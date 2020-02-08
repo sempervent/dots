@@ -2,7 +2,7 @@
 # :set fdm=marker
 # :set tw=79
 # https://github.com/sempervent/dotfiles
-################################################################################
+###############################################################################
 # resolve to all symlinks the source directory
 SOURCE="${BASH_SOURCE[0]}"
 while [ -h "$SOURCE" ]; do
@@ -24,13 +24,15 @@ case $- in
       *) return;;
 esac # 2}}}
 # start tmux if running interactively {{{2
-if [[ -z "$TMUX" ]] ;then
-    ID="$( tmux ls | grep -vm1 attached | cut -d: -f1 )" # get the id of a deattached session
-    if [[ -z "$ID" ]] ;then # if not available create a new one
-        tmux new-session
-    else
-        tmux attach-session -t "$ID" # if available attach to it
-    fi
+if ! [ -x "tmux" ]; then
+  if [[ -z "$TMUX" ]] ;then
+      ID="$( tmux ls | grep -vm1 attached | cut -d: -f1 )" # get the id of a deattached session
+      if [[ -z "$ID" ]] ;then # if not available create a new one
+          tmux new-session
+      else
+          tmux attach-session -t "$ID" # if available attach to it
+      fi
+  fi 
 fi # 2}}}
 # autocomplete with sudo {{{2
 if [ "$PS1" ]; then
