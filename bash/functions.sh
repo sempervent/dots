@@ -57,7 +57,7 @@ make_old_bash_script() {
 	wget -O "$1" https://gist.githubusercontent.com/sempervent/4d94593e0d56f8fc1b43f92b9983d61f/raw/f4d761ad28ec20ceb45c4ae03f32628bb868946e/bash_skeleton.sh
 }
 make_bash_script() {
-SKELETON_URL=${BASH_SKELETON_URL:-"https://gist.githubusercontent.com/sempervent/4d94593e0d56f8fc1b43f92b9983d61f/raw/fe08f3de2b023dee323914ad564a5d746f4c6348/bash_skeleton.sh""}
+SKELETON_URL=${BASH_SKELETON_URL:-"https://gist.githubusercontent.com/sempervent/4d94593e0d56f8fc1b43f92b9983d61f/raw/fe08f3de2b023dee323914ad564a5d746f4c6348/bash_skeleton.sh"}
 wget -O "$1" "$SKELETON_URL"
 chmod +x "$1"
 vim "$1"
