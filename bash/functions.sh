@@ -63,27 +63,21 @@ chmod +x "$1"
 vim "$1"
 }
 # 1}}}
-# show external IP address 
-show_ip() {
-	dig +short myip.opendns.com @resolver.opendns.com
-}
-# set MY_IP env variable
-MY_IP=$(show_ip)
-export MY_IP
-# store(and optionally set the ~/dots/secrets
-alias myip='echo "$(show_ip)"'
 # git add and commit one-liner
 gac() {
   if [[ "$#" -ne "2" ]]; then
     echo -e "git-add-commit asserts 2 values, file to add & git commit msg"
     exit 1
   fi
-  if [[ "$(git status)" =~ .*$1.*  ]]; then
-    git add "$1"
-    git commit -m "$2"
-  else
-    echo -e "file is not in git status, proceeding anyway"
-    git add "$1"
-    git commit -m "$2"
-  fi
+  git diff "$1"
+  git add "$1"
+  git commit -m "$2"
+  #if [[ "$(git status)" =~ .*$1.*  ]]; then
+    #git add "$1"
+    #git commit -m "$2"
+  #else
+    #echo -e "file is not in git status, proceeding anyway"
+    #git add "$1"
+    #git commit -m "$2"
+  #fi
 }
