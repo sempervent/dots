@@ -53,4 +53,4 @@ if [ ! -d "$VUNDLE_DIR" ]; then
 fi
 # 1}}} ------------------------------------------------------------------------
 # have secrets
-mkdir "$DIR/secrets"
+mkdir - p "$DIR/secrets"

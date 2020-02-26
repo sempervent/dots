@@ -7,7 +7,6 @@ if [[ "$OS" != "Mac" ]]; then
 elif [[ "$OS" == 'Mac' ]]; then
 	alias ls="/usr/local/Cellar/coreutils/8.31/libexec/gnubin/ls $LS_OPTS"
 fi
-# export GREP_OPTIONS='--color=auto'
 alias grep='grep --color=auto'
 alias agrep='agrep --color=auto'
 alias fgrep='fgrep --color=auto'
