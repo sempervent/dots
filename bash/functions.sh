@@ -59,7 +59,9 @@ make_bash_script() {
 # 1}}}
 # show external IP address 
 show_ip() {
-	dig +short myip.opendns.com @resolver.opendns.com
+  MY_IP="$(curl ifconfig.me)"
+  export MY_IP
+  echo "$MY_IP"
 }
 # set MY_IP env variable
 MY_IP=$(show_ip)
