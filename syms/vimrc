@@ -27,6 +27,7 @@ Plugin 'nvie/vim-flake8'
 Plugin 'python-mode/python-mode'
 Plugin 'derekwyatt/vim-scala'
 Plugin 'ktvoelker/sbt-vim'
+Plugin 'davidhalter/jedi-vim'
 
 call vundle#end()
 " 1}}}
