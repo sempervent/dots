@@ -37,3 +37,4 @@ if [ -f ~/.bash_aliases ]; then
   source ~/.bash_aliases
 fi
 alias naermData='ssh 6ng@129.219.184.60'
+alias dcud='docker-compose down && docker-compose up -d'
