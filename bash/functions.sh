@@ -87,3 +87,40 @@ gac() {
     git commit -m "$2"
   fi
 }
+# run and execute into a docker image while mounting a directory
+# defaults to present working directory. Params are documented in code.
+dre() { # {{{1
+  IMAGE="rocker/tidyverse:latest"
+  VOLUME="$(pwd):/tmp/"
+  COMMAND="bash"
+  while :; do # {{{2
+    case $1 in 
+      --help|-h|-\?) # {{{3
+        echo "Usage is: "
+        echo "    dre -i|--image <image> [-v <volume>| -e <command>"
+        echo " Where options are:"
+        echo "      (-v|--volume '<host dir>:<container dir>')"
+        echo "      (-e|--exec 'command')"
+        echo ""
+        echo "Defaults are: "
+        echo '   image: "rocker/tidyverse:latest"'
+        echo '   volume: "$(pwd):/tmp/"'
+        echo '   command: "bash"'
+        exit
+        ;; # 3}}}
+      -i|--image) # {{{3
+        IMAGE="$2"
+        shift 2
+        ;; # 3}}}
+      -v|--volume) # {{{3
+        VOLUME="$2"
+        shift 2
+        ;; # 3}}}
+      -e|--exec) # {{{3
+        COMMAND="$2"
+        shift 2
+        ;; # 3}}}
+      esac
+    done # 2}}}
+  docker run -it -v "$VOLUME" "$IMAGE" "$COMMAND"
+} # 1}}}
