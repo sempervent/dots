@@ -56,6 +56,13 @@ cu() {
 make_old_bash_script() {
 	wget -O "$1" https://gist.githubusercontent.com/sempervent/4d94593e0d56f8fc1b43f92b9983d61f/raw/f4d761ad28ec20ceb45c4ae03f32628bb868946e/bash_skeleton.sh
 }
+# 1}}}
+# show external IP address 
+show_ip() {
+  MY_IP="$(curl ifconfig.me)"
+  export MY_IP
+  echo "$MY_IP"
+}
 make_bash_script() {
 SKELETON_URL=${BASH_SKELETON_URL:-"https://gist.githubusercontent.com/sempervent/4d94593e0d56f8fc1b43f92b9983d61f/raw/fe08f3de2b023dee323914ad564a5d746f4c6348/bash_skeleton.sh"}
 wget -O "$1" "$SKELETON_URL"
@@ -63,29 +70,23 @@ chmod +x "$1"
 vim "$1"
 }
 # 1}}}
-# show external IP address 
-show_ip() {
-	dig +short myip.opendns.com @resolver.opendns.com
-}
-# set MY_IP env variable
-MY_IP=$(show_ip)
-export MY_IP
-# store(and optionally set the ~/dots/secrets
-alias myip='echo "$(show_ip)"'
 # git add and commit one-liner
 gac() {
   if [[ "$#" -ne "2" ]]; then
     echo -e "git-add-commit asserts 2 values, file to add & git commit msg"
     exit 1
   fi
-  if [[ "$(git status)" =~ .*$1.*  ]]; then
-    git add "$1"
-    git commit -m "$2"
-  else
-    echo -e "file is not in git status, proceeding anyway"
-    git add "$1"
-    git commit -m "$2"
-  fi
+  git diff "$1"
+  git add "$1"
+  git commit -m "$2"
+  #if [[ "$(git status)" =~ .*$1.*  ]]; then
+    #git add "$1"
+    #git commit -m "$2"
+  #else
+    #echo -e "file is not in git status, proceeding anyway"
+    #git add "$1"
+    #git commit -m "$2"
+  #fi
 }
 # run and execute into a docker image while mounting a directory
 # defaults to present working directory. Params are documented in code.

@@ -7,7 +7,6 @@ if [[ "$OS" != "Mac" ]]; then
 elif [[ "$OS" == 'Mac' ]]; then
 	alias ls="/usr/local/Cellar/coreutils/8.31/libexec/gnubin/ls $LS_OPTS"
 fi
-# export GREP_OPTIONS='--color=auto'
 alias grep='grep --color=auto'
 alias agrep='agrep --color=auto'
 alias fgrep='fgrep --color=auto'
@@ -37,3 +36,5 @@ alias osupgrade="yay -Syua --noconfirm"
 if [ -f ~/.bash_aliases ]; then
   source ~/.bash_aliases
 fi
+alias naermData='ssh 6ng@129.219.184.60'
+alias dcud='docker-compose down && docker-compose up -d'
