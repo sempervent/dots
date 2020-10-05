@@ -98,14 +98,14 @@ dre() { # {{{1
     case $1 in 
       --help|-h|-\?) # {{{3
         echo "Usage is: "
-        echo "    dre -i|--image <image> [-v <volume>| -e <command>"
+        echo "    dre -i|--image <image> [-v <volume>| -e|--exec <command>"
         echo " Where options are:"
         echo "      (-v|--volume '<host dir>:<container dir>')"
         echo "      (-e|--exec 'command')"
         echo ""
         echo "Defaults are: "
         echo '   image: "rocker/tidyverse:latest"'
-        echo '   volume: "$(pwd):/tmp/"'
+        echo "   volume: \"$(pwd):/tmp/\""
         echo '   command: "bash"'
         exit
         ;; # 3}}}
@@ -125,3 +125,7 @@ dre() { # {{{1
     done # 2}}}
   docker run -it -v "$VOLUME" "$IMAGE" "$COMMAND"
 } # 1}}}
+# offset today by n number of days
+offset_today() {
+  date --date="$(date) - $1 day" +%Y-%m-%d
+}
