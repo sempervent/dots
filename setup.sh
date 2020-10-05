@@ -8,7 +8,7 @@ VUNDLE_DIR=~/.vim/bundle/Vundle.vim
 # file array {{{1 -------------------------------------------------------------
 # accept an environmental variable as a list
 if [[ "$FILE_ARRAY" == "" ]]; then
-	declare -a FILE_ARRAY=('bashrc' 'vimrc' 'tmux.conf')
+	declare -a FILE_ARRAY=('bashrc' 'vimrc' 'tmux.conf' 'sqliterc')
 fi
 # 1}}} ------------------------------------------------------------------------
 # ensure the $OLD_DOTS folder exists {{{1 -------------------------------------
