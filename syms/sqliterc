@@ -1,2 +1,4 @@
+.output /dev/null
 .headers on
 .mode column
+.output stdout
