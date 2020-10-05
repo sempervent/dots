@@ -38,3 +38,4 @@ if [ -f ~/.bash_aliases ]; then
 fi
 alias naermData='ssh 6ng@129.219.184.60'
 alias dcud='docker-compose down && docker-compose up -d'
+alias dps='docker ps --format "{{.Names}}: {{.Image}} @ {{.CreatedAt}} {{.Status}}"'
