@@ -28,6 +28,7 @@ Plugin 'python-mode/python-mode'
 Plugin 'derekwyatt/vim-scala'
 Plugin 'ktvoelker/sbt-vim'
 Plugin 'davidhalter/jedi-vim'
+Plugin 'chrisbra/csv.vim'
 
 call vundle#end()
 " 1}}}
@@ -131,6 +132,11 @@ let g:pymode_lint_on_write = 1
 let g:pymode_lint_message = 1
 let g:pymode_lint_checkers = ['pep8', 'pyflakes', 'pep257', 'pylint']
 let g:pymode_syntax = 1
+let g:flake8_ignore='D213'
+" jedi {{{2 ------------------------------------------------------------------
+let g:jedi#force_py_version = 3
+let g:jedi#completions_command = "<C-N>"
+" 2 }}} ----------------------------------------------------------------------
 " 2}}} -----------------------------------------------------------------------
 " scala related {{{2 ---------------------------------------------------------
 let g:scala_scaladoc_indent = 1
