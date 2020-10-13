@@ -37,6 +37,7 @@ syntax on
 set hidden
 set wildmenu
 set showcmd
+set t_Co=256
 " search commands {{{2
 set hlsearch
 set incsearch " 2}}}
@@ -72,7 +73,6 @@ set notimeout ttimeout ttimeoutlen=200
 syntax enable
 set background=dark
 set encoding=utf8
-set t_Co=256
 set splitbelow
 set splitright
 set fdm=marker
