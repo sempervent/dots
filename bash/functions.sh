@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# file information of directory {{{1
+file_count() { # 2{{{
+  /bin/ls -1 | /usr/bin/wc -l | /bin/sed 's: ::g'
+} # 2}}}
+file_size() { #{{{2
+  /bin/ls -lah | /bin/grep -m 1 total | /bin/sed 's/total //'
+} # 2}}}
+# 1}}}
 # smart extract an archive file {{{1
 extract() {
   if [ -f $1 ]; then
@@ -52,51 +60,20 @@ cu() {
   done
   cd $path || return
 } # 1}}}
-# create a bash skeleton script {{{1
-make_old_bash_script() {
-	wget -O "$1" https://gist.githubusercontent.com/sempervent/4d94593e0d56f8fc1b43f92b9983d61f/raw/f4d761ad28ec20ceb45c4ae03f32628bb868946e/bash_skeleton.sh
-}
-# 1}}}
-# show external IP address 
-show_ip() {
-  MY_IP="$(curl ifconfig.me)"
-  export MY_IP
-  echo "$MY_IP"
-}
-make_bash_script() {
-SKELETON_URL=${BASH_SKELETON_URL:-"https://gist.githubusercontent.com/sempervent/4d94593e0d56f8fc1b43f92b9983d61f/raw/fe08f3de2b023dee323914ad564a5d746f4c6348/bash_skeleton.sh"}
-wget -O "$1" "$SKELETON_URL"
-chmod +x "$1"
-vim "$1"
-}
-# 1}}}
-# git add and commit one-liner
-gac() {
-  if [[ "$#" -ne "2" ]]; then
-    echo -e "git-add-commit asserts 2 values, file to add & git commit msg"
-    exit 1
-  fi
-  git diff "$1"
-  git add "$1"
-  git commit -m "$2"
-  #if [[ "$(git status)" =~ .*$1.*  ]]; then
-    #git add "$1"
-    #git commit -m "$2"
-  #else
-    #echo -e "file is not in git status, proceeding anyway"
-    #git add "$1"
-    #git commit -m "$2"
-  #fi
-}
-# run and execute into a docker image while mounting a directory
-# defaults to present working directory. Params are documented in code.
-dre() { # {{{1
+# offset today by n number of days {{{2
+offset_today() {  
+  date --date="$(date) - $1 day" +%Y-%m-%d
+} # 2}}}
+# Docker-related commands {{{1
+# run and execute into a docker image while mounting a directory {{{2
+# defaults to present working directory. Params are documented in code. 
+dre() {  
   IMAGE="rocker/tidyverse:latest"
   VOLUME="$(pwd):/tmp/"
   COMMAND="bash"
-  while :; do # {{{2
+  while :; do # {{{3
     case $1 in 
-      --help|-h|-\?) # {{{3
+      --help|-h|-\?) # {{{4
         echo "Usage is: "
         echo "    dre -i|--image <image> [-v <volume>| -e|--exec <command>"
         echo " Where options are:"
@@ -108,24 +85,114 @@ dre() { # {{{1
         echo "   volume: \"$(pwd):/tmp/\""
         echo '   command: "bash"'
         exit
-        ;; # 3}}}
-      -i|--image) # {{{3
+        ;; # 4}}}
+      -i|--image) # {{{4
         IMAGE="$2"
         shift 2
         ;; # 3}}}
-      -v|--volume) # {{{3
+      -v|--volume) # {{{4
         VOLUME="$2"
         shift 2
         ;; # 3}}}
-      -e|--exec) # {{{3
+      -e|--exec) # {{{4
         COMMAND="$2"
         shift 2
-        ;; # 3}}}
+        ;; # 4}}}
       esac
     done # 2}}}
   docker run -it -v "$VOLUME" "$IMAGE" "$COMMAND"
-} # 1}}}
-# offset today by n number of days
-offset_today() {
-  date --date="$(date) - $1 day" +%Y-%m-%d
-}
+} # 2}}}
+# 1}}}
+# Scratch - smbclient wrapper for work {{{1
+putScratch() { # {{{2
+	smbclient //gistcloud.ornl.gov/scr0 -U 6ng -W ORNL -c "cd 6ng ; put $1"
+} # 2}}}
+getScratch() { # {{{2
+	smbclient //gistcloud.ornl.gov/scr0 -U 6ng -W ORNL -c "cd 6ng ; get $1"
+} # 2}}}
+scratch() { # {{{2
+	while :; do
+		case $1 in
+			-h|-\?|--help)
+				echo "scratch [OPTION] [FILE]"
+				echo "\t[OPTION]s"
+				echo "\t  -p|-put"
+				echo "\t\tput a file on the server."
+				echo "\t  -g|-get"
+				echo "\t\tget a file from the server"
+				exit
+				;;
+			-p|--put)
+				putScratch $2
+				exit
+				;;
+			-g|--get)
+				getScratch $2
+				exit
+				;;
+			-?*)
+				echo "Unsuppported command. Run scratch -h|--help to see syntax."
+				exit
+				;;
+		esac
+		shift
+	done
+} # 2}}}
+# 1}}}
+# gists pull downs {{{1
+make_bash_skeletont() { # {{{2
+wget -O "$1" https://gist.githubusercontent.com/sempervent/4d94593e0d56f8fc1b43f92b9983d61f/raw/f4d761ad28ec20ceb45c4ae03f32628bb868946e/bash_skeleton.sh 
+} # 2}}}
+# pull down and edit the bash skeleton into a file {{{2
+make_bash_script() {
+SKELETON_URL=${BASH_SKELETON_URL:-"https://gist.githubusercontent.com/sempervent/4d94593e0d56f8fc1b43f92b9983d61f/raw/fe08f3de2b023dee323914ad564a5d746f4c6348/bash_skeleton.sh"}
+wget -O "$1" "$SKELETON_URL"
+chmod +x "$1"
+vim "$1"
+} # 2}}}
+# use the old style bash script # {{{2
+make_old_bash_script() {
+	wget -o "$1" https://gist.githubusercontent.com/sempervent/4d94593e0d56f8fc1b43f92b9983d61f/raw/f4d761ad28ec20ceb45c4ae03f32628bb868946e/bash_skeleton.sh
+} # 2}}}
+# 1}}}
+# Git function helpers {{{1
+# git add and commit one-liner  {{{2
+gac() {
+  if [[ "$#" -ne "2" ]]; then
+    echo -e "git-add-commit asserts 2 values, file to add & git commit msg"
+    exit 1
+  fi
+  git status --color-always | less -r
+  git diff --color-always "$1" | less -r
+  while true; do
+        read -p "do you wish to proceed with the add and commit?" yn
+          case $yn in
+            [yy]* ) make install; break;;
+            [nn]* ) exit;;
+            * ) echo "please answer yes or no.";;
+                esac
+              done
+  git add "$1"
+  git commit -m "$2"
+} # 2}}}
+# stuff to get git info {{{2
+parse_git_branch() { # {{{3
+  git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/'
+} # 3}}}
+parse_git_remote() { # {{{3
+  git for-each-ref --format='%(upstream:short)' $(git symbolic-ref --q HEAD 2> /dev/null) 2> /dev/null
+} # 3}}}
+render_git_info() { # {{{3
+  branch=$(parse_git_branch)
+  if [ "$branch" ]; then
+    echo "─┤$LYEL$(parse_git_remote)->$(parse_git_branch)├─"
+  else
+    echo "─"
+  fi
+} # 3}}}
+# 2}}}
+# 1}}}
+# grab gists quickly  # {{{2
+make_pyinit() {
+  wget https://gist.githubusercontent.com/sempervent/784b6285cc8a8a79b9924a6595787316/raw/d6beed2cc4f16b883a2d1d08cfc6c7a86ca8d8dc/__init__.py
+} # 2}}}
