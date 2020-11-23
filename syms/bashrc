@@ -17,6 +17,12 @@ SRC_DIR=$DIR/../bash
 set -o vi
 set show-mode-in-prompt on
 
+if [ -e /usr/share/terminfo/x/xterm-256color ]; then
+  export TERM='xterm-256color'
+else
+  export TERM='xterm-color'
+fi
+
 # General Settings {{{1
 # if not running interactively, don't do anything {{{2
 case $- in
@@ -26,7 +32,8 @@ esac # 2}}}
 # start tmux if running interactively {{{2
 if ! [ -x "tmux" ]; then
   if [[ -z "$TMUX" ]] ;then
-      ID="$( tmux ls | grep -vm1 attached | cut -d: -f1 )" # get the id of a deattached session
+    # get the id of a deattached session
+      ID="$( tmux ls | grep -vm1 attached | cut -d: -f1 )"
       if [[ -z "$ID" ]] ;then # if not available create a new one
           tmux new-session
       else
@@ -85,7 +92,6 @@ export EDITOR='vim'
 # exported options {{{1
 if [[ "$(uname -s)" =~ 'Darwin' ]]; then
 	echo 'Running in MacOS'
-	export PATH="/usr/local/opt/coreutils/libxec/gnubin:$PATH"
 	OS='Mac'
 elif [[ "$(uname -a)" =~ 'CYGWIN' ]]; then
 	echo 'Running in CYGWIN'
@@ -101,10 +107,10 @@ fi
 # 2}}}
 # set a fancy propmt (non-color, unless we know we "want" color) {{{2
 case $XTERM in 
-   xterm-color) color_prompt=yes;;
-   screen) color_prompt=yes;;
-   tmux) color_prompt=yes;;
-   *) color_prompt=yes;;
+   xterm-color) export color_prompt=yes;;
+   screen) export color_prompt=yes;;
+   tmux) export color_prompt=yes;;
+   *) export color_prompt=yes;;
 esac
 # 2}}}
 # colors {{{2
@@ -113,146 +119,27 @@ source $SRC_DIR/colors.sh
 # 2}}}
 # 1}}}
 # Prompt, Greeting, etc {{{1
-# stuff to get git info {{{2
-parse_git_branch() {
-  git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/'
-}
-parse_git_remote() {
-  git for-each-ref --format='%(upstream:short)' $(git symbolic-ref --q HEAD 2> /dev/null) 2> /dev/null
-}
-render_git_info() {
-  branch=$(parse_git_branch)
-  if [ "$branch" ]; then
-    echo "─┤$LYEL$(parse_git_remote)->$(parse_git_branch)├─"
-  else
-    echo "─"
-  fi
-} # 2}}}
-# file information of directory {{{2
-file_count() {
-  /bin/ls -1 | /usr/bin/wc -l | /bin/sed 's: ::g'
-}
-file_size() {
-  /bin/ls -lah | /bin/grep -m 1 total | /bin/sed 's/total //'
-}
-# 2}}}
-alias less='less --RAW-CONTROL-CHARS'
-if [ "$OS" != "Mac" ]; then
-	echo "aliasing ls ${LS_OPTS}"
-	alias ls='ls ${LS_OPTS}'
-fi
-alias so='source ~/.bashrc'
-alias grep='grep --color=auto'
-alias stopcolors='sed "s/\[^[[0-9;]*[a-za-z]//gi"'
-alias aptinstall='sudo aptitude install'
-alias bullshit="curl -s http://cbsg.sourceforge.net/cgi-bin/live | grep -Eo '<li>(.*?)</li>' | sed -e 's/<[^>]*>//g' | shuf -n 1 | cowsay -f kosh"
-alias lstree="ls -R | grep ":$" | sed -e 's/:$//' -e 's/[^-][^\/]*\//--/g' -e 's/^/   /' -e 's/-/|/' | less"
-alias suspend="sudo systemctl suspend"
-alias trello="chromium --app=https://trello.com"
-alias rstudio="chromium --app=http://192.168.1.178:8787"
-alias google="chromium --app=https://google.com"
-alias reddit="chromium --app=https://www.reddit.com"
-alias gmail="chromium --app=https://mail.google.com"
-alias reboot="sudo shutdown -r now"
-alias python="python3"
-alias eaglei='ssh -p 2200 127.0.0.1'
-alias nebula='ssh 6ng@gistnebula'
-alias home='cd /mnt/c/Users/6ng'
-alias dev='cd /mnt/c/Users/6ng/dev'
-alias weather='curl wttr.in'
-alias dco='docker-compose'
-alias git-ornl="chromium --app=http://code.ornl.gov"
-
-source ~/dots/bash/aliases.sh
-source ~/dots/bash/colors.sh
-source ~/dots/bash/completion.sh
-source ~/dots/bash/exports.sh
-source ~/dots/bash/history.sh
-# Prompt {{{2
-PS1="\[\n$NC\]┌──┤\[$GREEN\]\u\[$NC\]@\[$BLUE\]\h\[$NC\]├─┤\[$BPURP\]\@\[$NC\]├─┤\[$CYAN\]\d\[$NC\]├$(render_git_info)┤\[$NC\]│\n└─┤\[$YELLOW\]\w\[$NC\]│ "
-# 2}}}
-# greeting {{{2
-echo "Welcome, $(whoami)!"
-fortune | cowsay
-# 2}}}
-# Aliases {{{1
-#------------------------------------
-#------------------------------------
-# Custom {{{1
-#------------------------------------
-#source ~/.bin/tmuxinator.bash
-#------------------------------------
-# Custom Commands {{{2
-
-#------------------------------------
-# aptsearch () 
-# {
-   # # search and highlight keyword in the results
-   # export GREP_COLOR='1'
-   # # remove regexp patterns from the keyword to highlight
-   # keyword=`echo -n "$1" | sed -e 's/[^[:alnum:]|-]//g'`
-   # echo "Highlight keyword: $keyword"
-   # aptitude search "$1" --disable-columns | egrep --color "$keyword"
-
-   # # use the matching results to complete our install command
-   # matching=$(aptitude search --disable-columns -F "%p" "$1" | tr '\n' ' ')
-   # count=0
-   # for i in $matching ; do
-      # count=$((count + 1))
-   # done
-   # complete -W '$matching' aptinstall
-   # echo "(Matching packages: $count)"
-   # if ! [ -z $2 ] ; then
-      # echo -e "$matching" | egrep --color=always "$keyword"
-   # fi
-# }
-# markdown(){
-   # ~/scripts/Markdown_1.0.1/Markdown.pl $1 | lynx -stdin
-# }
-#wal -R
-# 1}}}
-
 # Imports {{{1 
 source ~/dots/bash/aliases.sh
 source ~/dots/bash/colors.sh
 source ~/dots/bash/completion.sh
 source ~/dots/bash/exports.sh
 source ~/dots/bash/history.sh
-#source ~/dots/bash/vimsetup.sh
-putScratch() { # {{{2
-	smbclient //gistcloud.ornl.gov/scr0 -U 6ng -W ORNL -c "cd 6ng ; put $1"
-} # 2}}}
-getScratch() { # {{{2
-	smbclient //gistcloud.ornl.gov/scr0 -U 6ng -W ORNL -c "cd 6ng ; get $1"
-} # 2}}}
-scratch() { # {{{2
-	while :; do
-		case $1 in
-			-h|-\?|--help)
-				echo "scratch [OPTION] [FILE]"
-				echo "\t[OPTION]s"
-				echo "\t  -p|-put"
-				echo "\t\tput a file on the server."
-				echo "\t  -g|-get"
-				echo "\t\tget a file from the server"
-				exit
-				;;
-			-p|--put)
-				putScratch $2
-				exit
-				;;
-			-g|--get)
-				getScratch $2
-				exit
-				;;
-			-?*)
-				echo "Unsuppported command. Run scratch -h|--help to see syntax."
-				exit
-				;;
-		esac
-		shift
-	done
-} # 2}}}
-make_bash_script() { # {{{2
-wget -O "$1" https://gist.githubusercontent.com/sempervent/4d94593e0d56f8fc1b43f92b9983d61f/raw/f4d761ad28ec20ceb45c4ae03f32628bb868946e/bash_skeleton.sh 
-} # 2}}}
+source ~/dots/bash/functions.sh
+# 2}}}
+# Prompt {{{2
+PS1="\[\n$NC\]┌──┤\[$GREEN\]\u\[$NC\]@\[$BLUE\]\h\[$NC\]├─┤\[$BPURP\]\@\[$NC\]├─┤\[$CYAN\]\d\[$NC\]├$(render_git_info)$NC\]│\n└─┤\[$YELLOW\]\w\[$NC\]│ "
+# 2}}}
+# greeting {{{2
+echo "Welcome, $(whoami)!"
+if [ -x "$(fortune)" ]; then
+  FORTUNE="$(fortune)"
+  if [ -x "$(cowsay)" ]; then
+    fortune | cowsay
+  elif [ -x "$(fortune)" ]; then
+    fortune
+  else:
+    echo -e "\e[32mInstall fortune and cowsay for extra fun in your banner.\e30m"
+  fi
+fi
+# 2}}}
