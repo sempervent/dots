@@ -52,5 +52,7 @@ if [ ! -d "$VUNDLE_DIR" ]; then
 	vim +BundleInstall
 fi
 # 1}}} ------------------------------------------------------------------------
+# install tmux tpm {{{1 -------------------------------------------------------
+git clone https://gkithub.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
 # have secrets
 mkdir - p "$DIR/secrets"
