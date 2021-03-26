@@ -18,11 +18,6 @@ if [ -x "$(command -v chromium)" ]; then
   alias reddit="chromium --app=https://www.reddit.com"
   alias gmail="chromium --app=https://mail.google.com"
   alias heimdall="chromium --app=https://172.16.0.79/"
-  alias trello="chromium --app=https://trello.com"
-  alias rstudio="chromium --app=http://192.168.1.178:8787"
-  alias google="chromium --app=https://google.com"
-  alias reddit="chromium --app=https://www.reddit.com"
-  alias gmail="chromium --app=https://mail.google.com"
 fi
 alias reboot="sudo shutdown -r now"
 alias python="python3"
