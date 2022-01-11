@@ -53,6 +53,6 @@ if [ ! -d "$VUNDLE_DIR" ]; then
 fi
 # 1}}} ------------------------------------------------------------------------
 # install tmux tpm {{{1 -------------------------------------------------------
-git clone https://gkithub.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
+git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
 # have secrets
 mkdir - p "$DIR/secrets"
