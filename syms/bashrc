@@ -128,17 +128,16 @@ source ~/dots/bash/history.sh
 source ~/dots/bash/functions.sh
 # 2}}}
 # Prompt {{{2
-PS1="\[\n$NC\]┌──┤\[$GREEN\]\u\[$NC\]@\[$BLUE\]\h\[$NC\]├─┤\[$BPURP\]\@\[$NC\]├─┤\[$CYAN\]\d\[$NC\]├$(render_git_info)$NC\]│\n└─┤\[$YELLOW\]\w\[$NC\]│ "
+PS1="\[\n$NC\]┌──┤\[$GREEN\]\u\[$NC\]@\[$BLUE\]\h\[$NC\]├─┤\[$BPURP\]\@\[$NC\]├─┤\[$CYAN\]\d\[$NC\]├$(render_git_info)$NC\]│\n├───┤jobs \[$CYAN\](\j)\[$NC\]├─┤\n└─┤\[$YELLOW\]\w\[$NC\]│ "
 # 2}}}
 # greeting {{{2
 echo "Welcome, $(whoami)!"
 if [ -x "$(fortune)" ]; then
-  FORTUNE="$(fortune)"
   if [ -x "$(cowsay)" ]; then
     fortune | cowsay
   elif [ -x "$(fortune)" ]; then
     fortune
-  else:
+  else
     echo -e "\e[32mInstall fortune and cowsay for extra fun in your banner.\e30m"
   fi
 fi
