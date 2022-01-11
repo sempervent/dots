@@ -145,7 +145,7 @@ wget -O "$1" https://gist.githubusercontent.com/sempervent/4d94593e0d56f8fc1b43f
 } # 2}}}
 # pull down and edit the bash skeleton into a file {{{2
 make_bash_script() {
-SKELETON_URL=${BASH_SKELETON_URL:-"https://gist.githubusercontent.com/sempervent/4d94593e0d56f8fc1b43f92b9983d61f/raw/fe08f3de2b023dee323914ad564a5d746f4c6348/bash_skeleton.sh"}
+SKELETON_URL=${BASH_SKELETON_URL:-"https://gist.github.com/sempervent/4d94593e0d56f8fc1b43f92b9983d61f/raw/6e87ec5a849b0371c37e27f77d4d52296633309d/bash_skeleton.sh"}
 wget -O "$1" "$SKELETON_URL"
 chmod +x "$1"
 vim "$1"
