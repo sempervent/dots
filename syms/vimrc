@@ -29,6 +29,7 @@ Plugin 'derekwyatt/vim-scala'
 Plugin 'ktvoelker/sbt-vim'
 Plugin 'davidhalter/jedi-vim'
 Plugin 'chrisbra/csv.vim'
+Plugin 'c.vim'
 
 call vundle#end()
 " 1}}}
