@@ -69,6 +69,8 @@ HISTCONTROL=ignoreboth
 
 # append to history file; don't overwrite it
 shopt -s histappend
+# save multiline command as single command
+shopt -s cmdhist
 
 # set history length
 HISTSIZE=100000
@@ -104,14 +106,6 @@ fi
 # 1}}}
 # Aesthetics {{{1
 # set variable identifying the chroot you work in {{{2
-# 2}}}
-# set a fancy propmt (non-color, unless we know we "want" color) {{{2
-case $XTERM in 
-   xterm-color) export color_prompt=yes;;
-   screen) export color_prompt=yes;;
-   tmux) export color_prompt=yes;;
-   *) export color_prompt=yes;;
-esac
 # 2}}}
 # colors {{{2
 force_color_prompt=yes
