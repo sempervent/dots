@@ -29,6 +29,7 @@ Plugin 'derekwyatt/vim-scala'
 Plugin 'ktvoelker/sbt-vim'
 Plugin 'davidhalter/jedi-vim'
 Plugin 'chrisbra/csv.vim'
+Plugin 'Yggdroot/indentLine'
 Plugin 'c.vim'
 
 call vundle#end()
@@ -139,7 +140,10 @@ let g:flake8_ignore='D213'
 " jedi {{{2 ------------------------------------------------------------------
 let g:jedi#force_py_version = 3
 let g:jedi#completions_command = "<C-N>"
-" 2 }}} ----------------------------------------------------------------------
+" 2}}} -----------------------------------------------------------------------
+" indentLine {{{2 ------------------------------------------------------------
+let g:indentLine_leadingSpaceChar='·'
+let g:indentLine_leadingSpaceEnable='1'
 " 2}}} -----------------------------------------------------------------------
 " scala related {{{2 ---------------------------------------------------------
 let g:scala_scaladoc_indent = 1
