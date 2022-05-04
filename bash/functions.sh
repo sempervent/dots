@@ -196,3 +196,7 @@ render_git_info() { # {{{3
 make_pyinit() {
   wget https://gist.githubusercontent.com/sempervent/784b6285cc8a8a79b9924a6595787316/raw/d6beed2cc4f16b883a2d1d08cfc6c7a86ca8d8dc/__init__.py
 } # 2}}}
+# whatthecommit {{{2
+whatthecommit() {
+  curl --silent --fail http://whatthecommit.com/index.txt
+} # 2}}}
