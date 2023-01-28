@@ -17,7 +17,7 @@ Plugin 'scrooloose/nerdtree'
 Plugin 'scrooloose/nerdcommenter'
 Plugin 'jistr/vim-nerdtree-tabs'
 if executable('fzf')
-	Plugin 'junegun/fzf'
+	Plugin 'junegunn/fzf'
 else
 	Plugin 'ctrlpvim/ctrlp.vim'
 endif
