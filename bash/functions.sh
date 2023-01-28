@@ -9,19 +9,19 @@ file_size() { #{{{2
 # 1}}}
 # smart extract an archive file {{{1
 extract() {
-  if [ -f $1 ]; then
+  if [ -f "$1" ]; then
     case $1 in
-      *.tar.bz2)  tar xvjf $1   ;;
-      *.tar.gz)   tar xzvf $1   ;;
-      *.bz2)      bunzip2 $1    ;;
-      *.rar)      rar x $1      ;;
-      *.gz)       gunzip $1     ;;
-      *.tar)      tar xvf $1    ;;
-      *.tbz2)     tar xvjf $1   ;;
-      *.tgz)      tar xzvf $1   ;;
-      *.zip)      unzip $1      ;;
-      *.Z)        uncompress $1 ;;
-      *.7z)       7z x $1       ;;
+      *.tar.bz2)  tar xvjf "$1"   ;;
+      *.tar.gz)   tar xzvf "$1"   ;;
+      *.bz2)      bunzip2 "$1"    ;;
+      *.rar)      rar x "$1"      ;;
+      *.gz)       gunzip "$1"     ;;
+      *.tar)      tar xvf "$1"    ;;
+      *.tbz2)     tar xvjf "$1"   ;;
+      *.tgz)      tar xzvf "$1"   ;;
+      *.zip)      unzip "$1"      ;;
+      *.Z)        uncompress "$1" ;;
+      *.7z)       7z x "$1"       ;;
       *)          echo "don't know how to extract '$1' ..." ;;
     esac
   else
@@ -34,6 +34,17 @@ cdmkdir() {
     mkdir -p -v "$1" && cd "$1" || return
   else
     echo 'cdmkdir requires one argument'
+  fi
+} # 1}}}
+# quickly make a python module
+mk_py_module() {
+  if [ $# -eq 1 ]; then
+    PREVIOUS_DIR="$PWD"
+    mkdir -p -v "$1" && cd "$1" || return
+    touch __init__.py
+    cd "$PREVIOUS_DIR" || return
+  else
+    echo "must specify a directory"
   fi
 } # 1}}}
 # check to see all colors are available {{{1
@@ -101,42 +112,6 @@ dre() {
       esac
     done # 2}}}
   docker run -it -v "$VOLUME" "$IMAGE" "$COMMAND"
-} # 2}}}
-# 1}}}
-# Scratch - smbclient wrapper for work {{{1
-putScratch() { # {{{2
-	smbclient //gistcloud.ornl.gov/scr0 -U 6ng -W ORNL -c "cd 6ng ; put $1"
-} # 2}}}
-getScratch() { # {{{2
-	smbclient //gistcloud.ornl.gov/scr0 -U 6ng -W ORNL -c "cd 6ng ; get $1"
-} # 2}}}
-scratch() { # {{{2
-	while :; do
-		case $1 in
-			-h|-\?|--help)
-				echo "scratch [OPTION] [FILE]"
-				echo "\t[OPTION]s"
-				echo "\t  -p|-put"
-				echo "\t\tput a file on the server."
-				echo "\t  -g|-get"
-				echo "\t\tget a file from the server"
-				exit
-				;;
-			-p|--put)
-				putScratch $2
-				exit
-				;;
-			-g|--get)
-				getScratch $2
-				exit
-				;;
-			-?*)
-				echo "Unsuppported command. Run scratch -h|--help to see syntax."
-				exit
-				;;
-		esac
-		shift
-	done
 } # 2}}}
 # 1}}}
 # gists pull downs {{{1
