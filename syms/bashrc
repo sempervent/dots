@@ -88,7 +88,7 @@ export HISTCONTROL=ignoreboth
 # 2}}} 1}}}
 # Path {{{1
 #-----------------------------------
-export PATH=$PATH:/home/jngrant/scripts:$JAVA_HOME/bin:/home/jngrant/.local/bin
+export PATH="$PATH:/home/$(whoami)/scripts:$JAVA_HOME/bin:/home/$(whoami)/.local/bin"
 export EDITOR='vim'
 # 1}}}
 # exported options {{{1
