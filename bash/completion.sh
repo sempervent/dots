@@ -14,4 +14,3 @@ fi
 
 source_if_exists "$nix_git_prompt"
 source_if_exists "$mac_git_prompt"
-

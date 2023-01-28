@@ -109,17 +109,17 @@ fi
 # 2}}}
 # colors {{{2
 force_color_prompt=yes
-source $SRC_DIR/colors.sh
+source "$SRC_DIR/colors.sh"
 # 2}}}
 # 1}}}
 # Prompt, Greeting, etc {{{1
 # Imports {{{1 
-source ~/dots/bash/aliases.sh
-source ~/dots/bash/colors.sh
-source ~/dots/bash/completion.sh
-source ~/dots/bash/exports.sh
-source ~/dots/bash/history.sh
-source ~/dots/bash/functions.sh
+source "$SRC_DIR/dots/bash/aliases.sh"
+source "$SRC_DIR/dots/bash/colors.sh"
+source "$SRC_DIR/dots/bash/completion.sh"
+source "$SRC_DIR/dots/bash/exports.sh"
+source "$SRC_DIR/dots/bash/history.sh"
+source "$SRC_DIR/dots/bash/functions.sh"
 # 2}}}
 # Prompt {{{2
 PS1="\[\n$NC\]┌──┤\[$GREEN\]\u\[$NC\]@\[$BLUE\]\h\[$NC\]├─┤\[$BPURP\]\@\[$NC\]├─┤\[$CYAN\]\d\[$NC\]├$(render_git_info)$NC\]│\n├───┤jobs \[$CYAN\](\j)\[$NC\]├─┤\n└─┤\[$YELLOW\]\w\[$NC\]│ "
