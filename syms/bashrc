@@ -11,7 +11,7 @@ while [ -h "$SOURCE" ]; do
 	[[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE" 
 done
 DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
-SRC_DIR=$DIR/../bash
+SRC_DIR=$HOME
 
 # give me trusty vim commands
 set -o vi
@@ -30,7 +30,7 @@ case $- in
       *) return;;
 esac # 2}}}
 # start tmux if running interactively {{{2
-if ! [ -x "tmux" ]; then
+if [ -x "$(which tmux)" ]; then
   if [[ -z "$TMUX" ]] ;then
     # get the id of a deattached session
       ID="$( tmux ls | grep -vm1 attached | cut -d: -f1 )"
@@ -45,8 +45,6 @@ fi # 2}}}
 if [ "$PS1" ]; then
    complete -cf sudo
 fi
-# give vim key-bindings
-set -o vi
 # enable bash completion if it exists
 if ! shopt -oq posix; then
   if [ -f /usr/share/bash-completion/bash_completion ]; then
@@ -109,7 +107,6 @@ fi
 # 2}}}
 # colors {{{2
 force_color_prompt=yes
-source "$SRC_DIR/colors.sh"
 # 2}}}
 # 1}}}
 # Prompt, Greeting, etc {{{1
@@ -126,13 +123,15 @@ PS1="\[\n$NC\]┌──┤\[$GREEN\]\u\[$NC\]@\[$BLUE\]\h\[$NC\]├─┤\[$BPUR
 # 2}}}
 # greeting {{{2
 echo "Welcome, $(whoami)!"
-if [ -x "$(fortune)" ]; then
-  if [ -x "$(cowsay)" ]; then
-    fortune | cowsay
-  elif [ -x "$(fortune)" ]; then
-    fortune
+if [ -x "$(which fortune)" ]; then
+  if [ -x "$(which cowsay)" ]; then
+    if [ -x "$(which lolcat)" ]; then
+      fortune | cowsay | lolcat
+    else
+      fortune | cowsay
+    fi
   else
-    echo -e "\e[32mInstall fortune and cowsay for extra fun in your banner.\e30m"
+    fortune
   fi
 fi
 # 2}}}
