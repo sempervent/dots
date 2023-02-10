@@ -56,3 +56,11 @@ fi
 git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
 # have secrets
 mkdir - p "$DIR/secrets"
+# git settings
+git config --global push.autoSetupRemote true
+git config --global pull.rebase true
+# shellcheck disable=SC2016
+if [ -x "$(which fortune)" ]; then
+  git config --global alias.fortune '!git commit -m \"$(fortune)\"'
+fi
+echo "Finished installing dots!"
