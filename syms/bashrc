@@ -59,31 +59,13 @@ shopt -s cdspell
 shopt -s dotglob
 shopt -s nocaseglob
 # 2}}}
-# History {{{2
-###################
-# don't put duplicate lines or lines starting with space in history
-# see bash(1) for more options
-HISTCONTROL=ignoreboth
-
-# append to history file; don't overwrite it
-shopt -s histappend
-# save multiline command as single command
-shopt -s cmdhist
-
-# set history length
-HISTSIZE=100000
-HISTFILESIZE=200000
-
 # check the window after each command and update
 # values of LINES and COLUMNS
 shopt -s checkwinsize
 
-# don't include duplicates or commands preceeded by space
-export HISTCONTROL=ignoreboth
-
 # make less more friendly for non-text input files, see lesspipe(1)
 [ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
-# 2}}} 1}}}
+# 1}}}
 # Path {{{1
 #-----------------------------------
 export PATH="$PATH:/home/$(whoami)/scripts:$JAVA_HOME/bin:/home/$(whoami)/.local/bin"
@@ -117,15 +99,16 @@ source "$SRC_DIR/dots/bash/completion.sh"
 source "$SRC_DIR/dots/bash/exports.sh"
 source "$SRC_DIR/dots/bash/history.sh"
 source "$SRC_DIR/dots/bash/functions.sh"
+source "$SRC_DIR/dots/bash/prompt.sh"
 # 2}}}
 # Prompt {{{2
-PS1="\[\n$NC\]┌──┤\[$GREEN\]\u\[$NC\]@\[$BLUE\]\h\[$NC\]├─┤\[$BPURP\]\@\[$NC\]├─┤\[$CYAN\]\d\[$NC\]├$(render_git_info)$NC\]│\n├───┤jobs \[$CYAN\](\j)\[$NC\]├─┤\n└─┤\[$YELLOW\]\w\[$NC\]│ "
+#PS1="\[\n$NC\]┌──┤\[$GREEN\]\u\[$NC\]@\[$BLUE\]\h\[$NC\]├─┤\[$BPURP\]\@\[$NC\]├─┤\[$CYAN\]\d\[$NC\]├$(render_git_info)$NC\]│\n├───┤jobs \[$CYAN\](\j)\[$NC\]├─┤\n└─┤\[$YELLOW\]\w\[$NC\]│ "
 # 2}}}
 # greeting {{{2
 echo "Welcome, $(whoami)!"
-if [ -x "$(which fortune)" ]; then
-  if [ -x "$(which cowsay)" ]; then
-    if [ -x "$(which lolcat)" ]; then
+if [ -x "$(which fortune || exit)" ]; then
+  if [ -x "$(which cowsay || exit)" ]; then
+    if [ -x "$(which lolcat || exit)" ]; then
       fortune | cowsay | lolcat
     else
       fortune | cowsay
