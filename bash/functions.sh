@@ -126,22 +126,27 @@ make_bash_script() {
 # Git function helpers {{{1
 # git add and commit one-liner  {{{2
 gac() {
-  if [[ "$#" -ne "2" ]]; then
+  if [[ "$#" -lt "1" ]]; then
     echo -e "git-add-commit asserts 2 values, file to add & git commit msg"
-    exit 1
+    return
   fi
-  git status --color-always | less -r
   git diff --color=always "$1" | less -r
   while true; do
-        read -p "do you wish to proceed with the add and commit?" yn
-          case $yn in
-            [yy]* ) make install; break;;
-            [nn]* ) exit;;
-            * ) echo "please answer yes or no.";;
-                esac
-              done
+    read -p "Proceed with the add and commit? " yn
+    case $yn in
+      y*) break;;
+      n*) return;;
+      * ) echo "please answer yes or no.";;
+    esac
+  done
   git add "$1"
-  git commit -m "$2"
+  if [[ -n "$2" ]]; then
+    git commit -m "$2"
+  else
+    echo -e "Please enter a ${YELLOW}commit message${NC}:"
+    read -p "" commit_message
+    git commit -m "$commit_message"
+  fi
 } # 2}}}
 # stuff to get git info {{{2
 parse_git_branch() { # {{{3
