@@ -2,8 +2,8 @@
 HISTCONTROL=ignoreboth
 # append to the history file
 shopt -s histappend
+# save multiline command as a single command
+shopt -s cmdhist
 # give lots of history
 HISTSIZE=10000000
 HISTFILESIZE=2000000
-# save and reload history after each command finishes
-export PROMPT_COMMAND="history -a; history -c; history -r; $PROMPT_COMMAND"

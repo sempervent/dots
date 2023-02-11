@@ -36,7 +36,7 @@ cdmkdir() {
     echo 'cdmkdir requires one argument'
   fi
 } # 1}}}
-# quickly make a python module
+# quickly make a python module {{{1
 mk_py_module() {
   if [ $# -eq 1 ]; then
     PREVIOUS_DIR="$PWD"
@@ -79,20 +79,20 @@ offset_today() {
 # run and execute into a docker image while mounting a directory {{{2
 # defaults to present working directory. Params are documented in code. 
 dre() {  
-  IMAGE="rocker/tidyverse:latest"
-  VOLUME="$(pwd):/tmp/"
+  IMAGE="python:latest"
+  VOLUME="-v $(pwd):/tmp/"
   COMMAND="bash"
   while :; do # {{{3
     case $1 in 
       --help|-h|-\?) # {{{4
         echo "Usage is: "
-        echo "    dre -i|--image <image> [-v <volume>| -e|--exec <command>"
+        echo "    dre -i|--image <image> -v <volume>| -e|--exec <command>"
         echo " Where options are:"
         echo "      (-v|--volume '<host dir>:<container dir>')"
         echo "      (-e|--exec 'command')"
         echo ""
         echo "Defaults are: "
-        echo '   image: "rocker/tidyverse:latest"'
+        echo '   image: "python:latest"'
         echo "   volume: \"$(pwd):/tmp/\""
         echo '   command: "bash"'
         exit
@@ -102,7 +102,7 @@ dre() {
         shift 2
         ;; # 3}}}
       -v|--volume) # {{{4
-        VOLUME="$2"
+        VOLUME="-v $2"
         shift 2
         ;; # 3}}}
       -e|--exec) # {{{4
@@ -111,23 +111,16 @@ dre() {
         ;; # 4}}}
       esac
     done # 2}}}
-  docker run -it -v "$VOLUME" "$IMAGE" "$COMMAND"
+  docker run -it "$IMAGE" "$COMMAND"
 } # 2}}}
 # 1}}}
 # gists pull downs {{{1
-make_bash_skeletont() { # {{{2
-wget -O "$1" https://gist.githubusercontent.com/sempervent/4d94593e0d56f8fc1b43f92b9983d61f/raw/f4d761ad28ec20ceb45c4ae03f32628bb868946e/bash_skeleton.sh 
-} # 2}}}
 # pull down and edit the bash skeleton into a file {{{2
 make_bash_script() {
-SKELETON_URL=${BASH_SKELETON_URL:-"https://gist.github.com/sempervent/4d94593e0d56f8fc1b43f92b9983d61f/raw/6e87ec5a849b0371c37e27f77d4d52296633309d/bash_skeleton.sh"}
-wget -O "$1" "$SKELETON_URL"
-chmod +x "$1"
-vim "$1"
-} # 2}}}
-# use the old style bash script # {{{2
-make_old_bash_script() {
-	wget -o "$1" https://gist.githubusercontent.com/sempervent/4d94593e0d56f8fc1b43f92b9983d61f/raw/f4d761ad28ec20ceb45c4ae03f32628bb868946e/bash_skeleton.sh
+  SKELETON_URL=${BASH_SKELETON_URL:-"https://gist.github.com/sempervent/4d94593e0d56f8fc1b43f92b9983d61f/raw/6e87ec5a849b0371c37e27f77d4d52296633309d/bash_skeleton.sh"}
+  wget -O "$1" "$SKELETON_URL"
+  chmod +x "$1"
+  vim "$1"
 } # 2}}}
 # 1}}}
 # Git function helpers {{{1
@@ -138,7 +131,7 @@ gac() {
     exit 1
   fi
   git status --color-always | less -r
-  git diff --color-always "$1" | less -r
+  git diff --color=always "$1" | less -r
   while true; do
         read -p "do you wish to proceed with the add and commit?" yn
           case $yn in
@@ -160,12 +153,28 @@ parse_git_remote() { # {{{3
 render_git_info() { # {{{3
   branch=$(parse_git_branch)
   if [ "$branch" ]; then
-    echo "─┤$LYEL$(parse_git_remote)->$(parse_git_branch)├─"
+    echo "─┤${LYEL}$(parse_git_remote)->$(parse_git_branch)├─"
   else
     echo "─"
   fi
 } # 3}}}
 # 2}}}
+# 1}}}
+# prompt command {{{1
+render_prompt_command() {
+  history -a
+  history -c
+  history -r
+  git_info="$(render_git_info)"
+  pwd_file_count="$(file_count)"
+  pwd_file_size="$(file_size)"
+  LINE_1="\[\n$NC\]┌──┤\[$GREEN\]\u\[$NC\]@\[$BLUE\]\h\[$NC\]├─┤\[$BPURP\]"
+  LINE_2="\@\[$NC\]├─┤\[$CYAN\]\d\[$NC\]├${git_info}$NC\]│\n"
+  LINE_3="├───┤jobs \[$CYAN\](\j)\[$NC\]├─┤${DGRAY}${pwd_file_count}⌂"
+  LINE_4="$pwd_file_size\[$NC\]│\n"
+  LINE_5="└─┤\[$YELLOW\]\w\[$NC\]│ "
+  PS1="${LINE_1}${LINE_2}${LINE_3}${LINE_4}${LINE_5}"
+}
 # 1}}}
 # grab gists quickly  # {{{2
 make_pyinit() {
