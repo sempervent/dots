@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # file information of directory {{{1
 file_count() { # 2{{{
-  /bin/ls -1 | /usr/bin/wc -l | /bin/sed 's: ::g'
+  ls -1 | wc -l | sed 's: ::g'
 } # 2}}}
 file_size() { #{{{2
-  /bin/ls -lah | /bin/grep -m 1 total | /bin/sed 's/total //'
+  ls -lah | grep -m 1 total | sed 's/total //'
 } # 2}}}
 # 1}}}
 # smart extract an archive file {{{1
