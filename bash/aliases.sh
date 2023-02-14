@@ -23,8 +23,6 @@ alias python="python3"
 alias tmux='TERM=xterm-256color tmux'
 alias dco='docker-compose'
 alias de='docker exec -it'
-# prevent use of nano everywhere
-alias nano=vim
 alias ffs='sudo "$BASH" -c "$(history -p !!)"'
 alias osupgrade="yay -Syua --noconfirm"
 # 1}}}
@@ -36,7 +34,6 @@ alias dcud='docker-compose down && docker-compose up -d'
 alias dps='docker ps --format "{{.Names}}: {{.Image}} @ {{.CreatedAt}} {{.Status}}"'
 alias less='less --RAW-CONTROL-CHARS'
 if [ "$OS" != "Mac" ]; then
-	echo "aliasing ls ${LS_OPTS}"
 	alias ls='ls ${LS_OPTS}'
 fi
 alias so='source "$HOME/.bashrc"'
@@ -47,6 +44,6 @@ alias bullshit="curl -s http://cbsg.sourceforge.net/cgi-bin/live | grep -Eo '<li
 alias my_ip="curl ifconfig.me"
 alias lstree="ls -R | grep ":\$" | sed -e 's/:$//' -e 's/[^-][^\/]*\//--/g' -e 's/^/   /' -e 's/-/|/' | less"
 alias suspend="sudo systemctl suspend"
-alias python="python3"
 alias weather='curl wttr.in'
 alias dco='docker-compose'
+alias show_pymodule='tree -a -I *.egg -I *.pyc -I "__pycache__|build|dist|.egg|.git|.pytest_cache" --prune | less -r'
