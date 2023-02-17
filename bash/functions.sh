@@ -33,18 +33,7 @@ cdmkdir() {
   if [ $# -eq 1 ]; then
     mkdir -p -v "$1" && cd "$1" || return
   else
-    echo 'cdmkdir requires one argument'
-  fi
-} # 1}}}
-# quickly make a python module {{{1
-mk_py_module() {
-  if [ $# -eq 1 ]; then
-    PREVIOUS_DIR="$PWD"
-    mkdir -p -v "$1" && cd "$1" || return
-    touch __init__.py
-    cd "$PREVIOUS_DIR" || return
-  else
-    echo "must specify a directory"
+    echo 'cdmkdir requires one argument for the new directory to create'
   fi
 } # 1}}}
 # check to see all colors are available {{{1
@@ -71,10 +60,48 @@ cu() {
   done
   cd $path || return
 } # 1}}}
-# offset today by n number of days {{{2
-offset_today() {  
+# date functions {{{1
+# print today in ISO-8061 {{{2
+today() {
+  DTFORMAT="+%F"
+  while :; do
+    case "$1" in
+      --help|-h|-\?|\?)
+        echo "Options:"
+        echo -e "\t-f,--format    the format to pass to date"
+        echo -e "\t-h,--help,-?,? display this help"
+        shift ;;
+      -f|--format)
+        DTFORMAT="$2"
+        shift 2 ;;
+      *) break ;;
+    esac
+  done
+  date "$DTFORMAT"
+} # 2}}}
+# print now in ISO-8061 {{{2
+now() {
+  DTFORMAT="+%FT%H:%M:%SZ%Z"
+  while :; do
+    case "$1" in
+      --help|-h|-\?|\?)
+        echo "Options:"
+        echo -e "\t-f,--format    the format to pass to date"
+        echo -e "\t-h,--help,-?,? display this help"
+        shift ;;
+      -f|--format)
+        DTFORMAT="$2"
+        shift 2 ;;
+      *) break ;;
+    esac
+  done
+  date "$DTFORMAT"
+} # 2}}}
+# go back n number of days {{{2
+past_today() {  
   date --date="$(date) - $1 day" +%Y-%m-%d
 } # 2}}}
+# 1}}}
 # Docker-related commands {{{1
 # run and execute into a docker image while mounting a directory {{{2
 # defaults to present working directory. Params are documented in code. 
@@ -128,7 +155,7 @@ make_bash_script() {
 gac() {
   if [[ "$#" -lt "1" ]]; then
     echo -e "git-add-commit asserts 2 values, file to add & git commit msg"
-    return
+    exit 1
   fi
   git diff --color=always "$1" | less -r
   while true; do
@@ -164,6 +191,22 @@ render_git_info() { # {{{3
   fi
 } # 3}}}
 # 2}}}
+# git manipulation commands
+verify_and_checkout() { # verify if a branch exists and checkout and pull {{{3
+  if git rev-parse --verify "$1" > /dev/null 2>&1; then
+    git checkout "$1" && git pull
+  else
+    exit 1
+  fi
+} # 3}}}
+checkout_main_or_master() {  # perform a git release {{{3
+  verify_and_checkout main || verify_and_checkout master
+} # 3}}}
+release() {  # make a release commit {{{3
+  checkout_main_or_master || echo "main or master not available" && exit 1
+  git checkout -b "Deploy_$(today)"
+} # 3}}}
+# 2}}}
 # 1}}}
 # prompt command {{{1
 render_prompt_command() {
@@ -182,10 +225,21 @@ render_prompt_command() {
 }
 # 1}}}
 # grab gists quickly  # {{{2
-make_pyinit() {
+make_pyinit() { # {{{1
   wget https://gist.githubusercontent.com/sempervent/784b6285cc8a8a79b9924a6595787316/raw/d6beed2cc4f16b883a2d1d08cfc6c7a86ca8d8dc/__init__.py
-} # 2}}}
+} # 3}}} 2}}}
 # whatthecommit {{{2
 whatthecommit() {
   curl --silent --fail http://whatthecommit.com/index.txt
 } # 2}}}
+# quickly make a python module {{{1
+mk_pymodule() {
+  if [ $# -eq 1 ]; then
+    PREVIOUS_DIR="$PWD"
+    mkdir -p -v "$1" && cd "$1" || return
+    make_pylint || touch __init__.py
+    cd "$PREVIOUS_DIR" || return
+  else
+    echo "must specify a directory"
+  fi
+} # 1}}}
