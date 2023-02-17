@@ -4,6 +4,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" > /dev/null 2>&1 && pwd )"
 SYM_DIR=$DIR/syms
 OLD_DOTS=~/old_dots
 VUNDLE_DIR=~/.vim/bundle/Vundle.vim
+TMUX_PLUGIN_DIR=~/.tmux/plugins/tpm
 # 1}}} ------------------------------------------------------------------------
 # file array {{{1 -------------------------------------------------------------
 # accept an environmental variable as a list
@@ -53,14 +54,9 @@ if [ ! -d "$VUNDLE_DIR" ]; then
 fi
 # 1}}} ------------------------------------------------------------------------
 # install tmux tpm {{{1 -------------------------------------------------------
-git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
+git clone https://github.com/tmux-plugins/tpm "$TMUX_PLUGIN_DIR"
 # have secrets
 mkdir - p "$DIR/secrets"
 # git settings
-git config --global push.autoSetupRemote true
-git config --global pull.rebase true
-# shellcheck disable=SC2016
-if [ -x "$(which fortune)" ]; then
-  git config --global alias.fortune '!git commit -m \"$(fortune)\"'
-fi
+source "${DIR}/setup-helpers/get_alias_setup.sh"
 echo "Finished installing dots!"
