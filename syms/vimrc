@@ -21,6 +21,7 @@ if executable('fzf')
 else
 	Plugin 'ctrlpvim/ctrlp.vim'
 endif
+Plugin 'coot/vim-man'
 Plugin 'tpope/vim-fugitive'
 Plugin 'vim-syntastic/syntastic'
 Plugin 'nvie/vim-flake8'
