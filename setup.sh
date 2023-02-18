@@ -56,7 +56,8 @@ fi
 # install tmux tpm {{{1 -------------------------------------------------------
 git clone https://github.com/tmux-plugins/tpm "$TMUX_PLUGIN_DIR"
 # have secrets
-mkdir - p "$DIR/secrets"
+export SECRETS_DIR="${SECRETS_DIR:"$DIR/.secrets"}"
+mkdir - p "$SECRETS_DIR"
 # git settings
-source "${DIR}/setup-helpers/get_alias_setup.sh"
+source "${DIR}/helpers/get_alias_setup.sh"
 echo "Finished installing dots!"
