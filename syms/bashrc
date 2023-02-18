@@ -83,6 +83,7 @@ else
 	OS='Nix'
 	export LS_OPTS='--color=auto'
 fi
+export OS
 # 1}}}
 # Aesthetics {{{1
 # set variable identifying the chroot you work in {{{2
