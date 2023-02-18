@@ -230,3 +230,14 @@ mk_pymodule() {
     echo "must specify a directory"
   fi
 } # 1}}}
+# open a webpage # {{1
+open-url() {
+  if [ "$OS" = "Mac" ]; then
+    open "$1"
+  elif [ "$OS" = "Nix" ]; then
+    if [ -x "$(which xdg-open)" ]; then
+      xdg-open "$1"
+    fi
+  fi
+}
+# 1}}
