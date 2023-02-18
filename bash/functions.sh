@@ -82,20 +82,7 @@ today() {
 # print now in ISO-8061 {{{2
 now() {
   DTFORMAT="+%FT%H:%M:%SZ%Z"
-  while :; do
-    case "$1" in
-      --help|-h|-\?|\?)
-        echo "Options:"
-        echo -e "\t-f,--format    the format to pass to date"
-        echo -e "\t-h,--help,-?,? display this help"
-        shift ;;
-      -f|--format)
-        DTFORMAT="$2"
-        shift 2 ;;
-      *) break ;;
-    esac
-  done
-  date "$DTFORMAT"
+  today -f"$DTFORMAT"
 } # 2}}}
 # go back n number of days {{{2
 past_today() {  
@@ -237,7 +224,7 @@ mk_pymodule() {
   if [ $# -eq 1 ]; then
     PREVIOUS_DIR="$PWD"
     mkdir -p -v "$1" && cd "$1" || return
-    make_pylint || touch __init__.py
+    make_pyinit || touch __init__.py
     cd "$PREVIOUS_DIR" || return
   else
     echo "must specify a directory"
