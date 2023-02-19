@@ -37,3 +37,7 @@ gitpr() {
     esac
   done
 }
+git config --global alias.showbranch '!git symbolic-ref --short HEAD'
+git config --global alias.showrepo "!f(){ git remote get-url --push origin | head -n 1 | sed 's/.\{4\}$//'; }; f;"
+git config --global alias.prurl '! echo "https://github.com/$(git showrepo)/pull/new/$(git showbranch)"'
+git config --global alias.prurl2 '!f(){ echo \"https://github.com/$(git remote -v | grep origin | awk \''{print $2}\'' | awk -F: \''{print $2}\'' | awk -F. \''{print $1}\'' | head -n 1)/pull/new/$(git symbolic-ref --short HEAD)\"; }; f;'

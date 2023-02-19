@@ -2,9 +2,9 @@
 # environment {{{1 ------------------------------------------------------------
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" > /dev/null 2>&1 && pwd )"
 SYM_DIR=$DIR/syms
-OLD_DOTS=~/old_dots
-VUNDLE_DIR=~/.vim/bundle/Vundle.vim
-TMUX_PLUGIN_DIR=~/.tmux/plugins/tpm
+OLD_DOTS="$HOME/.old_dots"
+VUNDLE_DIR="$HOME/.vim/bundle/Vundle.vim"
+TMUX_PLUGIN_DIR="$HOME/.tmux/plugins/tpm"
 # 1}}} ------------------------------------------------------------------------
 # file array {{{1 -------------------------------------------------------------
 # accept an environmental variable as a list
@@ -43,7 +43,7 @@ move_sym() { # {{{1 -----------------------------------------------------------
 } # 1}}} ----------------------------------------------------------------------
 # iterate over the array and execute move_symn {{{1 ---------------------------
 for i in "${FILE_ARRAY[@]}"; do
-	echo "$i"
+	echo "Symlinking $i to $HOME/.$i"
 	move_sym "$i" "$HOME/.$i"
 done
 # 1}}} ------------------------------------------------------------------------

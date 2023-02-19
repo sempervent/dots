@@ -92,8 +92,6 @@ export OS
 force_color_prompt=yes
 # 2}}}
 # 1}}}
-# Prompt, Greeting, etc {{{1
-# Imports {{{1 
 source "$SRC_DIR/dots/bash/aliases.sh"
 source "$SRC_DIR/dots/bash/colors.sh"
 source "$SRC_DIR/dots/bash/completion.sh"
@@ -101,10 +99,9 @@ source "$SRC_DIR/dots/bash/exports.sh"
 source "$SRC_DIR/dots/bash/history.sh"
 source "$SRC_DIR/dots/bash/functions.sh"
 source "$SRC_DIR/dots/bash/prompt.sh"
-# 2}}}
-# Prompt {{{2
-#PS1="\[\n$NC\]┌──┤\[$GREEN\]\u\[$NC\]@\[$BLUE\]\h\[$NC\]├─┤\[$BPURP\]\@\[$NC\]├─┤\[$CYAN\]\d\[$NC\]├$(render_git_info)$NC\]│\n├───┤jobs \[$CYAN\](\j)\[$NC\]├─┤\n└─┤\[$YELLOW\]\w\[$NC\]│ "
-# 2}}}
+if [ "$(whatdistro)" = "Void Linux" ]; then
+  source "$SRC_DIR/dots/distro/void.sh"
+fi
 # greeting {{{2
 echo "Welcome, $(whoami)!"
 if [ -x "$(which fortune || exit)" ]; then
