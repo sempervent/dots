@@ -230,8 +230,8 @@ mk_pymodule() {
     echo "must specify a directory"
   fi
 } # 1}}}
-# open a webpage # {{1
-open-url() {
+# web-related {{{1
+open-url() { # open a webpage {{2
   if [ "$OS" = "Mac" ]; then
     open "$1"
   elif [ "$OS" = "Nix" ]; then
@@ -239,5 +239,17 @@ open-url() {
       xdg-open "$1"
     fi
   fi
-}
+} # 2}}}
+websearch() { # google a query {{{2
+  if [ -z "$SEARCH_ENGINE" ]; then
+    SEARCH_ENGINE="https://google.com/search?q="
+  fi
+  terms="$@"
+  query="${SEARCH_ENGINE}$(echo "$terms" | tr ' ' '+')"
+  if [ -x "$(which w3m)" ]; then
+    w3m "$query"
+  else
+    open-url "$query"
+  fi
+} # 2}}}
 # 1}}
