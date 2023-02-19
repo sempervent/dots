@@ -11,18 +11,18 @@ xbps() { # wrapper for xbps packager operations {{{1
         xbps-query -f "$2"
         shift 2
         ;; # 2}}}
-      update) # {{{2
+      -u|update) # {{{2
         sudo xbps-install -Su
         xcheckrestart
         shift
         ;; # 2}}}
-      install) # {{{2
+      -i|install) # {{{2
         shift
         packages=("$@")
         sudo xbps-install "${packages[@]}"
         break
         ;; # 2}}}
-      search) # {{{2
+      -s|search) # {{{2
         xbps-query -Rs "$2"
         shift 2
         ;; # 2}}}
