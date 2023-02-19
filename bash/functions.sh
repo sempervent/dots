@@ -253,3 +253,15 @@ websearch() { # google a query {{{2
   fi
 } # 2}}}
 # 1}}
+# system functions {{{1
+whatdistro() {
+  if [ -f /etc/os-release ]; then
+    distro=$(cat /etc/os-release | grep -oP "(?<=^PRETTY_NAME\=\").*(?=\")")
+  else
+    distro=$(lsb_release -a | grep "Description" | awk -F: '{print $2}' | \
+      sed -e 's/^[ \t]*//' -e 's/[ \t]*$'
+  )
+  fi
+  echo "$distro"
+}
+# 1}}}
