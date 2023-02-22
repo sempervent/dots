@@ -160,7 +160,7 @@ let g:tmuxify_run = {
       \ 'sh': 'bash %',
       \ 'go': 'go build %',
       \ 'tex': 'latexmk -pdf -pvc %',
-      \ 'python': 'ipython || pipenv run python || python3 || python',
+      \ 'python': 'python',
       \ 'R': 'R --no-save --quiet',
       \ 'matlab': 'matlab',
       \ 'json': 'jq % .',
