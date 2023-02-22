@@ -32,7 +32,7 @@ Plugin 'davidhalter/jedi-vim'
 Plugin 'chrisbra/csv.vim'
 Plugin 'Yggdroot/indentLine'
 Plugin 'c.vim'
-Plugin 'tweekmonster/braceless'
+Plugin 'tweekmonster/braceless.vim'
 Plugin 'jebaum/vim-tmuxify'
 
 call vundle#end()
