@@ -25,13 +25,15 @@ Plugin 'coot/vim-man'
 Plugin 'tpope/vim-fugitive'
 Plugin 'vim-syntastic/syntastic'
 Plugin 'nvie/vim-flake8'
-Plugin 'python-mode/python-mode'
+# Plugin 'python-mode/python-mode' -- TODO remove this entirely; un-maintained
 Plugin 'derekwyatt/vim-scala'
 Plugin 'ktvoelker/sbt-vim'
 Plugin 'davidhalter/jedi-vim'
 Plugin 'chrisbra/csv.vim'
 Plugin 'Yggdroot/indentLine'
 Plugin 'c.vim'
+Plugin 'tweekmonster/braceless'
+Plugin 'jebaum/vim-tmuxify'
 
 call vundle#end()
 " 1}}}
@@ -129,14 +131,14 @@ au BufNewFile,BufRead *.R
 " 1}}}------------------------------------------------------------------------
 " plugin settings {{{1 -------------------------------------------------------
 " python related {{{2 --------------------------------------------------------
-let python_highlight_all=1
-let g:pymode_python = 'python3'
-let g:pymode_indent = 1
-let g:pymode_lint = 1
-let g:pymode_lint_on_write = 1
-let g:pymode_lint_message = 1
-let g:pymode_lint_checkers = ['pep8', 'pyflakes', 'pep257', 'pylint']
-let g:pymode_syntax = 1
+"let python_highlight_all=1
+"let g:pymode_python = 'python3'
+"let g:pymode_indent = 1
+"let g:pymode_lint = 1
+"let g:pymode_lint_on_write = 1
+"let g:pymode_lint_message = 1
+"let g:pymode_lint_checkers = ['pep8', 'pyflakes', 'pep257', 'pylint']
+"let g:pymode_syntax = 1
 let g:flake8_ignore='D213'
 " jedi {{{2 ------------------------------------------------------------------
 let g:jedi#force_py_version = 3
@@ -149,6 +151,23 @@ let g:indentLine_leadingSpaceEnable='1'
 " scala related {{{2 ---------------------------------------------------------
 let g:scala_scaladoc_indent = 1
 " 2}}} -----------------------------------------------------------------------
+" jebaum/vim-tmuxify {{{2 ----------------------------------------------------
+let g:tmuxify_map_prefix = 'm'  " if using marks, something like '+'
+" split the window vertically below vim buffer and with 15 lines
+let g:tmuxify_custom_command = 'tmux split-window -v -d -l 15'
+" specify types to run
+let g:tmuxify_run = {
+      \ 'sh': 'bash %',
+      \ 'go': 'go build %',
+      \ 'tex': 'latexmk -pdf -pvc %',
+      \ 'python': 'ipython || pipenv run python || python3 || python',
+      \ 'R': 'R --no-save --quiet',
+      \ 'matlab': 'matlab',
+      \ 'json': 'jq % .',
+      \ 'julia': 'julia',
+      \ }
+" 2}}} -----------------------------------------------------------------------
+" k 
 " file search settings {{{2 --------------------------------------------------
 if executable('rg')
 	let $FZF_DEFAULT_COMMAND = 'rg --files --no-messages "" .'
