@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # environment {{{1 ------------------------------------------------------------
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" > /dev/null 2>&1 && pwd )"
-SYM_DIR=$DIR/syms
+SYM_DIR="$DIR/syms"
 OLD_DOTS="$HOME/.old_dots"
 VUNDLE_DIR="$HOME/.vim/bundle/Vundle.vim"
 TMUX_PLUGIN_DIR="$HOME/.tmux/plugins/tpm"
@@ -15,9 +15,6 @@ fi
 # ensure the $OLD_DOTS folder exists {{{1 -------------------------------------
 if [ ! -d "$OLD_DOTS" ]; then
   mkdir -p $OLD_DOTS
-#else
-#	echo -e "$OLD_DOTS directory exists. . . exiting"
-#	exit 1
 fi
 # 1}}} ------------------------------------------------------------------------
 move_sym() { # {{{1 -----------------------------------------------------------
@@ -28,7 +25,7 @@ move_sym() { # {{{1 -----------------------------------------------------------
   else
     _SOURCE="$SYM_DIR/$1"
     _DEST="$2"
-    _BACKUP="$OLD_DOTS/$1"
+    _BACKUP="$OLD_DOTS/$1_$(date +%F)"
   fi
   if [ -f "$_DEST" ]; then
     echo -e "moving \\e[33m$_DEST\\e[39m to \\e[32m$_BACKUP\\e[39m"
@@ -38,6 +35,9 @@ move_sym() { # {{{1 -----------------------------------------------------------
      ln -s "$_SOURCE" "$_DEST"
   else
      echo 'unknown error'
+     echo "\\e[32mSource\\e[39m:  $_SOURCE"
+     echo "\\e[33mDesitnation\\e[39m:  $_DEST"
+     echo "\\e[32mBackup:\\39m:  $_BACKUP"
      exit 1
   fi
 } # 1}}} ----------------------------------------------------------------------
@@ -59,5 +59,5 @@ git clone https://github.com/tmux-plugins/tpm "$TMUX_PLUGIN_DIR"
 export SECRETS_DIR="${SECRETS_DIR:"$DIR/.secrets"}"
 mkdir - p "$SECRETS_DIR"
 # git settings
-source "${DIR}/helpers/get_alias_setup.sh"
+source "${DIR}/helpers/git_alias_setup.sh"
 echo "Finished installing dots!"
