@@ -57,7 +57,15 @@ add_to_gitignore_and_remove() { # add to .gitignore and remove {{{1
   echo "$ext" | cat - .gitignore > temp && mv temp .gitignore
   git rm -r --cached "$(find . -name "*.$ext")"
 } # 1}}}
+git_checkpoint(){ # {{{1
+  if [ -z "$FORTUNE" ]; then
+    FORTUNE=$(fortune)
+  fi
+  FORTUNE=$(echo "$FORTUNE" | sed 's/\n/ /g')
+  git commit -am "$FORTUNE" && git push
+} # 1}}}
 git config --global alias.showbranch '!git symbolic-ref --short HEAD'
 git config --global alias.showrepo "!f(){ git remote get-url --push origin | head -n 1 | sed 's/.\{4\}$//'; }; f;"
 git config --global alias.prurl '! echo "https://github.com/$(git showrepo)/pull/new/$(git showbranch)"'
 git config --global alias.prurl2 '!f(){ echo \"https://github.com/$(git remote -v | grep origin | awk \''{print $2}\'' | awk -F: \''{print $2}\'' | awk -F. \''{print $1}\'' | head -n 1)/pull/new/$(git symbolic-ref --short HEAD)\"; }; f;'
+git config --global alias.cp "!git_checkpoint"  # FIXME should do git_checkpoint fortune

@@ -81,12 +81,27 @@ today() {
 } # 2}}}
 # print now in ISO-8061 {{{2
 now() {
-  DTFORMAT="+%FT%H:%M:%SZ%Z"
+  if [ -z "$1" ]; then
+    DTFORMAT="+%FT%H:%M:%SZ%Z"
+  else
+    DTFORMAT="$1"
+  fi
   today -f"$DTFORMAT"
 } # 2}}}
 # go back n number of days {{{2
 past_today() {  
-  date --date="$(date) - $1 day" +%Y-%m-%d
+  if [ ! -z "$1" ]; then
+    date --date="$(date) - $1 day" +%Y-%m-%d
+  else
+    date --date="$(date) - 1 day" +%Y-%m-%d
+  fi
+} # 2}}}
+day-from-now() { # go forward n/1 number of days {{{2
+  if [ ! -z "$1" ]; then
+    date --date="$(date) + $1 day" +%F
+  else
+    date --date="$(date) + 1 day" +%F
+  fi
 } # 2}}}
 # 1}}}
 # Docker-related commands {{{1
@@ -222,10 +237,10 @@ whatthecommit() {
 # quickly make a python module {{{1
 mk_pymodule() {
   if [ $# -eq 1 ]; then
-    PREVIOUS_DIR="$PWD"
+    #PREVIOUS_DIR="$PWD"
     mkdir -p -v "$1" && cd "$1" || return
     make_pyinit || touch __init__.py
-    cd "$PREVIOUS_DIR" || return
+    #cd "$PREVIOUS_DIR" || return
   else
     echo "must specify a directory"
   fi
