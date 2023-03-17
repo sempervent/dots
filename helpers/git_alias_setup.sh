@@ -61,7 +61,7 @@ git_checkpoint(){ # {{{1
   if [ -z "$FORTUNE" ]; then
     FORTUNE=$(fortune)
   fi
-  FORTUNE=$(echo "$FORTUNE" | sed 's/\n/ /g')
+  FORTUNE=$(echo "$FORTUNE" | sed 's/\n/ /g' | sed 's/\s+/ /g')
   git commit -am "$FORTUNE" && git push
 } # 1}}}
 git config --global alias.showbranch '!git symbolic-ref --short HEAD'
