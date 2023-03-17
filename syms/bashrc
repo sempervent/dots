@@ -107,9 +107,9 @@ echo "Welcome, $(whoami)!"
 if [ -x "$(which fortune || exit)" ]; then
   if [ -x "$(which cowsay || exit)" ]; then
     if [ -x "$(which lolcat || exit)" ]; then
-      fortune | cowsay | lolcat
+      pipe-fortune | cowsay | lolcat
     else
-      fortune | cowsay
+      pipe-fortune | cowsay
     fi
   else
     fortune
