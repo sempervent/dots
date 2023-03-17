@@ -282,3 +282,7 @@ whatdistro() {
   echo "$distro"
 }
 # 1}}}
+pipe-fortune(){ # make pipe fortune {{{1
+  echo "$(fortune | sed 's/\n/ /g' | sed 's/\s+/ /g')"
+} # 1}}}
+
