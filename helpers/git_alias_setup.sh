@@ -58,9 +58,6 @@ add_to_gitignore_and_remove() { # add to .gitignore and remove {{{1
   git rm -r --cached "$(find . -name "*.$ext")"
 } # 1}}}
 git_checkpoint(){ # {{{1
-  if [ -z "$FORTUNE" ]; then
-    FORTUNE=$(fortune)
-  fi
   FORTUNE=$(echo "$FORTUNE" | sed 's/\n/ /g' | sed 's/\s+/ /g')
   git commit -am "$FORTUNE" && git push
 } # 1}}}
