@@ -208,6 +208,14 @@ release() {  # make a release commit {{{3
   checkout_main_or_master || echo "main or master not available" && exit 1
   git checkout -b "Deploy_$(today)"
 } # 3}}}
+git_checkpoint() {  # make a random checkpoint
+  git add .
+  commit_msg="adding all, .gitignore should have blocked unnecessary files"
+  commit_msg="$commit_msg on $(date +%F): "
+  commit_msg="$commit_msg $(fortune | sed 's/(\s{2,}|\n)/ /g')"
+  git commit -m "$(commit_msg)"
+  git push
+}
 # 2}}}
 # 1}}}
 # prompt command {{{1
