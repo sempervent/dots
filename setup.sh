@@ -14,7 +14,7 @@ fi
 # 1}}} ------------------------------------------------------------------------
 # ensure the $OLD_DOTS folder exists {{{1 -------------------------------------
 if [ ! -d "$OLD_DOTS" ]; then
-  mkdir -p $OLD_DOTS
+  mkdir -p "$OLD_DOTS"
 fi
 # 1}}} ------------------------------------------------------------------------
 move_sym() { # {{{1 -----------------------------------------------------------
@@ -57,7 +57,7 @@ fi
 git clone https://github.com/tmux-plugins/tpm "$TMUX_PLUGIN_DIR"
 # have secrets
 export SECRETS_DIR="${SECRETS_DIR:"$DIR/.secrets"}"
-mkdir - p "$SECRETS_DIR"
+mkdir -p "$SECRETS_DIR"
 # git settings
 source "${DIR}/helpers/git_alias_setup.sh"
 echo "Finished installing dots!"

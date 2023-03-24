@@ -1,0 +1,1 @@
+bash ranger lolcat fortune cowsay xonsh pyeng gnutils go sqlite w3m ruby yarn tree git-flow git-lfs shellcheck zsh-completions node tmux bash-completion bash figlet neovim jq yq perl bat btop htop fzf wget watch curl cloc gcc
