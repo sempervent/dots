@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # -*- coding: utf-8 -*-
 git config --global push.autoSetupRemote true
-git config --global pull.rebase true
+git config --global pull.rebase false
 # shellcheck disable=SC2016
 git config --global alias.release '!git checkout main && git pull && git checkout -b Deploy_$(date +%F)'
 # shellcheck disable=SC2016
 if [ -x "$(which fortune)" ]; then
-  git config --global alias.fortune '!git commit -m \"$(fortune)\"'
+  git config --global alias.fortune '!git commit -m "$(fortune)"'
+  git config --global alias.yolo '!f(){ git commit -m "$(fortune)" && git push;}; f;'
 fi
 gitpr() { # define a git pr method {{{1
   PREFIX="release/"

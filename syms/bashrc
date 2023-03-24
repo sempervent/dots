@@ -102,6 +102,12 @@ source "$SRC_DIR/dots/bash/prompt.sh"
 if [ "$(whatdistro)" = "Void Linux" ]; then
   source "$SRC_DIR/dots/distro/void.sh"
 fi
+if [ -f "$HOME/.fzf.bash" ]; then
+  source "$HOME/.fzf.bash"
+fi
+if [ "$OS" = "Mac" ]; then
+  source "$HOME/dots/distro/mac.sh"
+fi
 # greeting {{{2
 echo "Welcome, $(whoami)!"
 if [ -x "$(which fortune || exit)" ]; then
