@@ -294,3 +294,19 @@ pipe-fortune(){ # make pipe fortune {{{1
   echo "$(fortune | sed 's/\n/ /g' | sed 's/\s+/ /g')"
 } # 1}}}
 
+# DOCKER related functions: {{{1
+get_docker_swap_usage() {
+  if [[ -n "$(command -v docker)" ]]; then
+      # Get the container ID(s) from the container name or ID.
+      container_ids=$(docker ps -q)
+      for container_id in $container_ids; do
+          container_name=$(docker inspect --format='{{.Name}}' "$container_id")
+          swap_usage=$(docker inspect --format='{{.State.Pid}}' "$container_id" | xargs -I{} sh -c 'awk "/Swap/{ sum += \$2 } END { print sum }" /proc/{}/smaps 2>/dev/null')
+          echo "Container ID: $container_id, Container Name: $container_name, Swap usage: $swap_usage bytes"
+      done
+  else
+      echo "Docker is not installed. Cannot check container swap usage."
+  fi
+}
+
+# 1}}
