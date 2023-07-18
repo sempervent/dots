@@ -90,14 +90,14 @@ now() {
 } # 2}}}
 # go back n number of days {{{2
 past_today() {  
-  if [ ! -z "$1" ]; then
+  if [ -n "$1" ]; then
     date --date="$(date) - $1 day" +%Y-%m-%d
   else
     date --date="$(date) - 1 day" +%Y-%m-%d
   fi
 } # 2}}}
 day-from-now() { # go forward n/1 number of days {{{2
-  if [ ! -z "$1" ]; then
+  if [ -n "$1" ]; then
     date --date="$(date) + $1 day" +%F
   else
     date --date="$(date) + 1 day" +%F
@@ -140,7 +140,7 @@ dre() {
         ;; # 4}}}
       esac
     done # 2}}}
-  docker run -it "$IMAGE" "$COMMAND"
+  docker run -it "$VOLUME" "$IMAGE" "$COMMAND"
 } # 2}}}
 # 1}}}
 # gists pull downs {{{1
