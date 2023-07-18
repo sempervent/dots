@@ -308,5 +308,7 @@ get_docker_swap_usage() {
       echo "Docker is not installed. Cannot check container swap usage."
   fi
 }
-
+list_docker_images() {
+  docker images  --format "table {{.Repository}}:{{.Tag}} {{.Size}}"
+}
 # 1}}
