@@ -99,6 +99,7 @@ source "$SRC_DIR/dots/bash/exports.sh"
 source "$SRC_DIR/dots/bash/history.sh"
 source "$SRC_DIR/dots/bash/functions.sh"
 source "$SRC_DIR/dots/bash/prompt.sh"
+source "$SRC_DIR/dots/bash/web.sh"
 if [ "$(whatdistro)" = "Void Linux" ]; then
   source "$SRC_DIR/dots/distro/void.sh"
 fi
