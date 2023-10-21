@@ -312,3 +312,31 @@ list_docker_images() {
   docker images  --format "table {{.Repository}}:{{.Tag}} {{.Size}}"
 }
 # 1}}
+convert_bytes_to_human() {
+  local bytes=$1
+  if [[ $bytes -lt 1024 ]]; then
+      echo "${bytes}B"
+  elif [[ $bytes -lt 1048576 ]]; then
+      echo "$(bc <<< "scale=2; $bytes/1024")K"
+  elif [[ $bytes -lt 1073741824 ]]; then
+      echo "$(bc <<< "scale=2; $bytes/1048576")M"
+  elif [[ $bytes -lt 1099511627776 ]]; then
+      echo "$(bc <<< "scale=2; $bytes/1073741824")G"
+  else
+      echo "$(bc <<< "scale=2; $bytes/1099511627776")T"
+  fi
+}
+
+show_nas_storage_size() {
+  output=$(df -Pk | grep '^//')
+  # Summing the values and using bc for arithmetic to avoid overflow
+  total_size=$(echo "$output" | awk '{print $2}' | paste -sd+ - | bc)
+  total_size=$((total_size * 1024))  # Convert from KB to Bytes
+  total_used=$(echo "$output" | awk '{print $3}' | paste -sd+ - | bc)
+  total_used=$((total_used * 1024))
+  total_avail=$(echo "$output" | awk '{print $4}' | paste -sd+ - | bc)
+  total_avail=$((total_avail * 1024))
+  echo "Total Size: $(convert_bytes_to_human "$total_size")"
+  echo "Total Used: $(convert_bytes_to_human "$total_used")"
+  echo "Total Available: $(convert_bytes_to_human "$total_avail")"
+}
