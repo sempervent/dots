@@ -340,3 +340,9 @@ show_nas_storage_size() {
   echo "Total Used: $(convert_bytes_to_human "$total_used")"
   echo "Total Available: $(convert_bytes_to_human "$total_avail")"
 }
+
+remove_docker_volumes() {
+    local prefix=${1:-$(basename "$PWD")}
+    docker volume ls -q | grep "^${prefix}_" | xargs -r docker volume rm
+}
+
