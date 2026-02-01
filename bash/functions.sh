@@ -340,3 +340,17 @@ show_nas_storage_size() {
   echo "Total Used: $(convert_bytes_to_human "$total_used")"
   echo "Total Available: $(convert_bytes_to_human "$total_avail")"
 }
+
+
+rsmv() {
+  echo "----- DRY RUN (no changes made) -----"
+  rsync -av --dry-run "$1"/ "$2"/ || return 1
+
+  echo
+  read -r -p "Proceed with move? (y/N): " ans
+  [[ "$ans" =~ ^[Yy]$ ]] || { echo "Aborted."; return 1; }
+
+  echo
+  echo "----- EXECUTING -----"
+  rsync -av --info=progress2 "$1"/ "$2"/
+}
