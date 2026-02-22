@@ -123,3 +123,5 @@ if [ -x "$(which fortune || exit)" ]; then
   fi
 fi
 # 2}}}
+
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"

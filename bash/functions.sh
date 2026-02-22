@@ -344,7 +344,7 @@ show_nas_storage_size() {
 
 rsmv() {
   echo "----- DRY RUN (no changes made) -----"
-  rsync -av --dry-run "$1"/ "$2"/ || return 1
+  rsync -av --ignore-existing --dry-run "$1"/ "$2"/ || return 1
 
   echo
   read -r -p "Proceed with move? (y/N): " ans
@@ -352,5 +352,178 @@ rsmv() {
 
   echo
   echo "----- EXECUTING -----"
-  rsync -av --info=progress2 "$1"/ "$2"/
+  rsync -av --ignore-existing --info=progress2 "$1"/ "$2"/
 }
+
+count_tree() {
+  find . -type f |
+    sed 's|/[^/]*$||' |
+    sort |
+    uniq -c |
+    sort -k2
+}
+
+sd-diff() {
+  A="${1%/}"
+  B="${2%/}"
+
+  if [[ ! -d "$A" || ! -d "$B" ]]; then
+    echo "Usage: sd-diff /path/to/dirA /path/to/dirB"
+    return 1
+  fi
+
+  tmpA=$(mktemp)
+  tmpB=$(mktemp)
+
+  (
+    cd "$A" || exit
+    find . -type f -print0 |
+      sed -z 's|/[^/]*$||' |
+      sed -z 's|^\./||' |
+      tr '\0' '\n' |
+      sort |
+      uniq -c |
+      awk '{ printf "%s\t(%s)\n", substr($0, index($0,$2)), $1 }'
+  ) > "$tmpA"
+
+  (
+    cd "$B" || exit
+    find . -type f -print0 |
+      sed -z 's|/[^/]*$||' |
+      sed -z 's|^\./||' |
+      tr '\0' '\n' |
+      sort |
+      uniq -c |
+      awk '{ printf "%s\t(%s)\n", substr($0, index($0,$2)), $1 }'
+  ) > "$tmpB"
+
+  echo
+  printf "%-40s %-40s\n" "DirA subdir (files)" "DirB subdir (files)"
+  printf "%-40s %-40s\n" "----------------------" "----------------------"
+
+  join -t $'\t' -a1 -a2 -e "" -o 1.1,1.2,2.2 \
+    <(sort -t $'\t' -k1,1 "$tmpA") \
+    <(sort -t $'\t' -k1,1 "$tmpB") |
+  while IFS=$'\t' read -r dir a b; do
+    printf "%-40s %-40s\n" \
+      "${dir:+$dir $a}" \
+      "${b:+$dir $b}"
+  done
+
+  rm -f "$tmpA" "$tmpB"
+}
+
+rm-empty-tree() {
+  root="${1%/}"
+
+  if [[ -z "$root" || ! -d "$root" ]]; then
+    echo "Usage: rm-empty-tree /path/to/directory"
+    return 1
+  fi
+
+  echo "Scanning for empty directories under:"
+  echo "  $root"
+  echo
+
+  # Find empty directories (deepest first)
+  mapfile -t empties < <(find "$root" -type d -empty | sort -r)
+
+  if [[ ${#empties[@]} -eq 0 ]]; then
+    echo "No empty directories found."
+    return 0
+  fi
+
+  echo "The following empty directories would be deleted:"
+  echo
+
+  for d in "${empties[@]}"; do
+    echo "  $d"
+  done
+
+  echo
+  read -r -p "Delete these directories? (y/N): " ans
+  [[ "$ans" =~ ^[Yy]$ ]] || { echo "Aborted."; return 1; }
+
+  echo
+  echo "Deleting empty directories..."
+
+  for d in "${empties[@]}"; do
+    rmdir "$d" 2>/dev/null
+  done
+
+  echo "Done."
+}
+
+vdir-diff() {
+  A="${1%/}"
+  B="${2%/}"
+
+  if [[ ! -d "$A" || ! -d "$B" ]]; then
+    echo "Usage: vdir-diff /path/to/dirA /path/to/dirB"
+    return 1
+  fi
+
+  tmpA=$(mktemp)
+  tmpB=$(mktemp)
+
+  (
+    cd "$A" || exit
+    find . -type f -print0 |
+      sort -z |
+      xargs -0 stat --format='%n (%s bytes)' 2>/dev/null
+  ) > "$tmpA"
+
+  (
+    cd "$B" || exit
+    find . -type f -print0 |
+      sort -z |
+      xargs -0 stat --format='%n (%s bytes)' 2>/dev/null
+  ) > "$tmpB"
+
+  vimdiff "$tmpA" "$tmpB"
+
+  rm -f "$tmpA" "$tmpB"
+}
+
+# jump to recently used dirs
+j() {
+  local dir
+  dir=$(dirs -p | sed 's|^~|'"$HOME"'|' | awk '!seen[$0]++' | fzf --height 40% --reverse --prompt="dirs> ") || return
+  cd -- "$dir"
+}
+
+# fuzzy cd into a subdir of current tree
+cdf() {
+  local dir
+  dir=$(find . -type d -not -path "*/\.git/*" 2>/dev/null | sed 's|^\./||' | fzf --height 40% --reverse --prompt="cd> ") || return
+  cd -- "$dir"
+}
+
+mkcd() { mkdir -p -- "$1" && cd -- "$1"; }
+
+# quick grep with line numbers, recursive, ignores .git
+rgf() { grep -RIn --exclude-dir=.git -- "$1" .; }
+
+# show biggest things, fast
+big() { du -ah "${1:-.}" 2>/dev/null | sort -hr | head -n "${2:-20}"; }
+
+# kill whatever is on a port
+killport() {
+  local port="$1"
+  [ -z "$port" ] && { echo "usage: killport <port>"; return 2; }
+  local pids
+  pids=$(lsof -ti "TCP:$port" -sTCP:LISTEN 2>/dev/null)
+  [ -z "$pids" ] && { echo "No listener on :$port"; return 0; }
+  echo "Killing: $pids"
+  kill -TERM $pids
+}
+
+# tail logs with timestamps
+logtail() { tail -F "$1" | awk '{ print strftime("%F %T"), $0; fflush(); }'; }
+
+# quick JSON pretty printer
+jsonpp() { python -m json.tool; }
+
+# parquet peek (DuckDB)
+parquetpeek() { duckdb -c "SELECT * FROM read_parquet('$1') LIMIT ${2:-10};"; }
+parquetschema() { duckdb -c "DESCRIBE SELECT * FROM read_parquet('$1') LIMIT 1;"; }
