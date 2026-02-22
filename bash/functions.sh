@@ -527,3 +527,8 @@ jsonpp() { python -m json.tool; }
 # parquet peek (DuckDB)
 parquetpeek() { duckdb -c "SELECT * FROM read_parquet('$1') LIMIT ${2:-10};"; }
 parquetschema() { duckdb -c "DESCRIBE SELECT * FROM read_parquet('$1') LIMIT 1;"; }
+remove_docker_volumes() {
+    local prefix=${1:-$(basename "$PWD")}
+    docker volume ls -q | grep "^${prefix}_" | xargs -r docker volume rm
+}
+
