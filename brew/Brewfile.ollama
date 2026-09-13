@@ -1,0 +1,3 @@
+# Optional: ./setup.sh --with ollama
+# Does NOT pull models or start the service.
+brew "ollama"

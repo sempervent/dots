@@ -3,7 +3,6 @@
 .secrets/
 secrets/
 *.secret
-*.key
 *.pem
 .env
 .env.*
@@ -17,3 +16,11 @@ secrets/
 
 .idea/
 .vscode/
+
+# Accidental local AI/runtime drops (do not ignore generic config.yaml)
+.hermes/
+.ollama/
+**/auth.json
+**/herdr.log
+**/herdr-client.log
+**/herdr-server.log

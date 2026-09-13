@@ -1,0 +1,45 @@
+# Herdr configuration (non-secret) — version-controlled by dots
+# Deployed to ~/.config/herdr/config.toml
+# Validated against herdr 0.9.x --default-config
+
+[theme]
+name = "catppuccin"
+auto_switch = true
+dark_name = "catppuccin"
+light_name = "catppuccin-latte"
+
+[keys]
+# Prefix: Ctrl-A (tmux remains Ctrl-Space)
+prefix = "ctrl+a"
+
+# Pane focus (tmux muscle memory)
+focus_pane_left = "prefix+h"
+focus_pane_down = "prefix+j"
+focus_pane_up = "prefix+k"
+focus_pane_right = "prefix+l"
+
+# Splits: v = side-by-side; minus = top/bottom
+# Sidebar STAYS on prefix+b (authoritative — do not steal b for splits)
+split_vertical = "prefix+v"
+split_horizontal = "prefix+minus"
+toggle_sidebar = "prefix+b"
+
+# Tabs
+new_tab = "prefix+c"
+previous_tab = "prefix+p"
+next_tab = "prefix+n"
+switch_tab = "prefix+1..9"
+
+# Pane ops
+zoom = "prefix+z"
+close_pane = "prefix+x"
+detach = "prefix+q"
+
+# Herdr-native navigation
+workspace_picker = "prefix+w"
+goto = "prefix+g"
+resize_mode = "prefix+r"
+reload_config = "prefix+shift+r"
+
+# Scrollback: tmux-familiar [ maps to Herdr native editor
+edit_scrollback = "prefix+["

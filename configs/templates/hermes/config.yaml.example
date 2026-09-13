@@ -1,0 +1,24 @@
+# Example Hermes config (NON-SECRET documentation only).
+# Do NOT copy over an existing ~/.hermes/config.yaml automatically.
+#
+# Hermes is user-owned. Install CLI via: ./setup.sh --with hermes
+# (Homebrew formula hermes-agent; macOS also gets hermes-desktop cask.)
+#
+# Local Ollama example (OpenAI-compatible endpoint):
+#
+# model:
+#   provider: ollama-launch
+#   default: gemma4
+#   base_url: http://127.0.0.1:11434/v1
+#
+# providers:
+#   ollama-launch:
+#     name: Ollama
+#     api: http://127.0.0.1:11434/v1
+#     default_model: gemma4
+#     models:
+#       - gemma4
+#       - qwen3.5:latest
+#
+# Prefer `hermes model` / `hermes setup` / `hermes config` interactively.
+# Secrets belong in ~/.hermes/.env — never in git.

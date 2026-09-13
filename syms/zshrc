@@ -36,6 +36,7 @@ unset _zshrc_src
 # Shared layer {{{1
 [[ -f "${DOTS_DIR}/shell/paths.sh" ]] && source "${DOTS_DIR}/shell/paths.sh"
 [[ -f "${DOTS_DIR}/shell/exports.sh" ]] && source "${DOTS_DIR}/shell/exports.sh"
+[[ -f "${DOTS_DIR}/shell/theme.sh" ]] && source "${DOTS_DIR}/shell/theme.sh"
 # 1}}}
 
 # Zsh modules (before OMZ so options/history are set; prompt AFTER OMZ) {{{1
@@ -102,10 +103,10 @@ export NVM_DIR="${NVM_DIR:-${HOME}/.nvm}"
 [[ -f "${HOME}/.cargo/env" ]] && source "${HOME}/.cargo/env"
 # 1}}}
 
-# Tmux auto-attach (configurable; no nesting) {{{1
+# Multiplexer auto-start (tmux | herdr | none) {{{1
 [[ -f "${DOTS_DIR}/shell/tmux.sh" ]] && source "${DOTS_DIR}/shell/tmux.sh"
-if typeset -f dots_maybe_start_tmux >/dev/null 2>&1; then
-  dots_maybe_start_tmux
+if typeset -f dots_maybe_start_multiplexer >/dev/null 2>&1; then
+  dots_maybe_start_multiplexer
 fi
 # 1}}}
 

@@ -41,6 +41,8 @@ esac
 [ -f "${DOTS_DIR}/shell/paths.sh" ] && . "${DOTS_DIR}/shell/paths.sh"
 # shellcheck disable=SC1091
 [ -f "${DOTS_DIR}/shell/exports.sh" ] && . "${DOTS_DIR}/shell/exports.sh"
+# shellcheck disable=SC1091
+[ -f "${DOTS_DIR}/shell/theme.sh" ] && . "${DOTS_DIR}/shell/theme.sh"
 # 1}}}
 
 # Bash modules {{{1
@@ -116,11 +118,11 @@ export NVM_DIR="${NVM_DIR:-${HOME}/.nvm}"
 [ -f "${HOME}/.cargo/env" ] && . "${HOME}/.cargo/env"
 # 1}}}
 
-# Tmux auto-attach (configurable; no nesting) {{{1
+# Multiplexer auto-start (tmux | herdr | none) {{{1
 # shellcheck disable=SC1091
 [ -f "${DOTS_DIR}/shell/tmux.sh" ] && . "${DOTS_DIR}/shell/tmux.sh"
-if declare -F dots_maybe_start_tmux >/dev/null 2>&1; then
-  dots_maybe_start_tmux
+if declare -F dots_maybe_start_multiplexer >/dev/null 2>&1; then
+  dots_maybe_start_multiplexer
 fi
 # 1}}}
 

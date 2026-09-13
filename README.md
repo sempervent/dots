@@ -3,10 +3,9 @@
 Author: Joshua N. Grant
 Email: jngrant@live.com
 
-Bash remains fully supported for servers and scripts. Zsh + Oh My Zsh is the
-primary rich interactive shell (especially on macOS). Shared logic lives in
-`shell/`; shell-specific behavior in `bash/` and `zsh/`. `.zshrc` does **not**
-source Bash configs.
+Bash remains fully supported. Zsh + Oh My Zsh is the primary rich interactive
+shell. Shared logic lives in `shell/`; shell-specific behavior in `bash/` and
+`zsh/`.
 
 ## Install
 
@@ -16,75 +15,134 @@ cd ~/dots
 ./setup.sh
 ```
 
-`setup.sh` is idempotent: unique timestamped backups under `~/.old_dots/`,
-skips existing Oh My Zsh / TPM / Vundle / plugin clones, and does not change
-your login shell.
+`setup.sh` is idempotent. Default install does **not** install AI tooling or
+download models.
 
-Packages: prefer `brew bundle --file=brew/Brewfile` (also invoked by setup when
-`brew` is available). `brew/packages.txt` is a lighter fallback list.
+### Optional components (`--with`)
+
+```bash
+./setup.sh --with herdr
+./setup.sh --with hermes
+./setup.sh --with ollama
+./setup.sh --with herdr,hermes,ollama
+./setup.sh --with=herdr,hermes
+./setup.sh --dry-run --with herdr
+./setup.sh --help
+```
+
+| Component | Installs |
+|-----------|----------|
+| `herdr` | `brew/Brewfile.herdr` → `herdr` |
+| `hermes` | `hermes-agent` (+ macOS cask `hermes-desktop`) |
+| `ollama` | `ollama` (no models, service not started) |
+
+## Package management
+
+**Homebrew truth is `brew/Brewfile` only.** There is no `packages.txt`.
+
+Optional AI packages are declared in:
+
+- `brew/Brewfile.herdr`
+- `brew/Brewfile.hermes`
+- `brew/Brewfile.ollama`
+
+and applied only when selected via `--with`.
 
 ## Layout
 
 ```
-shell/     shared aliases, exports, functions, PATH/Homebrew, tools, tmux helper
-bash/      Bash-only options, history, completion, prompt, ffs/so
-zsh/       Zsh-only options, history, keybindings, prompt, Oh My Zsh
-distro/    macOS / Linux hooks
-syms/      files linked into $HOME (.bashrc, .zshrc, .zprofile, …)
-brew/      Brewfile + packages.txt
+shell/     shared aliases, exports, functions, paths, tools, multiplexer, theme
+bash/      Bash-only
+zsh/       Zsh-only + Oh My Zsh
+distro/    platform hooks
+syms/      $HOME symlink sources
+ranger/    Ranger overrides + Catppuccin colorscheme
+configs/   bat, btop, herdr, templates
+brew/      Brewfile (+ optional fragments)
 ```
 
-## Oh My Zsh
+## Multiplexers
 
-Installed to `~/.oh-my-zsh` if missing. Third-party plugins are cloned once under
-`$ZSH_CUSTOM/plugins`:
+| Tool | Prefix | Auto via |
+|------|--------|----------|
+| tmux | **Ctrl-Space** | `DOTS_MULTIPLEXER=tmux` (default) |
+| Herdr | **Ctrl-A** | `DOTS_MULTIPLEXER=herdr` |
+| none | — | `DOTS_MULTIPLEXER=none` or `DOTS_AUTO_TMUX=0` |
 
-- zsh-autosuggestions
-- zsh-syntax-highlighting (loaded last)
-- zsh-history-substring-search
+Suggested iTerm profiles (set env in the profile — not hard-coded):
 
-Not enabled: OMZ `extract` (custom `extract()`), OMZ `z` (zoxide).
+- general: `DOTS_MULTIPLEXER=tmux`
+- agents: `DOTS_MULTIPLEXER=herdr`
+- plain: `DOTS_MULTIPLEXER=none`
 
-Update plugins: `omz update` and `git -C ~/.oh-my-zsh/custom/plugins/<name> pull`.
+Never nests tmux inside Herdr (detects `HERDR_*` env).
 
-## Useful toggles
+### Herdr keys (Ctrl-A)
 
-| Variable | Effect |
-|----------|--------|
-| `DOTS_AUTO_TMUX=0` | disable interactive auto-tmux |
-| `DOTS_PROMPT_STATS=1` | enable dir file count/size in prompt |
-| `DOTS_GREETING=0` | silence fortune greeting |
+| Key | Action |
+|-----|--------|
+| h/j/k/l | focus panes |
+| v | side-by-side split |
+| `-` | top/bottom split |
+| **b** | **sidebar** (kept on b) |
+| c / n / p / 1–9 | tabs |
+| z / x / q | zoom / close pane / detach |
+| w / g | workspace picker / goto |
+| r | resize mode |
+| Shift-R | reload config |
+| `[` | edit scrollback |
 
-## Default shell
+Theme: Catppuccin (Mocha dark / Latte light with auto_switch).
+
+## Ranger
+
+Managed overrides under `ranger/` (not a full upstream dump). Setup deploys
+file-level links into `~/.config/ranger/` without wiping bookmarks/history.
+
+Previews: bat, jq, yq, chafa, pdftotext, mediainfo/ffprobe, exiftool, sqlite3.
+Explicit trash: `dt` (normal Ranger delete unchanged).
+
+## Hermes
+
+Install via Homebrew when opted in (`--with hermes`). Existing `~/.hermes/`
+config and secrets remain **user-owned** and are never overwritten.
+
+If `~/.local/bin/hermes` still wins PATH after Brew install, rename/remove that
+shim manually after verifying `brew`'s `hermes-agent`.
+
+Non-secret example notes: `configs/templates/hermes/config.yaml.example`.
+
+## Ollama
 
 ```bash
-chsh -s "$(command -v zsh)"   # prefer Zsh
-chsh -s "$(command -v bash)"  # revert to Bash
+./setup.sh --with ollama
+brew services start ollama   # manual
+brew services stop ollama
+ollama list
 ```
 
-## Testing / startup timing
+No model downloads from setup.
 
-```bash
-DOTS_AUTO_TMUX=0 DOTS_GREETING=0 bash -lic 'echo bash-ok'
-DOTS_AUTO_TMUX=0 DOTS_GREETING=0 zsh  -lic 'echo zsh-ok'
-time DOTS_AUTO_TMUX=0 DOTS_GREETING=0 bash -i -c exit
-time DOTS_AUTO_TMUX=0 DOTS_GREETING=0 zsh  -i -c exit
-```
+## Catppuccin
 
-## Migration notes
+| Tool | Flavor |
+|------|--------|
+| Herdr | built-in catppuccin + latte auto |
+| tmux | catppuccin/tmux `#v2.1.3` Mocha |
+| Ranger | `colorschemes/catppuccin.py` |
+| bat | Catppuccin Mocha theme (setup builds cache) |
+| btop | catppuccin_mocha.theme |
+| fzf | Mocha colors via `shell/theme.sh` |
 
-- `dco` prefers `docker compose`, falls back to `docker-compose`
-- `ffs` is Bash-only; Zsh: OMZ `sudo` plugin (Esc Esc)
-- No global `TERM=xterm-256color`; tmux prefers `tmux-256color`
-- Homebrew typo `/opt/hombrew` removed; use `brew shellenv`
-- History is configured separately for Bash and Zsh
-- Use `bash-completion@2` (not `bash-completion` v1)
+Shell prompts stay custom (no Starship / Powerlevel10k).
 
-## Homebrew troubleshooting
+## Troubleshooting
 
-If `brew bundle` warns about stale keg metadata (`libtiff` / `webp`), that is a
-local Homebrew repair — **not** something `setup.sh` will auto-uninstall. See
-`brew doctor` and Homebrew’s guidance before removing kegs.
+- Old Hermes PATH: `type -a hermes`
+- Herdr integrations: `herdr integration status`
+- tmux plugins: Prefix `Ctrl-Space` then `I`
+- bat theme: `bat cache --build` (setup does this when themes present)
+- Health: `./scripts/check.sh`
 
 ## License
 
