@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "drawthings": {
+      "command": "~/.local/bin/drawthings-mcp",
+      "args": [],
+      "env": {
+        "DOTS_DRAWTHINGS_CONFIG": "~/.config/drawthings-mcp/config.toml"
+      }
+    }
+  }
+}

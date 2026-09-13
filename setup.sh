@@ -3,12 +3,13 @@
 #
 # Usage:
 #   ./setup.sh
-#   ./setup.sh --with herdr,hermes,ollama
+#   ./setup.sh --with herdr,hermes,ollama,archify
 #   ./setup.sh --with=herdr
+#   ./setup.sh --with archify
 #   ./setup.sh --dry-run
 #   ./setup.sh --help
 #
-# Default setup does NOT install AI tooling (herdr / hermes / ollama).
+# Default setup does NOT install AI tooling (herdr / hermes / ollama / agent skills).
 set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
@@ -21,7 +22,16 @@ ZSH_CUSTOM="${ZSH_CUSTOM:-${ZSH}/custom}"
 DRY_RUN=0
 DOTS_WITH_COMPONENTS=()
 
-SUPPORTED_WITH=(herdr hermes ollama)
+SUPPORTED_WITH=(herdr hermes ollama archify drawthings)
+
+# shellcheck source=helpers/agent_skills.sh
+source "${DIR}/helpers/agent_skills.sh"
+# shellcheck source=helpers/herdr_config.sh
+source "${DIR}/helpers/herdr_config.sh"
+# shellcheck source=helpers/optional_components.sh
+source "${DIR}/helpers/optional_components.sh"
+# shellcheck source=helpers/drawthings.sh
+source "${DIR}/helpers/drawthings.sh"
 
 usage() {
   cat <<'EOF'
@@ -30,8 +40,15 @@ Usage: ./setup.sh [options]
 Install / refresh dotfiles (idempotent). Safe to re-run.
 
 Options:
-  --with <list>     Comma-separated optional components to install via Brewfile
-                    fragments. Supported: herdr, hermes, ollama
+  --with <list>     Comma-separated optional components. Supported:
+                      herdr      — terminal multiplexer (Brewfile.herdr)
+                      hermes     — Hermes agent CLI (+ macOS hermes-desktop)
+                      ollama     — local LLM runtime (no models pulled)
+                      archify    — agent skill: architecture / workflow /
+                                   sequence / data-flow / lifecycle diagrams
+                                   (requires Node 18+; Brewfile.archify)
+                      drawthings — Draw Things image tool bridge (CLI + MCP;
+                                   GUI app must already be installed)
   --with=<list>     Same as --with <list>
   --dry-run         Preview actions without modifying the machine
   -h, --help        Show this help
@@ -39,12 +56,13 @@ Options:
 Examples:
   ./setup.sh
   ./setup.sh --with herdr
-  ./setup.sh --with herdr,hermes
-  ./setup.sh --with herdr,hermes,ollama
+  ./setup.sh --with archify
+  ./setup.sh --with drawthings
+  ./setup.sh --with hermes,herdr,ollama,archify,drawthings
   ./setup.sh --with=ollama
-  ./setup.sh --dry-run --with herdr
+  ./setup.sh --dry-run --with drawthings
 
-Default ./setup.sh does NOT install AI tools or download models.
+Default ./setup.sh does NOT install AI tools, agent skills, or download models.
 
 Environment (runtime shells, not installer):
   DOTS_MULTIPLEXER=tmux|herdr|none   (default: tmux)
@@ -223,8 +241,7 @@ if [[ -f "${DIR}/configs/btop/themes/catppuccin_mocha.theme" ]]; then
     "${DIR}/configs/btop/themes/catppuccin_mocha.theme"
 fi
 if [[ -f "${DIR}/configs/herdr/config.toml" ]]; then
-  # Prefer symlink; Herdr reads ~/.config/herdr/config.toml
-  move_sym "herdr_config.toml" "${HOME}/.config/herdr/config.toml" "${DIR}/configs/herdr/config.toml"
+  sync_herdr_config
 fi
 
 # Ranger — file-level deploy only
@@ -300,29 +317,7 @@ if command -v brew >/dev/null 2>&1; then
   }
 
   apply_brewfile "${DIR}/brew/Brewfile"
-
-  if has_component herdr; then
-    apply_brewfile "${DIR}/brew/Brewfile.herdr"
-  fi
-  if has_component hermes; then
-    apply_brewfile "${DIR}/brew/Brewfile.hermes"
-    if [[ "$(uname -s)" == "Darwin" ]]; then
-      echo "Installing hermes-desktop cask (macOS)..."
-      if [[ "${DRY_RUN}" -eq 1 ]]; then
-        echo "[dry-run] brew install --cask hermes-desktop"
-      else
-        brew install --cask hermes-desktop || {
-          brew_failed=1
-          echo "Warn: hermes-desktop cask install failed"
-        }
-      fi
-    else
-      echo "Note: hermes-desktop cask skipped (macOS only)"
-    fi
-  fi
-  if has_component ollama; then
-    apply_brewfile "${DIR}/brew/Brewfile.ollama"
-  fi
+  apply_optional_brewfiles
 
   if [[ "${brew_failed}" -ne 0 ]]; then
     echo "Homebrew finished with warnings — review output before relying on new tools."
@@ -331,58 +326,17 @@ else
   echo "Note: brew not found; skipped package install"
 fi
 
+# Agent skills (npx skills add …) — after Brewfile so Node is available when needed
+dots_install_requested_agent_skills || exit 1
+
 # Hermes PATH ambiguity warning (never delete old install)
-if has_component hermes || command -v hermes >/dev/null 2>&1; then
-  echo "=== Hermes PATH check ==="
-  if [[ "${DRY_RUN}" -eq 0 ]]; then
-    type -a hermes 2>/dev/null || true
-    _hermes_win="$(command -v hermes 2>/dev/null || true)"
-    if [[ "${_hermes_win}" == "${HOME}/.local/bin/hermes" ]]; then
-      echo "Warn: ~/.local/bin/hermes currently wins PATH (likely git install)."
-      echo "      After verifying Homebrew hermes-agent, remove/rename the old shim manually."
-      echo "      Prefer Homebrew PATH (brew shellenv) ahead of ~/.local/bin if desired."
-    fi
-    unset _hermes_win
-  else
-    echo "[dry-run] would run: type -a hermes"
-  fi
-fi
+dots_check_hermes_path
 
 # Herdr integrations (only when herdr present / selected)
-if has_component herdr || command -v herdr >/dev/null 2>&1; then
-  echo "=== Herdr integrations ==="
-  ensure_herdr_integration() {
-    local name="$1" need_cli="$2"
-    if ! command -v herdr >/dev/null 2>&1; then
-      return 0
-    fi
-    if [[ -n "${need_cli}" ]] && ! command -v "${need_cli}" >/dev/null 2>&1; then
-      echo "Skip integration ${name}: ${need_cli} not installed"
-      return 0
-    fi
-    if [[ "${DRY_RUN}" -eq 1 ]]; then
-      echo "[dry-run] herdr integration install ${name} (if needed)"
-      return 0
-    fi
-    # install is idempotent enough; status may already say current
-    herdr integration install "${name}" 2>&1 || echo "Warn: herdr integration ${name} failed"
-  }
-  # Only install integrations for agents that exist
-  ensure_herdr_integration hermes hermes
-  ensure_herdr_integration codex codex
-  # OpenCode CLI binary name varies; try common names
-  if command -v opencode >/dev/null 2>&1 || command -v open-code >/dev/null 2>&1; then
-    ensure_herdr_integration opencode opencode
-  else
-    # Still try if integration status previously existed — only when herdr selected
-    if has_component herdr; then
-      echo "Note: OpenCode CLI not found; skip opencode integration unless already present"
-      if [[ "${DRY_RUN}" -eq 0 ]]; then
-        herdr integration status 2>/dev/null | rg -i '^opencode:' || true
-      fi
-    fi
-  fi
-fi
+dots_ensure_herdr_integrations
+
+# Draw Things image tool bridge (optional)
+dots_setup_drawthings || exit 1
 
 # bat theme cache (Catppuccin) if theme files present
 if command -v bat >/dev/null 2>&1 && [[ -d "${DIR}/configs/bat/themes" ]]; then
@@ -437,9 +391,17 @@ Finished installing dots$([ "${DRY_RUN}" -eq 1 ] && echo ' (dry-run)').
 
 Core: ~/.bashrc ~/.zshrc ~/.zprofile ~/.vimrc ~/.tmux.conf
 Ranger: ~/.config/ranger/{rc.conf,rifle.conf,scope.sh,colorschemes/catppuccin.py}
-Herdr config: ~/.config/herdr/config.toml (when present in repo)
+Herdr config: ~/.config/herdr/config.toml (merged [theme]/[keys] from repo; local [ui]/onboarding preserved)
 
 Optional --with: ${DOTS_WITH_COMPONENTS[*]:-none}
+
+Agent skills (when requested): installed globally via \`npx skills\` into ~/.agents/skills/
+  Hermes discovers them through ~/.hermes/skills/<name> (skills CLI symlink).
+  Herdr orchestrates Hermes; it does not embed Archify schemas/renderers.
+
+Draw Things (when requested): CLI via Brewfile.drawthings + MCP bridge.
+  Launcher: ~/.local/bin/drawthings-mcp   Config: ~/.config/drawthings-mcp/config.toml
+  Images → ~/Pictures/AI/DrawThings/  (configurable). Not an LLM provider.
 
 Multiplexer (shell runtime):
   DOTS_MULTIPLEXER=tmux|herdr|none   (default tmux)

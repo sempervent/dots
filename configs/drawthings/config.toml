@@ -1,0 +1,42 @@
+# DOTS Draw Things bridge configuration (non-secret).
+# Repo defaults. First install copies to:
+#   ~/.config/drawthings-mcp/config.toml
+# Existing live configs are preserved (local overrides win).
+#
+# Draw Things is an image-generation TOOL backend — not a Hermes chat model.
+
+[cli]
+# Ensured via: ./setup.sh --with drawthings → brew/Brewfile.drawthings
+binary = "draw-things-cli"
+
+[app]
+# Optional. CLI generation does not require the GUI process.
+# Models often live under the app container after a GUI install, or set DRAWTHINGS_MODELS_DIR.
+path = "/Applications/Draw Things.app"
+
+[output]
+# User assets stay outside the dots repo.
+dir = "~/Pictures/AI/DrawThings"
+
+[model]
+# Empty = first downloaded model from `draw-things-cli models list --downloaded-only`
+# Do not assume a specific checkpoint exists on every machine.
+default = ""
+
+[memory]
+# manual        — never stop Ollama (safest default on 24 GB unified memory)
+# unload_ollama — `ollama stop` each loaded model before generation (not the daemon)
+policy = "manual"
+
+[smoke]
+# Low-cost optional generation (scripts/drawthings_smoke.sh); not run by check.sh
+width = 512
+height = 512
+steps = 4
+prompt = "a red cube on a black background"
+
+[http_api]
+# Optional Draw Things GUI HTTP API. Not used by the DOTS CLI MCP bridge.
+# Keep localhost-only if enabled in-app.
+host = "127.0.0.1"
+port = 7860

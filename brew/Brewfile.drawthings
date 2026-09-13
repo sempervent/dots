@@ -1,0 +1,3 @@
+tap "drawthingsai/draw-things"
+# First-party local inference CLI (does not install the Draw Things GUI).
+brew "drawthingsai/draw-things/draw-things-cli"

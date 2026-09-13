@@ -1,0 +1,3 @@
+# Optional: ./setup.sh --with archify
+# Node.js runtime for agent skills installed via `npx skills add` (Archify requires Node 18+).
+brew "node"
