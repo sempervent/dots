@@ -62,6 +62,9 @@ esac
 # Bash-only helpers (ffs, so)
 # shellcheck disable=SC1091
 [ -f "${DOTS_DIR}/bash/bash_only.sh" ] && . "${DOTS_DIR}/bash/bash_only.sh"
+# Upstream web helpers (wsearch); optional
+# shellcheck disable=SC1091
+[ -f "${DOTS_DIR}/bash/web.sh" ] && . "${DOTS_DIR}/bash/web.sh"
 # 1}}}
 
 # Prompt last among bash modules so it owns PROMPT_COMMAND {{{1
