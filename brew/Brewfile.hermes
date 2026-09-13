@@ -1,0 +1,3 @@
+# Optional: ./setup.sh --with hermes
+# Formula provides the CLI; desktop cask is macOS-only (applied by setup.sh).
+brew "hermes-agent"

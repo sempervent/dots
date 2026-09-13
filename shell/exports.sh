@@ -41,5 +41,8 @@ export DOTS_PROMPT_STATS="${DOTS_PROMPT_STATS:-0}"
 # Auto-tmux: on by default for interactive sessions; override with DOTS_AUTO_TMUX=0
 export DOTS_AUTO_TMUX="${DOTS_AUTO_TMUX:-1}"
 
+# Multiplexer: tmux | herdr | none (default tmux). See shell/tmux.sh
+export DOTS_MULTIPLEXER="${DOTS_MULTIPLEXER:-tmux}"
+
 # Welcome banner: show outside tmux by default; set DOTS_GREETING=0 to silence
 export DOTS_GREETING="${DOTS_GREETING:-1}"
