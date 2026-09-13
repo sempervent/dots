@@ -1,0 +1,40 @@
+# ~/.cargo/config.toml - Cargo Configuration
+# https://github.com/sempervent/dotfiles
+
+[build]
+# Number of parallel jobs (0 = number of CPUs)
+jobs = 0
+
+# Default target
+# target = "x86_64-unknown-linux-gnu"
+
+# Registry
+# registry = "https://github.com/rust-lang/crates.io-index"
+
+[net]
+# Retry on network errors
+retry = 2
+# git-fetch-with-cli = false
+
+# Proxy settings (if needed)
+# http = { proxy = "http://proxy:port" }
+# https = { proxy = "http://proxy:port" }
+
+# [cargo-new]
+# name = "Your Name"
+# email = "your.email@example.com"
+
+[registries]
+# Custom registries can be added here
+# my-registry = { index = "https://my-intranet:8080/git/index" }
+
+[alias]
+# Useful aliases
+b = "build"
+c = "check"
+t = "test"
+r = "run"
+p = "package"
+clippy = "clippy -- -D warnings"
+
+

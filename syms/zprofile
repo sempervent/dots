@@ -1,0 +1,25 @@
+#!/usr/bin/env zsh
+# ~/.zprofile — login-shell PATH / Homebrew bootstrap
+# Keep this light; interactive config lives in .zshrc
+
+export DOTS_DIR="${DOTS_DIR:-${HOME}/dots}"
+
+# Resolve DOTS_DIR from this file when symlinked from the repo
+if [[ -z "${DOTS_DIR}" ]] || [[ ! -d "${DOTS_DIR}/shell" ]]; then
+  _zprofile_src="${(%):-%N}"
+  if [[ -L "${_zprofile_src}" ]]; then
+    _zprofile_src="$(readlink "${_zprofile_src}")"
+  fi
+  _zprofile_dir="${_zprofile_src:A:h}"
+  if [[ -d "${_zprofile_dir}/../shell" ]]; then
+    export DOTS_DIR="${_zprofile_dir:A}/.."
+    DOTS_DIR="${DOTS_DIR:A}"
+    export DOTS_DIR
+  fi
+  unset _zprofile_src _zprofile_dir
+fi
+
+if [[ -f "${DOTS_DIR}/shell/paths.sh" ]]; then
+  # shellcheck disable=SC1091
+  source "${DOTS_DIR}/shell/paths.sh"
+fi

@@ -1,0 +1,202 @@
+# ~/.gitignore_global - Global Git Ignore Patterns
+# https://github.com/sempervent/dotfiles
+
+# OS Files {{{1
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+
+# Linux
+.directory
+*~
+# 1}}}
+
+# Editor files {{{1
+# Vim
+*.swp
+*.swo
+*.swn
+*.swm
+*~
+Session.vim
+.netrwhist
+
+# Emacs
+*~
+\#*\#
+.\#*
+*~
+auto-save-list
+tramp
+.\#*
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# IntelliJ/IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Sublime
+*.sublime-project
+*.sublime-workspace
+
+# Atom
+.atom/
+# 1}}}
+
+# Build artifacts {{{1
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.npm
+.yarn-integrity
+
+# Rust
+target/
+Cargo.lock
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+*.log
+.gradle/
+build/
+target/
+
+# C/C++
+*.o
+*.a
+*.so
+*.exe
+*.out
+*.app
+# 1}}}
+
+# Test coverage {{{1
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.pytest_cache/
+.hypothesis/
+*.cover
+# 1}}}
+
+# Virtual environments {{{1
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+# 1}}}
+
+# IDEs and tools {{{1
+# Jupyter
+.ipynb_checkpoints
+*.ipynb_checkpoints
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+# 1}}}
+
+# Language-specific {{{1
+# R
+.Rhistory
+.RData
+.Ruserdata
+*.Rapp.history
+
+# LaTeX
+*.aux
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+*.toc
+*.out
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+# 1}}}
+
+# Secrets and sensitive data {{{1
+.env.local
+.env.*.local
+*.key
+*.pem
+*.p12
+*.pfx
+secrets/
+.secrets/
+# 1}}}
+
+

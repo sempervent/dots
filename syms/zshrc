@@ -1,0 +1,122 @@
+#!/usr/bin/env zsh
+# ~/.zshrc — primary rich interactive shell (Oh My Zsh + shared dots layer)
+# https://github.com/sempervent/dots
+#
+# Architecture:
+#   shell/     shared aliases, exports, functions, paths, tools
+#   zsh/       zsh-only options, history, keybindings, prompt, OMZ
+#   distro/    platform hooks (macOS / Linux)
+#
+# Does NOT source Bash-specific configs (shopt, complete, PROMPT_COMMAND, etc.).
+
+# Resolve dots directory {{{1
+export DOTS_DIR="${DOTS_DIR:-${HOME}/dots}"
+export DOTS_SHELL=zsh
+
+# If this file is a symlink into the repo, prefer that checkout
+_zshrc_src="${(%):-%N}"
+if [[ -L "${HOME}/.zshrc" ]]; then
+  _link="$(readlink "${HOME}/.zshrc")"
+  if [[ "${_link}" != /* ]]; then
+    _link="${HOME}/${_link}"
+  fi
+  _cand="${_link:A:h:h}"
+  if [[ -d "${_cand}/shell" ]]; then
+    export DOTS_DIR="${_cand}"
+  fi
+  unset _link _cand
+fi
+unset _zshrc_src
+# 1}}}
+
+# Non-interactive → stop early {{{1
+[[ $- != *i* ]] && return
+# 1}}}
+
+# Shared layer {{{1
+[[ -f "${DOTS_DIR}/shell/paths.sh" ]] && source "${DOTS_DIR}/shell/paths.sh"
+[[ -f "${DOTS_DIR}/shell/exports.sh" ]] && source "${DOTS_DIR}/shell/exports.sh"
+# 1}}}
+
+# Zsh modules (before OMZ so options/history are set; prompt AFTER OMZ) {{{1
+[[ -f "${DOTS_DIR}/zsh/options.zsh" ]] && source "${DOTS_DIR}/zsh/options.zsh"
+[[ -f "${DOTS_DIR}/zsh/history.zsh" ]] && source "${DOTS_DIR}/zsh/history.zsh"
+[[ -f "${DOTS_DIR}/zsh/keybindings.zsh" ]] && source "${DOTS_DIR}/zsh/keybindings.zsh"
+# 1}}}
+
+# Shared aliases / functions {{{1
+[[ -f "${DOTS_DIR}/shell/aliases.sh" ]] && source "${DOTS_DIR}/shell/aliases.sh"
+[[ -f "${DOTS_DIR}/shell/functions.sh" ]] && source "${DOTS_DIR}/shell/functions.sh"
+# 1}}}
+
+# Oh My Zsh + third-party plugins {{{1
+[[ -f "${DOTS_DIR}/zsh/oh-my-zsh.zsh" ]] && source "${DOTS_DIR}/zsh/oh-my-zsh.zsh"
+# 1}}}
+
+# Custom prompt AFTER OMZ so it is not overwritten by themes {{{1
+[[ -f "${DOTS_DIR}/zsh/prompt.zsh" ]] && source "${DOTS_DIR}/zsh/prompt.zsh"
+# 1}}}
+
+# Re-assert shared Docker helpers if OMZ aliases shadowed them {{{1
+if [[ -f "${DOTS_DIR}/shell/functions.sh" ]]; then
+  unalias dco dcud 2>/dev/null || true
+  # Re-source only the compose helpers by redefining via functions file
+  # (full re-source is cheap and keeps one source of truth)
+  source "${DOTS_DIR}/shell/functions.sh"
+fi
+# 1}}}
+
+# Modern tools: zoxide, direnv, atuin (not OMZ z) {{{1
+[[ -f "${DOTS_DIR}/shell/tools.sh" ]] && source "${DOTS_DIR}/shell/tools.sh"
+# 1}}}
+
+# fzf — prefer official integration when OMZ fzf plugin did not load it {{{1
+if ! typeset -f fzf-file-widget >/dev/null 2>&1; then
+  if command -v fzf >/dev/null 2>&1; then
+    if fzf --zsh >/dev/null 2>&1; then
+      source <(fzf --zsh)
+    elif [[ -f "${HOME}/.fzf.zsh" ]]; then
+      source "${HOME}/.fzf.zsh"
+    fi
+  fi
+fi
+# 1}}}
+
+# Platform hooks {{{1
+case "$(uname -s)" in
+  Darwin)
+    [[ -f "${DOTS_DIR}/distro/mac.sh" ]] && source "${DOTS_DIR}/distro/mac.sh"
+    ;;
+  Linux)
+    [[ -f "${DOTS_DIR}/distro/linux.sh" ]] && source "${DOTS_DIR}/distro/linux.sh"
+    if command -v whatdistro >/dev/null 2>&1 && [[ "$(whatdistro)" == "Void Linux" ]]; then
+      [[ -f "${DOTS_DIR}/distro/void.sh" ]] && source "${DOTS_DIR}/distro/void.sh"
+    fi
+    ;;
+esac
+# 1}}}
+
+# Version managers {{{1
+export NVM_DIR="${NVM_DIR:-${HOME}/.nvm}"
+[[ -s "${NVM_DIR}/nvm.sh" ]] && source "${NVM_DIR}/nvm.sh"
+[[ -f "${HOME}/.cargo/env" ]] && source "${HOME}/.cargo/env"
+# 1}}}
+
+# Tmux auto-attach (configurable; no nesting) {{{1
+[[ -f "${DOTS_DIR}/shell/tmux.sh" ]] && source "${DOTS_DIR}/shell/tmux.sh"
+if typeset -f dots_maybe_start_tmux >/dev/null 2>&1; then
+  dots_maybe_start_tmux
+fi
+# 1}}}
+
+# Zsh-only aliases {{{1
+alias so='source ~/.zshrc'
+alias reload='source ~/.zshrc'
+# 1}}}
+
+# Greeting {{{1
+[[ -f "${DOTS_DIR}/shell/greeting.sh" ]] && source "${DOTS_DIR}/shell/greeting.sh"
+if [[ -z "${TMUX:-}" ]] || [[ -n "${SSH_TTY:-}" ]]; then
+  typeset -f dots_greeting >/dev/null 2>&1 && dots_greeting
+fi
+# 1}}}

@@ -1,0 +1,57 @@
+# ~/.inputrc - GNU Readline Configuration
+# https://github.com/sempervent/dotfiles
+# Used by bash, python, and other readline-based tools
+
+# Vi mode (if you prefer vi)
+# set editing-mode vi
+
+# Emacs mode (default)
+set editing-mode emacs
+
+# Completion {{{1
+set completion-ignore-case on
+set completion-prefix-display-length 2
+set completion-query-items 100
+set show-all-if-ambiguous on
+set show-all-if-unmodified on
+set menu-complete-display-prefix on
+# 1}}}
+
+# History {{{1
+set history-size 10000
+set history-preserve-point on
+# 1}}}
+
+# Keybindings {{{1
+# Tab completion
+"\e[Z": menu-complete-backward
+
+# Move to beginning/end of line
+"\C-a": beginning-of-line
+"\C-e": end-of-line
+
+# Move word by word
+"\e[1;5C": forward-word
+"\e[1;5D": backward-word
+
+# Delete word
+"\e[3;5~": kill-word
+
+# History search
+"\e[A": history-search-backward
+"\e[B": history-search-forward
+
+# Clear screen
+"\C-l": clear-screen
+# 1}}}
+
+# Bell {{{1
+set bell-style none
+# 1}}}
+
+# Colors {{{1
+set colored-completion-prefix on
+set colored-stats on
+# 1}}}
+
+

@@ -1,0 +1,101 @@
+# ~/.Rprofile - R Configuration
+# https://github.com/sempervent/dotfiles
+
+# Set default options {{{1
+options(
+  # Output formatting
+  width = 80,
+  max.print = 1000,
+  digits = 4,
+  
+  # Memory and performance
+  Ncpus = parallel::detectCores(),
+  
+  # Package installation
+  repos = c(
+    CRAN = "https://cran.rstudio.com/"
+  ),
+  
+  # Editor
+  editor = "vim",
+  browser = Sys.getenv("BROWSER", "open"),
+  
+  # Strings
+  stringsAsFactors = FALSE,
+  
+  # Warnings
+  warn = 1,
+  
+  # Continue on error
+  error = quote({
+    cat("\nLast error:\n", geterrmessage(), "\n")
+    .Last <<- .Last.value
+  })
+)
+# 1}}}
+
+# Set environment variables {{{1
+# R_HOME is set automatically
+# R_LIBS_USER can be set here if needed
+if (Sys.getenv("R_LIBS_USER") == "") {
+  Sys.setenv(R_LIBS_USER = paste0(Sys.getenv("HOME"), "/.R/library"))
+}
+# 1}}}
+
+# Custom functions {{{1
+# Quick help - search help files
+qhelp <- function(term) {
+  help.search(term)
+}
+
+# List objects in environment
+lsa <- function() {
+  ls(envir = .GlobalEnv)
+}
+
+# Clear console
+clear <- function() {
+  cat("\014")
+}
+
+# Quick summary
+qs <- function(x) {
+  if (is.data.frame(x)) {
+    cat("Dimensions:", nrow(x), "x", ncol(x), "\n")
+    cat("Memory:", format(object.size(x), units = "auto"), "\n")
+    summary(x)
+  } else {
+    summary(x)
+  }
+}
+
+# Source all R files in directory
+source_all <- function(dir = ".") {
+  files <- list.files(dir, pattern = "\\.R$", full.names = TRUE)
+  for (file in files) {
+    source(file)
+  }
+}
+# 1}}}
+
+# Startup message {{{1
+if (interactive()) {
+  cat("\nWelcome to R!\n")
+  cat("R version", R.version.string, "\n")
+  cat("Platform:", R.version$platform, "\n")
+  cat("Available CPUs:", parallel::detectCores(), "\n")
+  cat("\nQuick commands:\n")
+  cat("  qhelp(term)  - Search help\n")
+  cat("  clear()      - Clear console\n")
+  cat("  qs(x)        - Quick summary\n")
+  cat("\n")
+}
+# 1}}}
+
+# Auto-load common packages {{{1
+# if (require("pacman", quietly = TRUE)) {
+#   # Use pacman for package management
+# }
+# 1}}}
+
+

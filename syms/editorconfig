@@ -1,0 +1,51 @@
+# ~/.editorconfig - EditorConfig Settings
+# https://github.com/sempervent/dotfiles
+# See: https://editorconfig.org/
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.{py,pyw}]
+indent_size = 4
+max_line_length = 88
+
+[*.{js,jsx,ts,tsx,json,yaml,yml}]
+indent_size = 2
+
+[*.{c,cpp,h,hpp,java}]
+indent_size = 4
+
+[*.{sh,bash,zsh,fish}]
+indent_size = 2
+
+[*.{vim,vimrc}]
+indent_size = 2
+indent_style = tab
+
+[*.md]
+trim_trailing_whitespace = false
+max_line_length = off
+
+[Makefile]
+indent_style = tab
+
+[*.{sql,R}]
+indent_size = 2
+
+[*.rb]
+indent_size = 2
+
+[*.{go,rs}]
+indent_size = 4
+
+[*.{diff,patch}]
+trim_trailing_whitespace = false
+
+

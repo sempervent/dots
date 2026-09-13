@@ -1,2 +1,19 @@
-*.swp
+# Ignore private / generated / editor noise
+
+.secrets/
 secrets/
+*.secret
+*.key
+*.pem
+.env
+.env.*
+
+.old_dots/
+
+.DS_Store
+*.swp
+*.swo
+*~
+
+.idea/
+.vscode/

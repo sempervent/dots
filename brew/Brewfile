@@ -1,0 +1,50 @@
+# Curated Homebrew manifest for shell/dev workstation use.
+# Prefer: brew bundle --file=brew/Brewfile
+#
+# Notes:
+# - Use bash-completion@2 (conflicts with bash-completion v1).
+# - Prefer moreutils over GNU parallel (both ship `parallel`).
+# - Do not add neofetch, tldr, git-flow, or openssl@1.1 here.
+# - Terraform comes from the HashiCorp tap, not a nonexistent core formula.
+
+brew "bash"
+brew "bash-completion@2"
+brew "zsh"
+brew "zsh-completions"
+brew "tmux"
+brew "vim"
+brew "git"
+brew "git-lfs"
+brew "git-delta"
+brew "shellcheck"
+brew "shfmt"
+brew "fzf"
+brew "fd"
+brew "ripgrep"
+brew "eza"
+brew "zoxide"
+brew "direnv"
+brew "atuin"
+brew "uv"
+brew "gh"
+brew "just"
+brew "moreutils"
+brew "fastfetch"
+brew "bat"
+brew "jq"
+brew "yq"
+brew "htop"
+brew "tree"
+brew "wget"
+brew "curl"
+
+# Optional but commonly used with this dots setup
+brew "neovim"
+brew "ranger"
+brew "coreutils"
+brew "findutils"
+brew "gnu-sed"
+
+tap "hashicorp/tap"
+brew "hashicorp/tap/terraform"
+brew "terraform-ls"

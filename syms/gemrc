@@ -1,0 +1,24 @@
+# ~/.gemrc - RubyGems Configuration
+# https://github.com/sempervent/dotfiles
+
+---
+# Installation
+:update_sources: true
+:sources:
+  - https://rubygems.org/
+  
+# Verbose output
+:verbose: true
+
+# Don't install documentation by default (faster)
+:no_document: true
+# :no_rdoc: true  # For older versions
+# :no_ri: true   # For older versions
+
+# Backtrace on errors
+:backtrace: true
+
+# Benchmark gem operations
+# :benchmark: false
+
+

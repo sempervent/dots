@@ -1,0 +1,58 @@
+# ~/.irbrc - Ruby Interactive Ruby Configuration
+# https://github.com/sempervent/dotfiles
+
+# History
+IRB.conf[:HISTORY_FILE] = File.expand_path("~/.irb_history")
+IRB.conf[:SAVE_HISTORY] = 10000
+IRB.conf[:EVAL_HISTORY] = 100
+
+# Prompt
+IRB.conf[:PROMPT_MODE] = :SIMPLE
+IRB.conf[:PROMPT_I] = "%03n:%02i> "
+IRB.conf[:PROMPT_S] = "%03n:%02i%l "
+IRB.conf[:PROMPT_C] = "%03n:%02i* "
+IRB.conf[:RETURN] = " => %s\n"
+
+# Auto-indent
+IRB.conf[:AUTO_INDENT] = true
+
+# Load libraries
+require 'pp'
+require 'irb/completion'
+
+# Pretty print by default
+def pp(obj)
+  Kernel.pp(obj)
+end
+
+# Clear screen
+def clear
+  system('clear' || 'cls')
+end
+
+# Quick help
+def h(str = nil)
+  if str
+    puts `ri #{str}`
+  else
+    puts "Usage: h('ClassName#method')"
+  end
+end
+
+# Reload file
+def reload!
+  load __FILE__
+end
+
+# CD shortcut
+def cd(path)
+  Dir.chdir(File.expand_path(path))
+  puts Dir.pwd
+end
+
+# Welcome message
+puts "Ruby #{RUBY_VERSION} (#{RUBY_RELEASE_DATE}) [#{RUBY_PLATFORM}]"
+puts "IRB #{IRB::VERSION}"
+puts "Type 'h' for help, 'exit' to quit."
+
+

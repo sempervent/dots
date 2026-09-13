@@ -1,0 +1,101 @@
+# ~/.gitattributes - Global Git Attributes
+# https://github.com/sempervent/dotfiles
+
+# Auto detect text files and perform LF normalization {{{1
+* text=auto
+# 1}}}
+
+# Explicitly declare text files {{{1
+*.txt text
+*.md text
+*.sh text
+*.bash text
+*.zsh text
+*.fish text
+*.py text
+*.js text
+*.ts text
+*.json text
+*.yaml text
+*.yml text
+*.xml text
+*.html text
+*.css text
+*.scss text
+*.rb text
+*.go text
+*.rs text
+*.c text
+*.cpp text
+*.h text
+*.hpp text
+*.java text
+*.sql text
+*.r text
+*.R text
+*.pl text
+*.pm text
+*.conf text
+*.config text
+*.ini text
+*.vim text
+*.vimrc text
+*.zshrc text
+*.bashrc text
+*.tmux.conf text
+*.screenrc text
+# 1}}}
+
+# Binary files {{{1
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.tar binary
+*.gz binary
+*.bz2 binary
+*.7z binary
+*.jar binary
+*.war binary
+*.ear binary
+*.class binary
+# 1}}}
+
+# Line ending normalization {{{1
+# Unix line endings for shell scripts
+*.sh text eol=lf
+*.bash text eol=lf
+*.zsh text eol=lf
+*.fish text eol=lf
+
+# Windows line endings for certain files
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+# 1}}}
+
+# Diff and merge {{{1
+# Use custom merge driver for specific files
+*.conf merge=union
+*.config merge=union
+# 1}}}
+
+# Language-specific {{{1
+# Python
+*.py linguist-language=Python
+*.pyw linguist-language=Python
+
+# JavaScript/TypeScript
+*.js linguist-language=JavaScript
+*.ts linguist-language=TypeScript
+*.jsx linguist-language=JavaScript
+*.tsx linguist-language=TypeScript
+
+# Markdown
+*.md linguist-language=Markdown
+# 1}}}
+
+
