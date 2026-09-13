@@ -90,14 +90,14 @@ now() {
 } # 2}}}
 # go back n number of days {{{2
 past_today() {  
-  if [ ! -z "$1" ]; then
+  if [ -n "$1" ]; then
     date --date="$(date) - $1 day" +%Y-%m-%d
   else
     date --date="$(date) - 1 day" +%Y-%m-%d
   fi
 } # 2}}}
 day-from-now() { # go forward n/1 number of days {{{2
-  if [ ! -z "$1" ]; then
+  if [ -n "$1" ]; then
     date --date="$(date) + $1 day" +%F
   else
     date --date="$(date) + 1 day" +%F
@@ -140,7 +140,7 @@ dre() {
         ;; # 4}}}
       esac
     done # 2}}}
-  docker run -it "$IMAGE" "$COMMAND"
+  docker run -it "$VOLUME" "$IMAGE" "$COMMAND"
 } # 2}}}
 # 1}}}
 # gists pull downs {{{1
@@ -293,4 +293,242 @@ whatdistro() {
 pipe-fortune(){ # make pipe fortune {{{1
   echo "$(fortune | sed 's/\n/ /g' | sed 's/\s+/ /g')"
 } # 1}}}
+
+# DOCKER related functions: {{{1
+get_docker_swap_usage() {
+  if [[ -n "$(command -v docker)" ]]; then
+      # Get the container ID(s) from the container name or ID.
+      container_ids=$(docker ps -q)
+      for container_id in $container_ids; do
+          container_name=$(docker inspect --format='{{.Name}}' "$container_id")
+          swap_usage=$(docker inspect --format='{{.State.Pid}}' "$container_id" | xargs -I{} sh -c 'awk "/Swap/{ sum += \$2 } END { print sum }" /proc/{}/smaps 2>/dev/null')
+          echo "Container ID: $container_id, Container Name: $container_name, Swap usage: $swap_usage bytes"
+      done
+  else
+      echo "Docker is not installed. Cannot check container swap usage."
+  fi
+}
+list_docker_images() {
+  docker images  --format "table {{.Repository}}:{{.Tag}} {{.Size}}"
+}
+# 1}}
+convert_bytes_to_human() {
+  local bytes=$1
+  if [[ $bytes -lt 1024 ]]; then
+      echo "${bytes}B"
+  elif [[ $bytes -lt 1048576 ]]; then
+      echo "$(bc <<< "scale=2; $bytes/1024")K"
+  elif [[ $bytes -lt 1073741824 ]]; then
+      echo "$(bc <<< "scale=2; $bytes/1048576")M"
+  elif [[ $bytes -lt 1099511627776 ]]; then
+      echo "$(bc <<< "scale=2; $bytes/1073741824")G"
+  else
+      echo "$(bc <<< "scale=2; $bytes/1099511627776")T"
+  fi
+}
+
+show_nas_storage_size() {
+  output=$(df -Pk | grep '^//')
+  # Summing the values and using bc for arithmetic to avoid overflow
+  total_size=$(echo "$output" | awk '{print $2}' | paste -sd+ - | bc)
+  total_size=$((total_size * 1024))  # Convert from KB to Bytes
+  total_used=$(echo "$output" | awk '{print $3}' | paste -sd+ - | bc)
+  total_used=$((total_used * 1024))
+  total_avail=$(echo "$output" | awk '{print $4}' | paste -sd+ - | bc)
+  total_avail=$((total_avail * 1024))
+  echo "Total Size: $(convert_bytes_to_human "$total_size")"
+  echo "Total Used: $(convert_bytes_to_human "$total_used")"
+  echo "Total Available: $(convert_bytes_to_human "$total_avail")"
+}
+
+
+rsmv() {
+  echo "----- DRY RUN (no changes made) -----"
+  rsync -av --ignore-existing --dry-run "$1"/ "$2"/ || return 1
+
+  echo
+  read -r -p "Proceed with move? (y/N): " ans
+  [[ "$ans" =~ ^[Yy]$ ]] || { echo "Aborted."; return 1; }
+
+  echo
+  echo "----- EXECUTING -----"
+  rsync -av --ignore-existing --info=progress2 "$1"/ "$2"/
+}
+
+count_tree() {
+  find . -type f |
+    sed 's|/[^/]*$||' |
+    sort |
+    uniq -c |
+    sort -k2
+}
+
+sd-diff() {
+  A="${1%/}"
+  B="${2%/}"
+
+  if [[ ! -d "$A" || ! -d "$B" ]]; then
+    echo "Usage: sd-diff /path/to/dirA /path/to/dirB"
+    return 1
+  fi
+
+  tmpA=$(mktemp)
+  tmpB=$(mktemp)
+
+  (
+    cd "$A" || exit
+    find . -type f -print0 |
+      sed -z 's|/[^/]*$||' |
+      sed -z 's|^\./||' |
+      tr '\0' '\n' |
+      sort |
+      uniq -c |
+      awk '{ printf "%s\t(%s)\n", substr($0, index($0,$2)), $1 }'
+  ) > "$tmpA"
+
+  (
+    cd "$B" || exit
+    find . -type f -print0 |
+      sed -z 's|/[^/]*$||' |
+      sed -z 's|^\./||' |
+      tr '\0' '\n' |
+      sort |
+      uniq -c |
+      awk '{ printf "%s\t(%s)\n", substr($0, index($0,$2)), $1 }'
+  ) > "$tmpB"
+
+  echo
+  printf "%-40s %-40s\n" "DirA subdir (files)" "DirB subdir (files)"
+  printf "%-40s %-40s\n" "----------------------" "----------------------"
+
+  join -t $'\t' -a1 -a2 -e "" -o 1.1,1.2,2.2 \
+    <(sort -t $'\t' -k1,1 "$tmpA") \
+    <(sort -t $'\t' -k1,1 "$tmpB") |
+  while IFS=$'\t' read -r dir a b; do
+    printf "%-40s %-40s\n" \
+      "${dir:+$dir $a}" \
+      "${b:+$dir $b}"
+  done
+
+  rm -f "$tmpA" "$tmpB"
+}
+
+rm-empty-tree() {
+  root="${1%/}"
+
+  if [[ -z "$root" || ! -d "$root" ]]; then
+    echo "Usage: rm-empty-tree /path/to/directory"
+    return 1
+  fi
+
+  echo "Scanning for empty directories under:"
+  echo "  $root"
+  echo
+
+  # Find empty directories (deepest first)
+  mapfile -t empties < <(find "$root" -type d -empty | sort -r)
+
+  if [[ ${#empties[@]} -eq 0 ]]; then
+    echo "No empty directories found."
+    return 0
+  fi
+
+  echo "The following empty directories would be deleted:"
+  echo
+
+  for d in "${empties[@]}"; do
+    echo "  $d"
+  done
+
+  echo
+  read -r -p "Delete these directories? (y/N): " ans
+  [[ "$ans" =~ ^[Yy]$ ]] || { echo "Aborted."; return 1; }
+
+  echo
+  echo "Deleting empty directories..."
+
+  for d in "${empties[@]}"; do
+    rmdir "$d" 2>/dev/null
+  done
+
+  echo "Done."
+}
+
+vdir-diff() {
+  A="${1%/}"
+  B="${2%/}"
+
+  if [[ ! -d "$A" || ! -d "$B" ]]; then
+    echo "Usage: vdir-diff /path/to/dirA /path/to/dirB"
+    return 1
+  fi
+
+  tmpA=$(mktemp)
+  tmpB=$(mktemp)
+
+  (
+    cd "$A" || exit
+    find . -type f -print0 |
+      sort -z |
+      xargs -0 stat --format='%n (%s bytes)' 2>/dev/null
+  ) > "$tmpA"
+
+  (
+    cd "$B" || exit
+    find . -type f -print0 |
+      sort -z |
+      xargs -0 stat --format='%n (%s bytes)' 2>/dev/null
+  ) > "$tmpB"
+
+  vimdiff "$tmpA" "$tmpB"
+
+  rm -f "$tmpA" "$tmpB"
+}
+
+# jump to recently used dirs
+j() {
+  local dir
+  dir=$(dirs -p | sed 's|^~|'"$HOME"'|' | awk '!seen[$0]++' | fzf --height 40% --reverse --prompt="dirs> ") || return
+  cd -- "$dir"
+}
+
+# fuzzy cd into a subdir of current tree
+cdf() {
+  local dir
+  dir=$(find . -type d -not -path "*/\.git/*" 2>/dev/null | sed 's|^\./||' | fzf --height 40% --reverse --prompt="cd> ") || return
+  cd -- "$dir"
+}
+
+mkcd() { mkdir -p -- "$1" && cd -- "$1"; }
+
+# quick grep with line numbers, recursive, ignores .git
+rgf() { grep -RIn --exclude-dir=.git -- "$1" .; }
+
+# show biggest things, fast
+big() { du -ah "${1:-.}" 2>/dev/null | sort -hr | head -n "${2:-20}"; }
+
+# kill whatever is on a port
+killport() {
+  local port="$1"
+  [ -z "$port" ] && { echo "usage: killport <port>"; return 2; }
+  local pids
+  pids=$(lsof -ti "TCP:$port" -sTCP:LISTEN 2>/dev/null)
+  [ -z "$pids" ] && { echo "No listener on :$port"; return 0; }
+  echo "Killing: $pids"
+  kill -TERM $pids
+}
+
+# tail logs with timestamps
+logtail() { tail -F "$1" | awk '{ print strftime("%F %T"), $0; fflush(); }'; }
+
+# quick JSON pretty printer
+jsonpp() { python -m json.tool; }
+
+# parquet peek (DuckDB)
+parquetpeek() { duckdb -c "SELECT * FROM read_parquet('$1') LIMIT ${2:-10};"; }
+parquetschema() { duckdb -c "DESCRIBE SELECT * FROM read_parquet('$1') LIMIT 1;"; }
+remove_docker_volumes() {
+    local prefix=${1:-$(basename "$PWD")}
+    docker volume ls -q | grep "^${prefix}_" | xargs -r docker volume rm
+}
 
