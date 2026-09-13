@@ -1,0 +1,42 @@
+# ~/.npmrc - npm Configuration
+# https://github.com/sempervent/dotfiles
+
+# Package installation location
+prefix=${HOME}/.npm-packages
+
+# Global packages location
+global-bin-dir=${HOME}/.npm-packages/bin
+
+# Cache location
+cache=${HOME}/.npm/.cache
+
+# Registry
+registry=https://registry.npmjs.org/
+
+# Save exact versions by default
+save-exact=false
+save-prefix=^
+
+# Color output
+color=always
+
+# Progress bar
+progress=true
+
+# Logging
+loglevel=notice
+
+# Security
+audit=true
+audit-level=moderate
+
+# Engine strictness
+engine-strict=false
+
+# Fund messages
+fund=false
+
+# Update notifications
+update-notifier=true
+
+

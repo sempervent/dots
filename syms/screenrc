@@ -1,0 +1,123 @@
+# ~/.screenrc - GNU Screen Configuration
+# Modern screen configuration similar to tmux
+
+# Startup message
+startup_message off
+
+# Escape key (default is Ctrl-a, but can be changed)
+escape ^Aa
+
+# Terminal type
+term screen-256color
+
+# Default shell
+shell -$SHELL
+
+# Screen windows {{{1
+# Number of windows to start with
+defscrollback 10000
+
+# Title settings
+hardstatus alwayslastline
+hardstatus string '%{= kG}[ %{G}%H %{g}][%= %{= kw}%?%-Lw%?%{r}(%{W}%n*%f%t%?(%u)%?%{r})%{w}%?%+Lw%?%?%= %{g}][%{B} %m-%d %{W}%c %{g}]'
+
+# Window title format
+caption always "%{= bW}%h%{-} %= %{= rW}%t %{-} %= %{= bW}%-w%{= rW}%n %t%{-}%+w %{= bW}%<%{= rW}@%H %{= bW}%<%{= rW}%d.%m.%Y"
+
+# Status line
+backtick 1 5 5 uptime
+backtick 2 30 30 $HOME/.screen/dmesg
+hardstatus string '%{= kG}[%{G}%H%{g}] %{= kw}%?%-Lw%?%{r}(%{W}%n*%f%t%?(%u)%?%{r})%{w}%?%+Lw%?%?%= %{= kG}[%{G}%1`%{g}]%{= kG}[%{G}%2`%{g}] %{= kG}[%{G}%Y-%m-%d %{g}%{= kG}%c%{g}]'
+# 1}}}
+
+# Visual bell instead of beep
+vbell on
+
+# Activity monitoring {{{1
+# Monitor for 30 seconds
+monitor on 30
+# Notify if window has been silent for 5 minutes
+silencewait 300
+# 1}}}
+
+# Logging {{{1
+# Auto-logging
+deflog on
+
+# Log file location
+logfile $HOME/.screen/logs/screen-%Y%m%d.log
+# 1}}}
+
+# Startup commands {{{1
+# Start with multiple windows
+screen -t shell 0
+# screen -t editor 1 vim
+# screen -t logs 2
+
+# Default window selection
+select 0
+# 1}}}
+
+# Key bindings {{{1
+# Window navigation
+bind 'C' screen 1
+bind 'c' screen 1
+bind 'n' screen 1
+bind 'p' screen 0
+bind 'N' screen 0
+
+# Split windows (if available in your screen version)
+# bind S split
+# bind Q remove
+
+# Detach
+bind '^d' detach
+
+# Reload config
+bind '^r' source $HOME/.screenrc
+
+# Better scrolling
+bind ^b eval "copy" "stuff ^b"
+bind ^f eval "copy" "stuff ^f"
+bind ^u eval "copy" "stuff ^u"
+bind ^d eval "copy" "stuff ^d"
+
+# Vi-style copy mode
+bind [ copy
+# 1}}}
+
+# Default window settings {{{1
+# Disable startup message
+defnonblock on
+
+# Enable xon/xoff flow control
+defflow off
+
+# Mouse support (if available)
+termcapinfo xterm* 'hs:ts=\E]0;:fs=\007:ds=\E]0;screen\007'
+
+# Set window name
+autodetach on
+# 1}}}
+
+# Colors {{{1
+# 256 color support
+attrcolor b ".I"
+termcapinfo xterm 'Co#256:AB=\E[48;5;%dm:AF=\E[38;5;%dm'
+defbce on
+# 1}}}
+
+# Locking {{{1
+# Lock screen with Ctrl-a x
+bind x lockscreen
+# 1}}}
+
+# Screen titles {{{1
+# Automatically set window title
+autodetach on
+
+# Window name format
+defscrollback 10000
+# 1}}}
+
+

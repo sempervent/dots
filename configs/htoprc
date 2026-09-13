@@ -1,0 +1,79 @@
+# htop configuration file
+# Location: ~/.config/htop/htoprc or symlinked from dots/configs/htoprc
+
+# Fields shown (can be changed in UI with F2 -> Setup -> Display options)
+fields=0 48 17 18 38 39 40 2 46 47 49 1
+
+# Sort by PID initially (can be changed with F6)
+sort_key=46
+sort_direction=1
+
+# Tree view enabled
+tree_view=0
+
+# Color scheme (0=monochrome, 1=black on white, 2=white on black)
+color_scheme=0
+
+# Update delay in tenths of seconds (10 = 1 second)
+delay=15
+
+# Hide kernel threads
+hide_kernel_threads=1
+
+# Hide userland threads
+hide_userland_threads=0
+
+# Shadow other users' processes
+shadow_other_users=0
+
+# Show thread names
+show_thread_names=0
+
+# Show program path
+show_program_path=1
+
+# Highlight base name
+highlight_base_name=1
+
+# Highlight changed threads
+highlight_changed_threads=0
+
+# Highlight deleted processes
+highlight_deleted_processes=0
+
+# Highlight low priority threads
+highlight_low_priority_threads=0
+
+# Update process names on this interval
+update_process_names=0
+
+# Account for guest time
+account_guest_in_cpu_meter=0
+
+# CPU color mode (0=normal, 1=gradient, 2=rainbow)
+color_cpu_mode=0
+
+# Show CPU frequency
+show_cpu_frequency=1
+
+# Show CPU temperature
+show_cpu_temperature=1
+
+# Temperature unit (0=Celsius, 1=Fahrenheit, 2=Kelvin)
+temperature_unit=0
+
+# CPU temperature color mode (0=normal, 1=gradient)
+cpu_temperature_color_mode=0
+
+# Left column meters
+left_meters=AllCPUs Memory Swap
+left_meter_modes=1 1 1
+
+# Right column meters
+right_meters=Tasks LoadAverage Uptime
+right_meter_modes=2 2 2
+
+# Meter types: Bar, Text, Graph, LED
+# Meter modes: Text, Graph, LED (varies by meter type)
+
+

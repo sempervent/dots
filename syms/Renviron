@@ -1,0 +1,25 @@
+# ~/.Renviron - R Environment Variables
+# https://github.com/sempervent/dotfiles
+# Note: This file should NOT have comments that start with #
+# Format: KEY=VALUE
+
+# R Library Path
+R_LIBS_USER=${HOME}/.R/library
+
+# Make R use all available CPUs
+MAKEFLAGS=-j$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
+
+# CRAN mirror (can be overridden)
+# CRAN_MIRROR=https://cran.rstudio.com/
+
+# R Build options
+R_BUILD_OPTS=--no-build-vignettes
+
+# Editor (can be overridden in .Rprofile)
+R_PROFILE_USER=${HOME}/.Rprofile
+R_HISTFILE=${HOME}/.Rhistory
+
+# Disable interactive prompts during package installation
+R_INSTALL_STAGED=TRUE
+
+

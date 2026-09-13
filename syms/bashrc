@@ -1,124 +1,138 @@
 #!/usr/bin/env bash
-# :set fdm=marker
-# :set tw=79
-# https://github.com/sempervent/dotfiles
-###############################################################################
-# resolve to all symlinks the source directory
+# ~/.bashrc — Bash for servers, scripts, troubleshooting, and Zsh-less hosts
+# https://github.com/sempervent/dots
+#
+# Architecture:
+#   shell/  shared aliases, exports, functions, paths, tools
+#   bash/   bash-only options, history, completion, prompt
+#   distro/ platform hooks
+#
+# Does not assume Oh My Zsh. Keeps vi mode, custom prompt, and tmux workflow.
+
+# Resolve this file and dots checkout {{{1
 SOURCE="${BASH_SOURCE[0]}"
-while [ -h "$SOURCE" ]; do
-	DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
-	SOURCE="$(readlink "$SOURCE")"
-	[[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE" 
+while [ -h "${SOURCE}" ]; do
+  DIR="$(cd -P "$(dirname "${SOURCE}")" >/dev/null 2>&1 && pwd)"
+  SOURCE="$(readlink "${SOURCE}")"
+  [[ ${SOURCE} != /* ]] && SOURCE="${DIR}/${SOURCE}"
 done
-DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
-SRC_DIR=$HOME
+DIR="$(cd -P "$(dirname "${SOURCE}")" >/dev/null 2>&1 && pwd)"
 
-# give me trusty vim commands
-set -o vi
-set show-mode-in-prompt on
-
-if [ -e /usr/share/terminfo/x/xterm-256color ]; then
-  export TERM='xterm-256color'
+# Prefer repo containing this bashrc (…/dots/syms → …/dots)
+if [ -d "${DIR}/../shell" ]; then
+  DOTS_DIR="$(cd "${DIR}/.." >/dev/null 2>&1 && pwd)"
 else
-  export TERM='xterm-color'
+  DOTS_DIR="${DOTS_DIR:-${HOME}/dots}"
 fi
+export DOTS_DIR
+export DOTS_SHELL=bash
+export SRC_DIR="${HOME}"
+# 1}}}
 
-# General Settings {{{1
-# if not running interactively, don't do anything {{{2
+# Non-interactive → stop early (before anything noisy) {{{1
 case $- in
-   *i*) ;;
-      *) return;;
-esac # 2}}}
-# start tmux if running interactively {{{2
-if [ -x "$(which tmux)" ]; then
-  if [[ -z "$TMUX" ]] ;then
-    # get the id of a deattached session
-      ID="$( tmux ls | grep -vm1 attached | cut -d: -f1 )"
-      if [[ -z "$ID" ]] ;then # if not available create a new one
-          tmux new-session
-      else
-          tmux attach-session -t "$ID" # if available attach to it
-      fi
-  fi 
-fi # 2}}}
-# autocomplete with sudo {{{2
-if [ "$PS1" ]; then
-   complete -cf sudo
-fi
-# enable bash completion if it exists
-if ! shopt -oq posix; then
-  if [ -f /usr/share/bash-completion/bash_completion ]; then
-    . /usr/share/bash-completion/bash_completion
-  elif [ -f /etc/bash_completion ]; then
-    . /etc/bash_completion
-  fi
-fi
-# correct minor spelling errors in cd
-shopt -s cdspell
-# include dotfiles in wildcard expansion and match case-insensitively
-shopt -s dotglob
-shopt -s nocaseglob
-# 2}}}
-# check the window after each command and update
-# values of LINES and COLUMNS
-shopt -s checkwinsize
+  *i*) ;;
+  *) return ;;
+esac
+# 1}}}
 
-# make less more friendly for non-text input files, see lesspipe(1)
-[ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
+# Shared layer {{{1
+# shellcheck disable=SC1091
+[ -f "${DOTS_DIR}/shell/paths.sh" ] && . "${DOTS_DIR}/shell/paths.sh"
+# shellcheck disable=SC1091
+[ -f "${DOTS_DIR}/shell/exports.sh" ] && . "${DOTS_DIR}/shell/exports.sh"
 # 1}}}
-# Path {{{1
-#-----------------------------------
-export PATH="$PATH:/home/$(whoami)/scripts:$JAVA_HOME/bin:/home/$(whoami)/.local/bin"
-export EDITOR='vim'
+
+# Bash modules {{{1
+# shellcheck disable=SC1091
+[ -f "${DOTS_DIR}/bash/options.sh" ] && . "${DOTS_DIR}/bash/options.sh"
+# shellcheck disable=SC1091
+[ -f "${DOTS_DIR}/bash/history.sh" ] && . "${DOTS_DIR}/bash/history.sh"
+# shellcheck disable=SC1091
+[ -f "${DOTS_DIR}/bash/completion.sh" ] && . "${DOTS_DIR}/bash/completion.sh"
+# shellcheck disable=SC1091
+[ -f "${DOTS_DIR}/bash/colors.sh" ] && . "${DOTS_DIR}/bash/colors.sh"
 # 1}}}
-# exported options {{{1
-if [[ "$(uname -s)" =~ 'Darwin' ]]; then
-	echo 'Running in MacOS'
-	OS='Mac'
-elif [[ "$(uname -a)" =~ 'CYGWIN' ]]; then
-	echo 'Running in CYGWIN'
-	OS='Win'
-else
-	echo 'Running in *nix'
-	OS='Nix'
-	export LS_OPTS='--color=auto'
-fi
-export OS
+
+# Shared aliases / functions {{{1
+# shellcheck disable=SC1091
+[ -f "${DOTS_DIR}/shell/aliases.sh" ] && . "${DOTS_DIR}/shell/aliases.sh"
+# shellcheck disable=SC1091
+[ -f "${DOTS_DIR}/shell/functions.sh" ] && . "${DOTS_DIR}/shell/functions.sh"
+# Bash-only helpers (ffs, so)
+# shellcheck disable=SC1091
+[ -f "${DOTS_DIR}/bash/bash_only.sh" ] && . "${DOTS_DIR}/bash/bash_only.sh"
 # 1}}}
-# Aesthetics {{{1
-# set variable identifying the chroot you work in {{{2
-# 2}}}
-# colors {{{2
-force_color_prompt=yes
-# 2}}}
+
+# Prompt last among bash modules so it owns PROMPT_COMMAND {{{1
+# shellcheck disable=SC1091
+[ -f "${DOTS_DIR}/bash/prompt.sh" ] && . "${DOTS_DIR}/bash/prompt.sh"
 # 1}}}
-source "$SRC_DIR/dots/bash/aliases.sh"
-source "$SRC_DIR/dots/bash/colors.sh"
-source "$SRC_DIR/dots/bash/completion.sh"
-source "$SRC_DIR/dots/bash/exports.sh"
-source "$SRC_DIR/dots/bash/history.sh"
-source "$SRC_DIR/dots/bash/functions.sh"
-source "$SRC_DIR/dots/bash/prompt.sh"
-if [ "$(whatdistro)" = "Void Linux" ]; then
-  source "$SRC_DIR/dots/distro/void.sh"
-fi
-if [ -f "$HOME/.fzf.bash" ]; then
-  source "$HOME/.fzf.bash"
-fi
-if [ "$OS" = "Mac" ]; then
-  source "$HOME/dots/distro/mac.sh"
-fi
-# greeting {{{2
-echo "Welcome, $(whoami)!"
-if [ -x "$(which fortune || exit)" ]; then
-  if [ -x "$(which cowsay || exit)" ]; then
-    if [ -x "$(which lolcat || exit)" ]; then
-      pipe-fortune | cowsay | lolcat
-    else
-      pipe-fortune | cowsay
-    fi
-  else
-    fortune
+
+# Modern tools {{{1
+# shellcheck disable=SC1091
+[ -f "${DOTS_DIR}/shell/tools.sh" ] && . "${DOTS_DIR}/shell/tools.sh"
+# 1}}}
+
+# fzf — prefer official bash integration {{{1
+if command -v fzf >/dev/null 2>&1; then
+  if fzf --bash >/dev/null 2>&1; then
+    # shellcheck disable=SC1090
+    eval "$(fzf --bash)"
+  elif [ -f "${HOME}/.fzf.bash" ]; then
+    # shellcheck disable=SC1091
+    . "${HOME}/.fzf.bash"
   fi
 fi
-# 2}}}
+# 1}}}
+
+# Platform hooks {{{1
+case "$(uname -s)" in
+  Darwin)
+    # shellcheck disable=SC1091
+    [ -f "${DOTS_DIR}/distro/mac.sh" ] && . "${DOTS_DIR}/distro/mac.sh"
+    ;;
+  Linux)
+    # shellcheck disable=SC1091
+    [ -f "${DOTS_DIR}/distro/linux.sh" ] && . "${DOTS_DIR}/distro/linux.sh"
+    if command -v whatdistro >/dev/null 2>&1 && [ "$(whatdistro)" = "Void Linux" ]; then
+      # shellcheck disable=SC1091
+      [ -f "${DOTS_DIR}/distro/void.sh" ] && . "${DOTS_DIR}/distro/void.sh"
+    fi
+    ;;
+esac
+# 1}}}
+
+# Version managers {{{1
+export NVM_DIR="${NVM_DIR:-${HOME}/.nvm}"
+# shellcheck disable=SC1091
+[ -s "${NVM_DIR}/nvm.sh" ] && . "${NVM_DIR}/nvm.sh"
+# shellcheck disable=SC1091
+[ -s "${NVM_DIR}/bash_completion" ] && . "${NVM_DIR}/bash_completion"
+# shellcheck disable=SC1091
+[ -f "${HOME}/.cargo/env" ] && . "${HOME}/.cargo/env"
+# 1}}}
+
+# Tmux auto-attach (configurable; no nesting) {{{1
+# shellcheck disable=SC1091
+[ -f "${DOTS_DIR}/shell/tmux.sh" ] && . "${DOTS_DIR}/shell/tmux.sh"
+if declare -F dots_maybe_start_tmux >/dev/null 2>&1; then
+  dots_maybe_start_tmux
+fi
+# 1}}}
+
+# Greeting {{{1
+# shellcheck disable=SC1091
+[ -f "${DOTS_DIR}/shell/greeting.sh" ] && . "${DOTS_DIR}/shell/greeting.sh"
+if [ -z "${TMUX:-}" ] || [ -n "${SSH_TTY:-}" ]; then
+  if declare -F dots_greeting >/dev/null 2>&1; then
+    dots_greeting
+  fi
+fi
+# 1}}}
+
+# Optional per-machine overrides
+# shellcheck disable=SC1091
+[ -f "${HOME}/.bash_aliases" ] && . "${HOME}/.bash_aliases"
+# shellcheck disable=SC1091
+[ -f "${HOME}/.bashrc.local" ] && . "${HOME}/.bashrc.local"

@@ -1,0 +1,304 @@
+# ~/.xonshrc - Xonsh Shell Configuration
+# https://github.com/sempervent/dotfiles
+
+# Path to dots directory
+$DOTS_DIR = os.path.expanduser('~/dots')
+$SRC_DIR = os.path.expanduser('~')
+
+# Environment variables {{{1
+$EDITOR = 'vim'
+$VISUAL = 'vim'
+$TERM = 'xterm-256color'
+
+# Detect OS
+import platform
+if platform.system() == 'Darwin':
+    $OS = 'Mac'
+elif 'CYGWIN' in platform.system() or 'MSYS' in platform.system() or 'MINGW' in platform.system():
+    $OS = 'Win'
+else:
+    $OS = 'Nix'
+    $LS_OPTS = '--color=auto'
+
+# PATH additions
+import os
+home = os.path.expanduser('~')
+path_entries = [
+    os.path.join(home, 'scripts'),
+    os.path.join(home, '.local', 'bin'),
+]
+
+if 'JAVA_HOME' in os.environ:
+    path_entries.append(os.path.join(os.environ['JAVA_HOME'], 'bin'))
+
+for entry in path_entries:
+    if os.path.exists(entry) and entry not in $PATH:
+        $PATH.insert(0, entry)
+
+# macOS Homebrew
+if $OS == 'Mac':
+    if os.path.exists('/opt/homebrew'):
+        $PATH.insert(0, '/opt/homebrew/bin')
+    elif os.path.exists('/usr/local/Homebrew'):
+        $PATH.insert(0, '/usr/local/bin')
+# 1}}}
+
+# Xonsh settings {{{1
+$XONSH_SHOW_TRACEBACK = False
+$XONSH_COLOR_STYLE = 'monokai'
+# 1}}}
+
+# Aliases {{{1
+# Note: In xonsh, aliases work differently - we use aliases for shell commands
+# and can call Python functions directly
+
+# File operations
+aliases['less'] = 'less --color-always --RAW-CONTROL-CHARS'
+aliases['grep'] = 'grep --color=auto'
+aliases['egrep'] = 'egrep --color=auto'
+aliases['fgrep'] = 'fgrep --color=auto'
+aliases['ll'] = 'ls -lh'
+aliases['la'] = 'ls -lah'
+aliases['l'] = 'ls -lh'
+
+# Docker
+aliases['de'] = 'docker exec -it'
+aliases['dps'] = 'docker ps --format "{{.Names}}: {{.Image}} @ {{.CreatedAt}} {{.Status}}"'
+
+# Git shortcuts
+aliases['gst'] = 'git status'
+aliases['gaa'] = 'git add .'
+aliases['gcm'] = 'git commit -m'
+aliases['gco'] = 'git checkout'
+aliases['gpl'] = 'git pull'
+aliases['gps'] = 'git push'
+aliases['glog'] = 'git log --oneline --graph --decorate --all'
+
+# System
+aliases['reload'] = 'source ~/.xonshrc'
+aliases['so'] = 'source ~/.xonshrc'
+# 1}}}
+
+# Python functions (xonsh allows mixing Python and shell) {{{1
+def mkcd(path):
+    """Make directory and cd into it"""
+    import os
+    os.makedirs(path, exist_ok=True)
+    os.chdir(path)
+
+def extract(archive):
+    """Extract various archive formats"""
+    import os
+    if not os.path.exists(archive):
+        print(f"'{archive}' is not a valid file.")
+        return
+    
+    if archive.endswith('.tar.bz2'):
+        $(tar xvjf @(archive))
+    elif archive.endswith('.tar.gz'):
+        $(tar xzvf @(archive))
+    elif archive.endswith('.bz2'):
+        $(bunzip2 @(archive))
+    elif archive.endswith('.rar'):
+        $(unrar x @(archive))
+    elif archive.endswith('.gz'):
+        $(gunzip @(archive))
+    elif archive.endswith('.tar'):
+        $(tar xvf @(archive))
+    elif archive.endswith('.tbz2'):
+        $(tar xvjf @(archive))
+    elif archive.endswith('.tgz'):
+        $(tar xzvf @(archive))
+    elif archive.endswith('.zip'):
+        $(unzip @(archive))
+    elif archive.endswith('.Z'):
+        $(uncompress @(archive))
+    elif archive.endswith('.7z'):
+        $(7z x @(archive))
+    else:
+        print(f"don't know how to extract '{archive}' ...")
+
+def file_count():
+    """Count files in current directory"""
+    import subprocess
+    result = subprocess.run(['ls', '-1'], capture_output=True, text=True)
+    return len([f for f in result.stdout.strip().split('\n') if f])
+
+def my_ip():
+    """Get public IP address"""
+    import requests
+    try:
+        return requests.get('http://ifconfig.me', timeout=5).text.strip()
+    except:
+        try:
+            return requests.get('http://ifconfig.co', timeout=5).text.strip()
+        except:
+            return "Unable to get IP"
+
+def weather():
+    """Get weather information"""
+    import requests
+    try:
+        return requests.get('http://wttr.in', timeout=5).text
+    except:
+        return "Weather service unavailable"
+
+def whatdistro():
+    """Detect operating system distribution"""
+    import platform
+    if $OS == 'Mac':
+        try:
+            import subprocess
+            result = subprocess.run(['sw_vers', '-productName'], capture_output=True, text=True)
+            return result.stdout.strip()
+        except:
+            return "macOS"
+    elif os.path.exists('/etc/os-release'):
+        with open('/etc/os-release') as f:
+            for line in f:
+                if line.startswith('PRETTY_NAME'):
+                    return line.split('=')[1].strip('"\n')
+    return platform.system()
+
+def f(pattern):
+    """Quick file search"""
+    import os
+    import subprocess
+    result = subprocess.run(['find', '.', '-name', f'*{pattern}*'], capture_output=True, text=True)
+    return result.stdout
+
+def d(pattern):
+    """Quick directory search"""
+    import subprocess
+    result = subprocess.run(['find', '.', '-type', 'd', '-name', f'*{pattern}*'], capture_output=True, text=True)
+    return result.stdout
+
+# Docker functions {{{2
+def dco(*args):
+    """Docker compose wrapper that auto-detects docker-compose or docker compose"""
+    import subprocess
+    import shutil
+    
+    # Check for docker-compose command
+    if shutil.which('docker-compose'):
+        cmd = ['docker-compose'] + list(args)
+    else:
+        # Try docker compose
+        result = subprocess.run(['docker', 'compose', 'version'], 
+                              capture_output=True, text=True, timeout=2)
+        if result.returncode == 0:
+            cmd = ['docker', 'compose'] + list(args)
+        else:
+            print("Error: Neither 'docker-compose' nor 'docker compose' found")
+            return 1
+    
+    subprocess.run(cmd)
+
+def dcud(*args):
+    """Docker compose down and up -d with auto-detection"""
+    import subprocess
+    import shutil
+    
+    # Check for docker-compose command
+    if shutil.which('docker-compose'):
+        subprocess.run(['docker-compose', 'down'])
+        subprocess.run(['docker-compose', 'up', '-d'] + list(args))
+    else:
+        # Try docker compose
+        result = subprocess.run(['docker', 'compose', 'version'], 
+                              capture_output=True, text=True, timeout=2)
+        if result.returncode == 0:
+            subprocess.run(['docker', 'compose', 'down'])
+            subprocess.run(['docker', 'compose', 'up', '-d'] + list(args))
+        else:
+            print("Error: Neither 'docker-compose' nor 'docker compose' found")
+            return 1
+# 2}}}
+# 1}}}
+
+# Prompt customization {{{1
+# Modern prompt with git info
+def _gather_git_info():
+    """Gather git information for prompt"""
+    import subprocess
+    try:
+        branch = subprocess.run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], 
+                               capture_output=True, text=True, timeout=1).stdout.strip()
+        if branch:
+            return f" [{branch}]"
+    except:
+        pass
+    return ""
+
+@events.on_precommand
+def _precommand(cmd):
+    """Before command hook"""
+    pass
+
+def _get_prompt():
+    """Custom prompt function"""
+    import os
+    git_info = _gather_git_info()
+    cwd = os.getcwd().replace(os.path.expanduser('~'), '~')
+    return f"[{cwd}]{git_info} $ "
+
+$PROMPT = _get_prompt
+# 1}}}
+
+# Load shared functions if available {{{1
+# Since xonsh is Python-based, we could load shared Python utilities
+# For now, we've defined the essential functions above
+# 1}}}
+
+# OS-specific configuration {{{1
+if $OS == 'Mac':
+    # macOS-specific setup can go here
+    pass
+# 1}}}
+
+# nvm (Node Version Manager) {{{1
+nvm_dir = os.path.expanduser('~/.nvm')
+nvm_sh = os.path.join(nvm_dir, 'nvm.sh')
+if os.path.exists(nvm_sh):
+    $NVM_DIR = nvm_dir
+    # nvm is a bash script, so we source it with bash
+    import subprocess
+    result = subprocess.run(['bash', '-c', f'source {nvm_sh} && nvm --version'], 
+                          capture_output=True, text=True)
+    # Note: Actual nvm usage requires running bash commands
+# 1}}}
+
+# rustup (Rust toolchain manager) {{{1
+cargo_env = os.path.expanduser('~/.cargo/env')
+if os.path.exists(cargo_env):
+    # Source cargo environment
+    exec(open(cargo_env).read())
+# 1}}}
+
+# fzf integration {{{1
+# xonsh doesn't have native fzf integration like bash/zsh/fish
+# but can still use fzf via aliases
+if __xonsh__.commands_cache.get('fzf'):
+    def _fzf_wrapper():
+        """Wrapper for fzf in xonsh"""
+        import subprocess
+        result = subprocess.run(['fzf'], capture_output=True, text=True)
+        return result.stdout.strip()
+    
+    aliases['fzf'] = 'fzf'
+# 1}}}
+
+# Welcome message {{{1
+import subprocess
+if os.environ.get('SSH_TTY') or not os.environ.get('TMUX'):
+    print(f"Welcome, {os.getenv('USER', 'user')}!")
+    if __xonsh__.commands_cache.get('fortune'):
+        if __xonsh__.commands_cache.get('cowsay'):
+            if __xonsh__.commands_cache.get('lolcat'):
+                $(fortune | cowsay | lolcat)
+            else:
+                $(fortune | cowsay)
+        else:
+            $(fortune)
+# 1}}}
+

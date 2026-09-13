@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ImageMagick configuration file -->
+<!-- Location: ~/.config/ImageMagick/magick.xml or symlinked from dots/configs/magick.xml -->
+<imagemagickconfig>
+  <policy domain="path" name="@*">
+    <policy domain="cache" name="memory" value="256MiB"/>
+    <policy domain="cache" name="map" value="512MiB"/>
+    <policy domain="cache" name="disk" value="1GiB"/>
+    <policy domain="resource" name="memory" value="256MiB"/>
+    <policy domain="resource" name="map" value="512MiB"/>
+    <policy domain="resource" name="disk" value="2GiB"/>
+    <policy domain="resource" name="width" value="10KP"/>
+    <policy domain="resource" name="height" value="10KP"/>
+  </policy>
+  
+  <!-- Enable read/write for common formats -->
+  <policy domain="coder" rights="read|write" pattern="*" />
+  
+  <!-- Threads configuration -->
+  <policy domain="resource" name="thread" value="4"/>
+  
+  <!-- Default quality for JPEG -->
+  <policy domain="resource" name="quality" value="85"/>
+  
+  <!-- Enable transparent PNGs -->
+  <policy domain="delegate" rights="none" pattern="*" />
+</imagemagickconfig>
+
+

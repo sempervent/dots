@@ -1,0 +1,15 @@
+{
+  "auths": {},
+  "credsStore": "",
+  "credsHelpers": {},
+  "detachKeys": "",
+  "experimental": "",
+  "stackOrchestrator": "",
+  "httpHeaders": {
+    "User-Agent": "Docker-Client/19.03.0"
+  },
+  "plugins": {},
+  "proxies": {}
+}
+
+

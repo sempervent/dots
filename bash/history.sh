@@ -1,9 +1,24 @@
-# ignore duplicates and lines starting with a space
+#!/usr/bin/env bash
+# Bash history — intentional settings (single source of truth)
+#
+# Semantic intent:
+# - ignoreboth: drop duplicates and commands starting with a space
+# - histappend / prompt sync: share history across interactive sessions
+# - large but reasonable HISTSIZE / HISTFILESIZE
+
 HISTCONTROL=ignoreboth
-# append to the history file
+HISTSIZE=100000
+HISTFILESIZE=200000
+HISTTIMEFORMAT='%F %T '
+HISTIGNORE='ls:ll:la:cd:pwd:exit:clear:history'
+
 shopt -s histappend
-# save multiline command as a single command
 shopt -s cmdhist
-# give lots of history
-HISTSIZE=10000000
-HISTFILESIZE=2000000
+shopt -s lithist 2>/dev/null || true
+
+# Sync history across sessions without clobbering the custom prompt's PROMPT_COMMAND.
+# Append our syncers; prompt.sh will compose the final PROMPT_COMMAND.
+_dots_bash_history_sync() {
+  history -a
+  history -n
+}
