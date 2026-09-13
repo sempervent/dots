@@ -1,6 +1,7 @@
 # Herdr configuration (non-secret) — version-controlled by dots
-# Deployed to ~/.config/herdr/config.toml
-# Validated against herdr 0.9.x --default-config
+# Deployed into ~/.config/herdr/config.toml via setup.sh merge (not a symlink:
+# Herdr rewrites local onboarding/[ui] state into that path).
+# Validated against herdr 0.9.x --default-config / `herdr config check`.
 
 [theme]
 name = "catppuccin"
@@ -12,34 +13,52 @@ light_name = "catppuccin-latte"
 # Prefix: Ctrl-A (tmux remains Ctrl-Space)
 prefix = "ctrl+a"
 
-# Pane focus (tmux muscle memory)
+# Pane focus (tmux muscle memory: prefix+h/j/k/l)
 focus_pane_left = "prefix+h"
 focus_pane_down = "prefix+j"
 focus_pane_up = "prefix+k"
 focus_pane_right = "prefix+l"
 
-# Splits: v = side-by-side; minus = top/bottom
-# Sidebar STAYS on prefix+b (authoritative — do not steal b for splits)
-split_vertical = "prefix+v"
-split_horizontal = "prefix+minus"
+# ---------------------------------------------------------------------------
+# Splits — Herdr naming vs tmux semantics
+#
+#   Herdr split_vertical   ≈ side-by-side  (tmux `split-window -h`, classic `%`)
+#   Herdr split_horizontal ≈ top/bottom   (tmux `split-window -v`, classic `"`)
+#
+# Authoritative Herdr-specific keys (do NOT use tmux's v/b here):
+#   prefix+&  → split_vertical   (side-by-side; & stands in for classic %)
+#   prefix+"  → split_horizontal (top/bottom; matches classic tmux ")
+#
+# Named punctuation (herdr keybinds.rs): ampersand=&  double_quote="
+# (Do not use "quote" — that is apostrophe.)
+# ---------------------------------------------------------------------------
+split_vertical = "prefix+ampersand"
+split_horizontal = "prefix+double_quote"
+
+# Sidebar STAYS on prefix+b (intentional exception vs tmux's b = top/bottom split)
 toggle_sidebar = "prefix+b"
 
-# Tabs
+# Tabs / windows (tmux defaults: c / p / n / 1–9)
 new_tab = "prefix+c"
 previous_tab = "prefix+p"
 next_tab = "prefix+n"
 switch_tab = "prefix+1..9"
 
-# Pane ops
+# Pane ops (tmux: z zoom, x kill-pane, K kill-window, d detach)
 zoom = "prefix+z"
 close_pane = "prefix+x"
-detach = "prefix+q"
+close_tab = "prefix+shift+k"
+detach = "prefix+d"
 
-# Herdr-native navigation
+# Herdr-native navigation (closest to tmux choose-tree / session helpers)
 workspace_picker = "prefix+w"
 goto = "prefix+g"
+
+# Resize vs reload:
+#   tmux reload = prefix+r
+#   Herdr needs resize_mode on r (default); reload stays on shift+r (intentional)
 resize_mode = "prefix+r"
 reload_config = "prefix+shift+r"
 
-# Scrollback: tmux-familiar [ maps to Herdr native editor
+# Scrollback: tmux copy-mode often on [ — map to Herdr scrollback editor
 edit_scrollback = "prefix+["

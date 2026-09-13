@@ -4,6 +4,17 @@
 # Hermes is user-owned. Install CLI via: ./setup.sh --with hermes
 # (Homebrew formula hermes-agent; macOS also gets hermes-desktop cask.)
 #
+# Agent skills (e.g. Archify):
+#   ./setup.sh --with archify
+# installs globally via `npx skills add … -g` into ~/.agents/skills/.
+# The skills CLI also links into ~/.hermes/skills/<name>. Hermes lists these
+# as local skills (`hermes skills list`). No manual symlink from dots.
+#
+# Draw Things (image TOOL, not a chat model):
+#   ./setup.sh --with drawthings
+# registers mcp_servers.drawthings → scripts/drawthings-mcp (CLI bridge).
+# Images land in ~/Pictures/AI/DrawThings/ by default.
+#
 # Local Ollama example (OpenAI-compatible endpoint):
 #
 # model:

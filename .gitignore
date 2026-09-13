@@ -24,3 +24,4 @@ secrets/
 **/herdr.log
 **/herdr-client.log
 **/herdr-server.log
+tools/drawthings_mcp/.venv/
