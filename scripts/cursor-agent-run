@@ -2,8 +2,10 @@
 # cursor-agent-run — thin DOTS wrapper around official Cursor `agent --print`
 # Usage:
 #   cursor-agent-run run --dir /path/to/repo --prompt "Inspect this repository."
-#   cursor-agent-run run --prompt "..." [--mode plan|ask] [--model MODEL]
 set -euo pipefail
+
+DOTS_DIR="${DOTS_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
+TELEMETRY_BIN="${DOTS_DIR}/scripts/agent-telemetry"
 
 usage() {
   cat <<'EOF'
@@ -54,10 +56,36 @@ if ! command -v agent >/dev/null 2>&1; then
   exit 1
 fi
 
+# Telemetry start (never stores prompt; never aborts task)
+TELE_ID=""
+if [[ "${DOTS_TELEMETRY:-1}" != "0" ]] && [[ -x "${TELEMETRY_BIN}" ]]; then
+  TELE_ID="$("${TELEMETRY_BIN}" record-start \
+    --backend cursor \
+    --kind coding-cursor \
+    --label "cursor agent run" \
+    --model "${MODEL:-}" \
+    --cwd "${DIR_ARG:-$(pwd)}" \
+    --tool cursor-agent-run \
+    --local-or-cloud cloud 2>/dev/null || true)"
+fi
+
 args=(-p --print --output-format "${OUTFMT}" --trust)
 [[ -n "${DIR_ARG}" ]] && args+=(--workspace "${DIR_ARG}")
 [[ -n "${MODE}" ]] && args+=(--mode "${MODE}")
 [[ -n "${MODEL}" ]] && args+=(--model "${MODEL}")
 args+=("${PROMPT}")
 
-exec agent "${args[@]}"
+set +e
+agent "${args[@]}"
+rc=$?
+set -e
+
+if [[ -n "${TELE_ID}" ]] && [[ -x "${TELEMETRY_BIN}" ]]; then
+  if [[ "${rc}" -eq 0 ]]; then
+    "${TELEMETRY_BIN}" record-finish --id "${TELE_ID}" --success true --exit-code 0 --model "${MODEL:-}" >/dev/null 2>&1 || true
+  else
+    "${TELEMETRY_BIN}" record-finish --id "${TELE_ID}" --success false --exit-code "${rc}" --model "${MODEL:-}" >/dev/null 2>&1 || true
+  fi
+fi
+
+exit "${rc}"

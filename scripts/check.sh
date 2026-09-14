@@ -847,6 +847,52 @@ if [[ -x "${DOTS_DIR}/scripts/profile_resolution_test.sh" ]]; then
   fi
 fi
 
+echo -e "\n${BLUE}Agent telemetry (local)${NC}"
+[[ -f "${CONFIG_DIR}/agents/telemetry.toml" ]] && ok "telemetry.toml present" || fail "configs/agents/telemetry.toml missing"
+[[ -d "${DOTS_DIR}/tools/agent_telemetry/dots_telemetry" ]] && ok "telemetry package present" || fail "tools/agent_telemetry missing"
+if [[ -L "${HOME}/.local/bin/agent-telemetry" ]] || [[ -x "${HOME}/.local/bin/agent-telemetry" ]] || [[ -x "${DOTS_DIR}/scripts/agent-telemetry" ]]; then
+  ok "agent-telemetry CLI present"
+else
+  warn "agent-telemetry not linked (run ./setup.sh)"
+fi
+if [[ -L "${HOME}/.local/bin/agent-stats" ]] || [[ -x "${HOME}/.local/bin/agent-stats" ]] || [[ -x "${DOTS_DIR}/scripts/agent-stats" ]]; then
+  ok "agent-stats CLI present"
+else
+  warn "agent-stats not linked (run ./setup.sh)"
+fi
+TELE_DATA="${HOME}/.local/share/dots/telemetry"
+if [[ -d "${TELE_DATA}" ]] || mkdir -p "${TELE_DATA}" 2>/dev/null; then
+  ok "telemetry data dir writable (${TELE_DATA})"
+else
+  warn "telemetry data dir not writable"
+fi
+if DOTS_DIR="${DOTS_DIR}" "${DOTS_DIR}/scripts/agent-telemetry" doctor >/tmp/dots-tele-doc.$$ 2>&1; then
+  ok "agent-telemetry doctor"
+  rm -f /tmp/dots-tele-doc.$$
+else
+  warn "agent-telemetry doctor failed"
+  cat /tmp/dots-tele-doc.$$ >&2 || true
+  rm -f /tmp/dots-tele-doc.$$
+fi
+if DOTS_DIR="${DOTS_DIR}" "${DOTS_DIR}/scripts/agent-stats" --json >/tmp/dots-tele-stats.$$ 2>&1; then
+  ok "agent-stats works (empty DB OK)"
+  rm -f /tmp/dots-tele-stats.$$
+else
+  warn "agent-stats failed"
+  cat /tmp/dots-tele-stats.$$ >&2 || true
+  rm -f /tmp/dots-tele-stats.$$
+fi
+if [[ -x "${DOTS_DIR}/scripts/telemetry_test.sh" ]]; then
+  if "${DOTS_DIR}/scripts/telemetry_test.sh" >/tmp/dots-tele-test.$$ 2>&1; then
+    ok "telemetry unit/integration tests"
+    rm -f /tmp/dots-tele-test.$$
+  else
+    fail "telemetry tests failed"
+    cat /tmp/dots-tele-test.$$ >&2 || true
+    rm -f /tmp/dots-tele-test.$$
+  fi
+fi
+
 # Destination availability when components are present (partial installs OK; info not warn)
 if command -v hermes >/dev/null 2>&1; then
   hermes mcp list 2>/dev/null | rg -q 'opencode' && ok "router dest opencode MCP present" || info "router dest opencode MCP absent (opt-in)"

@@ -1,0 +1,15 @@
+#!/usr/bin/env python3
+"""agent-stats — human-friendly DOTS telemetry summary (local only)."""
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1] / "tools" / "agent_telemetry"
+sys.path.insert(0, str(ROOT))
+
+from dots_telemetry.cli import main  # noqa: E402
+
+if __name__ == "__main__":
+    # Force stats subcommand
+    raise SystemExit(main(["stats", *sys.argv[1:]]))

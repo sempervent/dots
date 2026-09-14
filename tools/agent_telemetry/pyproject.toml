@@ -1,0 +1,16 @@
+[project]
+name = "dots-agent-telemetry"
+version = "0.1.0"
+description = "Private local DOTS agent telemetry (stdlib sqlite3)"
+requires-python = ">=3.11"
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["dots_telemetry"]
+
+[tool.uv]
+package = false

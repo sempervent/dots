@@ -52,6 +52,33 @@ are also selected.
 
 Authority for optional component ids: `configs/components.toml`.
 
+### Local agent telemetry (private)
+
+DOTS records **local observational** metadata about routing and adapter
+executions so you can measure the harness before changing it.
+
+| | |
+|--|--|
+| **Stored** | backend, model, duration, success/timeout, route reason/category, escalation flags, optional resource/Ollama snapshots, token/cost *if exposed* |
+| **Not stored (default)** | prompts, responses, secrets, source code, full paths, env dumps |
+| **Database** | `~/.local/share/dots/telemetry/agents.sqlite3` (SQLite WAL) |
+| **Config** | `configs/agents/telemetry.toml` → `~/.config/dots/agents/telemetry.toml` |
+| **Opt-out** | `DOTS_TELEMETRY=0` or `enabled = false` in telemetry.toml |
+
+```bash
+agent-stats
+agent-stats --week
+agent-stats --failures
+agent-stats --escalations
+agent-stats --backend opencode --json
+agent-telemetry doctor
+agent-telemetry prune
+agent-telemetry reset --yes   # delete local DB
+```
+
+Telemetry failures never abort agent work. Routing is **not** adapted from these
+metrics yet — collect evidence first.
+
 `setup.sh` is idempotent. Default install includes shell UX (fnm, Starship,
 JetBrainsMono Nerd Font, Neovim, terminal-notifier) but does **not** install AI
 tooling or download models.

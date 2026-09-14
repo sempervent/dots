@@ -55,6 +55,8 @@ source "${DIR}/helpers/nvim.sh"
 source "${DIR}/helpers/notify.sh"
 # shellcheck source=helpers/path_hygiene.sh
 source "${DIR}/helpers/path_hygiene.sh"
+# shellcheck source=helpers/telemetry.sh
+source "${DIR}/helpers/telemetry.sh"
 
 usage() {
   cat <<'EOF'
@@ -392,6 +394,9 @@ dots_path_hygiene
 
 # Generic notify helper + Hermes completion hooks
 dots_deploy_notify
+
+# Private local agent telemetry (base harness — not a provider)
+dots_deploy_telemetry
 
 # Agent skills (npx skills add …) — after fnm Node is available
 dots_install_requested_agent_skills || exit 1
