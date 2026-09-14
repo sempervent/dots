@@ -1,19 +1,42 @@
-# Curated Hermes Engineering Pack (DOTS --with skills)
-# Install via skills CLI globally → ~/.agents/skills/
-# Hermes discovers via ~/.hermes/skills/ (skills CLI symlink).
+# Curated skill packs for DOTS
 #
-# Do NOT install the entire magnus919 catalog — only entries below.
+# Install via skills CLI → ~/.agents/skills/
+# Hermes discovers via ~/.hermes/skills/ only when hermes is co-selected.
+#
+# Packs:
+#   skills     — engineering pack (--with skills); includes Archify
+#   ai-skills  — AI/agent harness pack (--with ai-skills)
+#
+# Union (--with skills,ai-skills): install each skill once (set semantics).
+# Do NOT install the entire magnus919 catalog.
 
-version = 1
-name = "hermes-engineering-pack"
-description = "Curated engineering skills for Hermes (reproducible, security-reviewed)"
+version = 2
+name = "dots-skill-packs"
+description = "Declarative curated skill packs with groups and provenance"
+
+# Pack → group membership (skills listed under [[skills]] with matching group)
+[packs.skills]
+description = "Engineering pack (reproducible, security-reviewed)"
+groups = ["security", "core", "engineering", "infrastructure", "testing", "visualization"]
+
+[packs.ai-skills]
+description = "AI/agent engineering pack for operating and evaluating the harness"
+groups = ["security", "ai"]
+
+# ---------------------------------------------------------------------------
+# security
+# ---------------------------------------------------------------------------
 
 [[skills]]
 name = "skill-security-review"
 source = "dkleptsov/skill-security-review"
 group = "security"
 enabled = true
-# Audit provenance before enabling new third-party skills.
+# Audit prerequisite before enabling new third-party skills.
+
+# ---------------------------------------------------------------------------
+# core / engineering / infrastructure / testing  (--with skills)
+# ---------------------------------------------------------------------------
 
 [[skills]]
 name = "systematic-debugging"
@@ -108,6 +131,64 @@ enabled = true
 [[skills]]
 name = "archify"
 source = "tt-a1i/archify"
-group = "diagrams"
+group = "visualization"
 enabled = true
 # Also installable alone via --with archify
+
+# ---------------------------------------------------------------------------
+# ai  (--with ai-skills) — magnus919/agent-skills curated subset
+# ---------------------------------------------------------------------------
+
+[[skills]]
+name = "agent-evals-and-observability"
+source = "magnus919/agent-skills"
+group = "ai"
+enabled = true
+
+[[skills]]
+name = "agent-production-operations"
+source = "magnus919/agent-skills"
+group = "ai"
+enabled = true
+
+[[skills]]
+name = "litellm"
+source = "magnus919/agent-skills"
+group = "ai"
+enabled = true
+
+[[skills]]
+name = "ml-engineering"
+source = "magnus919/agent-skills"
+group = "ai"
+enabled = true
+
+[[skills]]
+name = "workflow-architect"
+source = "magnus919/agent-skills"
+group = "ai"
+enabled = true
+
+[[skills]]
+name = "capacity-and-cost-engineering"
+source = "magnus919/agent-skills"
+group = "ai"
+enabled = true
+
+[[skills]]
+name = "privacy-engineering"
+source = "magnus919/agent-skills"
+group = "ai"
+enabled = true
+
+[[skills]]
+name = "product-analytics-and-measurement"
+source = "magnus919/agent-skills"
+group = "ai"
+enabled = true
+
+[[skills]]
+name = "telemetry"
+source = "magnus919/agent-skills"
+group = "ai"
+enabled = true

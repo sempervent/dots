@@ -1,0 +1,16 @@
+# configs/bootstrap/profiles/all.toml
+# Convenience lab profile: every optional DOTS component from configs/components.toml
+# (omit_from_all entries like archify are skipped — covered by skills).
+#
+# WARNING: may install cloud/external AI clients (Codex, Cursor).
+# Prefer --profile home or a custom allowlist on machines with policy constraints.
+#
+# Use: ./bootstrap.sh --profile all
+
+[profile]
+name = "all"
+description = "ALL optional DOTS components (lab convenience — may include cloud AI)"
+include_all_optional = true
+with = []
+
+open_apps = ["iTerm"]

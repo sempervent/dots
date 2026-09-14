@@ -30,7 +30,7 @@ apply_optional_brewfiles() {
   if has_component ollama; then
     apply_brewfile "${DIR}/brew/Brewfile.ollama"
   fi
-  if has_component archify || has_component skills; then
+  if has_component archify || has_component skills || has_component ai-skills; then
     apply_brewfile "${DIR}/brew/Brewfile.archify"
   fi
   if has_component drawthings; then
@@ -68,15 +68,35 @@ apply_optional_brewfiles() {
 }
 
 dots_install_requested_agent_skills() {
-  # --with skills: curated Engineering Pack (includes Archify)
+  # Pack selection uses set semantics (union / dedupe inside dots_install_skill_packs).
+  local packs=()
   if has_component skills; then
-    dots_install_skills_pack || {
-      echo "Error: curated skills pack installation failed." >&2
+    packs+=(skills)
+  fi
+  if has_component ai-skills; then
+    packs+=(ai-skills)
+  fi
+
+  if [[ ${#packs[@]} -gt 0 ]]; then
+    # Brewfile.archify when skills pack (or archify alone) needs Node tooling path
+    dots_install_skill_packs "${packs[@]}" || {
+      echo "Error: skill pack installation failed (${packs[*]})." >&2
       return 1
     }
+    # --with archify alongside packs: already covered if skills selected; else install once
+    if has_component archify && ! has_component skills; then
+      # ai-skills alone does not include archify — honor explicit archify
+      install_agent_skill archify || {
+        echo "Error: archify installation failed." >&2
+        return 1
+      }
+    elif has_component archify && has_component skills; then
+      echo "OK: archify covered by skills pack (no duplicate install)"
+    fi
     return 0
   fi
 
+  # archify-only (no packs)
   local c want_skills=0
   [[ ${#DOTS_WITH_COMPONENTS[@]} -gt 0 ]] || return 0
   for c in "${DOTS_WITH_COMPONENTS[@]}"; do

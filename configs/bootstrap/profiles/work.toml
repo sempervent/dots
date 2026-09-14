@@ -2,21 +2,25 @@
 # Conservative work-machine template.
 #
 # IMPORTANT: Do NOT infer employer AI policy. Start with NO AI clients.
-# Add approved components explicitly to `with` after policy review.
+# Add approved components explicitly after policy review.
 #
-# Cursor is intentionally omitted and must not be added without approval.
+# Cursor MUST NOT be included without approval.
 #
 # Use: ./bootstrap.sh --profile work
-# Example after approval: with = ["images", "tex", "hermes"]
+# Example: ./bootstrap.sh --profile work --with hermes,ollama
+# Or: ./configure.sh  (save as work or a custom path)
 
 [profile]
 name = "work"
 description = "Conservative allowlist — no AI clients by default"
 
 # Explicit allowlist only. Empty = core shell UX, zero AI configuration.
-# Approved non-AI tooling examples (uncomment as needed):
+# Approved examples (uncomment as needed):
 #   "images"
 #   "tex"
+#   "hermes"
+#   "ollama"
+#   "skills"
 with = []
 
 # Do not list Cursor here.

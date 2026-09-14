@@ -22,7 +22,10 @@ ZSH_CUSTOM="${ZSH_CUSTOM:-${ZSH}/custom}"
 DRY_RUN=0
 DOTS_WITH_COMPONENTS=()
 
-SUPPORTED_WITH=(herdr hermes ollama archify skills drawthings opencode codex cursor images tex)
+# shellcheck source=helpers/components.sh
+source "${DIR}/helpers/components.sh"
+SUPPORTED_WITH=()
+dots_load_supported_with_into SUPPORTED_WITH
 
 # shellcheck source=helpers/ai_consent.sh
 source "${DIR}/helpers/ai_consent.sh"
@@ -69,6 +72,8 @@ Options:
                                    (requires Node via fnm; Brewfile.archify)
                       skills     — curated Engineering Pack (manifest
                                    + security-review + Archify + magnus919 set)
+                      ai-skills  — curated AI/agent harness skill pack
+                                   (evals, litellm, ml-engineering, …)
                       drawthings — Draw Things image tool bridge (CLI + MCP
                                    launchers; GUI app must already be installed)
                       opencode   — local/general coding adapter (+ Hermes MCP
@@ -87,21 +92,25 @@ Options:
 Consent vs presence:
   A binary already on PATH does NOT authorize DOTS to configure it.
   AI client config runs only for components listed in --with this run.
-  Prefer ./bootstrap.sh --profile {base,home,work} for machine onboarding.
+  Prefer ./bootstrap.sh --profile {base,home,work,all|path.toml} for onboarding.
+  Edit profiles with ./configure.sh (writes TOML only).
 
 Examples:
   ./setup.sh
   ./setup.sh --with herdr
   ./setup.sh --with cursor
+  ./setup.sh --with ai-skills
+  ./setup.sh --with skills,ai-skills
+  ./setup.sh --with hermes,skills,ai-skills
   ./setup.sh --with herdr,cursor
   ./setup.sh --with drawthings
   ./setup.sh --with hermes,drawthings
   ./setup.sh --with cursor,drawthings
   ./setup.sh --with skills
   ./setup.sh --with images,tex
-  ./setup.sh --with hermes,herdr,ollama,skills,drawthings,opencode,codex,cursor,images,tex
-  ./setup.sh --dry-run --with cursor
-  ./bootstrap.sh --profile work
+  ./setup.sh --dry-run --with ai-skills
+  ./bootstrap.sh --profile home
+  ./configure.sh --help
 
 Default ./setup.sh installs core shell UX (fnm, Starship, Nerd Font, Neovim,
 terminal-notifier) but does NOT install AI tools, agent skills, or models.
@@ -476,9 +485,13 @@ if has_component herdr; then
   echo "Herdr: ~/.config/herdr/config.toml (merged [theme]/[keys]/ui.tab_bar_right)"
   echo "  Integrations only for co-selected agents (hermes/opencode/codex/cursor)."
 fi
-if has_component skills || has_component archify; then
+if has_component skills || has_component ai-skills || has_component archify; then
   cat <<'EOF'
 Agent skills:
+  --with archify → Archify only
+  --with skills → engineering pack (includes Archify)
+  --with ai-skills → AI/agent harness pack
+  --with skills,ai-skills → union (deduped)
   Global store: ~/.agents/skills/
   Hermes links: only when hermes is also selected
   Update (opt-in): ./scripts/update-skills.sh

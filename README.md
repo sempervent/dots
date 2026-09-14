@@ -21,9 +21,36 @@ For a new machine, prefer profiles:
 ./bootstrap.sh --profile base    # core shell UX only — zero AI
 ./bootstrap.sh --profile work    # conservative allowlist (edit work.toml)
 ./bootstrap.sh --profile home    # editable home stack template
+./bootstrap.sh --profile all     # every optional DOTS component (lab; may include cloud AI)
 ./bootstrap.sh --profile work --with hermes   # profile + explicit add
 ./bootstrap.sh --profile home --without cursor
+./bootstrap.sh --profile ~/.config/dots/profiles/studio.toml
+./bootstrap.sh --profile home --show
+./configure.sh                   # create/edit profiles (TOML only — no installs)
 ```
+
+### Skill options
+
+| Flag | Meaning |
+|------|---------|
+| `--with archify` | Archify only |
+| `--with skills` | Engineering pack (includes Archify + security-review) |
+| `--with ai-skills` | AI/agent harness pack (evals, litellm, ml-engineering, …) |
+| `--with skills,ai-skills` | Union of both packs (each skill installed once) |
+
+Skill packs are declared in `configs/skills/manifest.toml` (`[packs.*]` + groups).
+Installing packs does **not** configure Hermes/Cursor/Codex unless those clients
+are also selected.
+
+### Separation of concerns
+
+| Script | Role |
+|--------|------|
+| `setup.sh` | Install / refresh mechanism (`--with` components) |
+| `bootstrap.sh` | Machine/profile orchestration → calls `setup.sh` |
+| `configure.sh` | Profile creation/editing (writes TOML only) |
+
+Authority for optional component ids: `configs/components.toml`.
 
 `setup.sh` is idempotent. Default install includes shell UX (fnm, Starship,
 JetBrainsMono Nerd Font, Neovim, terminal-notifier) but does **not** install AI
@@ -57,6 +84,8 @@ for **that** invocation.
 ./setup.sh --with ollama
 ./setup.sh --with archify
 ./setup.sh --with skills
+./setup.sh --with ai-skills
+./setup.sh --with skills,ai-skills
 ./setup.sh --with drawthings
 ./setup.sh --with opencode
 ./setup.sh --with codex
@@ -68,9 +97,10 @@ for **that** invocation.
 ./setup.sh --with cursor,drawthings
 ./setup.sh --with images,drawthings
 ./setup.sh --with images,tex
-./setup.sh --with herdr,hermes,ollama,skills,drawthings,opencode,codex,cursor,images,tex
+./setup.sh --with herdr,hermes,ollama,skills,ai-skills,drawthings,opencode,codex,cursor,images,tex
 ./setup.sh --with=herdr,hermes
 ./setup.sh --dry-run --with cursor
+./setup.sh --dry-run --with ai-skills
 ./setup.sh --help
 ```
 
@@ -81,6 +111,7 @@ for **that** invocation.
 | `ollama` | `ollama` (no models, service not started) |
 | `archify` | Archify skill only (`npx skills add tt-a1i/archify -g`) |
 | `skills` | Curated Engineering Pack from `configs/skills/manifest.toml` (includes Archify + security-review) |
+| `ai-skills` | Curated AI/agent pack (evals, production ops, litellm, ml-engineering, …) |
 | `drawthings` | `Brewfile.drawthings` → `draw-things-cli` + MCP launcher + `img` |
 | `opencode` | `Brewfile.opencode` → OpenCode CLI + DOTS adapter/MCP |
 | `codex` | `Brewfile.codex` → **Homebrew cask** `codex` (+ Hermes MCP if hermes co-selected) |
@@ -88,7 +119,7 @@ for **that** invocation.
 | `images` | `Brewfile.images` → Magick/gs/rsvg/exiftool/pngquant/webp/oxipng |
 | `tex` | `Brewfile.tex` → Homebrew `texlive` (CLI) |
 
-**Do not add `--with ai`.** Prefer `--profile home` for a full personal stack.
+**Do not add `--with ai`.** Prefer `--profile home` or `--profile all` (lab) for aggregates.
 ## Package management
 
 **Homebrew truth is `brew/Brewfile` only.** There is no `packages.txt`.
@@ -160,12 +191,15 @@ Defaults (width/height/steps) are CLI flags; model + output dir come from the sa
 
 ```bash
 ./setup.sh --with archify   # Archify only
-./setup.sh --with skills    # curated Hermes Engineering Pack (includes Archify)
+./setup.sh --with skills    # curated Engineering Pack (includes Archify)
+./setup.sh --with ai-skills # curated AI/agent harness pack
+./setup.sh --with skills,ai-skills  # union (deduped)
 ./scripts/update-skills.sh  # opt-in update (not on every setup)
 ```
 
-Manifest: `configs/skills/manifest.toml`. Provenance: `~/.agents/.skill-lock.json`
-(copied to `~/.config/dots/skills/skills-lock.json` after pack install).
+Manifest: `configs/skills/manifest.toml` (`[packs.skills]`, `[packs.ai-skills]`, groups).
+Provenance: `~/.agents/.skill-lock.json` (content-hash via skills CLI; not git SHA pinning)
+copied to `~/.config/dots/skills/skills-lock.json` after pack install.
 
 What `--with archify` does:
 

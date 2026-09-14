@@ -122,7 +122,7 @@ must_not "G" "${out}" 'Brewfile.cursor' || ok=0
 # Profiles
 out="$(run_capture "\"${BOOT}\" --profile base --dry-run")"
 ok=1
-must "base" "${out}" 'no optional AI' || ok=0
+must "base" "${out}" 'no optional components' || ok=0
 must "base" "${out}" 'none — base/core only' || ok=0
 must_not "base" "${out}" 'Cursor Agent CLI' || ok=0
 must_not "base" "${out}" 'Brewfile.hermes' || ok=0
@@ -139,6 +139,7 @@ must "work" "${out}" 'none — base/core only' || ok=0
 out="$(run_capture "\"${BOOT}\" --profile home --dry-run")"
 ok=1
 must "home" "${out}" 'cursor' || ok=0
+must "home" "${out}" 'ai-skills' || ok=0
 must "home" "${out}" 'Cursor Agent CLI' || ok=0
 [[ "${ok}" -eq 1 ]] && { echo "OK: home profile"; pass=$((pass+1)); } || fail=$((fail+1))
 
@@ -154,6 +155,55 @@ ok=1
 must "ch" "${out}" 'herdr integration install cursor' || ok=0
 must_not "ch" "${out}" 'herdr integration install hermes' || ok=0
 [[ "${ok}" -eq 1 ]] && { echo "OK: cursor+herdr"; pass=$((pass+1)); } || fail=$((fail+1))
+
+# --- ai-skills isolation ---
+out="$(run_capture "\"${SETUP}\" --dry-run --with ai-skills")"
+ok=1
+must "ai" "${out}" 'Skill packs: ai-skills' || ok=0
+must "ai" "${out}" 'agent-evals-and-observability' || ok=0
+must "ai" "${out}" 'Hermes skill exposure: disabled' || ok=0
+must_not "ai" "${out}" 'Cursor Agent CLI' || ok=0
+must_not "ai" "${out}" 'Brewfile.cursor' || ok=0
+must_not "ai" "${out}" 'Brewfile.hermes' || ok=0
+must_not "ai" "${out}" 'register Hermes MCP' || ok=0
+[[ "${ok}" -eq 1 ]] && { echo "OK: ai-skills alone"; pass=$((pass+1)); } || fail=$((fail+1))
+
+out="$(run_capture "\"${SETUP}\" --dry-run --with skills,ai-skills")"
+ok=1
+must "union" "${out}" 'Skill packs: skills ai-skills' || ok=0
+must "union" "${out}" 'Planned unique skills' || ok=0
+must "union" "${out}" 'systematic-debugging' || ok=0
+must "union" "${out}" 'litellm' || ok=0
+must "union" "${out}" 'Hermes skill exposure: disabled' || ok=0
+# security-review install header once
+sec_count="$(printf '%s\n' "${out}" | rg -c 'Skill: skill-security-review' || true)"
+[[ -z "${sec_count}" ]] && sec_count=0
+if [[ "${sec_count}" -le 1 ]]; then
+  :
+else
+  echo "FAIL: union: skill-security-review install section repeated (${sec_count})" >&2
+  ok=0
+fi
+[[ "${ok}" -eq 1 ]] && { echo "OK: skills+ai-skills union"; pass=$((pass+1)); } || fail=$((fail+1))
+
+out="$(run_capture "\"${SETUP}\" --dry-run --with hermes,skills,ai-skills")"
+ok=1
+must "hs" "${out}" 'Skill packs: skills ai-skills' || ok=0
+must "hs" "${out}" 'Hermes skill exposure: enabled' || ok=0
+must_not "hs" "${out}" 'Cursor Agent CLI' || ok=0
+must_not "hs" "${out}" 'Brewfile.cursor' || ok=0
+must_not "hs" "${out}" 'Brewfile.opencode' || ok=0
+must_not "hs" "${out}" 'Brewfile.codex' || ok=0
+[[ "${ok}" -eq 1 ]] && { echo "OK: hermes+skills+ai-skills"; pass=$((pass+1)); } || fail=$((fail+1))
+
+out="$(run_capture "\"${SETUP}\" --dry-run --with cursor,ai-skills")"
+ok=1
+must "ca" "${out}" 'Cursor Agent CLI' || ok=0
+must "ca" "${out}" 'Skill packs: ai-skills' || ok=0
+must "ca" "${out}" 'Hermes skill exposure: disabled' || ok=0
+must_not "ca" "${out}" 'Brewfile.hermes' || ok=0
+must_not "ca" "${out}" 'register Hermes MCP' || ok=0
+[[ "${ok}" -eq 1 ]] && { echo "OK: cursor+ai-skills"; pass=$((pass+1)); } || fail=$((fail+1))
 
 echo ""
 echo "Passed: ${pass}  Failed: ${fail}"

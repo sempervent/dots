@@ -13,7 +13,7 @@ agent_router_repo_dir() {
 agent_router_should_install() {
   has_component hermes || has_component opencode || has_component codex ||
     has_component drawthings || has_component archify || has_component ollama ||
-    has_component cursor || has_component skills
+    has_component cursor || has_component skills || has_component ai-skills
 }
 
 deploy_router_config() {
