@@ -1,11 +1,9 @@
-# ~/.npmrc - npm Configuration
-# https://github.com/sempervent/dotfiles
-
-# Package installation location
-prefix=${HOME}/.npm-packages
-
-# Global packages location
-global-bin-dir=${HOME}/.npm-packages/bin
+# ~/.npmrc - npm Configuration (DOTS)
+# https://github.com/sempervent/dots
+#
+# Node is managed by fnm (not a custom global prefix).
+# Previous prefix=${HOME}/.npm-packages stranded globals when the dir was missing.
+# Global packages now install into the active fnm Node prefix.
 
 # Cache location
 cache=${HOME}/.npm/.cache
@@ -38,5 +36,3 @@ fund=false
 
 # Update notifications
 update-notifier=true
-
-

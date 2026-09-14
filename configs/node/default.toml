@@ -1,0 +1,11 @@
+# DOTS default Node version policy for fnm.
+# Setup installs this major (or exact version) once and sets it as fnm's default.
+# Setup does NOT auto-upgrade major releases on every run.
+#
+# Pin: current Node.js Active LTS (Krypton) as of 2026-09.
+# Update deliberately when ready for a new LTS major.
+
+version = "24"
+lts_codename = "Krypton"
+# Optional exact pin (uncomment to freeze patch):
+# version = "24.21.0"
