@@ -34,7 +34,9 @@ unset _zshrc_src
 # 1}}}
 
 # Shared layer {{{1
+# Order: Homebrew PATH → fnm → exports/theme → OMZ → Starship prompt
 [[ -f "${DOTS_DIR}/shell/paths.sh" ]] && source "${DOTS_DIR}/shell/paths.sh"
+[[ -f "${DOTS_DIR}/zsh/fnm.zsh" ]] && source "${DOTS_DIR}/zsh/fnm.zsh"
 [[ -f "${DOTS_DIR}/shell/exports.sh" ]] && source "${DOTS_DIR}/shell/exports.sh"
 [[ -f "${DOTS_DIR}/shell/theme.sh" ]] && source "${DOTS_DIR}/shell/theme.sh"
 # 1}}}
@@ -52,6 +54,8 @@ unset _zshrc_src
 
 # Oh My Zsh + third-party plugins {{{1
 [[ -f "${DOTS_DIR}/zsh/oh-my-zsh.zsh" ]] && source "${DOTS_DIR}/zsh/oh-my-zsh.zsh"
+# Re-assert fnm PATH after OMZ (wins over ~/.local/bin/node)
+[[ -f "${DOTS_DIR}/zsh/fnm.zsh" ]] && source "${DOTS_DIR}/zsh/fnm.zsh"
 # 1}}}
 
 # Custom prompt AFTER OMZ so it is not overwritten by themes {{{1
@@ -98,8 +102,8 @@ esac
 # 1}}}
 
 # Version managers {{{1
-export NVM_DIR="${NVM_DIR:-${HOME}/.nvm}"
-[[ -s "${NVM_DIR}/nvm.sh" ]] && source "${NVM_DIR}/nvm.sh"
+# Node: fnm (zsh/fnm.zsh after Homebrew PATH). NVM is not sourced by DOTS.
+# Existing ~/.nvm installs are left alone; prefer `fnm` going forward.
 [[ -f "${HOME}/.cargo/env" ]] && source "${HOME}/.cargo/env"
 # 1}}}
 

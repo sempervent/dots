@@ -1,0 +1,138 @@
+# DOTS Starship config — Catppuccin Mocha, restrained Powerline-style prompt.
+# Deployed to ~/.config/starship.toml
+
+"$schema" = 'https://starship.rs/config-schema.json'
+
+format = """
+[](fg:#89b4fa)\
+$os\
+$username\
+$hostname\
+[](bg:#cba6f7 fg:#89b4fa)\
+$directory\
+[](fg:#cba6f7 bg:#a6e3a1)\
+$git_branch\
+$git_status\
+[](fg:#a6e3a1 bg:#313244)\
+$nodejs\
+$python\
+$kubernetes\
+[](fg:#313244)\
+$fill\
+$cmd_duration\
+$status\
+$line_break\
+$character\
+"""
+
+add_newline = true
+palette = "catppuccin_mocha"
+
+[palettes.catppuccin_mocha]
+rosewater = "#f5e0dc"
+flamingo = "#f2cdcd"
+pink = "#f5c2e7"
+mauve = "#cba6f7"
+red = "#f38ba8"
+maroon = "#eba0ac"
+peach = "#fab387"
+yellow = "#f9e2af"
+green = "#a6e3a1"
+teal = "#94e2d5"
+sky = "#89dceb"
+sapphire = "#74c7ec"
+blue = "#89b4fa"
+lavender = "#b4befe"
+text = "#cdd6f4"
+subtext1 = "#bac2de"
+subtext0 = "#a6adc8"
+overlay2 = "#9399b2"
+overlay1 = "#7f849c"
+overlay0 = "#6c7086"
+surface2 = "#585b70"
+surface1 = "#45475a"
+surface0 = "#313244"
+base = "#1e1e2e"
+mantle = "#181825"
+crust = "#11111b"
+
+[os]
+disabled = true
+
+[username]
+show_always = false
+style_user = "bg:#89b4fa fg:#1e1e2e"
+style_root = "bg:#f38ba8 fg:#1e1e2e"
+format = "[$user]($style)"
+
+[hostname]
+ssh_only = true
+style = "bg:#89b4fa fg:#1e1e2e"
+format = "[@$hostname]($style)"
+disabled = false
+
+[directory]
+style = "bg:#cba6f7 fg:#1e1e2e"
+truncation_length = 3
+truncate_to_repo = true
+format = "[ $path ]($style)"
+truncation_symbol = "…/"
+
+[git_branch]
+symbol = " "
+style = "bg:#a6e3a1 fg:#1e1e2e"
+format = "[$symbol$branch]($style)"
+
+[git_status]
+style = "bg:#a6e3a1 fg:#1e1e2e"
+format = "[$all_status$ahead_behind ]($style)"
+conflicted = "="
+ahead = "⇡"
+behind = "⇣"
+diverged = "⇕"
+untracked = "?"
+stashed = "≡"
+modified = "!"
+staged = "+"
+renamed = "»"
+deleted = "✘"
+
+[nodejs]
+symbol = "󰎙 "
+style = "bg:#313244 fg:#a6e3a1"
+format = "[ $symbol($version) ]($style)"
+detect_files = ["package.json", ".nvmrc", ".node-version"]
+
+[python]
+symbol = "󰌠 "
+style = "bg:#313244 fg:#89b4fa"
+format = "[ $symbol($version)( \\($virtualenv\\)) ]($style)"
+detect_files = [".python-version", "Pipfile", "pyproject.toml", "requirements.txt"]
+
+[kubernetes]
+symbol = "󱃾 "
+style = "bg:#313244 fg:#89dceb"
+format = "[ $symbol$context ]($style)"
+disabled = false
+# Only show when kubeconfig context is set and dir looks k8s-related
+detect_files = ["k8s", "helm", "Chart.yaml", "kustomization.yaml"]
+detect_folders = [".kube"]
+
+[cmd_duration]
+min_time = 2_000
+style = "fg:#f9e2af"
+format = "[ ⏱ $duration ]($style)"
+
+[status]
+disabled = false
+style = "fg:#f38ba8"
+format = "[ ✘ $status ]($style)"
+success_symbol = ""
+
+[fill]
+symbol = " "
+
+[character]
+success_symbol = "[❯](bold green)"
+error_symbol = "[❯](bold red)"
+vimcmd_symbol = "[❮](bold green)"
