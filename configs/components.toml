@@ -1,0 +1,103 @@
+# configs/components.toml — authoritative optional-component registry
+#
+# Single source for setup.sh / bootstrap.sh / configure.sh / profile `all`.
+# Profiles and CLI --with must only reference ids listed here.
+
+version = 1
+
+[[components]]
+id = "herdr"
+label = "Herdr"
+category = "multiplexer"
+cloud = false
+local_ai = false
+description = "Terminal multiplexer (Brewfile.herdr)"
+
+[[components]]
+id = "hermes"
+label = "Hermes"
+category = "ai_client"
+cloud = false
+local_ai = true
+description = "Hermes agent CLI (+ macOS hermes-desktop)"
+
+[[components]]
+id = "ollama"
+label = "Ollama"
+category = "ai_runtime"
+cloud = false
+local_ai = true
+description = "Local LLM runtime (no models pulled)"
+
+[[components]]
+id = "archify"
+label = "Archify"
+category = "skills"
+cloud = false
+local_ai = false
+omit_from_all = true
+description = "Archify skill only (also included in --with skills)"
+
+[[components]]
+id = "skills"
+label = "Engineering skills"
+category = "skills"
+cloud = false
+local_ai = false
+description = "Curated engineering skill pack (includes Archify)"
+
+[[components]]
+id = "ai-skills"
+label = "AI skills"
+category = "skills"
+cloud = false
+local_ai = false
+description = "Curated AI/agent engineering skill pack"
+
+[[components]]
+id = "drawthings"
+label = "Draw Things"
+category = "image_ai"
+cloud = false
+local_ai = true
+description = "Draw Things CLI + MCP bridge + img"
+
+[[components]]
+id = "opencode"
+label = "OpenCode"
+category = "ai_client"
+cloud = false
+local_ai = true
+description = "Local/general coding adapter"
+
+[[components]]
+id = "codex"
+label = "Codex"
+category = "ai_client"
+cloud = true
+local_ai = false
+description = "Frontier coding via Homebrew cask Codex"
+
+[[components]]
+id = "cursor"
+label = "Cursor"
+category = "ai_client"
+cloud = true
+local_ai = false
+description = "Cursor Agent CLI (explicit opt-in)"
+
+[[components]]
+id = "images"
+label = "Images toolkit"
+category = "media"
+cloud = false
+local_ai = false
+description = "Deterministic image toolkit (Magick, etc.)"
+
+[[components]]
+id = "tex"
+label = "TeX"
+category = "docs"
+cloud = false
+local_ai = false
+description = "Homebrew TeX Live (CLI)"

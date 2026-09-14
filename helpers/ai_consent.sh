@@ -69,6 +69,7 @@ AI client ownership (explicit --with / profile only):
                 ONLY when that client is also selected
   skills        ~/.agents/skills global store; Hermes exposure only
                 when hermes is selected
+  ai-skills     same store; AI pack only; no client config from pack alone
 
 Binary presence alone NEVER authorizes configuration.
 EOF

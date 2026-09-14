@@ -1,5 +1,5 @@
 # configs/bootstrap/profiles/base.toml
-# Universally safe DOTS baseline — NO AI providers/clients.
+# Universally safe DOTS baseline — NO optional AI providers or skill packs.
 #
 # Use: ./bootstrap.sh --profile base
 
@@ -7,8 +7,6 @@
 name = "base"
 description = "Core shell UX only — safe on any machine"
 
-# Optional components for this profile (empty = none)
 with = []
 
-# Applications that may be opened with --open-apps (only if installed)
 open_apps = ["iTerm"]

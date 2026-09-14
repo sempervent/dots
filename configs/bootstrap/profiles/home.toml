@@ -2,20 +2,18 @@
 # EDITABLE home-machine template. Adjust `with` to your preferred stack.
 #
 # Use: ./bootstrap.sh --profile home
-#
-# This is NOT silently applied to every machine — you must choose --profile home.
+# Or edit via: ./configure.sh
 
 [profile]
 name = "home"
-description = "Example home stack — edit before relying on it"
+description = "Personal workstation — edit before relying on it"
 
-# Preferred home AI / creative stack (user-editable allowlist).
-# Comment out anything you do not want on a given Mac.
 with = [
   "hermes",
   "herdr",
   "ollama",
   "skills",
+  "ai-skills",
   "drawthings",
   "opencode",
   "codex",

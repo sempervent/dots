@@ -836,6 +836,17 @@ if [[ -x "${DOTS_DIR}/scripts/provider_isolation_test.sh" ]]; then
   fi
 fi
 
+if [[ -x "${DOTS_DIR}/scripts/profile_resolution_test.sh" ]]; then
+  if "${DOTS_DIR}/scripts/profile_resolution_test.sh" >/tmp/dots-profiles.$$ 2>&1; then
+    ok "profile resolution tests"
+    rm -f /tmp/dots-profiles.$$
+  else
+    fail "profile resolution tests failed"
+    cat /tmp/dots-profiles.$$ >&2 || true
+    rm -f /tmp/dots-profiles.$$
+  fi
+fi
+
 # Destination availability when components are present (partial installs OK; info not warn)
 if command -v hermes >/dev/null 2>&1; then
   hermes mcp list 2>/dev/null | rg -q 'opencode' && ok "router dest opencode MCP present" || info "router dest opencode MCP absent (opt-in)"
@@ -856,6 +867,18 @@ fi
 [[ -f "${CONFIG_DIR}/bootstrap/profiles/base.toml" ]] && ok "bootstrap profile base" || fail "base profile missing"
 [[ -f "${CONFIG_DIR}/bootstrap/profiles/home.toml" ]] && ok "bootstrap profile home" || fail "home profile missing"
 [[ -f "${CONFIG_DIR}/bootstrap/profiles/work.toml" ]] && ok "bootstrap profile work" || fail "work profile missing"
+[[ -f "${CONFIG_DIR}/bootstrap/profiles/all.toml" ]] && ok "bootstrap profile all" || fail "all profile missing"
+[[ -f "${CONFIG_DIR}/components.toml" ]] && ok "components registry present" || fail "configs/components.toml missing"
+if [[ -f "${DOTS_DIR}/configure.sh" ]] && [[ -x "${DOTS_DIR}/configure.sh" ]]; then
+  ok "configure.sh present"
+else
+  fail "configure.sh missing or not executable"
+fi
+if [[ -f "${CONFIG_DIR}/skills/manifest.toml" ]] && rg -q '\[packs\.ai-skills\]' "${CONFIG_DIR}/skills/manifest.toml"; then
+  ok "skills manifest has ai-skills pack"
+else
+  fail "skills manifest missing packs.ai-skills"
+fi
 
 echo -e "\n${BLUE}Summary${NC}"
 echo -e "Passed: ${GREEN}${PASSED}${NC}  Warnings: ${YELLOW}${WARNINGS}${NC}  Failed: ${RED}${FAILED}${NC}"
