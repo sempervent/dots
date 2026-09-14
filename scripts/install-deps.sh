@@ -133,16 +133,17 @@ install_cargo_packages() {
 
 install_version_managers() {
   echo -e "${BLUE}Checking version managers...${NC}"
-  
-  # nvm
-  if [ ! -s "${HOME}/.nvm/nvm.sh" ]; then
-    echo -e "  ${YELLOW}→${NC} Installing nvm..."
-    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
-    echo -e "  ${GREEN}✓${NC} nvm installed"
+
+  # Node: DOTS default is Homebrew fnm (not nvm)
+  if command -v fnm >/dev/null 2>&1 || brew list fnm >/dev/null 2>&1; then
+    echo -e "  ${GREEN}✓${NC} fnm (DOTS Node manager)"
   else
-    echo -e "  ${GREEN}✓${NC} nvm already installed"
+    echo -e "  ${YELLOW}→${NC} Installing fnm via Homebrew..."
+    brew install fnm || echo -e "  ${RED}✗${NC} fnm install failed — run ./setup.sh"
   fi
-  
+  echo -e "  ${BLUE}ℹ${NC} nvm is obsolete for DOTS; optional cleanup: brew uninstall nvm"
+  echo -e "  ${BLUE}ℹ${NC} Do not delete ~/.nvm data automatically"
+
   # rustup
   if [ ! -f "${HOME}/.cargo/env" ]; then
     echo -e "  ${YELLOW}→${NC} Installing rustup..."
@@ -204,7 +205,7 @@ if [ ${#CARGO_PACKAGES[@]} -gt 0 ]; then
 fi
 
 # Version managers
-read -p "Install version managers (nvm, rustup)? [y/N] " -n 1 -r
+read -p "Install version managers (fnm/Node, rustup)? [y/N] " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
   install_version_managers

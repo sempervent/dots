@@ -30,15 +30,50 @@ apply_optional_brewfiles() {
   if has_component ollama; then
     apply_brewfile "${DIR}/brew/Brewfile.ollama"
   fi
-  if has_component archify; then
+  if has_component archify || has_component skills; then
     apply_brewfile "${DIR}/brew/Brewfile.archify"
   fi
   if has_component drawthings; then
     apply_brewfile "${DIR}/brew/Brewfile.drawthings"
   fi
+  if has_component opencode; then
+    apply_brewfile "${DIR}/brew/Brewfile.opencode"
+  fi
+  if has_component codex; then
+    # npm @openai/codex under /opt/homebrew blocks the cask binary path — migrate first.
+    if [[ "${DRY_RUN}" -eq 0 ]] && declare -F codex_is_npm_backed >/dev/null 2>&1; then
+      if codex_is_npm_backed; then
+        local _creal
+        _creal="$(codex_real_path "$(codex_resolve_bin)")"
+        if [[ "${_creal}" == /opt/homebrew/lib/node_modules/@openai/codex/* ]]; then
+          codex_migrate_npm_to_cask || true
+        else
+          warn_codex_npm_conflict
+        fi
+      fi
+    elif [[ "${DRY_RUN}" -eq 1 ]]; then
+      echo "[dry-run] migrate npm Codex if blocking Homebrew cask, then Brewfile.codex"
+    fi
+    apply_brewfile "${DIR}/brew/Brewfile.codex"
+  fi
+  if has_component images; then
+    apply_brewfile "${DIR}/brew/Brewfile.images"
+  fi
+  if has_component tex; then
+    apply_brewfile "${DIR}/brew/Brewfile.tex"
+  fi
 }
 
 dots_install_requested_agent_skills() {
+  # --with skills: curated Engineering Pack (includes Archify)
+  if has_component skills; then
+    dots_install_skills_pack || {
+      echo "Error: curated skills pack installation failed." >&2
+      return 1
+    }
+    return 0
+  fi
+
   local c want_skills=0
   [[ ${#DOTS_WITH_COMPONENTS[@]} -gt 0 ]] || return 0
   for c in "${DOTS_WITH_COMPONENTS[@]}"; do
@@ -60,16 +95,30 @@ dots_check_hermes_path() {
   fi
   echo "=== Hermes PATH check ==="
   if [[ "${DRY_RUN}" -eq 1 ]]; then
-    echo "[dry-run] would run: type -a hermes"
+    echo "[dry-run] would verify Homebrew hermes-agent wins PATH"
     return 0
   fi
   type -a hermes 2>/dev/null || true
-  local hermes_win
+  local hermes_win brew_hermes=""
   hermes_win="$(command -v hermes 2>/dev/null || true)"
-  if [[ "${hermes_win}" == "${HOME}/.local/bin/hermes" ]]; then
-    echo "Warn: ~/.local/bin/hermes currently wins PATH (likely git install)."
-    echo "      After verifying Homebrew hermes-agent, remove/rename the old shim manually."
-    echo "      Prefer Homebrew PATH (brew shellenv) ahead of ~/.local/bin if desired."
+  if [[ -x /opt/homebrew/bin/hermes ]]; then
+    brew_hermes="/opt/homebrew/bin/hermes"
+  elif [[ -x /usr/local/bin/hermes ]]; then
+    brew_hermes="/usr/local/bin/hermes"
+  fi
+
+  if [[ -n "${brew_hermes}" ]]; then
+    local win_real brew_real
+    win_real="$(realpath "${hermes_win}" 2>/dev/null || echo "${hermes_win}")"
+    brew_real="$(realpath "${brew_hermes}" 2>/dev/null || echo "${brew_hermes}")"
+    if [[ "${hermes_win}" == "${brew_hermes}" ]] || [[ "${win_real}" == "${brew_real}" ]]; then
+      echo "OK: canonical Hermes is Homebrew (${hermes_win})"
+    else
+      echo "Warn: Hermes on PATH is ${hermes_win} (expected Homebrew ${brew_hermes})"
+      echo "      Re-run ./setup.sh (PATH hygiene) or retire ~/.local/bin/hermes"
+    fi
+  elif [[ "${hermes_win}" == "${HOME}/.local/bin/hermes" ]]; then
+    echo "Note: using git-install Hermes at ~/.local/bin/hermes (Homebrew hermes-agent not installed)"
   fi
 }
 
@@ -100,8 +149,10 @@ dots_ensure_herdr_integrations() {
   fi
   echo "=== Herdr integrations ==="
   ensure_herdr_integration hermes hermes
-  ensure_herdr_integration codex codex
-  if command -v opencode >/dev/null 2>&1 || command -v open-code >/dev/null 2>&1; then
+  if has_component codex || command -v codex >/dev/null 2>&1; then
+    ensure_herdr_integration codex codex
+  fi
+  if has_component opencode || command -v opencode >/dev/null 2>&1 || command -v open-code >/dev/null 2>&1; then
     ensure_herdr_integration opencode opencode
   elif has_component herdr; then
     echo "Note: OpenCode CLI not found; skip opencode integration unless already present"
