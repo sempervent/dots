@@ -42,8 +42,7 @@ ensure_node_major() {
 
   if ! command -v node >/dev/null 2>&1; then
     echo "Error: Node.js is required (need >= ${min}) but 'node' was not found on PATH." >&2
-    echo "       Install via Homebrew (./setup.sh --with archify applies brew/Brewfile.archify)" >&2
-    echo "       or ensure a Node ${min}+ runtime is available, then re-run." >&2
+    echo "       Install via ./setup.sh (fnm + configs/node/default.toml) then re-run." >&2
     return 1
   fi
 
@@ -61,7 +60,7 @@ ensure_node_major() {
   if [[ "${major}" -lt "${min}" ]]; then
     echo "Error: Node.js ${major} is too old; agent skills require Node >= ${min}." >&2
     echo "       Current: $(command -v node) → $(node -v 2>/dev/null)" >&2
-    echo "       Upgrade Node (Homebrew: brew upgrade node) and re-run." >&2
+    echo "       Upgrade Node via fnm (fnm install 24 && fnm default 24) and re-run." >&2
     return 1
   fi
 
@@ -135,7 +134,7 @@ install_agent_skill() {
   fi
 
   echo "Installing agent skill '${name}' from ${spec} (global)..."
-  if ! npx -y skills add "${spec}" -g -y; then
+  if ! npx -y skills add "${spec}" -g -y </dev/null; then
     echo "Warn: npx skills add exited non-zero; verifying install..." >&2
   fi
 

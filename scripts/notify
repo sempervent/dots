@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# notify — generic macOS notification helper wrapping terminal-notifier
+# Usage:
+#   notify --title "Title" --message "Body"
+#   notify --title T --message M --subtitle S --group G --sound Glass
+set -euo pipefail
+
+TITLE=""
+MESSAGE=""
+SUBTITLE=""
+GROUP=""
+SOUND=""
+
+usage() {
+  cat <<'EOF'
+Usage: notify --title <title> --message <message> [options]
+
+Options:
+  --title <text>       Notification title (required)
+  --message <text>     Notification body (required)
+  --subtitle <text>    Optional subtitle
+  --group <id>         Optional grouping id (replaces prior in group)
+  --sound <name>       Optional macOS sound name (e.g. Glass)
+  -h, --help           Show help
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -h|--help) usage; exit 0 ;;
+    --title) TITLE="${2:-}"; shift 2 ;;
+    --message) MESSAGE="${2:-}"; shift 2 ;;
+    --subtitle) SUBTITLE="${2:-}"; shift 2 ;;
+    --group) GROUP="${2:-}"; shift 2 ;;
+    --sound) SOUND="${2:-}"; shift 2 ;;
+    *)
+      echo "Error: unknown argument: $1" >&2
+      usage >&2
+      exit 1
+      ;;
+  esac
+done
+
+if [[ -z "${TITLE}" ]] || [[ -z "${MESSAGE}" ]]; then
+  echo "Error: --title and --message are required" >&2
+  usage >&2
+  exit 1
+fi
+
+if ! command -v terminal-notifier >/dev/null 2>&1; then
+  echo "Error: terminal-notifier not found. Install via: brew install terminal-notifier" >&2
+  exit 1
+fi
+
+# Truncate for Notification Center practical limits
+trunc() {
+  local s="$1" max="${2:-280}"
+  if [[ ${#s} -gt ${max} ]]; then
+    printf '%s…\n' "${s:0:$((max - 1))}"
+  else
+    printf '%s\n' "${s}"
+  fi
+}
+
+MESSAGE="$(trunc "${MESSAGE}" 280)"
+TITLE="$(trunc "${TITLE}" 80)"
+
+args=(-title "${TITLE}" -message "${MESSAGE}")
+[[ -n "${SUBTITLE}" ]] && args+=(-subtitle "$(trunc "${SUBTITLE}" 100)")
+[[ -n "${GROUP}" ]] && args+=(-group "${GROUP}")
+[[ -n "${SOUND}" ]] && args+=(-sound "${SOUND}")
+
+exec terminal-notifier "${args[@]}"

@@ -1,0 +1,113 @@
+# Curated Hermes Engineering Pack (DOTS --with skills)
+# Install via skills CLI globally → ~/.agents/skills/
+# Hermes discovers via ~/.hermes/skills/ (skills CLI symlink).
+#
+# Do NOT install the entire magnus919 catalog — only entries below.
+
+version = 1
+name = "hermes-engineering-pack"
+description = "Curated engineering skills for Hermes (reproducible, security-reviewed)"
+
+[[skills]]
+name = "skill-security-review"
+source = "dkleptsov/skill-security-review"
+group = "security"
+enabled = true
+# Audit provenance before enabling new third-party skills.
+
+[[skills]]
+name = "systematic-debugging"
+source = "magnus919/agent-skills"
+group = "core"
+enabled = true
+
+[[skills]]
+name = "verification-methodology"
+source = "magnus919/agent-skills"
+group = "core"
+enabled = true
+
+[[skills]]
+name = "implementation-planning"
+source = "magnus919/agent-skills"
+group = "core"
+enabled = true
+
+[[skills]]
+name = "spec-driven-development"
+source = "magnus919/agent-skills"
+group = "core"
+enabled = true
+
+[[skills]]
+name = "software-architecture"
+source = "magnus919/agent-skills"
+group = "engineering"
+enabled = true
+
+[[skills]]
+name = "software-architecture-analysis"
+source = "magnus919/agent-skills"
+group = "engineering"
+enabled = true
+
+[[skills]]
+name = "secure-software-engineering"
+source = "magnus919/agent-skills"
+group = "engineering"
+enabled = true
+
+[[skills]]
+name = "technical-documentation"
+source = "magnus919/agent-skills"
+group = "engineering"
+enabled = true
+
+[[skills]]
+name = "adr-authoring"
+source = "magnus919/agent-skills"
+group = "engineering"
+enabled = true
+
+[[skills]]
+name = "cli-builder"
+source = "magnus919/agent-skills"
+group = "engineering"
+enabled = true
+
+[[skills]]
+name = "docker-compose"
+source = "magnus919/agent-skills"
+group = "infrastructure"
+enabled = true
+
+[[skills]]
+name = "kubernetes"
+source = "magnus919/agent-skills"
+group = "infrastructure"
+enabled = true
+
+[[skills]]
+name = "terraform"
+source = "magnus919/agent-skills"
+group = "infrastructure"
+enabled = true
+
+[[skills]]
+name = "release-engineering"
+source = "magnus919/agent-skills"
+group = "infrastructure"
+enabled = true
+
+[[skills]]
+name = "playwright"
+source = "magnus919/agent-skills"
+group = "testing"
+enabled = true
+
+[[skills]]
+name = "archify"
+source = "tt-a1i/archify"
+group = "diagrams"
+enabled = true
+# Also installable alone via --with archify

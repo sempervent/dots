@@ -1,0 +1,5 @@
+# Optional: ./setup.sh --with codex
+# Official Codex CLI via Homebrew cask (platform binary).
+# Auth remains under ~/.codex/ — never copied into DOTS.
+# npm global @openai/codex is NOT the DOTS-managed source.
+cask "codex"

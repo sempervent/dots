@@ -1,0 +1,11 @@
+# DOTS notification defaults (terminal-notifier wrapper + Hermes hooks)
+
+# Minimum session duration (seconds) before Hermes completion notifies.
+# Shorter sessions stay silent to avoid noise.
+threshold_seconds = 60
+
+# Default sound for notify helper (empty = system default / none)
+# sound = "Glass"
+
+# Hermes notification title
+hermes_title = "Hermes Task Complete"

@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Launch the DOTS Codex MCP bridge (stdio). Used when ``codex mcp-server`` is absent.
+set -euo pipefail
+
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+if command -v realpath >/dev/null 2>&1; then
+  SCRIPT_PATH="$(realpath "${SCRIPT_PATH}")"
+elif [[ -L "${SCRIPT_PATH}" ]]; then
+  SCRIPT_PATH="$(readlink "${SCRIPT_PATH}")"
+fi
+DOTS_DIR="$(cd "$(dirname "${SCRIPT_PATH}")/.." && pwd)"
+PROJECT_DIR="${DOTS_DIR}/tools/codex_mcp"
+
+export DOTS_DIR
+
+if ! command -v uv >/dev/null 2>&1; then
+  echo "Error: uv is required for the Codex MCP bridge." >&2
+  exit 1
+fi
+
+if [[ ! -f "${PROJECT_DIR}/server.py" ]]; then
+  echo "Error: missing ${PROJECT_DIR}/server.py" >&2
+  exit 1
+fi
+
+exec uv run --directory "${PROJECT_DIR}" --python-preference system \
+  python "${PROJECT_DIR}/server.py"
