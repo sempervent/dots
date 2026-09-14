@@ -1,0 +1,37 @@
+# DOTS coding-agent execution adapters (no automatic routing).
+#
+# Live copy (after setup): ~/.config/dots/agents/execution.toml
+# Repo template: configs/agents/execution.toml
+#
+# Roles (manual / future router):
+#   local/general coding  → OpenCode
+#   frontier/escalated    → Codex (Hermes MCP → codex mcp-server)
+#
+# Concurrency note (24 GB MacBook Air):
+# Avoid running OpenCode local inference + Hermes local model + Draw Things
+# (+ another heavyweight local model) at once. OpenCode and Hermes may share
+# the same Ollama server; do not start extra persistent local inference
+# consumers automatically.
+
+[opencode]
+# standalone | server (attach only; DOTS does not auto-daemonize serve)
+mode = "standalone"
+default_agent = "build"
+# Actual OpenCode provider/model id (from `opencode models` after Ollama wiring)
+default_model = "ollama/qwen-hermes:latest"
+# Used only when mode = "server" and caller does not pass --attach
+server_url = "http://127.0.0.1:4096"
+# Seconds; coding agents can run a while
+timeout_seconds = 600
+# Pass `opencode run --auto` (auto-approve allowed permissions). Prefer false;
+# use agent=plan for inspect/review. Set true for noninteractive implementation.
+auto_approve = false
+binary = "opencode"
+
+[codex]
+mode = "mcp"
+# Stable executable on PATH (resolved at setup; Hermes registration uses absolute path)
+binary = "codex"
+mcp_args = ["mcp-server"]
+# Hermes MCP server name
+mcp_name = "codex"

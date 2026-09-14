@@ -2,6 +2,10 @@
 # -*- coding: utf-8 -*-
 git config --global push.autoSetupRemote true
 git config --global pull.rebase false
+# DOTS default interactive editor (Neovim); does not overwrite /usr/bin/vim
+if command -v nvim >/dev/null 2>&1; then
+  git config --global core.editor nvim
+fi
 # shellcheck disable=SC2016
 git config --global alias.release '!git checkout main && git pull && git checkout -b Deploy_$(date +%F)'
 # shellcheck disable=SC2016

@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Stable OpenCode agent CLI (after setup: ~/.local/bin/opencode-agent).
+set -euo pipefail
+
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+if command -v realpath >/dev/null 2>&1; then
+  SCRIPT_PATH="$(realpath "${SCRIPT_PATH}")"
+elif [[ -L "${SCRIPT_PATH}" ]]; then
+  SCRIPT_PATH="$(readlink "${SCRIPT_PATH}")"
+fi
+DOTS_DIR="$(cd "$(dirname "${SCRIPT_PATH}")/.." && pwd)"
+PROJECT_DIR="${DOTS_DIR}/tools/opencode_mcp"
+
+export DOTS_DIR
+export DOTS_AGENTS_EXEC_CONFIG="${DOTS_AGENTS_EXEC_CONFIG:-${HOME}/.config/dots/agents/execution.toml}"
+
+if ! command -v uv >/dev/null 2>&1; then
+  echo "Error: uv is required for opencode-agent." >&2
+  exit 1
+fi
+
+if [[ ! -f "${PROJECT_DIR}/cli.py" ]]; then
+  echo "Error: missing ${PROJECT_DIR}/cli.py" >&2
+  exit 1
+fi
+
+exec uv run --directory "${PROJECT_DIR}" --python-preference system \
+  python "${PROJECT_DIR}/cli.py" "$@"

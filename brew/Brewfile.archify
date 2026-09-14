@@ -1,3 +1,5 @@
 # Optional: ./setup.sh --with archify
-# Node.js runtime for agent skills installed via `npx skills add` (Archify requires Node 18+).
-brew "node"
+# Node for agent skills comes from default fnm (configs/node/default.toml).
+# This Brewfile is intentionally empty of Node — kept so --with archify remains
+# a valid brew-bundle no-op hook for future Archify-native deps.
+# (Previously installed brew "node"; prefer fnm-managed Node.)

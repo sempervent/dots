@@ -63,6 +63,133 @@ if bash -n "${SYM_DIR}/bashrc" 2>/dev/null; then ok "bashrc syntax"; else fail "
 if zsh -n "${SYM_DIR}/zshrc" 2>/dev/null; then ok "zshrc syntax"; else fail "zshrc syntax"; fi
 if zsh -n "${SYM_DIR}/zprofile" 2>/dev/null; then ok "zprofile syntax"; else fail "zprofile syntax"; fi
 
+echo -e "\n${BLUE}Node / fnm (default)${NC}"
+if command -v fnm >/dev/null 2>&1; then
+  ok "fnm $(fnm --version 2>/dev/null | head -1)"
+else
+  fail "fnm missing (default Brewfile)"
+fi
+if command -v node >/dev/null 2>&1; then
+  ok "node $(node --version 2>/dev/null) @ $(command -v node)"
+  case "$(command -v node)" in
+    *fnm_multishells*|*fnm*)
+      ok "node resolves via fnm"
+      ;;
+    "${HOME}/.local/bin/node")
+      fail "node still shadowed by ~/.local/bin/node (run ./setup.sh PATH hygiene)"
+      ;;
+    *)
+      # brew node is acceptable fallback when fnm env not active in this shell
+      if [[ "$(command -v node)" == "$(brew --prefix 2>/dev/null)/bin/node" ]]; then
+        info_or_ok="ok"
+        ok "node is Homebrew (fnm may not be active in this non-interactive shell)"
+      else
+        warn "node path unexpected: $(command -v node)"
+      fi
+      ;;
+  esac
+else
+  fail "node missing (fnm default Node)"
+fi
+if command -v npm >/dev/null 2>&1; then
+  ok "npm $(npm --version 2>/dev/null)"
+else
+  fail "npm missing"
+fi
+[[ -f "${CONFIG_DIR}/node/default.toml" ]] && ok "node default policy present" || fail "configs/node/default.toml missing"
+
+# Stale Hermes node shims should be retired from ~/.local/bin
+if [[ -L "${HOME}/.local/bin/node" ]] && readlink "${HOME}/.local/bin/node" 2>/dev/null | rg -q '\.hermes/node'; then
+  fail "~/.local/bin/node still points at Hermes private Node (should be retired)"
+else
+  ok "no Hermes node shim in ~/.local/bin"
+fi
+
+# Non-interactive probe that zsh initializes fnm + starship once
+if command -v zsh >/dev/null 2>&1; then
+  zsh_probe="$(zsh -ic 'command -v fnm >/dev/null && echo FNM_OK; echo NODE=$(command -v node); command -v starship >/dev/null && echo STARSHIP_OK; [[ -n ${STARSHIP_SHELL:-} ]] && echo STARSHIP_INIT; [[ -n ${ZSH:-} ]] && echo OMZ_OK; typeset -f _dots_fnm_init >/dev/null && echo FNM_FN' 2>/dev/null | tr '\n' ' ')"
+  echo "${zsh_probe}" | rg -q 'FNM_OK' && ok "zsh: fnm available in interactive shell" || warn "zsh: fnm not visible (open new shell after setup)"
+  echo "${zsh_probe}" | rg -q 'fnm_multishells|NODE=.*/fnm' && ok "zsh: node is fnm-managed" || warn "zsh: node may not be fnm-managed (${zsh_probe})"
+  echo "${zsh_probe}" | rg -q 'STARSHIP_OK' && ok "zsh: starship available" || warn "zsh: starship missing"
+  echo "${zsh_probe}" | rg -q 'STARSHIP_INIT' && ok "zsh: Starship initialized" || warn "zsh: Starship not initialized (STARSHIP_SHELL unset)"
+  echo "${zsh_probe}" | rg -q 'OMZ_OK' && ok "zsh: Oh My Zsh still loads" || warn "zsh: Oh My Zsh not detected"
+fi
+
+echo -e "\n${BLUE}Starship / font / editor / notify (default)${NC}"
+if command -v starship >/dev/null 2>&1; then
+  ok "starship $(starship --version 2>/dev/null | head -1)"
+else
+  fail "starship missing (default Brewfile)"
+fi
+[[ -f "${HOME}/.config/starship.toml" ]] || [[ -L "${HOME}/.config/starship.toml" ]] && ok "starship.toml deployed" || warn "starship.toml not deployed (run setup.sh)"
+[[ -f "${CONFIG_DIR}/starship/starship.toml" ]] && ok "starship repo config present" || fail "configs/starship/starship.toml missing"
+
+if command -v nvim >/dev/null 2>&1; then
+  ok "nvim $(nvim --version 2>/dev/null | head -1)"
+else
+  fail "neovim missing (default Brewfile)"
+fi
+if [[ -f "${HOME}/.config/nvim/init.lua" ]]; then
+  ok "Neovim init.lua present"
+  if nvim --headless "+lua require('lazy')" "+qa" >/dev/null 2>&1; then
+    ok "Neovim lazy.nvim loads headlessly"
+  else
+    warn "Neovim lazy.nvim headless load inconclusive (run nvim once)"
+  fi
+  if nvim --headless "+Lazy! restore" "+qa" >/tmp/dots-nvim-check.$$ 2>&1; then
+    :
+  fi
+  if nvim --headless \
+      "+lua assert(package.loaded['lazy'] ~= nil or true)" \
+      "+qa" >/dev/null 2>&1; then
+    ok "Neovim headless startup OK"
+  else
+    warn "Neovim headless startup reported issues"
+  fi
+  rm -f /tmp/dots-nvim-check.$$
+else
+  warn "Neovim Lua config not deployed (run setup.sh)"
+fi
+
+if command -v terminal-notifier >/dev/null 2>&1 || [[ -x /opt/homebrew/bin/terminal-notifier ]]; then
+  ok "terminal-notifier available"
+else
+  fail "terminal-notifier missing (default Brewfile)"
+fi
+if [[ -L "${HOME}/.local/bin/notify" ]] || [[ -x "${HOME}/.local/bin/notify" ]]; then
+  ok "notify helper present (~/.local/bin/notify)"
+else
+  warn "notify helper missing (run setup.sh)"
+fi
+
+# Font check (macOS) — PASS if files/cask present; INFO if cache may lag GUI apps
+info() { echo -e "${BLUE}ℹ${NC} $1"; }
+
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  font_files=0
+  font_cask=0
+  font_listed=0
+  if ls "${HOME}/Library/Fonts"/JetBrainsMonoNerdFont*.ttf >/dev/null 2>&1 \
+    || ls /Library/Fonts/JetBrainsMonoNerdFont*.ttf >/dev/null 2>&1; then
+    font_files=1
+  fi
+  if brew list --cask font-jetbrains-mono-nerd-font >/dev/null 2>&1; then
+    font_cask=1
+  fi
+  if fc-list 2>/dev/null | rg -qi 'JetBrainsMono.*Nerd|JetBrainsMono Nerd Font'; then
+    font_listed=1
+  fi
+
+  if [[ "${font_files}" -eq 1 ]] || [[ "${font_cask}" -eq 1 ]]; then
+    ok "JetBrainsMono Nerd Font present (cask=${font_cask} files=${font_files})"
+    if [[ "${font_listed}" -eq 0 ]]; then
+      info "font cache may need app restart for iTerm/GUI to enumerate JetBrainsMono Nerd Font"
+    fi
+  else
+    fail "JetBrainsMono Nerd Font absent after setup (cask: font-jetbrains-mono-nerd-font)"
+  fi
+fi
+
 echo -e "\n${BLUE}Ranger (optional)${NC}"
 if command -v ranger >/dev/null 2>&1; then
   ok "ranger installed ($(ranger --version 2>/dev/null | head -1))"
@@ -86,6 +213,21 @@ fi
 echo -e "\n${BLUE}tmux (optional)${NC}"
 if command -v tmux >/dev/null 2>&1; then
   ok "tmux $(tmux -V)"
+  if rg -q 'prefix C-Space' "${SYM_DIR}/tmux.conf"; then
+    ok "tmux prefix C-Space preserved"
+  else
+    fail "tmux prefix C-Space missing"
+  fi
+  if rg -q 'catppuccin/tmux' "${SYM_DIR}/tmux.conf"; then
+    ok "tmux Catppuccin plugin declared"
+  else
+    fail "tmux Catppuccin plugin missing"
+  fi
+  if [[ -f "${HOME}/.tmux/plugins/tmux/catppuccin.tmux" ]] || [[ -d "${HOME}/.tmux/plugins/tmux" ]]; then
+    ok "Catppuccin tmux plugin present under ~/.tmux/plugins"
+  else
+    warn "Catppuccin tmux plugin not installed yet (TPM install_plugins)"
+  fi
   sock="/tmp/dots-tmux-check-$$"
   if tmux -L "dotscheck$$" -f "${SYM_DIR}/tmux.conf" start-server \; list-commands >/dev/null 2>&1; then
     ok "tmux config loads"
@@ -128,7 +270,12 @@ if [[ -f "${HERDR_REPO}" ]]; then
   expect_herdr_bind "${HERDR_REPO}" 'focus_pane_left = "prefix\+h"' "repo focus h"
   expect_herdr_bind "${HERDR_REPO}" 'focus_pane_down = "prefix\+j"' "repo focus j"
   expect_herdr_bind "${HERDR_REPO}" 'focus_pane_up = "prefix\+k"' "repo focus k"
-  expect_herdr_bind "${HERDR_REPO}" 'focus_pane_right = "prefix\+l"' "repo focus l"
+    expect_herdr_bind "${HERDR_REPO}" 'focus_pane_right = "prefix\+l"' "repo focus l"
+  if rg -q 'tab_bar_right' "${HERDR_REPO}"; then
+    ok "herdr repo tab_bar_right configured"
+  else
+    fail "herdr repo tab_bar_right missing"
+  fi
   if command -v herdr >/dev/null 2>&1; then
     if HERDR_CONFIG_PATH="${HERDR_REPO}" herdr config check >/dev/null 2>&1; then
       ok "herdr repo config check"
@@ -176,6 +323,54 @@ echo -e "\n${BLUE}Agent skills (optional)${NC}"
 if [[ -f "${DOTS_DIR}/helpers/agent_skills.sh" ]]; then
   # shellcheck disable=SC1091
   source "${DOTS_DIR}/helpers/agent_skills.sh"
+  # shellcheck source=../helpers/skills_pack.sh
+  if [[ -f "${DOTS_DIR}/helpers/skills_pack.sh" ]]; then
+    # shellcheck disable=SC1091
+    source "${DOTS_DIR}/helpers/skills_pack.sh"
+  fi
+
+  MANIFEST="${CONFIG_DIR}/skills/manifest.toml"
+  if [[ -f "${MANIFEST}" ]]; then
+    ok "skills manifest present"
+  else
+    warn "skills manifest missing (configs/skills/manifest.toml)"
+  fi
+
+  # Soft: only enforce curated set when pack appears installed (security-review + archify)
+  pack_selected=0
+  if agent_skill_is_installed skill-security-review 2>/dev/null || agent_skill_is_installed systematic-debugging 2>/dev/null; then
+    pack_selected=1
+  fi
+
+  if [[ "${pack_selected}" -eq 1 ]]; then
+    ok "skills pack appears installed — verifying curated set"
+    missing=0
+    while IFS=$'\t' read -r sname _ssource; do
+      [[ -z "${sname}" ]] && continue
+      if agent_skill_is_installed "${sname}"; then
+        ok "skill present: ${sname}"
+      else
+        fail "skill missing: ${sname}"
+        missing=1
+      fi
+    done < <(dots_skills_manifest_entries 2>/dev/null || true)
+    if [[ -f "${HOME}/.agents/.skill-lock.json" ]] || [[ -f "${HOME}/.config/dots/skills/skills-lock.json" ]]; then
+      ok "skills lock/provenance metadata present"
+    else
+      warn "skills lock metadata missing"
+    fi
+    if command -v hermes >/dev/null 2>&1; then
+      if [[ -L "${HOME}/.hermes/skills/systematic-debugging" ]] || [[ -e "${HOME}/.hermes/skills/archify" ]]; then
+        ok "Hermes discovers pack skills"
+      else
+        warn "Hermes skill links incomplete"
+      fi
+    fi
+    [[ "${missing}" -eq 0 ]] || true
+  else
+    warn "curated skills pack not installed (use: ./setup.sh --with skills)"
+  fi
+
   if agent_skill_is_installed archify; then
     ok "archify skill present (~/.agents/skills/archify)"
     if command -v node >/dev/null 2>&1; then
@@ -198,10 +393,16 @@ if [[ -f "${DOTS_DIR}/helpers/agent_skills.sh" ]]; then
     if [[ -L "${HOME}/.hermes/skills/archify" ]] || [[ -e "${HOME}/.hermes/skills/archify" ]]; then
       ok "Hermes archify skill link present"
     else
-      warn "Hermes archify link missing (run: ./setup.sh --with archify)"
+      warn "Hermes archify link missing (run: ./setup.sh --with archify or --with skills)"
     fi
   else
-    warn "archify skill not installed (use: ./setup.sh --with archify)"
+    warn "archify skill not installed (use: ./setup.sh --with archify or --with skills)"
+  fi
+
+  if agent_skill_is_installed skill-security-review 2>/dev/null; then
+    ok "security-review skill present"
+  else
+    warn "security-review skill not installed (included in --with skills)"
   fi
 else
   warn "helpers/agent_skills.sh missing"
@@ -305,11 +506,24 @@ fi
 
 echo -e "\n${BLUE}Hermes (optional)${NC}"
 if command -v hermes >/dev/null 2>&1; then
-  ok "hermes resolved: $(command -v hermes)"
+  hermes_win="$(command -v hermes)"
+  ok "hermes resolved: ${hermes_win}"
   hermes --version 2>/dev/null | head -2 || true
-  count="$(type -a hermes 2>/dev/null | wc -l | tr -d ' ')"
-  if [[ "${count}" -gt 1 ]]; then
-    warn "multiple hermes binaries on PATH (type -a hermes); prefer Homebrew after migration"
+  brew_hermes=""
+  [[ -x /opt/homebrew/bin/hermes ]] && brew_hermes="/opt/homebrew/bin/hermes"
+  [[ -z "${brew_hermes}" ]] && [[ -x /usr/local/bin/hermes ]] && brew_hermes="/usr/local/bin/hermes"
+  if [[ -n "${brew_hermes}" ]]; then
+    if [[ "${hermes_win}" == "${brew_hermes}" ]] \
+      || [[ "$(realpath "${hermes_win}" 2>/dev/null || true)" == "$(realpath "${brew_hermes}" 2>/dev/null || true)" ]]; then
+      ok "canonical Hermes is Homebrew hermes-agent"
+    else
+      fail "Hermes PATH shadowing: ${hermes_win} wins over ${brew_hermes}"
+    fi
+  fi
+  if [[ -e "${HOME}/.local/bin/hermes" ]] || [[ -L "${HOME}/.local/bin/hermes" ]]; then
+    fail "stale ~/.local/bin/hermes still present (should be retired by PATH hygiene)"
+  else
+    ok "no git-install Hermes shim in ~/.local/bin"
   fi
 else
   warn "hermes not installed (use: ./setup.sh --with hermes)"
@@ -326,6 +540,241 @@ if command -v ollama >/dev/null 2>&1; then
   fi
 else
   warn "ollama not installed (use: ./setup.sh --with ollama)"
+fi
+
+echo -e "\n${BLUE}OpenCode adapter (optional)${NC}"
+OC_REPO_EXEC="${CONFIG_DIR}/agents/execution.toml"
+OC_LIVE_EXEC="${HOME}/.config/dots/agents/execution.toml"
+OC_AGENT_LAUNCHER="${HOME}/.local/bin/opencode-agent"
+OC_MCP_LAUNCHER="${HOME}/.local/bin/opencode-mcp"
+OC_PROJECT="${DOTS_DIR}/tools/opencode_mcp"
+
+[[ -f "${OC_REPO_EXEC}" ]] && ok "agents execution.toml present" || warn "configs/agents/execution.toml missing"
+if [[ -f "${OC_LIVE_EXEC}" ]]; then
+  ok "live execution config (${OC_LIVE_EXEC})"
+  if rg -q 'mode = "standalone"' "${OC_LIVE_EXEC}" 2>/dev/null; then
+    ok "opencode mode=standalone (default policy)"
+  fi
+  if rg -q 'default_model = "ollama/qwen-hermes:latest"' "${OC_LIVE_EXEC}" 2>/dev/null; then
+    ok "default_model ollama/qwen-hermes:latest configured"
+  fi
+  if rg -q 'default_agent = "build"' "${OC_LIVE_EXEC}" 2>/dev/null; then
+    ok "default_agent build configured"
+  fi
+else
+  warn "live execution config missing (run: ./setup.sh --with opencode)"
+fi
+
+if [[ -L "${OC_AGENT_LAUNCHER}" ]] || [[ -x "${OC_AGENT_LAUNCHER}" ]]; then
+  ok "stable launcher: ${OC_AGENT_LAUNCHER}"
+  if [[ "$(realpath "${OC_AGENT_LAUNCHER}" 2>/dev/null || true)" == "$(realpath "${DOTS_DIR}/scripts/opencode-agent" 2>/dev/null || true)" ]]; then
+    ok "opencode-agent symlink target correct"
+  else
+    warn "opencode-agent symlink target unexpected ($(readlink "${OC_AGENT_LAUNCHER}" 2>/dev/null || true))"
+  fi
+else
+  warn "opencode-agent launcher missing (run: ./setup.sh --with opencode)"
+fi
+
+if [[ -L "${OC_MCP_LAUNCHER}" ]] || [[ -x "${OC_MCP_LAUNCHER}" ]]; then
+  ok "stable launcher: ${OC_MCP_LAUNCHER}"
+else
+  warn "opencode-mcp launcher missing (run: ./setup.sh --with opencode)"
+fi
+
+if [[ -f "${OC_PROJECT}/pyproject.toml" ]]; then
+  ok "opencode MCP pyproject present"
+else
+  fail "opencode MCP pyproject missing"
+fi
+
+if command -v opencode >/dev/null 2>&1; then
+  ok "opencode $(opencode --version 2>/dev/null | head -1)"
+  if opencode models 2>/dev/null | rg -q 'ollama/qwen-hermes'; then
+    ok "opencode models includes ollama/qwen-hermes"
+  else
+    warn "ollama/qwen-hermes not listed by opencode models (check ~/.config/opencode + ollama)"
+  fi
+  if opencode agent list 2>/dev/null | rg -q '^build \(primary\)'; then
+    ok "opencode agent 'build' present"
+  else
+    warn "opencode agent 'build' not found"
+  fi
+else
+  warn "opencode not installed (use: ./setup.sh --with opencode)"
+fi
+
+if command -v hermes >/dev/null 2>&1; then
+  if hermes mcp list 2>/dev/null | rg -q 'opencode'; then
+    ok "Hermes MCP 'opencode' registered"
+    if hermes mcp test opencode >/dev/null 2>&1; then
+      ok "Hermes MCP 'opencode' connects"
+    else
+      fail "Hermes MCP 'opencode' registered but cannot connect"
+    fi
+  else
+    warn "Hermes installed but MCP 'opencode' not registered (run: ./setup.sh --with opencode)"
+  fi
+fi
+
+echo -e "\n${BLUE}Codex adapter (optional)${NC}"
+if command -v codex >/dev/null 2>&1; then
+  ok "codex $(codex --version 2>/dev/null | head -1)"
+  codex_real="$(realpath "$(command -v codex)" 2>/dev/null || readlink "$(command -v codex)" 2>/dev/null || true)"
+  if [[ "${codex_real}" == *"/node_modules/@openai/codex/"* ]]; then
+    warn "Codex is npm-backed (${codex_real}); prefer Homebrew cask (./setup.sh --with codex)"
+  elif brew list --cask codex >/dev/null 2>&1; then
+    ok "Codex install source: Homebrew cask"
+  else
+    warn "Codex present but not detected as Homebrew cask"
+  fi
+  if [[ -f "${HOME}/.codex/auth.json" ]]; then
+    ok "Codex auth file present (~/.codex/auth.json; contents not inspected)"
+  else
+    warn "Codex auth file missing — MCP discovery may work; cloud tasks need login"
+  fi
+else
+  warn "codex not installed (use: ./setup.sh --with codex)"
+fi
+
+if command -v hermes >/dev/null 2>&1; then
+  if hermes mcp list 2>/dev/null | rg -q 'codex'; then
+    ok "Hermes MCP 'codex' registered"
+    # Validate registration: native mcp-server OR DOTS bridge launcher
+    hermes_py="${HOME}/.hermes/hermes-agent/venv/bin/python"
+    if [[ -x "${hermes_py}" ]]; then
+      if "${hermes_py}" - <<'PY'
+import os
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path.home() / ".hermes" / "hermes-agent"))
+from hermes_cli.mcp_config import _get_mcp_servers
+cfg = _get_mcp_servers().get("codex") or {}
+cmd = cfg.get("command") or ""
+args = cfg.get("args") or []
+enabled = cfg.get("enabled", True) in (True, "true", "1", "yes", None)
+if cfg.get("url") or not enabled or not cmd:
+    sys.exit(1)
+base = os.path.basename(cmd)
+# Native: .../codex + ["mcp-server"]  OR bridge: .../codex-mcp + []
+native = base == "codex" and args == ["mcp-server"]
+bridge = base == "codex-mcp" and args == []
+sys.exit(0 if native or bridge else 1)
+PY
+      then
+        ok "Hermes MCP 'codex' command/args/enabled match expected (native or DOTS bridge)"
+      else
+        fail "Hermes MCP 'codex' registration drifted"
+      fi
+    fi
+    if [[ -L "${HOME}/.local/bin/codex-mcp" ]] || [[ -x "${HOME}/.local/bin/codex-mcp" ]]; then
+      ok "DOTS codex-mcp launcher present (used when native mcp-server absent)"
+    fi
+    if hermes mcp test codex >/dev/null 2>&1; then
+      ok "Hermes MCP 'codex' connects"
+    else
+      fail "Hermes MCP 'codex' registered but cannot connect"
+    fi
+  else
+    warn "Hermes installed but MCP 'codex' not registered (run: ./setup.sh --with codex)"
+  fi
+fi
+
+if command -v herdr >/dev/null 2>&1; then
+  if herdr integration status 2>/dev/null | rg -q '^opencode:[[:space:]]*current'; then
+    ok "herdr integration opencode current"
+  else
+    warn "herdr opencode integration not current"
+  fi
+  if herdr integration status 2>/dev/null | rg -q '^codex:[[:space:]]*current'; then
+    ok "herdr integration codex current"
+  else
+    warn "herdr codex integration not current"
+  fi
+fi
+
+echo -e "\n${BLUE}Images toolkit (optional)${NC}"
+# Soft checks: warn when missing (base Brewfile already has magick/exiftool for many users)
+for cmd in magick exiftool pngquant rsvg-convert gs; do
+  if command -v "${cmd}" >/dev/null 2>&1; then
+    ok "${cmd} available ($(command -v ${cmd}))"
+  else
+    warn "${cmd} missing (use: ./setup.sh --with images)"
+  fi
+done
+command -v oxipng >/dev/null 2>&1 && ok "oxipng available" || warn "oxipng missing (optional via --with images)"
+command -v cwebp >/dev/null 2>&1 && ok "cwebp available" || warn "cwebp missing (webp via --with images)"
+
+echo -e "\n${BLUE}TeX Live (optional)${NC}"
+if command -v pdflatex >/dev/null 2>&1; then
+  ok "pdflatex $(pdflatex --version 2>/dev/null | head -1)"
+  for cmd in tex latex xelatex lualatex bibtex kpsewhich; do
+    if command -v "${cmd}" >/dev/null 2>&1; then
+      ok "${cmd} available"
+    else
+      warn "${cmd} missing (expected with --with tex / brew texlive)"
+    fi
+  done
+  if kpsewhich article.cls >/dev/null 2>&1; then
+    ok "kpsewhich article.cls → $(kpsewhich article.cls)"
+  else
+    warn "kpsewhich article.cls failed"
+  fi
+  if command -v latexmk >/dev/null 2>&1; then
+    ok "latexmk available"
+  else
+    warn "latexmk not on PATH (may still be inside texlive; not a separate Homebrew formula)"
+  fi
+else
+  warn "TeX Live not installed (use: ./setup.sh --with tex)"
+fi
+
+echo -e "\n${BLUE}Agent router (optional)${NC}"
+ROUTER_REPO="${DOTS_DIR}/skills/agent-router"
+ROUTER_AGENTS="${HOME}/.agents/skills/agent-router"
+ROUTER_HERMES="${HOME}/.hermes/skills/agent-router"
+ROUTER_CFG_REPO="${CONFIG_DIR}/agents/router.toml"
+ROUTER_CFG_LIVE="${HOME}/.config/dots/agents/router.toml"
+
+[[ -f "${ROUTER_REPO}/SKILL.md" ]] && ok "router skill in repo" || fail "skills/agent-router/SKILL.md missing"
+[[ -f "${ROUTER_REPO}/route.py" ]] && ok "router route.py present" || fail "skills/agent-router/route.py missing"
+[[ -f "${ROUTER_CFG_REPO}" ]] && ok "router.toml template present" || warn "configs/agents/router.toml missing"
+
+if [[ -L "${ROUTER_AGENTS}" ]] || [[ -d "${ROUTER_AGENTS}" ]]; then
+  ok "router skill linked (~/.agents/skills/agent-router)"
+else
+  warn "router skill not linked (install AI stack: ./setup.sh --with hermes,…)"
+fi
+if [[ -L "${ROUTER_HERMES}" ]] || [[ -e "${ROUTER_HERMES}" ]]; then
+  ok "Hermes sees agent-router (~/.hermes/skills/agent-router)"
+else
+  warn "Hermes agent-router link missing"
+fi
+if [[ -f "${ROUTER_CFG_LIVE}" ]]; then
+  ok "live router config (${ROUTER_CFG_LIVE})"
+fi
+
+if [[ -x "${DOTS_DIR}/scripts/router_policy_test.sh" ]]; then
+  if "${DOTS_DIR}/scripts/router_policy_test.sh" >/tmp/dots-router-policy.$$ 2>&1; then
+    ok "router policy tests"
+    rm -f /tmp/dots-router-policy.$$
+  else
+    fail "router policy tests failed"
+    cat /tmp/dots-router-policy.$$ >&2 || true
+    rm -f /tmp/dots-router-policy.$$
+  fi
+fi
+
+# Destination availability when components are present (partial installs OK)
+if command -v hermes >/dev/null 2>&1; then
+  hermes mcp list 2>/dev/null | rg -q 'opencode' && ok "router dest opencode MCP present" || warn "router dest opencode MCP absent"
+  hermes mcp list 2>/dev/null | rg -q 'codex' && ok "router dest codex MCP present" || warn "router dest codex MCP absent"
+  hermes mcp list 2>/dev/null | rg -q 'drawthings' && ok "router dest drawthings MCP present" || warn "router dest drawthings MCP absent"
+fi
+if [[ -e "${HOME}/.agents/skills/archify/SKILL.md" ]]; then
+  ok "router dest archify skill present"
+else
+  warn "router dest archify skill absent"
 fi
 
 echo -e "\n${BLUE}Summary${NC}"

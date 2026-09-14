@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# Launch the DOTS Draw Things MCP server (stdio only — no network bind).
+#
+# Stable entrypoint (after setup): ~/.local/bin/drawthings-mcp
+# This script may also be invoked via that symlink.
+set -euo pipefail
+
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+# Resolve symlink so DOTS_DIR is correct when launched from ~/.local/bin
+if command -v realpath >/dev/null 2>&1; then
+  SCRIPT_PATH="$(realpath "${SCRIPT_PATH}")"
+elif [[ -L "${SCRIPT_PATH}" ]]; then
+  SCRIPT_PATH="$(readlink "${SCRIPT_PATH}")"
+fi
+DOTS_DIR="$(cd "$(dirname "${SCRIPT_PATH}")/.." && pwd)"
+PROJECT_DIR="${DOTS_DIR}/tools/drawthings_mcp"
+
+export DOTS_DIR
+export DOTS_DRAWTHINGS_CONFIG="${DOTS_DRAWTHINGS_CONFIG:-${HOME}/.config/drawthings-mcp/config.toml}"
+
+if ! command -v uv >/dev/null 2>&1; then
+  echo "Error: uv is required for the Draw Things MCP bridge." >&2
+  echo "       Install via Homebrew (./setup.sh applies brew/Brewfile which includes uv)," >&2
+  echo "       then re-run: ./setup.sh --with drawthings" >&2
+  exit 1
+fi
+
+if [[ ! -f "${PROJECT_DIR}/pyproject.toml" ]]; then
+  echo "Error: missing ${PROJECT_DIR}/pyproject.toml" >&2
+  exit 1
+fi
+
+if [[ ! -f "${PROJECT_DIR}/server.py" ]]; then
+  echo "Error: missing ${PROJECT_DIR}/server.py" >&2
+  exit 1
+fi
+
+# Reproducible project env (mcp>=1.2,<2 declared in pyproject.toml).
+# --directory keeps the lock/venv colocated with the bridge.
+exec uv run --directory "${PROJECT_DIR}" --python-preference system \
+  python "${PROJECT_DIR}/server.py"

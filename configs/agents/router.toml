@@ -1,0 +1,32 @@
+# DOTS explicit routing defaults (no embeddings / learned classifiers).
+#
+# Live copy: ~/.config/dots/agents/router.toml
+# Behavioral policy: skills/agent-router/SKILL.md
+# Deterministic classifier for tests: skills/agent-router/route.py
+
+[router]
+# local_first: prefer Hermes/Ollama and OpenCode before Codex
+local_first = true
+# At most one automatic coding escalation: opencode -> codex
+max_auto_escalation = 1
+# Do not invent a coding cwd; require explicit/trusted repository path
+require_coding_cwd = true
+
+[overrides]
+# Explicit user phrases always win (see SKILL.md)
+enabled = true
+
+[escalation]
+# Signals that allow OpenCode -> Codex (single step)
+on_nonzero_exit = true
+on_timeout = true
+on_explicit_inability = true
+on_tests_still_failing = true
+on_high_consequence = true
+# Do NOT escalate merely because a response is long
+on_long_response = false
+
+[concurrency]
+# 24 GB unified memory: avoid stacking heavyweight local consumers
+avoid_parallel_local_inference = true
+note = "Do not start OpenCode local model + Hermes local model + Draw Things simultaneously."

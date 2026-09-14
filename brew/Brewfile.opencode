@@ -1,0 +1,2 @@
+# Optional: ./setup.sh --with opencode
+brew "opencode"

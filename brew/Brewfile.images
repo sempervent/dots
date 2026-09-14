@@ -1,0 +1,19 @@
+# Optional: ./setup.sh --with images
+# Deterministic image conversion / optimization / metadata toolkit.
+# Distinct from --with drawthings (generative). Composes: --with images,drawthings
+#
+# Already in the base Brewfile (idempotent if repeated here for a standalone
+# `brew bundle --file=…` workflow): imagemagick, exiftool.
+# webp is often already present as a dependency; listed for cwebp/dwebp.
+
+brew "imagemagick"
+brew "ghostscript"
+brew "librsvg"
+brew "exiftool"
+brew "pngquant"
+brew "webp"
+brew "oxipng"
+
+# Intentionally omitted:
+#   jpegoptim — Magick covers JPEG quality/size; avoid near-duplicate CLI
+#   libvips   — heavy; Magick covers AI/media post-processing on this machine

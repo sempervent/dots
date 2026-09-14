@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+# hermes-notify-hook — Hermes shell hook for session start/end notifications
+# stdin: JSON payload from Hermes; stdout: optional JSON (usually {})
+# Config: ~/.config/dots/notify.toml or configs/notify/config.toml
+set -euo pipefail
+
+MODE="${1:-end}"
+PAYLOAD="$(cat - || true)"
+STATE_DIR="${XDG_CACHE_HOME:-${HOME}/.cache}/dots/hermes-notify"
+mkdir -p "${STATE_DIR}"
+
+threshold=60
+title="Hermes Task Complete"
+cfg=""
+for cand in "${HOME}/.config/dots/notify.toml" "${DOTS_DIR:-${HOME}/dots}/configs/notify/config.toml"; do
+  if [[ -f "${cand}" ]]; then
+    cfg="${cand}"
+    break
+  fi
+done
+if [[ -n "${cfg}" ]]; then
+  threshold="$(python3 - "${cfg}" <<'PY' 2>/dev/null || echo 60
+import sys
+from pathlib import Path
+try:
+    import tomllib
+except ImportError:
+    print(60); raise SystemExit
+data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(int(data.get("threshold_seconds") or 60))
+PY
+)"
+  title="$(python3 - "${cfg}" <<'PY' 2>/dev/null || echo "Hermes Task Complete"
+import sys
+from pathlib import Path
+try:
+    import tomllib
+except ImportError:
+    print("Hermes Task Complete"); raise SystemExit
+data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(str(data.get("hermes_title") or "Hermes Task Complete"))
+PY
+)"
+fi
+threshold="${DOTS_HERMES_NOTIFY_THRESHOLD:-${threshold}}"
+
+session_id="$(printf '%s' "${PAYLOAD}" | python3 -c 'import json,sys
+try:
+  d=json.load(sys.stdin)
+except Exception:
+  d={}
+print(d.get("session_id") or (d.get("extra") or {}).get("session_id") or "unknown")' 2>/dev/null || echo unknown)"
+state_file="${STATE_DIR}/${session_id}.start"
+
+case "${MODE}" in
+  start)
+    date +%s >"${state_file}"
+    printf '{}\n'
+    exit 0
+    ;;
+  end|*)
+    now="$(date +%s)"
+    start="${now}"
+    if [[ -f "${state_file}" ]]; then
+      start="$(cat "${state_file}" 2>/dev/null || echo "${now}")"
+      rm -f "${state_file}"
+    else
+      # No start marker → treat as short / skip
+      printf '{}\n'
+      exit 0
+    fi
+    dur=$((now - start))
+    if [[ "${dur}" -lt "${threshold}" ]]; then
+      printf '{}\n'
+      exit 0
+    fi
+
+    status="$(printf '%s' "${PAYLOAD}" | python3 -c 'import json,sys
+try: d=json.load(sys.stdin)
+except Exception: d={}
+extra=d.get("extra") or {}
+if extra.get("failed"): print("failed")
+elif extra.get("interrupted"): print("interrupted")
+elif extra.get("completed") is False: print("failed")
+else: print("completed")' 2>/dev/null || echo completed)"
+
+    model="$(printf '%s' "${PAYLOAD}" | python3 -c 'import json,sys
+try: d=json.load(sys.stdin)
+except Exception: d={}
+extra=d.get("extra") or {}
+print(extra.get("model") or d.get("model") or "")' 2>/dev/null || true)"
+
+    msg="Status: ${status} · ${dur}s"
+    [[ -n "${model}" ]] && msg="${msg} · ${model}"
+
+    if command -v notify >/dev/null 2>&1; then
+      notify --title "${title}" --message "${msg}" --group "hermes-${session_id}" --subtitle "session ${session_id:0:12}" >/dev/null 2>&1 || true
+    elif command -v terminal-notifier >/dev/null 2>&1; then
+      terminal-notifier -title "${title}" -message "${msg}" -group "hermes-${session_id}" >/dev/null 2>&1 || true
+    fi
+    printf '{}\n'
+    exit 0
+    ;;
+esac
