@@ -1,4 +1,8 @@
-"~/.vimrc
+"~/.vimrc — LEGACY Vim configuration
+" DOTS managed editor is Neovim (~/.config/nvim via configs/nvim/).
+" This file is kept for plain `vim` / emergency use only — do not maintain
+" two divergent full editor configs. Prefer: nvim / $EDITOR=nvim
+"
 " vundle settings {{{1
 set nocompatible
 filetype off

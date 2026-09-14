@@ -2,8 +2,9 @@
 # Shared environment exports (Bash + Zsh compatible)
 # Do NOT force TERM here — leave terminal/tmux negotiation alone.
 
-export EDITOR="${EDITOR:-vim}"
-export VISUAL="${VISUAL:-vim}"
+# Neovim is the DOTS-managed default editor (system /usr/bin/vim untouched)
+export EDITOR="${EDITOR:-nvim}"
+export VISUAL="${VISUAL:-nvim}"
 export PAGER="${PAGER:-less}"
 export LESS="${LESS:--R}"
 export GZIP_OPT="${GZIP_OPT:--9}"

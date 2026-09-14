@@ -49,6 +49,13 @@ fi
 alias python='python3'
 alias pip='pip3'
 
+# Editor: interactive aliases only (do not affect noninteractive scripts)
+# System /usr/bin/vim and /usr/bin/vi are never overwritten.
+if command -v nvim >/dev/null 2>&1; then
+  alias vim='nvim'
+  alias vi='nvim'
+fi
+
 # Docker
 alias de='docker exec -it'
 alias dps='docker ps --format "{{.Names}}: {{.Image}} @ {{.CreatedAt}} {{.Status}}"'

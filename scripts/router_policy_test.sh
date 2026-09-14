@@ -34,6 +34,7 @@ expect "analyze the architecture of this repository" "archify"
 expect "generate an image of a lunar synthesizer" "drawthings"
 expect "resize foo.png to 512x512" "images"
 expect "use Codex to inspect this" "codex"
+expect "use Cursor to inspect this" "cursor"
 expect "keep this local and inspect this repo" "opencode"
 
 # Degradation: Codex missing → OpenCode
@@ -44,6 +45,28 @@ if [[ "${got}" == "opencode True" ]]; then
   pass=$((pass + 1))
 else
   echo "FAIL: degrade expected 'opencode True' got '${got}'" >&2
+  fail=$((fail + 1))
+fi
+
+# Cursor missing → report unavailable (hermes_direct), NOT silent Codex/OpenCode
+got="$(python3 "${ROUTE}" --json --available hermes_direct,local,opencode,codex,archify,drawthings,images \
+  "use Cursor to inspect this" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["destination"], d.get("degraded"), (d.get("note") or "")[:40])')"
+if [[ "${got}" == hermes_direct\ True\ Cursor* ]]; then
+  echo "OK: [cursor unavailable] no silent cloud substitute"
+  pass=$((pass + 1))
+else
+  echo "FAIL: cursor unavailable expected hermes_direct degraded note, got '${got}'" >&2
+  fail=$((fail + 1))
+fi
+
+# Cursor available → cursor
+got="$(python3 "${ROUTE}" --json --available hermes_direct,local,opencode,codex,cursor,archify,drawthings,images \
+  "use Cursor to inspect this" | python3 -c 'import json,sys; print(json.load(sys.stdin)["destination"])')"
+if [[ "${got}" == "cursor" ]]; then
+  echo "OK: [cursor available] use Cursor → cursor"
+  pass=$((pass + 1))
+else
+  echo "FAIL: want=cursor got=${got}" >&2
   fail=$((fail + 1))
 fi
 

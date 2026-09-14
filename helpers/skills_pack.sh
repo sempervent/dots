@@ -55,18 +55,31 @@ install_skill_from_source() {
   local min_node=18
   local hermes_link="${HOME}/.hermes/skills/${name}"
   local need_install=1
-  local need_hermes=0
+  local expose_hermes=0
+  local agent_args=()
+
+  # Hermes exposure only when hermes was explicitly selected this run.
+  if declare -F dots_may_configure_hermes >/dev/null 2>&1 && dots_may_configure_hermes; then
+    expose_hermes=1
+    agent_args=(-a hermes-agent)
+  fi
 
   echo "=== Skill pack: ${name} (${source}) ==="
 
   if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
     if agent_skill_is_installed "${name}"; then
       echo "[dry-run] skip content install (${name} already under ~/.agents/skills)"
-      if [[ -d "${HOME}/.hermes" ]] && [[ ! -e "${hermes_link}" ]]; then
+      if [[ "${expose_hermes}" -eq 1 ]] && [[ ! -e "${hermes_link}" ]]; then
         echo "[dry-run] would ensure Hermes discovery: npx skills add … -a hermes-agent"
+      elif [[ "${expose_hermes}" -eq 0 ]]; then
+        echo "[dry-run] skip Hermes skill link (hermes not selected this run)"
       fi
     else
-      echo "[dry-run] npx -y skills add ${source} -g -y -s ${name} -a hermes-agent"
+      if [[ "${expose_hermes}" -eq 1 ]]; then
+        echo "[dry-run] npx -y skills add ${source} -g -y -s ${name} -a hermes-agent"
+      else
+        echo "[dry-run] npx -y skills add ${source} -g -y -s ${name}  (global store only)"
+      fi
     fi
     return 0
   fi
@@ -78,23 +91,28 @@ install_skill_from_source() {
     echo "OK: '${name}' already installed under ~/.agents/skills"
   fi
 
-  if [[ -d "${HOME}/.hermes" ]] && [[ ! -e "${hermes_link}" ]]; then
-    need_hermes=1
+  local need_hermes_link=0
+  if [[ "${expose_hermes}" -eq 1 ]] && [[ ! -e "${hermes_link}" ]]; then
+    need_hermes_link=1
   fi
 
-  if [[ "${need_install}" -eq 0 ]] && [[ "${need_hermes}" -eq 0 ]]; then
-    echo "OK: Hermes discovery present (~/.hermes/skills/${name})"
+  if [[ "${need_install}" -eq 0 ]] && [[ "${need_hermes_link}" -eq 0 ]]; then
+    if [[ "${expose_hermes}" -eq 1 ]]; then
+      echo "OK: Hermes discovery present (~/.hermes/skills/${name})"
+    else
+      echo "OK: global skill present (Hermes not selected — no ~/.hermes/skills mutation)"
+    fi
     return 0
   fi
 
-  # Always target hermes-agent so ~/.hermes/skills/<name> is created/updated.
+  # Global store always; -a hermes-agent only when hermes selected.
   # </dev/null: skills CLI must not consume the manifest install loop's stdin.
   if [[ "${source}" == *"/skill-security-review" ]] || [[ "${source}" == "tt-a1i/archify" ]]; then
-    echo "Installing/linking '${name}' from ${source} (Hermes)..."
-    npx -y skills add "${source}" -g -y -a hermes-agent </dev/null || true
+    echo "Installing '${name}' from ${source}..."
+    npx -y skills add "${source}" -g -y "${agent_args[@]}" </dev/null || true
   else
-    echo "Installing/linking '${name}' from ${source} (-s ${name}, Hermes)..."
-    npx -y skills add "${source}" -g -y -s "${name}" -a hermes-agent </dev/null || true
+    echo "Installing '${name}' from ${source} (-s ${name})..."
+    npx -y skills add "${source}" -g -y -s "${name}" "${agent_args[@]}" </dev/null || true
   fi
 
   if ! agent_skill_is_installed "${name}"; then
@@ -102,10 +120,14 @@ install_skill_from_source() {
     return 1
   fi
   echo "OK: installed '${name}'"
-  if [[ -e "${hermes_link}" ]] || [[ -L "${hermes_link}" ]]; then
-    echo "OK: Hermes discovers '${name}' via ~/.hermes/skills/${name}"
-  elif [[ -d "${HOME}/.hermes" ]]; then
-    echo "Warn: ~/.hermes exists but skills/${name} link missing after install" >&2
+  if [[ "${expose_hermes}" -eq 1 ]]; then
+    if [[ -e "${hermes_link}" ]] || [[ -L "${hermes_link}" ]]; then
+      echo "OK: Hermes discovers '${name}' via ~/.hermes/skills/${name}"
+    else
+      echo "Warn: hermes selected but skills/${name} link missing after install" >&2
+    fi
+  else
+    echo "Note: skill in ~/.agents/skills only (re-run with --with hermes,skills for Hermes links)"
   fi
   if dots_skill_lock_has "${name}"; then
     echo "OK: lock entry present (~/.agents/.skill-lock.json)"

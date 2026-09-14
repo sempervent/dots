@@ -14,7 +14,7 @@
 	# signingkey = YOUR_GPG_KEY_ID
 
 [core]
-	editor = vim
+	editor = nvim
 	excludesfile = ~/.gitignore_global
 	autocrlf = input
 	# autocrlf = true  # For Windows

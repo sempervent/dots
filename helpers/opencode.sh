@@ -151,12 +151,21 @@ install_opencode_launchers() {
 
 register_hermes_opencode_mcp() {
   local launcher="${DOTS_OPENCODE_MCP_LAUNCHER}"
+  if ! dots_may_configure_hermes; then
+    if [[ "${DRY_RUN}" -eq 1 ]]; then
+      echo "[dry-run] skip Hermes MCP for opencode (hermes not selected this run)"
+    else
+      echo "Note: hermes not selected — OpenCode adapter only; no Hermes MCP mutation."
+      echo "      Later: ./setup.sh --with hermes,opencode"
+    fi
+    return 0
+  fi
   if [[ "${DRY_RUN}" -eq 1 ]]; then
     echo "[dry-run] register Hermes MCP '${DOTS_OPENCODE_MCP_NAME}' → ${launcher}"
     return 0
   fi
   if ! command -v hermes >/dev/null 2>&1; then
-    echo "Note: hermes not installed — OpenCode adapter installed; MCP registration deferred."
+    echo "Note: hermes selected but not on PATH — MCP registration deferred."
     echo "      Later: ./setup.sh --with hermes,opencode"
     return 0
   fi
@@ -220,7 +229,7 @@ validate_opencode_bridge() {
     return 1
   fi
   echo "OK: opencode-agent --help"
-  if command -v hermes >/dev/null 2>&1; then
+  if dots_may_configure_hermes && command -v hermes >/dev/null 2>&1; then
     if hermes mcp test "${DOTS_OPENCODE_MCP_NAME}" >/tmp/dots-hermes-oc-test.$$ 2>&1; then
       echo "OK: hermes mcp test ${DOTS_OPENCODE_MCP_NAME}"
       rm -f /tmp/dots-hermes-oc-test.$$

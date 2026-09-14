@@ -1,0 +1,8 @@
+# brew/Brewfile.cursor — optional: ./setup.sh --with cursor
+# Official Cursor Agent CLI via Homebrew cask (preferred over curl|bash).
+# Upstream also documents: curl https://cursor.com/install -fsS | bash
+# DOTS prefers the cask for inspectability / no pipe-to-shell.
+#
+# Provides: cursor-agent  (DOTS also ensures ~/.local/bin/agent → same binary)
+
+cask "cursor-cli"

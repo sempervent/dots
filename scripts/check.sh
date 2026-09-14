@@ -12,6 +12,7 @@ CONFIG_DIR="${DOTS_DIR}/configs"
 ok() { echo -e "${GREEN}✓${NC} $1"; PASSED=$((PASSED + 1)); }
 warn() { echo -e "${YELLOW}⚠${NC} $1"; WARNINGS=$((WARNINGS + 1)); }
 fail() { echo -e "${RED}✗${NC} $1"; FAILED=$((FAILED + 1)); }
+info() { echo -e "${BLUE}ℹ${NC} $1"; }
 
 check_symlink() {
   local target="$1" source="$2" name="$3"
@@ -494,16 +495,24 @@ if command -v hermes >/dev/null 2>&1; then
       fail "Hermes MCP 'drawthings' registered but cannot connect"
     fi
   else
-    warn "Hermes installed but MCP 'drawthings' not registered (run: ./setup.sh --with drawthings)"
+    info "Hermes present; MCP 'drawthings' not registered (requires --with hermes,drawthings)"
   fi
 else
-  warn "Hermes not installed — Draw Things bridge can exist without MCP registration"
+  info "Hermes not installed — Draw Things bridge can exist without MCP registration"
 fi
 
 if [[ -f "${HOME}/.config/dots/drawthings-mcp.client.json" ]]; then
   ok "reusable MCP client snippet (~/.config/dots/drawthings-mcp.client.json)"
 fi
 
+if [[ -L "${HOME}/.local/bin/img" ]] || [[ -x "${HOME}/.local/bin/img" ]]; then
+  ok "img launcher present (~/.local/bin/img)"
+  command -v img >/dev/null 2>&1 && ok "img on PATH" || info "img not on PATH (ensure ~/.local/bin)"
+else
+  if [[ -f "${DT_LIVE_CFG}" ]]; then
+    info "img launcher missing (re-run: ./setup.sh --with drawthings)"
+  fi
+fi
 echo -e "\n${BLUE}Hermes (optional)${NC}"
 if command -v hermes >/dev/null 2>&1; then
   hermes_win="$(command -v hermes)"
@@ -613,7 +622,7 @@ if command -v hermes >/dev/null 2>&1; then
       fail "Hermes MCP 'opencode' registered but cannot connect"
     fi
   else
-    warn "Hermes installed but MCP 'opencode' not registered (run: ./setup.sh --with opencode)"
+    info "Hermes present; MCP 'opencode' not registered (requires --with hermes,opencode)"
   fi
 fi
 
@@ -676,7 +685,7 @@ PY
       fail "Hermes MCP 'codex' registered but cannot connect"
     fi
   else
-    warn "Hermes installed but MCP 'codex' not registered (run: ./setup.sh --with codex)"
+    info "Hermes present; MCP 'codex' not registered (requires --with hermes,codex)"
   fi
 fi
 
@@ -684,12 +693,63 @@ if command -v herdr >/dev/null 2>&1; then
   if herdr integration status 2>/dev/null | rg -q '^opencode:[[:space:]]*current'; then
     ok "herdr integration opencode current"
   else
-    warn "herdr opencode integration not current"
+    info "herdr opencode integration not current (requires --with herdr,opencode)"
   fi
   if herdr integration status 2>/dev/null | rg -q '^codex:[[:space:]]*current'; then
     ok "herdr integration codex current"
   else
-    warn "herdr codex integration not current"
+    info "herdr codex integration not current (requires --with herdr,codex)"
+  fi
+  if herdr integration status 2>/dev/null | rg -q '^cursor:[[:space:]]*current'; then
+    ok "herdr integration cursor current"
+  else
+    info "herdr cursor integration not current (requires --with herdr,cursor)"
+  fi
+  if herdr integration status 2>/dev/null | rg -q '^hermes:[[:space:]]*current'; then
+    ok "herdr integration hermes current"
+  else
+    info "herdr hermes integration not current (requires --with herdr,hermes)"
+  fi
+fi
+
+echo -e "\n${BLUE}Cursor Agent (optional; managed only)${NC}"
+CURSOR_MANAGED="${HOME}/.config/dots/managed/cursor"
+if [[ -f "${CURSOR_MANAGED}" ]]; then
+  ok "Cursor managed by DOTS (${CURSOR_MANAGED})"
+  if command -v agent >/dev/null 2>&1; then
+    ok "agent on PATH ($(command -v agent))"
+    agent --version 2>/dev/null | head -1 || true
+  else
+    warn "managed Cursor but 'agent' not on PATH"
+  fi
+  if [[ -f "${HOME}/.cursor/cli-config.json" ]]; then
+    if python3 -c 'import json,sys; json.load(open(sys.argv[1]))' "${HOME}/.cursor/cli-config.json" 2>/dev/null; then
+      ok "Cursor cli-config.json parses"
+    else
+      fail "Cursor cli-config.json invalid JSON"
+    fi
+  else
+    warn "managed Cursor but ~/.cursor/cli-config.json missing"
+  fi
+  if [[ -f "${HOME}/.cursor/mcp.json" ]]; then
+    if python3 -c 'import json,sys; json.load(open(sys.argv[1]))' "${HOME}/.cursor/mcp.json" 2>/dev/null; then
+      ok "Cursor mcp.json parses"
+      if rg -q '"drawthings"' "${HOME}/.cursor/mcp.json" 2>/dev/null; then
+        ok "Cursor MCP includes drawthings"
+      else
+        info "Cursor MCP has no drawthings (add with --with cursor,drawthings)"
+      fi
+    else
+      fail "Cursor mcp.json invalid JSON"
+    fi
+  else
+    info "Cursor mcp.json absent (optional until MCP servers co-selected)"
+  fi
+else
+  if command -v agent >/dev/null 2>&1 || command -v cursor-agent >/dev/null 2>&1; then
+    info "Cursor CLI present on machine but not DOTS-managed (presence ≠ consent)"
+  else
+    info "Cursor not managed (use: ./setup.sh --with cursor)"
   fi
 fi
 
@@ -748,7 +808,7 @@ fi
 if [[ -L "${ROUTER_HERMES}" ]] || [[ -e "${ROUTER_HERMES}" ]]; then
   ok "Hermes sees agent-router (~/.hermes/skills/agent-router)"
 else
-  warn "Hermes agent-router link missing"
+  info "Hermes agent-router link absent (requires --with hermes + router install)"
 fi
 if [[ -f "${ROUTER_CFG_LIVE}" ]]; then
   ok "live router config (${ROUTER_CFG_LIVE})"
@@ -765,17 +825,37 @@ if [[ -x "${DOTS_DIR}/scripts/router_policy_test.sh" ]]; then
   fi
 fi
 
-# Destination availability when components are present (partial installs OK)
+if [[ -x "${DOTS_DIR}/scripts/provider_isolation_test.sh" ]]; then
+  if "${DOTS_DIR}/scripts/provider_isolation_test.sh" >/tmp/dots-isolation.$$ 2>&1; then
+    ok "provider isolation dry-run tests"
+    rm -f /tmp/dots-isolation.$$
+  else
+    fail "provider isolation tests failed"
+    cat /tmp/dots-isolation.$$ >&2 || true
+    rm -f /tmp/dots-isolation.$$
+  fi
+fi
+
+# Destination availability when components are present (partial installs OK; info not warn)
 if command -v hermes >/dev/null 2>&1; then
-  hermes mcp list 2>/dev/null | rg -q 'opencode' && ok "router dest opencode MCP present" || warn "router dest opencode MCP absent"
-  hermes mcp list 2>/dev/null | rg -q 'codex' && ok "router dest codex MCP present" || warn "router dest codex MCP absent"
-  hermes mcp list 2>/dev/null | rg -q 'drawthings' && ok "router dest drawthings MCP present" || warn "router dest drawthings MCP absent"
+  hermes mcp list 2>/dev/null | rg -q 'opencode' && ok "router dest opencode MCP present" || info "router dest opencode MCP absent (opt-in)"
+  hermes mcp list 2>/dev/null | rg -q 'codex' && ok "router dest codex MCP present" || info "router dest codex MCP absent (opt-in)"
+  hermes mcp list 2>/dev/null | rg -q 'drawthings' && ok "router dest drawthings MCP present" || info "router dest drawthings MCP absent (opt-in)"
 fi
 if [[ -e "${HOME}/.agents/skills/archify/SKILL.md" ]]; then
   ok "router dest archify skill present"
 else
-  warn "router dest archify skill absent"
+  info "router dest archify skill absent (optional)"
 fi
+
+if [[ -f "${DOTS_DIR}/bootstrap.sh" ]] && [[ -x "${DOTS_DIR}/bootstrap.sh" ]]; then
+  ok "bootstrap.sh present"
+else
+  fail "bootstrap.sh missing or not executable"
+fi
+[[ -f "${CONFIG_DIR}/bootstrap/profiles/base.toml" ]] && ok "bootstrap profile base" || fail "base profile missing"
+[[ -f "${CONFIG_DIR}/bootstrap/profiles/home.toml" ]] && ok "bootstrap profile home" || fail "home profile missing"
+[[ -f "${CONFIG_DIR}/bootstrap/profiles/work.toml" ]] && ok "bootstrap profile work" || fail "work profile missing"
 
 echo -e "\n${BLUE}Summary${NC}"
 echo -e "Passed: ${GREEN}${PASSED}${NC}  Warnings: ${YELLOW}${WARNINGS}${NC}  Failed: ${RED}${FAILED}${NC}"

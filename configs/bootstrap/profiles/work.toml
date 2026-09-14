@@ -1,0 +1,23 @@
+# configs/bootstrap/profiles/work.toml
+# Conservative work-machine template.
+#
+# IMPORTANT: Do NOT infer employer AI policy. Start with NO AI clients.
+# Add approved components explicitly to `with` after policy review.
+#
+# Cursor is intentionally omitted and must not be added without approval.
+#
+# Use: ./bootstrap.sh --profile work
+# Example after approval: with = ["images", "tex", "hermes"]
+
+[profile]
+name = "work"
+description = "Conservative allowlist — no AI clients by default"
+
+# Explicit allowlist only. Empty = core shell UX, zero AI configuration.
+# Approved non-AI tooling examples (uncomment as needed):
+#   "images"
+#   "tex"
+with = []
+
+# Do not list Cursor here.
+open_apps = ["iTerm"]

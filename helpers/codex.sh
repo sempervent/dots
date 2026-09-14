@@ -167,13 +167,23 @@ register_hermes_codex_mcp() {
     args_json='[]'
   fi
 
+  if ! dots_may_configure_hermes; then
+    if [[ "${DRY_RUN}" -eq 1 ]]; then
+      echo "[dry-run] skip Hermes MCP for codex (hermes not selected this run)"
+    else
+      echo "Note: hermes not selected — Codex CLI only; no Hermes MCP mutation."
+      echo "      Later: ./setup.sh --with hermes,codex"
+    fi
+    return 0
+  fi
+
   if [[ "${DRY_RUN}" -eq 1 ]]; then
     echo "[dry-run] register Hermes MCP '${DOTS_CODEX_MCP_NAME}' → ${command} ${args_json}"
     return 0
   fi
 
   if ! command -v hermes >/dev/null 2>&1; then
-    echo "Note: hermes not installed — Codex CLI present; MCP registration deferred."
+    echo "Note: hermes selected but not on PATH — MCP registration deferred."
     return 0
   fi
 
@@ -226,7 +236,7 @@ validate_codex_mcp() {
     echo "[dry-run] hermes mcp test ${DOTS_CODEX_MCP_NAME}"
     return 0
   fi
-  if ! command -v hermes >/dev/null 2>&1; then
+  if ! dots_may_configure_hermes || ! command -v hermes >/dev/null 2>&1; then
     return 0
   fi
   if hermes mcp test "${DOTS_CODEX_MCP_NAME}" >/tmp/dots-hermes-codex-test.$$ 2>&1; then
@@ -247,7 +257,12 @@ dots_setup_codex() {
 
   echo "=== Codex (frontier coding via Hermes MCP) ==="
   if [[ "${DRY_RUN}" -eq 1 ]]; then
-    echo "[dry-run] ensure Homebrew cask + MCP (native or DOTS bridge)"
+    echo "[dry-run] ensure Homebrew cask + Codex adapter"
+    if dots_may_configure_hermes; then
+      echo "[dry-run] register Hermes MCP for codex (hermes co-selected)"
+    else
+      echo "[dry-run] skip Hermes MCP for codex (hermes not selected this run)"
+    fi
     return 0
   fi
 
