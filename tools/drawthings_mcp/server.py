@@ -238,6 +238,28 @@ def generate(
     out = Path(output_path).expanduser() if output_path else default_output_path("gen")
     out.parent.mkdir(parents=True, exist_ok=True)
 
+    _tele_id = None
+    try:
+        import sys as _sys
+
+        _tele_root = str(_dots_root() / "tools" / "agent_telemetry")
+        if _tele_root not in _sys.path:
+            _sys.path.insert(0, _tele_root)
+        import bridge as _tele  # type: ignore
+
+        _tele_id = _tele.start(
+            backend="drawthings",
+            task_kind="visual",
+            task_label="image generation",
+            model=model_id,
+            provider="drawthings",
+            tool="drawthings-mcp",
+            local_or_cloud="local",
+            metadata={"width": width, "height": height},
+        )
+    except Exception:
+        _tele_id = None
+
     mem_notes = maybe_unload_ollama()
     args = [
         "generate",
@@ -269,6 +291,24 @@ def generate(
         "stderr": (proc.stderr or "").strip()[-2000:],
         "memory": mem_notes,
     }
+    try:
+        if _tele_id:
+            import sys as _sys
+
+            _tele_root = str(_dots_root() / "tools" / "agent_telemetry")
+            if _tele_root not in _sys.path:
+                _sys.path.insert(0, _tele_root)
+            import bridge as _tele  # type: ignore
+
+            _tele.finish(
+                _tele_id,
+                success=proc.returncode == 0 and out.exists(),
+                exit_code=proc.returncode,
+                model=model_id,
+                metadata_update={"ollama_unload_notes": len(mem_notes)},
+            )
+    except Exception:
+        pass
     if proc.returncode != 0:
         raise RuntimeError(
             f"draw-things-cli generate failed (code {proc.returncode}): "

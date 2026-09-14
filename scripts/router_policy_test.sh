@@ -2,6 +2,9 @@
 # Lightweight router policy tests — no model/API calls.
 set -euo pipefail
 
+# Do not pollute the user's telemetry DB during policy unit tests
+export DOTS_TELEMETRY=0
+
 DOTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ROUTE="${DOTS_DIR}/skills/agent-router/route.py"
 

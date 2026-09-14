@@ -160,6 +160,31 @@ def run_opencode(
     if mode == "server" and not server_url:
         server_url = str(cfg.get("server_url") or DEFAULT_SERVER_URL)
 
+    # Local telemetry (never stores prompt; never fails the task)
+    _tele_id = None
+    try:
+        import sys as _sys
+        from pathlib import Path as _Path
+
+        _tele_root = str(_Path(__file__).resolve().parents[2] / "tools" / "agent_telemetry")
+        if _tele_root not in _sys.path:
+            _sys.path.insert(0, _tele_root)
+        import bridge as _tele  # type: ignore
+
+        _tele_id = _tele.start(
+            backend="opencode",
+            task_kind="coding-local",
+            task_label="repository coding",
+            model=resolved_model,
+            provider="opencode",
+            agent=resolved_agent,
+            tool="opencode-agent",
+            cwd=str(resolved_cwd),
+            local_or_cloud="local",
+        )
+    except Exception:
+        _tele_id = None
+
     bin_path = resolve_opencode_bin(str(cfg.get("binary") or "opencode"))
     argv: list[str] = [
         bin_path,
@@ -234,6 +259,26 @@ def run_opencode(
     if timed_out:
         success = False
         exit_code = exit_code if exit_code not in (0, None) else 124
+
+    try:
+        if _tele_id:
+            import sys as _sys
+            from pathlib import Path as _Path
+
+            _tele_root = str(_Path(__file__).resolve().parents[2] / "tools" / "agent_telemetry")
+            if _tele_root not in _sys.path:
+                _sys.path.insert(0, _tele_root)
+            import bridge as _tele  # type: ignore
+
+            _tele.finish(
+                _tele_id,
+                success=success,
+                exit_code=exit_code,
+                timed_out=timed_out,
+                model=resolved_model,
+            )
+    except Exception:
+        pass
 
     return RunResult(
         success=success,

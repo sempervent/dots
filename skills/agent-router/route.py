@@ -344,6 +344,34 @@ def main(argv: list[str] | None = None) -> int:
     if args.available.strip():
         avail = {x.strip() for x in args.available.split(",") if x.strip()}
     decision = classify(args.prompt, available=avail)
+    # Observational only — never stores the prompt body
+    try:
+        import os
+        from pathlib import Path
+
+        if os.environ.get("DOTS_TELEMETRY", "1").strip().lower() not in {
+            "0",
+            "false",
+            "no",
+            "off",
+        }:
+            tele_root = Path(__file__).resolve().parents[2] / "tools" / "agent_telemetry"
+            if str(tele_root) not in sys.path:
+                sys.path.insert(0, str(tele_root))
+            import bridge as tele  # type: ignore
+
+            tele.route(
+                category=decision.category,
+                destination=decision.destination,
+                reason=decision.reason,
+                user_override=decision.override,
+                degraded=decision.degraded,
+                escalation=decision.escalation,
+                available=avail,
+                note=decision.note,
+            )
+    except Exception:
+        pass
     if args.json:
         print(json.dumps(decision.to_dict(), indent=2))
     else:

@@ -196,7 +196,51 @@ def run_codex(
     if skip_git_repo_check:
         argv.append("--skip-git-repo-check")
     argv.append(prompt)
-    return _run_argv(argv, cwd=resolved, timeout=timeout)
+
+    _tele_id = None
+    try:
+        import sys as _sys
+        from pathlib import Path as _Path
+
+        _tele_root = str(_Path(__file__).resolve().parents[2] / "tools" / "agent_telemetry")
+        if _tele_root not in _sys.path:
+            _sys.path.insert(0, _tele_root)
+        import bridge as _tele  # type: ignore
+
+        _tele_id = _tele.start(
+            backend="codex",
+            task_kind="coding-frontier",
+            task_label="repository coding",
+            model=model,
+            provider="codex",
+            tool="codex-mcp",
+            cwd=str(resolved),
+            local_or_cloud="cloud",
+        )
+    except Exception:
+        _tele_id = None
+
+    result = _run_argv(argv, cwd=resolved, timeout=timeout)
+    try:
+        if _tele_id:
+            import sys as _sys
+            from pathlib import Path as _Path
+
+            _tele_root = str(_Path(__file__).resolve().parents[2] / "tools" / "agent_telemetry")
+            if _tele_root not in _sys.path:
+                _sys.path.insert(0, _tele_root)
+            import bridge as _tele  # type: ignore
+
+            _tele.finish(
+                _tele_id,
+                success=result.success,
+                exit_code=result.exit_code,
+                timed_out=result.timed_out,
+                model=model,
+            )
+    except Exception:
+        pass
+    return result
 
 
 def reply_codex(

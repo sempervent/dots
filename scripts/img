@@ -128,8 +128,36 @@ if [[ -n "${MODEL}" ]]; then
   args+=(--model "${MODEL}")
 fi
 
+DOTS_DIR="${DOTS_DIR:-${HOME}/dots}"
+TELEMETRY_BIN="${DOTS_DIR}/scripts/agent-telemetry"
+TELE_ID=""
+if [[ "${DOTS_TELEMETRY:-1}" != "0" ]] && [[ -x "${TELEMETRY_BIN}" ]]; then
+  TELE_ID="$("${TELEMETRY_BIN}" record-start \
+    --backend drawthings \
+    --kind visual \
+    --label "image generation" \
+    --model "${MODEL:-}" \
+    --tool img \
+    --local-or-cloud local 2>/dev/null || true)"
+fi
+
 echo "Generating → ${OUTFILE}"
+set +e
 draw-things-cli "${args[@]}"
+rc=$?
+set -e
+
+if [[ -n "${TELE_ID}" ]] && [[ -x "${TELEMETRY_BIN}" ]]; then
+  if [[ "${rc}" -eq 0 ]] && [[ -f "${OUTFILE}" ]]; then
+    "${TELEMETRY_BIN}" record-finish --id "${TELE_ID}" --success true --exit-code 0 --model "${MODEL:-}" >/dev/null 2>&1 || true
+  else
+    "${TELEMETRY_BIN}" record-finish --id "${TELE_ID}" --success false --exit-code "${rc}" --model "${MODEL:-}" >/dev/null 2>&1 || true
+  fi
+fi
+
+if [[ "${rc}" -ne 0 ]]; then
+  exit "${rc}"
+fi
 
 if [[ ! -f "${OUTFILE}" ]]; then
   echo "Error: expected output missing: ${OUTFILE}" >&2

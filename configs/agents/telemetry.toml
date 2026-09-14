@@ -1,0 +1,25 @@
+# DOTS private local agent telemetry (observational only — not adaptive routing).
+#
+# Live copy: ~/.config/dots/agents/telemetry.toml
+# Database:  ~/.local/share/dots/telemetry/agents.sqlite3
+#
+# Opt-out: enabled = false  OR  DOTS_TELEMETRY=0
+
+enabled = true
+storage = "sqlite"
+capture_text = false
+capture_resource_usage = true
+capture_cost = true
+capture_ollama_state = true
+retention_days = 90
+
+[privacy]
+store_prompts = false
+store_responses = false
+store_full_paths = false
+
+[sqlite]
+# Relative to XDG data home unless absolute
+path = "dots/telemetry/agents.sqlite3"
+busy_timeout_ms = 5000
+wal = true
