@@ -166,12 +166,15 @@ done
 # Version managers {{{2
 echo -e "\n${BLUE}Version Managers:${NC}"
 
-if [ -s "${HOME}/.nvm/nvm.sh" ]; then
-  echo -e "  ${GREEN}✓${NC} nvm"
-  INSTALLED+=("nvm")
+if command -v fnm >/dev/null 2>&1; then
+  echo -e "  ${GREEN}✓${NC} fnm (DOTS Node manager)"
+  INSTALLED+=("fnm")
 else
-  echo -e "  ${RED}✗${NC} nvm - curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash"
-  MISSING+=("nvm:curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash")
+  echo -e "  ${RED}✗${NC} fnm - brew install fnm  (or ./setup.sh)"
+  MISSING+=("fnm:brew install fnm")
+fi
+if brew list nvm >/dev/null 2>&1 || [[ -s "${HOME}/.nvm/nvm.sh" ]]; then
+  echo -e "  ${BLUE}ℹ${NC} nvm still present (unused by DOTS) — optional: brew uninstall nvm"
 fi
 
 if [ -f "${HOME}/.cargo/env" ]; then

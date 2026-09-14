@@ -25,3 +25,7 @@ secrets/
 **/herdr-client.log
 **/herdr-server.log
 tools/drawthings_mcp/.venv/
+tools/opencode_mcp/.venv/
+tools/codex_mcp/.venv/
+tools/**/__pycache__/
+
