@@ -62,3 +62,15 @@ reload_config = "prefix+shift+r"
 
 # Scrollback: tmux copy-mode often on [ — map to Herdr scrollback editor
 edit_scrollback = "prefix+["
+
+# ---------------------------------------------------------------------------
+# Status area (native Herdr tab_bar_right — not Starship/Powerlevel10k)
+# Restrained: zoom · hostname · datetime. Preserve theme/keys above.
+# ---------------------------------------------------------------------------
+[ui]
+tab_bar_right = [
+  { type = "zoom" },
+  { type = "hostname" },
+  { type = "datetime" },
+]
+tab_bar_right_separator = "  "
