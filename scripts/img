@@ -1,0 +1,142 @@
+#!/usr/bin/env bash
+# img — Draw Things convenience CLI (DOTS-managed)
+# Deployed as ~/.local/bin/img when --with drawthings.
+set -euo pipefail
+
+WIDTH=1024
+HEIGHT=1024
+STEPS=4
+OUTFILE=""
+NO_OPEN=0
+PROMPT=""
+
+usage() {
+  cat <<'EOF'
+Usage: img [options] "prompt"
+
+Options:
+  -w WIDTH     Image width (default: 1024)
+  -h HEIGHT    Image height (default: 1024)
+  -s STEPS     Diffusion steps (default: 4)
+  -o FILE      Explicit output PNG path
+  -n           Do not open the generated image
+  -?           Show help
+
+Environment:
+  DRAWTHINGS_MODEL       Override model (else config [model].default or first downloaded)
+  DRAWTHINGS_OUTPUT_DIR  Override output dir (else config [output].dir)
+
+Requires: ./setup.sh --with drawthings  (draw-things-cli + config)
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -w)
+      WIDTH="${2:-}"
+      shift 2
+      ;;
+    -h)
+      HEIGHT="${2:-}"
+      shift 2
+      ;;
+    -s)
+      STEPS="${2:-}"
+      shift 2
+      ;;
+    -o)
+      OUTFILE="${2:-}"
+      shift 2
+      ;;
+    -n)
+      NO_OPEN=1
+      shift
+      ;;
+    -\?|--help|-help)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -*)
+      echo "Error: unknown option: $1" >&2
+      usage >&2
+      exit 1
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+PROMPT="${*:-}"
+
+if [[ -z "${PROMPT}" ]]; then
+  usage >&2
+  exit 1
+fi
+
+if ! command -v draw-things-cli >/dev/null 2>&1; then
+  echo "Error: draw-things-cli not found. Install: ./setup.sh --with drawthings" >&2
+  exit 1
+fi
+
+CFG="${DOTS_DRAWTHINGS_CONFIG:-${HOME}/.config/drawthings-mcp/config.toml}"
+REPO_CFG="${DOTS_DIR:-${HOME}/dots}/configs/drawthings/config.toml"
+[[ -f "${CFG}" ]] || CFG="${REPO_CFG}"
+
+# Resolve output dir + model from shared Draw Things config (same as MCP).
+_resolved="$(python3 - "${CFG}" <<'PY'
+import os, sys
+from pathlib import Path
+cfg_path = Path(sys.argv[1])
+out_dir = os.environ.get("DRAWTHINGS_OUTPUT_DIR", "")
+model = os.environ.get("DRAWTHINGS_MODEL", "")
+if cfg_path.is_file():
+    try:
+        import tomllib
+        data = tomllib.loads(cfg_path.read_text(encoding="utf-8"))
+    except Exception:
+        data = {}
+    if not out_dir:
+        out_dir = ((data.get("output") or {}).get("dir") or "").strip()
+    if not model:
+        model = ((data.get("model") or {}).get("default") or "").strip()
+if not out_dir:
+    out_dir = str(Path.home() / "Pictures" / "AI" / "DrawThings")
+print(os.path.expanduser(out_dir))
+print(model)
+PY
+)"
+OUT_DIR="$(printf '%s\n' "${_resolved}" | sed -n '1p')"
+MODEL="$(printf '%s\n' "${_resolved}" | sed -n '2p')"
+
+mkdir -p "${OUT_DIR}"
+
+if [[ -z "${OUTFILE}" ]]; then
+  ts="$(date +%Y%m%d_%H%M%S)"
+  ms="$(python3 -c 'import time; print(int(time.time()*1000)%1000)')"
+  OUTFILE="${OUT_DIR}/img_${ts}_${ms}.png"
+else
+  OUTFILE="$(python3 -c 'import os,sys; print(os.path.expanduser(sys.argv[1]))' "${OUTFILE}")"
+  mkdir -p "$(dirname "${OUTFILE}")"
+fi
+
+args=(generate --width "${WIDTH}" --height "${HEIGHT}" --steps "${STEPS}" --output "${OUTFILE}" --prompt "${PROMPT}")
+if [[ -n "${MODEL}" ]]; then
+  args+=(--model "${MODEL}")
+fi
+
+echo "Generating → ${OUTFILE}"
+draw-things-cli "${args[@]}"
+
+if [[ ! -f "${OUTFILE}" ]]; then
+  echo "Error: expected output missing: ${OUTFILE}" >&2
+  exit 1
+fi
+
+echo "OK: ${OUTFILE}"
+if [[ "${NO_OPEN}" -eq 0 ]] && [[ "$(uname -s)" == "Darwin" ]] && command -v open >/dev/null 2>&1; then
+  open "${OUTFILE}"
+fi

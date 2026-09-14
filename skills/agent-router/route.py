@@ -19,6 +19,7 @@ DEST_LOCAL = "local"
 DEST_ARCHIFY = "archify"
 DEST_OPENCODE = "opencode"
 DEST_CODEX = "codex"
+DEST_CURSOR = "cursor"
 DEST_DRAWTHINGS = "drawthings"
 DEST_IMAGES = "images"
 
@@ -43,6 +44,8 @@ def _norm(text: str) -> str:
 
 
 OVERRIDE_PATTERNS: list[tuple[re.Pattern[str], str, str]] = [
+    # Cursor ONLY via explicit user request — never auto-selected
+    (re.compile(r"\b(use|with|via|through)\s+cursor\b|\bcursor\s+to\b|\bkeep this on cursor\b"), DEST_CURSOR, "coding-cursor"),
     (re.compile(r"\b(use|with|via|through)\s+codex\b|\bcodex\s+to\b|\bkeep this on codex\b"), DEST_CODEX, "coding-frontier"),
     (re.compile(r"\b(use|with|via)\s+opencode\b|\bopencode\s+to\b"), DEST_OPENCODE, "coding-local"),
     (re.compile(r"\b(use|with|via)\s+draw\s*things\b|\bgenerate (this |an? )?(image|png|jpg).*\bdraw\b"), DEST_DRAWTHINGS, "visual"),
@@ -65,7 +68,7 @@ def apply_override(text: str) -> Decision | None:
                     escalation=None,
                     override=True,
                 )
-            cwd_req = dest in {DEST_OPENCODE, DEST_CODEX, DEST_ARCHIFY}
+            cwd_req = dest in {DEST_OPENCODE, DEST_CODEX, DEST_CURSOR, DEST_ARCHIFY}
             return Decision(
                 destination=dest,
                 category=cat,
@@ -89,6 +92,7 @@ def classify(text: str, *, available: set[str] | None = None) -> Decision:
         DEST_ARCHIFY,
         DEST_OPENCODE,
         DEST_CODEX,
+        DEST_CURSOR,
         DEST_DRAWTHINGS,
         DEST_IMAGES,
     }
@@ -287,6 +291,19 @@ def degrade(decision: Decision, available: set[str]) -> Decision:
     if decision.destination in available:
         return decision
 
+    # Cursor: never silently substitute another cloud coding provider (work policy).
+    if decision.destination == DEST_CURSOR:
+        return Decision(
+            destination=DEST_DIRECT,
+            category=decision.category,
+            reason=decision.reason,
+            cwd_required=False,
+            escalation=None,
+            override=decision.override,
+            degraded=True,
+            note="Cursor unavailable; report unavailable — do not silently substitute Codex/OpenCode",
+        )
+
     # Graceful degradation map
     fallbacks = {
         DEST_CODEX: (DEST_OPENCODE, "Codex unavailable; using OpenCode; no cloud escalation"),
@@ -303,7 +320,7 @@ def degrade(decision: Decision, available: set[str]) -> Decision:
         destination=fb,
         category=decision.category,
         reason=decision.reason,
-        cwd_required=decision.cwd_required if fb in {DEST_OPENCODE, DEST_CODEX, DEST_ARCHIFY} else False,
+        cwd_required=decision.cwd_required if fb in {DEST_OPENCODE, DEST_CODEX, DEST_CURSOR, DEST_ARCHIFY} else False,
         escalation=None,
         override=decision.override,
         degraded=True,

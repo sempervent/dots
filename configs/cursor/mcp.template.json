@@ -1,0 +1,7 @@
+# Template MCP servers for Cursor (~/.cursor/mcp.json) — applied only when
+# --with cursor AND the matching tool component are both selected.
+# Empty by default; setup merges selected servers.
+
+{
+  "mcpServers": {}
+}

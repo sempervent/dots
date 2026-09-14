@@ -180,11 +180,21 @@ PY
   fi
 }
 
-# Idempotent Hermes registration via Hermes' own config helpers (CLI prompts on overwrite).
+# Idempotent Hermes registration — ONLY when hermes was explicitly selected this run.
 register_hermes_drawthings_mcp() {
   local launcher="${DOTS_DRAWTHINGS_LAUNCHER}"
   local cfg
   cfg="$(drawthings_live_config)"
+
+  if ! dots_may_configure_hermes; then
+    if [[ "${DRY_RUN}" -eq 1 ]]; then
+      echo "[dry-run] skip Hermes MCP for drawthings (hermes not selected this run)"
+    else
+      echo "Note: hermes not selected — Draw Things backend only; no Hermes MCP mutation."
+      echo "      Later: ./setup.sh --with hermes,drawthings"
+    fi
+    return 0
+  fi
 
   if [[ "${DRY_RUN}" -eq 1 ]]; then
     echo "[dry-run] register Hermes MCP '${DOTS_DRAWTHINGS_MCP_NAME}' → ${launcher}"
@@ -192,7 +202,7 @@ register_hermes_drawthings_mcp() {
   fi
 
   if ! command -v hermes >/dev/null 2>&1; then
-    echo "Note: hermes not installed — Draw Things bridge installed; MCP registration deferred."
+    echo "Note: hermes selected but not on PATH — MCP registration deferred."
     echo "      Later: ./setup.sh --with hermes,drawthings   # or: hermes mcp add drawthings --command ${launcher}"
     return 0
   fi
@@ -288,7 +298,7 @@ validate_drawthings_bridge() {
       return 1
     }
   fi
-  if command -v hermes >/dev/null 2>&1; then
+  if dots_may_configure_hermes && command -v hermes >/dev/null 2>&1; then
     if hermes mcp test "${DOTS_DRAWTHINGS_MCP_NAME}" >/tmp/dots-hermes-dt-test.$$ 2>&1; then
       echo "OK: hermes mcp test ${DOTS_DRAWTHINGS_MCP_NAME}"
       rm -f /tmp/dots-hermes-dt-test.$$
@@ -299,6 +309,40 @@ validate_drawthings_bridge() {
       return 1
     fi
   fi
+}
+
+install_img_launchers() {
+  local src="${DIR}/scripts/img"
+  local dest="${HOME}/.local/bin/img"
+  if [[ ! -f "${src}" ]]; then
+    echo "Warn: missing ${src}"
+    return 0
+  fi
+  if [[ "${DRY_RUN}" -eq 1 ]]; then
+    echo "[dry-run] link ${dest} → ${src}"
+    echo "[dry-run] deploy img-square / img-wide / pfl-icon helpers"
+    return 0
+  fi
+  ensure_dir "${HOME}/.local/bin"
+  chmod +x "${src}"
+  ln -sfn "${src}" "${dest}"
+  echo "OK: ${dest} → ${src}"
+
+  # Thin dimension wrappers (call img; no duplicated generate logic)
+  cat >"${HOME}/.local/bin/img-square" <<'EOF'
+#!/usr/bin/env bash
+exec img -w 1024 -h 1024 "$@"
+EOF
+  cat >"${HOME}/.local/bin/img-wide" <<'EOF'
+#!/usr/bin/env bash
+exec img -w 1536 -h 1024 "$@"
+EOF
+  cat >"${HOME}/.local/bin/pfl-icon" <<'EOF'
+#!/usr/bin/env bash
+exec img -w 1024 -h 1024 "$@"
+EOF
+  chmod +x "${HOME}/.local/bin/img-square" "${HOME}/.local/bin/img-wide" "${HOME}/.local/bin/pfl-icon"
+  echo "OK: img-square, img-wide, pfl-icon → ~/.local/bin/"
 }
 
 dots_setup_drawthings() {
@@ -312,10 +356,11 @@ dots_setup_drawthings() {
     echo "Warn: draw-things-cli is macOS-oriented; continuing with bridge config only."
   fi
 
-  # Order: config → uv env → launcher → output → CLI verify → Hermes → probe
+  # Order: config → uv env → launcher → img → output → CLI verify → client MCP → probe
   deploy_drawthings_config || return 1
   prepare_drawthings_mcp_env || return 1
   install_drawthings_launcher || return 1
+  install_img_launchers || true
   ensure_drawthings_output_dir || return 1
 
   if drawthings_app_present; then
@@ -328,7 +373,13 @@ dots_setup_drawthings() {
   fi
 
   if [[ "${DRY_RUN}" -eq 1 ]]; then
-    echo "[dry-run] verify CLI, register Hermes MCP, probe bridge"
+    register_hermes_drawthings_mcp
+    if dots_may_configure_cursor; then
+      echo "[dry-run] Cursor MCP for drawthings (via dots_setup_cursor)"
+    else
+      echo "[dry-run] skip Cursor MCP for drawthings (cursor not selected this run)"
+    fi
+    echo "[dry-run] verify CLI / probe bridge (skipped)"
     return 0
   fi
 
@@ -338,6 +389,7 @@ dots_setup_drawthings() {
   validate_drawthings_bridge || return 1
 
   echo "Draw Things is a TOOL (pixels), not a Hermes reasoning model."
-  echo "Manual register: hermes mcp add drawthings --command ${DOTS_DRAWTHINGS_LAUNCHER}"
+  echo "img CLI: img \"prompt\"  |  img-square / img-wide / pfl-icon"
+  echo "Hermes MCP only when hermes co-selected; Cursor MCP only when cursor co-selected."
   echo "Smoke (optional): ${DIR}/scripts/drawthings_smoke.sh"
 }

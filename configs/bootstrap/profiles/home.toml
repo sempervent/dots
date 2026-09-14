@@ -1,0 +1,27 @@
+# configs/bootstrap/profiles/home.toml
+# EDITABLE home-machine template. Adjust `with` to your preferred stack.
+#
+# Use: ./bootstrap.sh --profile home
+#
+# This is NOT silently applied to every machine — you must choose --profile home.
+
+[profile]
+name = "home"
+description = "Example home stack — edit before relying on it"
+
+# Preferred home AI / creative stack (user-editable allowlist).
+# Comment out anything you do not want on a given Mac.
+with = [
+  "hermes",
+  "herdr",
+  "ollama",
+  "skills",
+  "drawthings",
+  "opencode",
+  "codex",
+  "cursor",
+  "images",
+  "tex",
+]
+
+open_apps = ["iTerm", "Draw Things", "Cursor"]

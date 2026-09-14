@@ -22,16 +22,36 @@ ZSH_CUSTOM="${ZSH_CUSTOM:-${ZSH}/custom}"
 DRY_RUN=0
 DOTS_WITH_COMPONENTS=()
 
-SUPPORTED_WITH=(herdr hermes ollama archify drawthings)
+SUPPORTED_WITH=(herdr hermes ollama archify skills drawthings opencode codex cursor images tex)
 
+# shellcheck source=helpers/ai_consent.sh
+source "${DIR}/helpers/ai_consent.sh"
 # shellcheck source=helpers/agent_skills.sh
 source "${DIR}/helpers/agent_skills.sh"
+# shellcheck source=helpers/skills_pack.sh
+source "${DIR}/helpers/skills_pack.sh"
 # shellcheck source=helpers/herdr_config.sh
 source "${DIR}/helpers/herdr_config.sh"
 # shellcheck source=helpers/optional_components.sh
 source "${DIR}/helpers/optional_components.sh"
 # shellcheck source=helpers/drawthings.sh
 source "${DIR}/helpers/drawthings.sh"
+# shellcheck source=helpers/opencode.sh
+source "${DIR}/helpers/opencode.sh"
+# shellcheck source=helpers/codex.sh
+source "${DIR}/helpers/codex.sh"
+# shellcheck source=helpers/cursor.sh
+source "${DIR}/helpers/cursor.sh"
+# shellcheck source=helpers/agent_router.sh
+source "${DIR}/helpers/agent_router.sh"
+# shellcheck source=helpers/fnm.sh
+source "${DIR}/helpers/fnm.sh"
+# shellcheck source=helpers/nvim.sh
+source "${DIR}/helpers/nvim.sh"
+# shellcheck source=helpers/notify.sh
+source "${DIR}/helpers/notify.sh"
+# shellcheck source=helpers/path_hygiene.sh
+source "${DIR}/helpers/path_hygiene.sh"
 
 usage() {
   cat <<'EOF'
@@ -46,29 +66,52 @@ Options:
                       ollama     — local LLM runtime (no models pulled)
                       archify    — agent skill: architecture / workflow /
                                    sequence / data-flow / lifecycle diagrams
-                                   (requires Node 18+; Brewfile.archify)
-                      drawthings — Draw Things image tool bridge (CLI + MCP;
-                                   GUI app must already be installed)
+                                   (requires Node via fnm; Brewfile.archify)
+                      skills     — curated Engineering Pack (manifest
+                                   + security-review + Archify + magnus919 set)
+                      drawthings — Draw Things image tool bridge (CLI + MCP
+                                   launchers; GUI app must already be installed)
+                      opencode   — local/general coding adapter (+ Hermes MCP
+                                   only if hermes also selected)
+                      codex      — frontier coding via Homebrew cask Codex
+                                   (+ Hermes MCP only if hermes also selected)
+                      cursor     — Cursor Agent CLI (Homebrew cask cursor-cli;
+                                   configures ~/.cursor ONLY when selected)
+                      images     — deterministic image toolkit (Magick, etc.;
+                                   not generative — see drawthings)
+                      tex        — Homebrew TeX Live (CLI LaTeX)
   --with=<list>     Same as --with <list>
   --dry-run         Preview actions without modifying the machine
   -h, --help        Show this help
 
+Consent vs presence:
+  A binary already on PATH does NOT authorize DOTS to configure it.
+  AI client config runs only for components listed in --with this run.
+  Prefer ./bootstrap.sh --profile {base,home,work} for machine onboarding.
+
 Examples:
   ./setup.sh
   ./setup.sh --with herdr
-  ./setup.sh --with archify
+  ./setup.sh --with cursor
+  ./setup.sh --with herdr,cursor
   ./setup.sh --with drawthings
-  ./setup.sh --with hermes,herdr,ollama,archify,drawthings
-  ./setup.sh --with=ollama
-  ./setup.sh --dry-run --with drawthings
+  ./setup.sh --with hermes,drawthings
+  ./setup.sh --with cursor,drawthings
+  ./setup.sh --with skills
+  ./setup.sh --with images,tex
+  ./setup.sh --with hermes,herdr,ollama,skills,drawthings,opencode,codex,cursor,images,tex
+  ./setup.sh --dry-run --with cursor
+  ./bootstrap.sh --profile work
 
-Default ./setup.sh does NOT install AI tools, agent skills, or download models.
+Default ./setup.sh installs core shell UX (fnm, Starship, Nerd Font, Neovim,
+terminal-notifier) but does NOT install AI tools, agent skills, or models.
 
 Environment (runtime shells, not installer):
   DOTS_MULTIPLEXER=tmux|herdr|none   (default: tmux)
   DOTS_AUTO_TMUX=0                   disable auto tmux (compat)
-  DOTS_PROMPT_STATS=1                enable prompt dir stats
+  DOTS_PROMPT_STATS=1                enable prompt dir stats (legacy)
   DOTS_GREETING=0                    silence fortune greeting
+  DOTS_HERMES_NOTIFY_THRESHOLD=60    Hermes notify min session seconds
 EOF
 }
 
@@ -223,13 +266,16 @@ else
 fi
 
 echo "=== Symlinks ==="
-for f in bashrc zshrc zprofile vimrc tmux.conf sqliterc psqlrc; do
+for f in bashrc zshrc zprofile vimrc tmux.conf sqliterc psqlrc npmrc; do
   move_sym "${f}" "${HOME}/.${f}"
 done
 
 # App configs under XDG (file-level, not whole directory)
 if [[ -f "${DIR}/configs/bat.conf" ]]; then
   move_sym "bat_config" "${HOME}/.config/bat/config" "${DIR}/configs/bat.conf"
+fi
+if [[ -f "${DIR}/configs/starship/starship.toml" ]]; then
+  move_sym "starship.toml" "${HOME}/.config/starship.toml" "${DIR}/configs/starship/starship.toml"
 fi
 if [[ -f "${DIR}/configs/btop/btop.conf" ]]; then
   move_sym "btop.conf" "${HOME}/.config/btop/btop.conf" "${DIR}/configs/btop/btop.conf"
@@ -240,9 +286,12 @@ if [[ -f "${DIR}/configs/btop/themes/catppuccin_mocha.theme" ]]; then
     "${HOME}/.config/btop/themes/catppuccin_mocha.theme" \
     "${DIR}/configs/btop/themes/catppuccin_mocha.theme"
 fi
-if [[ -f "${DIR}/configs/herdr/config.toml" ]]; then
+if has_component herdr && [[ -f "${DIR}/configs/herdr/config.toml" ]]; then
   sync_herdr_config
 fi
+
+# Neovim Lua config (authoritative; replaces legacy init.vim deploy)
+dots_deploy_nvim
 
 # Ranger — file-level deploy only
 echo "=== Ranger ==="
@@ -326,17 +375,38 @@ else
   echo "Note: brew not found; skipped package install"
 fi
 
-# Agent skills (npx skills add …) — after Brewfile so Node is available when needed
+# fnm default Node (after Brewfile so fnm exists)
+dots_setup_fnm_node
+
+# Retire Hermes-owned ~/.local/bin shims that shadow fnm / brew hermes
+dots_path_hygiene
+
+# Generic notify helper + Hermes completion hooks
+dots_deploy_notify
+
+# Agent skills (npx skills add …) — after fnm Node is available
 dots_install_requested_agent_skills || exit 1
 
 # Hermes PATH ambiguity warning (never delete old install)
 dots_check_hermes_path
 
-# Herdr integrations (only when herdr present / selected)
+# Herdr integrations (only for agents co-selected with herdr this run)
 dots_ensure_herdr_integrations
 
 # Draw Things image tool bridge (optional)
 dots_setup_drawthings || exit 1
+
+# OpenCode local coding adapter (optional)
+dots_setup_opencode || exit 1
+
+# Codex frontier coding (optional; Hermes MCP only if hermes co-selected)
+dots_setup_codex || exit 1
+
+# Cursor Agent CLI (optional — NEVER touch ~/.cursor unless selected)
+dots_setup_cursor || exit 1
+
+# Explicit routing skill (when any AI stack component requested)
+dots_setup_agent_router || exit 1
 
 # bat theme cache (Catppuccin) if theme files present
 if command -v bat >/dev/null 2>&1 && [[ -d "${DIR}/configs/bat/themes" ]]; then
@@ -389,25 +459,78 @@ cat <<EOF
 
 Finished installing dots$([ "${DRY_RUN}" -eq 1 ] && echo ' (dry-run)').
 
-Core: ~/.bashrc ~/.zshrc ~/.zprofile ~/.vimrc ~/.tmux.conf
+Core: ~/.bashrc ~/.zshrc ~/.zprofile ~/.vimrc ~/.tmux.conf ~/.npmrc
+Starship: ~/.config/starship.toml (Catppuccin Mocha)
+Neovim: ~/.config/nvim (lazy.nvim; EDITOR/VISUAL=nvim)
+Node: fnm + configs/node/default.toml (not nvm)
+Notify: ~/.local/bin/notify  (smoke: ./scripts/notify-smoke.sh)
 Ranger: ~/.config/ranger/{rc.conf,rifle.conf,scope.sh,colorschemes/catppuccin.py}
-Herdr config: ~/.config/herdr/config.toml (merged [theme]/[keys] from repo; local [ui]/onboarding preserved)
 
 Optional --with: ${DOTS_WITH_COMPONENTS[*]:-none}
 
-Agent skills (when requested): installed globally via \`npx skills\` into ~/.agents/skills/
-  Hermes discovers them through ~/.hermes/skills/<name> (skills CLI symlink).
-  Herdr orchestrates Hermes; it does not embed Archify schemas/renderers.
+Consent: binary presence ≠ configuration authorization (see helpers/ai_consent.sh).
+Onboarding: ./bootstrap.sh --profile {base,home,work}
+EOF
 
-Draw Things (when requested): CLI via Brewfile.drawthings + MCP bridge.
-  Launcher: ~/.local/bin/drawthings-mcp   Config: ~/.config/drawthings-mcp/config.toml
-  Images → ~/Pictures/AI/DrawThings/  (configurable). Not an LLM provider.
+if has_component herdr; then
+  echo "Herdr: ~/.config/herdr/config.toml (merged [theme]/[keys]/ui.tab_bar_right)"
+  echo "  Integrations only for co-selected agents (hermes/opencode/codex/cursor)."
+fi
+if has_component skills || has_component archify; then
+  cat <<'EOF'
+Agent skills:
+  Global store: ~/.agents/skills/
+  Hermes links: only when hermes is also selected
+  Update (opt-in): ./scripts/update-skills.sh
+EOF
+fi
+if has_component drawthings; then
+  cat <<'EOF'
+Draw Things: CLI + MCP launcher + img helpers.
+  Launchers: ~/.local/bin/drawthings-mcp  ~/.local/bin/img
+  Config: ~/.config/drawthings-mcp/config.toml → ~/Pictures/AI/DrawThings/
+  Client MCP only when hermes/cursor co-selected.
+EOF
+fi
+if has_component opencode; then
+  cat <<'EOF'
+OpenCode: ~/.local/bin/opencode-agent  ~/.local/bin/opencode-mcp
+  Config: ~/.config/dots/agents/execution.toml
+EOF
+fi
+if has_component codex; then
+  cat <<'EOF'
+Codex: Homebrew cask; auth in ~/.codex/ (not copied). Hermes MCP only if hermes co-selected.
+EOF
+fi
+if has_component cursor; then
+  cat <<'EOF'
+Cursor: Homebrew cask cursor-cli → agent / cursor-agent.
+  Config: ~/.cursor/cli-config.json + mcp.json (merge; no tokens).
+  Draw Things MCP only with --with cursor,drawthings. Auth: interactive agent login.
+EOF
+fi
+if has_component images; then
+  echo "Images toolkit: Magick/gs/rsvg/exiftool/pngquant/webp/oxipng (deterministic)."
+fi
+if has_component tex; then
+  echo "TeX: Homebrew texlive. Validate: pdflatex --version; kpsewhich article.cls"
+fi
+if agent_router_should_install 2>/dev/null; then
+  cat <<'EOF'
+Agent router: skills/agent-router → ~/.agents/skills/agent-router
+  Explicit policy; Cursor only on "use Cursor". Tests: ./scripts/router_policy_test.sh
+EOF
+fi
 
-Multiplexer (shell runtime):
-  DOTS_MULTIPLEXER=tmux|herdr|none   (default tmux)
-  DOTS_AUTO_TMUX=0                   still disables auto-tmux
+cat <<'EOF'
 
-Prefixes: tmux=Ctrl-Space  herdr=Ctrl-A (sidebar remains Ctrl-A b)
+No autonomous multi-agent loops. Callers follow readable routing rules.
+
+Multiplexer: DOTS_MULTIPLEXER=tmux|herdr|none (default tmux); DOTS_AUTO_TMUX=0 disables.
+Prefixes: tmux=Ctrl-Space  herdr=Ctrl-A
+
+iTerm font (manual): JetBrainsMono Nerd Font → Profiles → Text → Font.
 
 See README.md for details.
 EOF

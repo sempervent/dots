@@ -12,7 +12,8 @@ agent_router_repo_dir() {
 
 agent_router_should_install() {
   has_component hermes || has_component opencode || has_component codex ||
-    has_component drawthings || has_component archify || has_component ollama
+    has_component drawthings || has_component archify || has_component ollama ||
+    has_component cursor || has_component skills
 }
 
 deploy_router_config() {
@@ -43,7 +44,11 @@ install_agent_router_skill() {
 
   if [[ "${DRY_RUN}" -eq 1 ]]; then
     echo "[dry-run] link ${dest_agents} → ${src}"
-    echo "[dry-run] link ${dest_hermes} → ${src} (if ~/.hermes exists)"
+    if declare -F dots_may_configure_hermes >/dev/null 2>&1 && dots_may_configure_hermes; then
+      echo "[dry-run] link ${dest_hermes} → ${src}"
+    else
+      echo "[dry-run] skip Hermes router link (hermes not selected this run)"
+    fi
     return 0
   fi
 
@@ -56,12 +61,13 @@ install_agent_router_skill() {
   ln -sfn "${src}" "${dest_agents}"
   echo "OK: ${dest_agents} → ${src}"
 
-  if [[ -d "${HOME}/.hermes" ]]; then
+  # Hermes skill exposure only when hermes explicitly selected
+  if declare -F dots_may_configure_hermes >/dev/null 2>&1 && dots_may_configure_hermes; then
     ensure_dir "${HOME}/.hermes/skills"
     ln -sfn "${src}" "${dest_hermes}"
     echo "OK: ${dest_hermes} → ${src}"
   else
-    echo "Note: ~/.hermes missing — skill linked under ~/.agents/skills; Hermes link deferred"
+    echo "Note: router skill in ~/.agents/skills only (Hermes link requires --with hermes)"
   fi
 }
 

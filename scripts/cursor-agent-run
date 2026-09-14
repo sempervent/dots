@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# cursor-agent-run — thin DOTS wrapper around official Cursor `agent --print`
+# Usage:
+#   cursor-agent-run run --dir /path/to/repo --prompt "Inspect this repository."
+#   cursor-agent-run run --prompt "..." [--mode plan|ask] [--model MODEL]
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage: cursor-agent-run run [options]
+
+Options:
+  --dir <path>       Workspace directory (default: cwd)
+  --prompt <text>    Prompt (required)
+  --mode <mode>      plan | ask (optional; omit for default agent mode)
+  --model <model>    Model id (optional)
+  --output-format f  text | json | stream-json (default: text)
+  -h, --help         Show help
+
+Requires Cursor Agent CLI (`agent`) from: ./setup.sh --with cursor
+EOF
+}
+
+CMD="${1:-}"
+[[ "${CMD}" == "-h" || "${CMD}" == "--help" ]] && { usage; exit 0; }
+[[ "${CMD}" == "run" ]] || { echo "Error: expected 'run'" >&2; usage >&2; exit 1; }
+shift || true
+
+DIR_ARG=""
+PROMPT=""
+MODE=""
+MODEL=""
+OUTFMT="text"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --dir) DIR_ARG="${2:-}"; shift 2 ;;
+    --prompt) PROMPT="${2:-}"; shift 2 ;;
+    --mode) MODE="${2:-}"; shift 2 ;;
+    --model) MODEL="${2:-}"; shift 2 ;;
+    --output-format) OUTFMT="${2:-}"; shift 2 ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "Error: unknown arg: $1" >&2; usage >&2; exit 1 ;;
+  esac
+done
+
+if [[ -z "${PROMPT}" ]]; then
+  echo "Error: --prompt is required" >&2
+  exit 1
+fi
+
+if ! command -v agent >/dev/null 2>&1; then
+  echo "Error: 'agent' (Cursor CLI) not found. Install: ./setup.sh --with cursor" >&2
+  exit 1
+fi
+
+args=(-p --print --output-format "${OUTFMT}" --trust)
+[[ -n "${DIR_ARG}" ]] && args+=(--workspace "${DIR_ARG}")
+[[ -n "${MODE}" ]] && args+=(--mode "${MODE}")
+[[ -n "${MODEL}" ]] && args+=(--model "${MODEL}")
+args+=("${PROMPT}")
+
+exec agent "${args[@]}"

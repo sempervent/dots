@@ -1,6 +1,6 @@
 ---
 name: agent-router
-description: Explicit, readable routing/delegation policy for DOTS AI backends. Classify requests into hermes_direct, local (Ollama), archify, opencode, codex, drawthings, or images CLI — with user overrides and one-step OpenCode→Codex escalation. Use when choosing which backend should handle a task, or when the user asks how work should be delegated. No embeddings or learned classifiers.
+description: Explicit, readable routing/delegation policy for DOTS AI backends. Classify requests into hermes_direct, local (Ollama), archify, opencode, codex, cursor, drawthings, or images CLI — with user overrides and one-step OpenCode→Codex escalation. Cursor is NEVER auto-selected (explicit "use Cursor" only). Use when choosing which backend should handle a task. No embeddings or learned classifiers.
 license: MIT
 metadata:
   version: "0.1.0"
@@ -24,12 +24,13 @@ Config defaults: `configs/agents/router.toml` → `~/.config/dots/agents/router.
 | `archify` | Archify skill | architecture assessment, diagrams, structure mapping |
 | `opencode` | OpenCode MCP/adapter | routine coding, repo inspection, tests, local refactors |
 | `codex` | Codex MCP | difficult/frontier coding, hard debugging, high-consequence work |
+| `cursor` | Cursor Agent CLI (`agent`) | **only** when user says "use Cursor" (never auto) |
 | `drawthings` | Draw Things MCP | generative images / img2img |
 | `images` | CLI toolkit (`magick`, `exiftool`, …) | resize, convert, optimize, EXIF — **not** generation |
 
 ## Precedence (highest first)
 
-1. **Explicit user override** (“Use Codex…”, “Keep this local…”, “Use OpenCode…”, “Generate with Draw Things…”, “Analyze with Archify…”).
+1. **Explicit user override** (“Use Cursor…”, “Use Codex…”, “Keep this local…”, “Use OpenCode…”, “Generate with Draw Things…”, “Analyze with Archify…”).
 2. **Deterministic media ops** → `images` (never Draw Things).
 3. **Generative imagery** → `drawthings`.
 4. **Architecture analysis** → `archify` (analysis only; no code mutation).
@@ -37,6 +38,8 @@ Config defaults: `configs/agents/router.toml` → `~/.config/dots/agents/router.
 6. **Routine coding / repo inspection** → `opencode` (escalation target: Codex).
 7. **Local/low-cost text work** → `local`.
 8. **Everything else** → `hermes_direct`.
+
+Cursor is **not** in the automatic coding path. If Cursor is requested but unavailable, report unavailable — do **not** silently substitute Codex/OpenCode (work-policy compliance).
 
 ## Decision shape
 

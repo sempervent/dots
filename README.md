@@ -15,8 +15,39 @@ cd ~/dots
 ./setup.sh
 ```
 
-`setup.sh` is idempotent. Default install does **not** install AI tooling or
-download models.
+For a new machine, prefer profiles:
+
+```bash
+./bootstrap.sh --profile base    # core shell UX only — zero AI
+./bootstrap.sh --profile work    # conservative allowlist (edit work.toml)
+./bootstrap.sh --profile home    # editable home stack template
+./bootstrap.sh --profile work --with hermes   # profile + explicit add
+./bootstrap.sh --profile home --without cursor
+```
+
+`setup.sh` is idempotent. Default install includes shell UX (fnm, Starship,
+JetBrainsMono Nerd Font, Neovim, terminal-notifier) but does **not** install AI
+tooling or download models.
+
+### Consent vs presence
+
+**DOTS distinguishes software presence from configuration consent.**
+
+A binary already on the machine (Cursor, Hermes, Codex, …) does **not** authorize
+DOTS to configure it. Configuration, MCP registration, and Herdr integrations run
+only for components explicitly listed in `--with` / the selected bootstrap profile
+for **that** invocation.
+
+| Component | Allowed config when selected |
+|-----------|------------------------------|
+| `hermes` | `~/.hermes/*` (MCP, notify hooks) |
+| `herdr` | Herdr config + integrations **only** for co-selected agents |
+| `ollama` | local Ollama notes/wiring when selected |
+| `opencode` | OpenCode config; Hermes MCP only if `hermes` also selected |
+| `codex` | Codex adapter; Hermes MCP only if `hermes` also selected |
+| `cursor` | `~/.cursor/*` merge; Herdr cursor integration if `herdr` also selected |
+| `drawthings` | bridge/launcher/`img`; MCP into a client only if that client is co-selected |
+| `skills` | `~/.agents/skills` global store; Hermes links only if `hermes` selected |
 
 ### Optional components (`--with`)
 
@@ -25,10 +56,21 @@ download models.
 ./setup.sh --with hermes
 ./setup.sh --with ollama
 ./setup.sh --with archify
+./setup.sh --with skills
 ./setup.sh --with drawthings
-./setup.sh --with herdr,hermes,ollama,archify,drawthings
+./setup.sh --with opencode
+./setup.sh --with codex
+./setup.sh --with cursor
+./setup.sh --with images
+./setup.sh --with tex
+./setup.sh --with herdr,cursor
+./setup.sh --with hermes,drawthings
+./setup.sh --with cursor,drawthings
+./setup.sh --with images,drawthings
+./setup.sh --with images,tex
+./setup.sh --with herdr,hermes,ollama,skills,drawthings,opencode,codex,cursor,images,tex
 ./setup.sh --with=herdr,hermes
-./setup.sh --dry-run --with drawthings
+./setup.sh --dry-run --with cursor
 ./setup.sh --help
 ```
 
@@ -37,40 +79,100 @@ download models.
 | `herdr` | `brew/Brewfile.herdr` → `herdr` |
 | `hermes` | `hermes-agent` (+ macOS cask `hermes-desktop`) |
 | `ollama` | `ollama` (no models, service not started) |
-| `archify` | `brew/Brewfile.archify` → Node 18+, then `npx skills add tt-a1i/archify -g` |
-| `drawthings` | `Brewfile.drawthings` → `draw-things-cli` + Hermes MCP bridge |
+| `archify` | Archify skill only (`npx skills add tt-a1i/archify -g`) |
+| `skills` | Curated Engineering Pack from `configs/skills/manifest.toml` (includes Archify + security-review) |
+| `drawthings` | `Brewfile.drawthings` → `draw-things-cli` + MCP launcher + `img` |
+| `opencode` | `Brewfile.opencode` → OpenCode CLI + DOTS adapter/MCP |
+| `codex` | `Brewfile.codex` → **Homebrew cask** `codex` (+ Hermes MCP if hermes co-selected) |
+| `cursor` | `Brewfile.cursor` → cask `cursor-cli` (`agent`) + opt-in `~/.cursor` merge |
+| `images` | `Brewfile.images` → Magick/gs/rsvg/exiftool/pngquant/webp/oxipng |
+| `tex` | `Brewfile.tex` → Homebrew `texlive` (CLI) |
 
+**Do not add `--with ai`.** Prefer `--profile home` for a full personal stack.
 ## Package management
 
 **Homebrew truth is `brew/Brewfile` only.** There is no `packages.txt`.
+
+Default Brewfile now includes: `fnm`, `starship`, `neovim`, `terminal-notifier`,
+and cask `font-jetbrains-mono-nerd-font`. Node runtime is managed by **fnm**
+(policy: `configs/node/default.toml`), not NVM and not raw `brew node`.
+
+**PATH hygiene:** Homebrew precedes `~/.local/bin`. Setup retires Hermes git-install
+shims (`~/.local/bin/{node,npm,npx,hermes}`) into `~/.local/bin/.dots-retired/`
+when Homebrew `hermes-agent` / fnm are present. Hermes keeps its private Node at
+`~/.hermes/node/` (not on PATH). Optional leftover cleanup: `brew uninstall nvm`
+(does **not** delete `~/.nvm` data).
+
+**Editor:** default `EDITOR`/`VISUAL`/`git core.editor` = `nvim`. Interactive
+`vim`/`vi` aliases map to Neovim; `/usr/bin/vim` is never overwritten.
+
+**Notifications:** `~/.local/bin/notify` wraps `terminal-notifier`. Hermes
+session hooks notify after long tasks (default ≥60s). Smoke:
+`./scripts/notify-smoke.sh`.
 
 Optional packages are declared in:
 
 - `brew/Brewfile.herdr`
 - `brew/Brewfile.hermes`
 - `brew/Brewfile.ollama`
-- `brew/Brewfile.archify` (Node for agent skills)
+- `brew/Brewfile.archify` (reserved; Node via fnm)
 - `brew/Brewfile.drawthings` (`draw-things-cli`; does **not** install the GUI)
+- `brew/Brewfile.opencode` (`opencode`)
+- `brew/Brewfile.codex` (cask `codex` — preferred over npm `@openai/codex`)
+- `brew/Brewfile.cursor` (cask `cursor-cli` — preferred over `curl … \| bash`)
+- `brew/Brewfile.images` (deterministic image toolkit)
+- `brew/Brewfile.tex` (`texlive`)
 
 and applied only when selected via `--with`.
 
-## Agent skills
+## Cursor Agent (`--with cursor`)
 
-Reusable agent skills install through the same `--with` mechanism. The first
-skill is **Archify** (architecture / workflow / sequence / data-flow /
-lifecycle diagrams → validated HTML).
+Install path: Homebrew cask `cursor-cli` (inspectable). Upstream also documents
+`curl https://cursor.com/install -fsS | bash`; DOTS prefers the cask to avoid
+pipe-to-shell. Official command is `agent` (also `cursor-agent`).
+
+Config is touched **only** when `cursor` is selected:
+
+- `~/.cursor/cli-config.json` — merge conservative defaults (no wildcard MCP/Shell)
+- `~/.cursor/mcp.json` — Draw Things only when `drawthings` co-selected
+- OpenCode/Codex are **not** registered as Cursor MCP tools
+
+Thin runner: `cursor-agent-run run --dir <repo> --prompt "…"` → `agent -p …`.
+
+Router: destination `cursor` only on explicit “use Cursor”. If unavailable, report
+unavailable — no silent Codex/OpenCode substitute.
+
+## Draw Things `img`
 
 ```bash
-./setup.sh --with archify
+img "a PCB-shelled cosmic turtle"
+img -w 1536 -h 1024 "retro-futurist synthesizer laboratory"
+img-square "…"
+img-wide "…"
+pfl-icon "experimental electronic music laboratory, bold icon"
 ```
 
-What happens:
+Defaults (width/height/steps) are CLI flags; model + output dir come from the same
+`configs/drawthings/config.toml` / live `~/.config/drawthings-mcp/config.toml` as MCP
+(`DRAWTHINGS_MODEL` / `DRAWTHINGS_OUTPUT_DIR` override). Deployed with `--with drawthings`.
 
-1. Homebrew installs Node (`Brewfile.archify`) if needed.
-2. Setup verifies Node ≥ 18 and `npx`.
-3. If Archify is not already present, runs:
+## Agent skills
+
+```bash
+./setup.sh --with archify   # Archify only
+./setup.sh --with skills    # curated Hermes Engineering Pack (includes Archify)
+./scripts/update-skills.sh  # opt-in update (not on every setup)
+```
+
+Manifest: `configs/skills/manifest.toml`. Provenance: `~/.agents/.skill-lock.json`
+(copied to `~/.config/dots/skills/skills-lock.json` after pack install).
+
+What `--with archify` does:
+
+1. Verifies Node ≥ 18 via fnm-managed Node and `npx`.
+2. If Archify is not already present, runs:
    `npx -y skills add tt-a1i/archify -g -y`
-4. Skill lives globally at `~/.agents/skills/archify` (shared across agents).
+3. Skill lives globally at `~/.agents/skills/archify` (shared across agents).
 
 **Hermes** discovers Archify via the symlink the `skills` CLI creates at
 `~/.hermes/skills/archify` → `~/.agents/skills/archify`. No extra Hermes
@@ -111,8 +213,9 @@ Hermes  --reasoning-->  Ollama / qwen-hermes
 3. Live config → `~/.config/drawthings-mcp/config.toml` (first install; existing live file kept).
 4. Stable launcher → `~/.local/bin/drawthings-mcp` → `$DOTS/scripts/drawthings-mcp`.
 5. Output dir → `~/Pictures/AI/DrawThings/` (writable).
-6. If Hermes is present: register MCP server `drawthings` (idempotent).
+6. MCP registration into Hermes/Cursor **only** when that client is co-selected.
 7. Probe: tool discovery + `status` + `list_models` (no image generation).
+8. `img` / `img-square` / `img-wide` / `pfl-icon` → `~/.local/bin/`.
 
 Does **not**: install Draw Things.app, download image models, or bind any network port.
 
@@ -150,8 +253,176 @@ MCP tools: `status`, `list_models`, `generate`, `img2img`.
 Memory: default `memory.policy = "manual"`. Optional `unload_ollama` stops loaded
 Ollama models before generation (not the Ollama daemon; no auto-reload).
 
-Reusable client snippet (OpenCode/Codex later): `~/.config/dots/drawthings-mcp.client.json`
+Reusable client snippet: `~/.config/dots/drawthings-mcp.client.json`
 (and template `configs/drawthings/mcp.client.json` using `~/.local/bin/drawthings-mcp`).
+
+## Coding backends (OpenCode + Codex)
+
+Hermes follows the **agent-router** skill for explicit delegation (no embeddings).
+
+```text
+User → Hermes conductor (+ agent-router policy)
+         ├── local reasoning     → Ollama
+         ├── architecture        → Archify skill
+         ├── image generation    → Draw Things MCP
+         ├── image manipulation  → images CLI (Magick/…)
+         ├── local/general code  → OpenCode adapter (MCP / CLI)
+         └── frontier/escalated  → Codex native MCP (codex mcp-server)
+Herdr supervises interactive sessions; it does not choose the coding backend.
+```
+
+### Install
+
+```bash
+./setup.sh --with opencode,codex
+# full local AI stack + media/TeX:
+./setup.sh --with hermes,herdr,ollama,archify,drawthings,opencode,codex,images,tex
+```
+
+### OpenCode (local/general coding)
+
+Stable launchers:
+
+- `~/.local/bin/opencode-agent` — CLI adapter over `opencode run`
+- `~/.local/bin/opencode-mcp` — thin Hermes MCP (`status`, `list_models`, `list_agents`, `run`)
+
+Config: `~/.config/dots/agents/execution.toml` (template `configs/agents/execution.toml`).
+
+Defaults (inspect with `opencode models` / `opencode agent list`):
+
+| Setting | Value |
+|---------|-------|
+| mode | `standalone` (no persistent `opencode serve` by default) |
+| default_model | `ollama/qwen-hermes:latest` |
+| default_agent | `build` (implementation; may modify files) |
+| timeout | 600s |
+
+Override agent for inspect/review: `--agent plan` (edit denied by OpenCode).
+
+```bash
+opencode-agent run \
+  --dir ~/dev/project \
+  --prompt "Inspect this repository and identify the cause of the failing tests."
+
+opencode-agent run \
+  --dir ~/dev/project \
+  --agent build \
+  --prompt "Implement the fix and run tests." \
+  --auto
+```
+
+`--dir` is required and must exist. The adapter does not default to DOTS or `$HOME`.
+
+Optional server mode: set `mode = "server"` and `server_url = "http://127.0.0.1:4096"` in
+execution.toml, start `opencode serve --hostname 127.0.0.1 --port 4096` yourself, then
+`opencode-agent run --attach http://127.0.0.1:4096 ...`. DOTS does not auto-daemonize serve.
+
+Hermes prompts (manual):
+
+- “Use OpenCode to inspect this repository.”
+- “Delegate this implementation to OpenCode.”
+
+Concurrency: avoid running OpenCode local inference + Hermes local model + Draw Things
+simultaneously on a 24 GB MacBook Air. They may share one Ollama server.
+
+```bash
+./scripts/opencode_smoke.sh   # temp dir; plan agent; opt-in
+```
+
+### Codex (frontier / escalated coding)
+
+Install source: **Homebrew cask** (`brew install --cask codex`), not global npm.
+
+Codex ≥0.154 removed `codex mcp-server`. When that subcommand is missing, DOTS
+registers a thin stdio MCP bridge (`~/.local/bin/codex-mcp` → `codex exec`) so
+Hermes can still delegate. Auth stays in `~/.codex/`.
+
+Hermes also ships a builtin **codex** skill that drives `codex exec` via the
+terminal — complementary to MCP.
+
+If an old npm `@openai/codex` is blocking `/opt/homebrew/bin/codex`, setup migrates the
+Homebrew-prefix npm package when safe, then installs the cask. Manual cleanup:
+
+```bash
+/opt/homebrew/bin/npm uninstall -g --prefix /opt/homebrew @openai/codex
+brew install --cask codex
+```
+
+```bash
+hermes mcp list
+hermes mcp test codex
+./scripts/codex_mcp_smoke.sh   # connection/discovery only
+```
+
+Hermes prompts (manual):
+
+- “Use Codex to review this architecture.”
+- “Escalate this difficult refactor to Codex.”
+
+Hermes↔Codex tool-callback / app-server bidirectionality is **deferred** unless Hermes
+creates it naturally; this pass only requires Hermes → Codex as a coding specialist.
+
+## Images toolkit (`--with images`)
+
+Deterministic conversion / optimization / metadata — **not** generative.
+
+```bash
+./setup.sh --with images
+./setup.sh --with images,drawthings   # toolkit + generative backend
+```
+
+| Tool | Role |
+|------|------|
+| `magick` | convert / trim / resize |
+| `gs` | Ghostscript / PDF |
+| `rsvg-convert` | SVG → raster |
+| `exiftool` | metadata |
+| `pngquant` | lossy PNG optimize |
+| `cwebp` / `dwebp` | WebP |
+| `oxipng` | lossless PNG |
+
+Examples:
+
+```bash
+magick input.webp output.png
+magick input.png -background none -trim output.png
+exiftool image.png
+pngquant image.png
+rsvg-convert input.svg > output.png
+```
+
+## TeX Live (`--with tex`)
+
+```bash
+./setup.sh --with tex
+pdflatex --version
+xelatex --version
+kpsewhich article.cls
+```
+
+Homebrew formula `texlive` (CLI). No MacTeX / BasicTeX GUI bundle.
+
+## Agent router (explicit policy)
+
+Version-controlled skill: `skills/agent-router/` (linked into `~/.agents/skills` and
+`~/.hermes/skills` when an AI stack component is requested).
+
+| Kind | Destination |
+|------|-------------|
+| general reasoning | Hermes / Ollama |
+| architecture | Archify |
+| routine coding | OpenCode |
+| difficult coding | Codex |
+| generative imagery | Draw Things |
+| image manipulation | images CLI |
+| TeX/LaTeX | TeX Live |
+
+User overrides always win (“Use Codex…”, “Keep this local…”). At most one automatic
+coding escalation: OpenCode → Codex. Policy tests (no model calls):
+
+```bash
+./scripts/router_policy_test.sh
+```
 
 ## Layout
 
@@ -162,10 +433,11 @@ zsh/       Zsh-only + Oh My Zsh
 distro/    platform hooks
 syms/      $HOME symlink sources
 ranger/    Ranger overrides + Catppuccin colorscheme
-configs/   bat, btop, herdr, drawthings, templates
+configs/   bat, btop, herdr, drawthings, opencode, agents, templates
 brew/      Brewfile (+ optional fragments)
-helpers/   setup helpers (herdr_config, agent_skills, optional_components, drawthings)
-tools/     MCP bridges (drawthings_mcp)
+helpers/   setup helpers (…, drawthings, opencode, codex, agent_router)
+skills/    DOTS-local Hermes skills (agent-router)
+tools/     MCP bridges (drawthings_mcp, opencode_mcp)
 ```
 
 ## Multiplexers

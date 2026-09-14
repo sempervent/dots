@@ -62,6 +62,9 @@ apply_optional_brewfiles() {
   if has_component tex; then
     apply_brewfile "${DIR}/brew/Brewfile.tex"
   fi
+  if has_component cursor; then
+    apply_brewfile "${DIR}/brew/Brewfile.cursor"
+  fi
 }
 
 dots_install_requested_agent_skills() {
@@ -125,14 +128,23 @@ dots_check_hermes_path() {
 ensure_herdr_integration() {
   local name="$1" need_cli="$2"
   if ! command -v herdr >/dev/null 2>&1; then
+    echo "Skip integration ${name}: herdr not on PATH"
     return 0
   fi
   if [[ -n "${need_cli}" ]] && ! command -v "${need_cli}" >/dev/null 2>&1; then
-    echo "Skip integration ${name}: ${need_cli} not installed"
-    return 0
+    # Cursor: official CLI is `agent`; Brew cask also provides cursor-agent
+    if [[ "${name}" == "cursor" ]]; then
+      if ! command -v agent >/dev/null 2>&1 && ! command -v cursor-agent >/dev/null 2>&1; then
+        echo "Skip integration cursor: agent/cursor-agent not installed"
+        return 0
+      fi
+    else
+      echo "Skip integration ${name}: ${need_cli} not installed"
+      return 0
+    fi
   fi
   if [[ "${DRY_RUN}" -eq 1 ]]; then
-    echo "[dry-run] herdr integration install ${name} (if needed)"
+    echo "[dry-run] herdr integration install ${name}"
     return 0
   fi
   # Idempotent: skip when status already reports current
@@ -143,21 +155,32 @@ ensure_herdr_integration() {
   herdr integration install "${name}" 2>&1 || echo "Warn: herdr integration ${name} failed"
 }
 
+# STRICT OPT-IN: only install integrations for agents co-selected with herdr.
+# Binary presence alone never authorizes herdr integration install.
 dots_ensure_herdr_integrations() {
-  if ! has_component herdr && ! command -v herdr >/dev/null 2>&1; then
+  if ! has_component herdr; then
     return 0
   fi
-  echo "=== Herdr integrations ==="
-  ensure_herdr_integration hermes hermes
-  if has_component codex || command -v codex >/dev/null 2>&1; then
+  echo "=== Herdr integrations (explicit co-selected agents only) ==="
+  local any=0
+  if dots_may_install_herdr_integration hermes; then
+    any=1
+    ensure_herdr_integration hermes hermes
+  fi
+  if dots_may_install_herdr_integration opencode; then
+    any=1
+    ensure_herdr_integration opencode opencode
+  fi
+  if dots_may_install_herdr_integration codex; then
+    any=1
     ensure_herdr_integration codex codex
   fi
-  if has_component opencode || command -v opencode >/dev/null 2>&1 || command -v open-code >/dev/null 2>&1; then
-    ensure_herdr_integration opencode opencode
-  elif has_component herdr; then
-    echo "Note: OpenCode CLI not found; skip opencode integration unless already present"
-    if [[ "${DRY_RUN}" -eq 0 ]]; then
-      herdr integration status 2>/dev/null | rg -i '^opencode:' || true
-    fi
+  if dots_may_install_herdr_integration cursor; then
+    any=1
+    ensure_herdr_integration cursor agent
+  fi
+  if [[ "${any}" -eq 0 ]]; then
+    echo "Note: --with herdr alone installs Herdr only; no AI-client integrations."
+    echo "      Co-select agents, e.g. --with herdr,hermes or --with herdr,cursor"
   fi
 }

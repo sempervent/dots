@@ -1,0 +1,16 @@
+# DOTS-managed Cursor CLI defaults (merged into ~/.cursor/cli-config.json
+# ONLY when ./setup.sh --with cursor). Never writes API keys.
+#
+# User/local overrides in the live file are preserved where keys differ.
+
+{
+  "version": 1,
+  "permissions": {
+    "allow": [
+      "Read(**)",
+      "Write(**)"
+    ],
+    "deny": []
+  },
+  "notes": "DOTS conservative baseline — no Mcp(*:*), Shell(*), or WebFetch(*) wildcards"
+}
