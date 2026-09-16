@@ -57,6 +57,12 @@ source "${DIR}/helpers/notify.sh"
 source "${DIR}/helpers/path_hygiene.sh"
 # shellcheck source=helpers/telemetry.sh
 source "${DIR}/helpers/telemetry.sh"
+# shellcheck source=helpers/launchers.sh
+source "${DIR}/helpers/launchers.sh"
+# shellcheck source=helpers/leaf.sh
+source "${DIR}/helpers/leaf.sh"
+# shellcheck source=helpers/rsync.sh
+source "${DIR}/helpers/rsync.sh"
 
 usage() {
   cat <<'EOF'
@@ -277,7 +283,7 @@ else
 fi
 
 echo "=== Symlinks ==="
-for f in bashrc zshrc zprofile vimrc tmux.conf sqliterc psqlrc npmrc; do
+for f in bashrc zshrc zprofile zshenv vimrc tmux.conf sqliterc psqlrc npmrc; do
   move_sym "${f}" "${HOME}/.${f}"
 done
 
@@ -356,6 +362,10 @@ elif [[ "${DRY_RUN}" -eq 1 ]]; then
 fi
 
 echo "=== Homebrew (Brewfile) ==="
+# leaf-markdown-viewer conflicts with deprecated formula `leaf` (reloader)
+if declare -F _dots_leaf_retire_conflicting_brew_leaf >/dev/null 2>&1; then
+  _dots_leaf_retire_conflicting_brew_leaf
+fi
 if command -v brew >/dev/null 2>&1; then
   brew_failed=0
   apply_brewfile() {
@@ -422,6 +432,16 @@ dots_setup_cursor || exit 1
 # Explicit routing skill (when any AI stack component requested)
 dots_setup_agent_router || exit 1
 
+# Re-link DOTS launchers (img, notify, agent-stats, …) every run so new
+# scripts land on PATH without requiring another --with pass.
+dots_ensure_launchers
+
+# leaf markdown viewer + shell completions (zsh/bash/fish; any host)
+dots_setup_leaf || echo "Warn: leaf setup reported errors"
+
+# rsync: Homebrew on macOS/Linuxbrew; native packages on Linux without brew
+dots_ensure_rsync || echo "Warn: rsync setup reported errors"
+
 # bat theme cache (Catppuccin) if theme files present
 if command -v bat >/dev/null 2>&1 && [[ -d "${DIR}/configs/bat/themes" ]]; then
   echo "=== bat theme cache ==="
@@ -473,11 +493,13 @@ cat <<EOF
 
 Finished installing dots$([ "${DRY_RUN}" -eq 1 ] && echo ' (dry-run)').
 
-Core: ~/.bashrc ~/.zshrc ~/.zprofile ~/.vimrc ~/.tmux.conf ~/.npmrc
+Core: ~/.bashrc ~/.zshrc ~/.zprofile ~/.zshenv ~/.vimrc ~/.tmux.conf ~/.npmrc
+Launchers: ~/.local/bin (img, notify, agent-stats, *-mcp when configured)
 Starship: ~/.config/starship.toml (Catppuccin Mocha)
 Neovim: ~/.config/nvim (lazy.nvim; EDITOR/VISUAL=nvim)
 Node: fnm + configs/node/default.toml (not nvm)
 Notify: ~/.local/bin/notify  (smoke: ./scripts/notify-smoke.sh)
+Leaf:   leaf (markdown viewer) + completions in ~/.local/share/leaf/completions
 Ranger: ~/.config/ranger/{rc.conf,rifle.conf,scope.sh,colorschemes/catppuccin.py}
 
 Optional --with: ${DOTS_WITH_COMPONENTS[*]:-none}

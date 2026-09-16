@@ -19,9 +19,9 @@ setopt NO_NOMATCH
 setopt INTERACTIVE_COMMENTS
 setopt PROMPT_SUBST
 
-# Prefer Zsh path array (PATH stays in sync)
+# Deduplicate path entries; order is owned by shell/paths.sh (brew → ~/.local/bin).
+# Do not prepend ~/.local/bin here — that shadows Homebrew hermes/node.
 typeset -U path PATH
-path=("$HOME/.local/bin" $path)
-path+=("$HOME/scripts")
-[[ -n "${JAVA_HOME:-}" ]] && path+=("${JAVA_HOME}/bin")
+[[ -d "${HOME}/scripts" ]] && path+=("${HOME}/scripts")
+[[ -n "${JAVA_HOME:-}" && -d "${JAVA_HOME}/bin" ]] && path+=("${JAVA_HOME}/bin")
 export PATH

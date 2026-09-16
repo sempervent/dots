@@ -38,6 +38,7 @@ declare -A UTILITIES=(
   ["vim"]="essential"
   ["git"]="essential"
   ["bash"]="essential"
+  ["rsync"]="essential"
   
   # Modern replacements
   ["bat"]="modern"
@@ -88,6 +89,7 @@ declare -A INSTALL_COMMANDS=(
   ["fortune|brew"]="brew install fortune"
   ["cowsay|brew"]="brew install cowsay"
   ["lolcat|brew"]="gem install lolcat"
+  ["rsync|brew"]="brew install rsync"
   
   # Linux apt
   ["bat|apt"]="apt install bat"
@@ -109,8 +111,8 @@ declare -A INSTALL_COMMANDS=(
   ["fortune|apt"]="apt install fortune-mod"
   ["cowsay|apt"]="apt install cowsay"
   ["lolcat|apt"]="gem install lolcat"
+  ["rsync|apt"]="apt install rsync"
 )
-
 INSTALLED=()
 MISSING=()
 # 1}}}
