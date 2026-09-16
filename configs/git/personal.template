@@ -1,0 +1,6 @@
+# Personal Git identity — NOT managed/overwritten by DOTS after first create.
+# Fill in your personal name/email. Used via includeIf for ~/dev/ (configurable).
+
+[user]
+	name = YOUR_PERSONAL_NAME
+	email = YOUR_PERSONAL_EMAIL

@@ -34,8 +34,9 @@ unset _zshrc_src
 # 1}}}
 
 # Shared layer {{{1
-# Order: Homebrew PATH → fnm → exports/theme → OMZ → Starship prompt
+# Order: PATH → runtime policy → fnm → exports/theme → OMZ → Starship
 [[ -f "${DOTS_DIR}/shell/paths.sh" ]] && source "${DOTS_DIR}/shell/paths.sh"
+[[ -f "${DOTS_DIR}/shell/runtime.sh" ]] && source "${DOTS_DIR}/shell/runtime.sh"
 [[ -f "${DOTS_DIR}/zsh/fnm.zsh" ]] && source "${DOTS_DIR}/zsh/fnm.zsh"
 [[ -f "${DOTS_DIR}/shell/exports.sh" ]] && source "${DOTS_DIR}/shell/exports.sh"
 [[ -f "${DOTS_DIR}/shell/theme.sh" ]] && source "${DOTS_DIR}/shell/theme.sh"
@@ -103,10 +104,15 @@ esac
 # 1}}}
 
 # Version managers {{{1
-# Node: fnm (zsh/fnm.zsh after Homebrew PATH). NVM is not sourced by DOTS.
+# Node: fnm (zsh/fnm.zsh). NVM is not sourced by DOTS.
 # Existing ~/.nvm installs are left alone; prefer `fnm` going forward.
 [[ -f "${HOME}/.cargo/env" ]] && source "${HOME}/.cargo/env"
 # 1}}}
+
+# Machine-local overrides (canonical shared Bash+Zsh contract)
+[[ -f "${HOME}/.config/dots/local.sh" ]] && source "${HOME}/.config/dots/local.sh"
+# Compatibility
+[[ -f "${HOME}/.zshrc.local" ]] && source "${HOME}/.zshrc.local"
 
 # Multiplexer auto-start (tmux | herdr | none) {{{1
 [[ -f "${DOTS_DIR}/shell/tmux.sh" ]] && source "${DOTS_DIR}/shell/tmux.sh"

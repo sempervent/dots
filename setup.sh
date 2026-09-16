@@ -63,6 +63,22 @@ source "${DIR}/helpers/launchers.sh"
 source "${DIR}/helpers/leaf.sh"
 # shellcheck source=helpers/rsync.sh
 source "${DIR}/helpers/rsync.sh"
+# shellcheck source=helpers/packages.sh
+source "${DIR}/helpers/packages.sh"
+# shellcheck source=helpers/links.sh
+source "${DIR}/helpers/links.sh"
+# shellcheck source=helpers/git_config.sh
+source "${DIR}/helpers/git_config.sh"
+# shellcheck source=helpers/profiles.sh
+source "${DIR}/helpers/profiles.sh"
+
+PROFILE_NAME=""
+PROFILE_PACKAGES=()
+PROFILE_RUNTIME_MULTIPLEXER=""
+PROFILE_RUNTIME_GREETING=""
+PROFILE_RUNTIME_PROMPT_STATS=""
+PROFILE_RUNTIME_AUTO_TMUX=""
+DOTS_SETUP_PROFILE=""
 
 usage() {
   cat <<'EOF'
@@ -196,6 +212,26 @@ while [[ $# -gt 0 ]]; do
       parse_with_list "$2"
       shift 2
       ;;
+    --packages=*)
+      IFS=',' read -r -a PROFILE_PACKAGES <<<"${1#--packages=}"
+      shift
+      ;;
+    --packages)
+      [[ $# -ge 2 ]] || { echo "Error: --packages requires an argument" >&2; exit 1; }
+      IFS=',' read -r -a PROFILE_PACKAGES <<<"$2"
+      shift 2
+      ;;
+    --profile=*)
+      DOTS_SETUP_PROFILE="${1#--profile=}"
+      PROFILE_NAME="${DOTS_SETUP_PROFILE}"
+      shift
+      ;;
+    --profile)
+      [[ $# -ge 2 ]] || { echo "Error: --profile requires an argument" >&2; exit 1; }
+      DOTS_SETUP_PROFILE="$2"
+      PROFILE_NAME="$2"
+      shift 2
+      ;;
     *)
       echo "Error: unknown argument: $1" >&2
       usage >&2
@@ -283,26 +319,10 @@ else
 fi
 
 echo "=== Symlinks ==="
-for f in bashrc zshrc zprofile zshenv vimrc tmux.conf sqliterc psqlrc npmrc; do
-  move_sym "${f}" "${HOME}/.${f}"
-done
+# Declarative authority: configs/links.toml
+dots_deploy_links
 
-# App configs under XDG (file-level, not whole directory)
-if [[ -f "${DIR}/configs/bat.conf" ]]; then
-  move_sym "bat_config" "${HOME}/.config/bat/config" "${DIR}/configs/bat.conf"
-fi
-if [[ -f "${DIR}/configs/starship/starship.toml" ]]; then
-  move_sym "starship.toml" "${HOME}/.config/starship.toml" "${DIR}/configs/starship/starship.toml"
-fi
-if [[ -f "${DIR}/configs/btop/btop.conf" ]]; then
-  move_sym "btop.conf" "${HOME}/.config/btop/btop.conf" "${DIR}/configs/btop/btop.conf"
-fi
-if [[ -f "${DIR}/configs/btop/themes/catppuccin_mocha.theme" ]]; then
-  ensure_dir "${HOME}/.config/btop/themes"
-  move_sym "btop_catppuccin_mocha.theme" \
-    "${HOME}/.config/btop/themes/catppuccin_mocha.theme" \
-    "${DIR}/configs/btop/themes/catppuccin_mocha.theme"
-fi
+# Herdr: merge, not link
 if has_component herdr && [[ -f "${DIR}/configs/herdr/config.toml" ]]; then
   sync_herdr_config
 fi
@@ -310,22 +330,9 @@ fi
 # Neovim Lua config (authoritative; replaces legacy init.vim deploy)
 dots_deploy_nvim
 
-# Ranger — file-level deploy only
-echo "=== Ranger ==="
-RANGER_DST="${HOME}/.config/ranger"
-ensure_dir "${RANGER_DST}"
-ensure_dir "${RANGER_DST}/colorschemes"
-for rf in rc.conf rifle.conf scope.sh commands.py; do
-  if [[ -f "${DIR}/ranger/${rf}" ]]; then
-    move_sym "ranger_${rf}" "${RANGER_DST}/${rf}" "${DIR}/ranger/${rf}"
-  fi
-done
-if [[ -f "${DIR}/ranger/colorschemes/catppuccin.py" ]]; then
-  move_sym "ranger_catppuccin.py" "${RANGER_DST}/colorschemes/catppuccin.py" \
-    "${DIR}/ranger/colorschemes/catppuccin.py"
-fi
-if [[ "${DRY_RUN}" -eq 0 ]] && [[ -f "${RANGER_DST}/scope.sh" ]]; then
-  chmod +x "${RANGER_DST}/scope.sh" || true
+# Ranger executable bit
+if [[ "${DRY_RUN}" -eq 0 ]] && [[ -f "${HOME}/.config/ranger/scope.sh" ]]; then
+  chmod +x "${HOME}/.config/ranger/scope.sh" || true
 fi
 
 echo "=== Oh My Zsh ==="
@@ -361,11 +368,19 @@ elif [[ "${DRY_RUN}" -eq 1 ]]; then
   echo "[dry-run] TPM install_plugins"
 fi
 
-echo "=== Homebrew (Brewfile) ==="
+echo "=== Packages ==="
 # leaf-markdown-viewer conflicts with deprecated formula `leaf` (reloader)
 if declare -F _dots_leaf_retire_conflicting_brew_leaf >/dev/null 2>&1; then
   _dots_leaf_retire_conflicting_brew_leaf
 fi
+
+# Profile-aware groups (brew/groups/*.Brewfile or Linux native maps)
+if ! dots_provision_packages; then
+  echo "Error: package provisioning failed" >&2
+  exit 1
+fi
+
+# Optional AI/component Brewfiles (explicit --with only)
 if command -v brew >/dev/null 2>&1; then
   brew_failed=0
   apply_brewfile() {
@@ -385,15 +400,11 @@ if command -v brew >/dev/null 2>&1; then
       echo "Warn: brew bundle failed for ${file}"
     fi
   }
-
-  apply_brewfile "${DIR}/brew/Brewfile"
   apply_optional_brewfiles
-
   if [[ "${brew_failed}" -ne 0 ]]; then
-    echo "Homebrew finished with warnings — review output before relying on new tools."
+    echo "Error: optional component Brewfile(s) failed" >&2
+    exit 1
   fi
-else
-  echo "Note: brew not found; skipped package install"
 fi
 
 # fnm default Node (after Brewfile so fnm exists)
@@ -462,12 +473,6 @@ if command -v bat >/dev/null 2>&1 && [[ -d "${DIR}/configs/bat/themes" ]]; then
   fi
 fi
 
-ensure_dir "${SECRETS_DIR:-${DIR}/.secrets}"
-if [[ -f "${DIR}/helpers/git_alias_setup.sh" ]] && [[ "${DRY_RUN}" -eq 0 ]]; then
-  # shellcheck disable=SC1091
-  source "${DIR}/helpers/git_alias_setup.sh" || true
-fi
-
 # Conservative Atuin local config if atuin exists and config missing
 if command -v atuin >/dev/null 2>&1; then
   ensure_dir "${HOME}/.config/atuin"
@@ -489,6 +494,16 @@ EOF
   fi
 fi
 
+# Git shared config + identity templates (never overwrite identity)
+dots_setup_git_config
+
+# Legacy alias helper (additive)
+ensure_dir "${SECRETS_DIR:-${DIR}/.secrets}"
+if [[ -f "${DIR}/helpers/git_alias_setup.sh" ]] && [[ "${DRY_RUN}" -eq 0 ]]; then
+  # shellcheck disable=SC1091
+  source "${DIR}/helpers/git_alias_setup.sh" || true
+fi
+
 cat <<EOF
 
 Finished installing dots$([ "${DRY_RUN}" -eq 1 ] && echo ' (dry-run)').
@@ -505,7 +520,7 @@ Ranger: ~/.config/ranger/{rc.conf,rifle.conf,scope.sh,colorschemes/catppuccin.py
 Optional --with: ${DOTS_WITH_COMPONENTS[*]:-none}
 
 Consent: binary presence ≠ configuration authorization (see helpers/ai_consent.sh).
-Onboarding: ./bootstrap.sh --profile {base,home,work}
+Onboarding: ./bootstrap.sh --profile {base,home,work,server}
 EOF
 
 if has_component herdr; then
