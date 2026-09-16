@@ -33,6 +33,15 @@ platforms = ["darwin", "linux"]
 description = "Local LLM runtime (no models pulled)"
 
 [[components]]
+id = "llamacpp"
+label = "llama.cpp"
+category = "ai_runtime"
+cloud = false
+local_ai = true
+platforms = ["darwin", "linux"]
+description = "llama.cpp runtime (Homebrew; models via pull_models.sh)"
+
+[[components]]
 id = "archify"
 label = "Archify"
 category = "skills"
@@ -133,6 +142,7 @@ description = "All supported AI applications for this platform"
 members = [
   "hermes",
   "ollama",
+  "llamacpp",
   "drawthings",
   "opencode",
   "codex",

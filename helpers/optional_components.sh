@@ -38,6 +38,15 @@ apply_optional_brewfiles() {
   if has_component ollama; then
     apply_brewfile "${DIR}/brew/Brewfile.ollama"
   fi
+  if has_component llamacpp; then
+    if command -v brew >/dev/null 2>&1; then
+      apply_brewfile "${DIR}/brew/Brewfile.llamacpp"
+    else
+      echo "Error: llamacpp selected but Homebrew is required for the canonical install." >&2
+      echo "       Install Homebrew, or build llama.cpp from https://github.com/ggml-org/llama.cpp" >&2
+      brew_failed=1
+    fi
+  fi
   if has_component archify || has_component skills || has_component ai-skills; then
     apply_brewfile "${DIR}/brew/Brewfile.archify"
   fi

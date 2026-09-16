@@ -1,0 +1,5 @@
+# brew/Brewfile.llamacpp — optional: ./setup.sh --with llamacpp
+# Official llama.cpp via Homebrew (macOS + Linuxbrew).
+# Does NOT download GGUF models — use ./scripts/pull_models.sh
+
+brew "llama.cpp"
