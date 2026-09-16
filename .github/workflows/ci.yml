@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  lint-and-profiles:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shellcheck + shfmt
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y shellcheck
+          # shfmt via go if available, else skip format gate softly
+          if ! command -v shfmt >/dev/null; then
+            curl -fsSL https://github.com/mvdan/sh/releases/download/v3.8.0/shfmt_v3.8.0_linux_amd64 -o /tmp/shfmt
+            chmod +x /tmp/shfmt
+            sudo mv /tmp/shfmt /usr/local/bin/shfmt
+          fi
+
+      - name: ShellCheck managed scripts
+        run: |
+          files=(
+            bootstrap.sh setup.sh configure.sh
+            helpers/*.sh
+            shell/*.sh
+            bash/*.sh
+            scripts/check.sh
+            scripts/profile_resolution_test.sh
+            scripts/provider_isolation_test.sh
+            tools/toml_min.py
+          )
+          # shellcheck scripts only
+          shellcheck -x bootstrap.sh setup.sh configure.sh \
+            helpers/toml.sh helpers/components.sh helpers/profiles.sh \
+            helpers/packages.sh helpers/links.sh helpers/git_config.sh \
+            shell/paths.sh shell/exports.sh shell/runtime.sh shell/fnm.sh \
+            shell/tmux.sh shell/tools.sh \
+            scripts/profile_resolution_test.sh \
+            || true
+          # Keep gate meaningful for new helpers (strict):
+          shellcheck -x helpers/toml.sh helpers/packages.sh helpers/links.sh \
+            helpers/git_config.sh shell/runtime.sh shell/fnm.sh bootstrap.sh
+
+      - name: shfmt check
+        run: |
+          shfmt -d bootstrap.sh helpers/packages.sh helpers/links.sh \
+            helpers/git_config.sh shell/runtime.sh shell/fnm.sh \
+            tools/toml_min.py 2>/dev/null || shfmt -d bootstrap.sh \
+            helpers/packages.sh helpers/links.sh helpers/git_config.sh \
+            shell/runtime.sh shell/fnm.sh
+
+      - name: TOML subset parser
+        run: |
+          python3 tools/toml_min.py configs/components.toml >/dev/null
+          python3 tools/toml_min.py configs/bootstrap/profiles/home.toml >/dev/null
+          python3 tools/toml_min.py configs/bootstrap/profiles/server.toml >/dev/null
+          python3 tools/toml_min.py configs/links.toml >/dev/null
+          python3 tools/toml_min.py configs/packages/groups.toml >/dev/null
+
+      - name: Profile --show (all builtins)
+        run: |
+          ./bootstrap.sh --profile base --show
+          ./bootstrap.sh --profile home --show
+          ./bootstrap.sh --profile work --show
+          ./bootstrap.sh --profile server --show
+          ./bootstrap.sh --profile all --show
+
+      - name: Profile resolution tests
+        run: bash scripts/profile_resolution_test.sh
+
+      - name: Provider isolation tests
+        run: bash scripts/provider_isolation_test.sh
+
+      - name: Bootstrap dry-run (server)
+        run: ./bootstrap.sh --profile server --dry-run
+
+      - name: Setup dry-run (base packages)
+        run: ./setup.sh --dry-run --profile base --packages core,modern
+
+  macos-smoke:
+    runs-on: macos-latest
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Profile show on macOS
+        run: |
+          ./bootstrap.sh --profile work --show
+          ./bootstrap.sh --profile home --show
+      - name: Dry-run work profile
+        run: ./bootstrap.sh --profile work --dry-run

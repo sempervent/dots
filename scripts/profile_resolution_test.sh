@@ -4,10 +4,14 @@ set -euo pipefail
 
 DOTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIR="${DOTS_DIR}"
+# shellcheck source=../helpers/toml.sh
+source "${DOTS_DIR}/helpers/toml.sh"
 # shellcheck source=../helpers/components.sh
 source "${DOTS_DIR}/helpers/components.sh"
 # shellcheck source=../helpers/profiles.sh
 source "${DOTS_DIR}/helpers/profiles.sh"
+# shellcheck source=../helpers/packages.sh
+source "${DOTS_DIR}/helpers/packages.sh"
 
 pass=0
 fail=0
@@ -20,6 +24,11 @@ resolve_named() {
   PROFILE_DESC=""
   PROFILE_WITH=()
   PROFILE_OPEN_APPS=()
+  PROFILE_PACKAGES=()
+  PROFILE_RUNTIME_MULTIPLEXER=""
+  PROFILE_RUNTIME_GREETING=""
+  PROFILE_RUNTIME_PROMPT_STATS=""
+  PROFILE_RUNTIME_AUTO_TMUX=""
   CLI_WITH=()
   CLI_WITHOUT=()
   EFFECTIVE_WITH=()
@@ -27,7 +36,6 @@ resolve_named() {
   file="$(dots_resolve_profile_path "$1")"
   dots_load_profile_file "${file}" >/dev/null
   shift || true
-  # remaining: optional --with / --without simulated via globals set by caller
   dots_compute_effective_with
 }
 
@@ -117,11 +125,38 @@ else
   ok "malformed TOML rejected"
 fi
 
+# SERVER
+resolve_named server
+if [[ ${#EFFECTIVE_WITH[@]} -eq 0 ]]; then ok "server → []"; else bad "server expected []"; fi
+if [[ "${PROFILE_PACKAGES[*]}" == "core modern server" ]]; then ok "server packages"; else bad "server packages=${PROFILE_PACKAGES[*]}"; fi
+if [[ "${PROFILE_RUNTIME_MULTIPLEXER}" == "tmux" ]]; then ok "server multiplexer=tmux"; else bad "server mux=${PROFILE_RUNTIME_MULTIPLEXER}"; fi
+
+# HOME packages + runtime
+resolve_named home
+if dots_array_contains gui "${PROFILE_PACKAGES[@]+"${PROFILE_PACKAGES[@]}"}"; then ok "home has gui group"; else bad "home missing gui"; fi
+if [[ "${PROFILE_RUNTIME_MULTIPLEXER}" == "herdr" ]]; then ok "home multiplexer=herdr"; else bad "home mux=${PROFILE_RUNTIME_MULTIPLEXER}"; fi
+
+# WORK has no AI
+resolve_named work
+if [[ ${#EFFECTIVE_WITH[@]} -eq 0 ]]; then ok "work AI empty"; else bad "work leaked AI"; fi
+
+# Unknown package group
+if dots_validate_package_groups "not-a-group" 2>/dev/null; then
+  bad "unknown package group should fail"
+else
+  ok "unknown package group rejected"
+fi
+
 # bootstrap --show smoke
 if "${DOTS_DIR}/bootstrap.sh" --profile work --show 2>/dev/null | rg -q 'components:'; then
   ok "bootstrap --show work"
 else
   bad "bootstrap --show work"
+fi
+if "${DOTS_DIR}/bootstrap.sh" --profile server --show 2>/dev/null | rg -q 'package groups:'; then
+  ok "bootstrap --show server"
+else
+  bad "bootstrap --show server"
 fi
 
 rm -f "${tmp}" "${badtoml}"

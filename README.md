@@ -1,32 +1,106 @@
 # Sempervent's Dotfiles
 
-Author: Joshua N. Grant
+Author: Joshua N. Grant  
 Email: jngrant@live.com
+
+A personal workstation operating layer: shared muscle memory across home Mac,
+work Mac, and headless Linux — not identical software everywhere.
 
 Bash remains fully supported. Zsh + Oh My Zsh is the primary rich interactive
 shell. Shared logic lives in `shell/`; shell-specific behavior in `bash/` and
 `zsh/`.
 
-## Install
+## First run (happy path)
 
 ```bash
 git clone https://github.com/sempervent/dots.git ~/dots
 cd ~/dots
-./setup.sh
+
+# Personal workstation
+./bootstrap.sh --profile home
+
+# Employer-owned workstation
+./bootstrap.sh --profile work
+
+# Headless Linux server
+./bootstrap.sh --profile server
 ```
 
-For a new machine, prefer profiles:
+Preview without installing:
 
 ```bash
-./bootstrap.sh --profile base    # core shell UX only — zero AI
-./bootstrap.sh --profile work    # conservative allowlist (edit work.toml)
-./bootstrap.sh --profile home    # editable home stack template
-./bootstrap.sh --profile all     # every optional DOTS component (lab; may include cloud AI)
-./bootstrap.sh --profile work --with hermes   # profile + explicit add
-./bootstrap.sh --profile home --without cursor
-./bootstrap.sh --profile ~/.config/dots/profiles/studio.toml
 ./bootstrap.sh --profile home --show
-./configure.sh                   # create/edit profiles (TOML only — no installs)
+./bootstrap.sh --profile work --show
+./bootstrap.sh --profile server --show
+./bootstrap.sh --profile home --dry-run
+```
+
+| Profile | Package groups | Optional AI | Multiplexer | GUI |
+|---------|----------------|-------------|-------------|-----|
+| `base` | core, modern | none | tmux | minimal |
+| `home` | core…gui + infra/media | personal stack | herdr (→ tmux fallback) | yes |
+| `work` | core, modern, workstation | **none** unless `--with` | tmux | limited |
+| `server` | core, modern, server | none | tmux | no |
+| `all` | full workstation | all optional | tmux | yes |
+
+**macOS Homebrew policy:** Homebrew is required. DOTS does **not** auto-install
+it. If missing, bootstrap exits with the install command and asks you to re-run.
+
+**Linux servers:** native `apt` / `pacman` / `xbps` / `dnf` (no Homebrew required).
+
+## Machine-local overrides
+
+```text
+~/.config/dots/runtime.env   # generated from profile (non-secret)
+~/.config/dots/local.sh      # your host overrides (never overwritten)
+```
+
+Precedence:
+
+```text
+process environment
+  > ~/.config/dots/local.sh
+  > ~/.config/dots/runtime.env
+  > repository defaults (shell/exports.sh)
+```
+
+Do not store secrets in `local.sh`.
+
+## Git identity
+
+DOTS manages `~/.config/git/common` (aliases, editor, rerere).  
+Personal/work `user.name` / `user.email` live in:
+
+```text
+~/.config/git/personal
+~/.config/git/work
+```
+
+created once from templates — never overwritten. See `configs/git/README.md`.
+
+## Verify
+
+```bash
+./scripts/check.sh --profile home
+./scripts/check.sh --profile server
+./bootstrap.sh --profile current --show   # last bootstrapped profile
+```
+
+Required check failures make bootstrap **fail**. Warnings do not.
+
+## Consent vs presence
+
+**Binary presence ≠ configuration authorization.** AI clients are configured only
+when explicitly listed in the profile / `--with` for that run.
+
+---
+
+## Install (legacy / direct)
+
+```bash
+./setup.sh                         # core refresh (no AI)
+./setup.sh --with herdr,hermes     # explicit components
+./configure.sh                     # edit profiles (TOML only)
 ```
 
 ### Skill options
@@ -35,22 +109,22 @@ For a new machine, prefer profiles:
 |------|---------|
 | `--with archify` | Archify only |
 | `--with skills` | Engineering pack (includes Archify + security-review) |
-| `--with ai-skills` | AI/agent harness pack (evals, litellm, ml-engineering, …) |
-| `--with skills,ai-skills` | Union of both packs (each skill installed once) |
+| `--with ai-skills` | AI/agent harness pack |
+| `--with skills,ai-skills` | Union of both packs |
 
-Skill packs are declared in `configs/skills/manifest.toml` (`[packs.*]` + groups).
-Installing packs does **not** configure Hermes/Cursor/Codex unless those clients
-are also selected.
+Skill packs are declared in `configs/skills/manifest.toml`.
 
 ### Separation of concerns
 
 | Script | Role |
 |--------|------|
-| `setup.sh` | Install / refresh mechanism (`--with` components) |
-| `bootstrap.sh` | Machine/profile orchestration → calls `setup.sh` |
+| `setup.sh` | Install / refresh mechanism |
+| `bootstrap.sh` | Profile orchestration → setup + health gate |
 | `configure.sh` | Profile creation/editing (writes TOML only) |
 
-Authority for optional component ids: `configs/components.toml`.
+Authority for optional component ids: `configs/components.toml`.  
+Package groups: `brew/groups/*.Brewfile` + `configs/packages/`.  
+Managed links: `configs/links.toml`.
 
 ### Local agent telemetry (private)
 
@@ -68,41 +142,27 @@ executions so you can measure the harness before changing it.
 ```bash
 agent-stats
 agent-stats --week
-agent-stats --failures
-agent-stats --escalations
-agent-stats --backend opencode --json
 agent-telemetry doctor
-agent-telemetry prune
-agent-telemetry reset --yes   # delete local DB
 ```
 
-Telemetry failures never abort agent work. Routing is **not** adapted from these
-metrics yet — collect evidence first.
+Telemetry failures never abort agent work.
 
-`setup.sh` is idempotent. Default install includes shell UX (fnm, Starship,
-JetBrainsMono Nerd Font, Neovim, terminal-notifier) but does **not** install AI
-tooling or download models.
+### Optional components (`--with`)
 
-### Consent vs presence
-
-**DOTS distinguishes software presence from configuration consent.**
-
-A binary already on the machine (Cursor, Hermes, Codex, …) does **not** authorize
-DOTS to configure it. Configuration, MCP registration, and Herdr integrations run
-only for components explicitly listed in `--with` / the selected bootstrap profile
-for **that** invocation.
-
-| Component | Allowed config when selected |
-|-----------|------------------------------|
-| `hermes` | `~/.hermes/*` (MCP, notify hooks) |
-| `herdr` | Herdr config + integrations **only** for co-selected agents |
-| `ollama` | local Ollama notes/wiring when selected |
-| `opencode` | OpenCode config; Hermes MCP only if `hermes` also selected |
-| `codex` | Codex adapter; Hermes MCP only if `hermes` also selected |
-| `cursor` | `~/.cursor/*` merge; Herdr cursor integration if `herdr` also selected |
-| `drawthings` | bridge/launcher/`img`; MCP into a client only if that client is co-selected |
-| `skills` | `~/.agents/skills` global store; Hermes links only if `hermes` selected |
-
+```bash
+./setup.sh --with herdr
+./setup.sh --with hermes
+./setup.sh --with ollama
+./setup.sh --with archify
+./setup.sh --with skills
+./setup.sh --with ai-skills
+./setup.sh --with drawthings
+./setup.sh --with opencode
+./setup.sh --with codex
+./setup.sh --with cursor
+./setup.sh --with images
+./setup.sh --with tex
+```
 ### Optional components (`--with`)
 
 ```bash
@@ -398,205 +458,3 @@ Codex ≥0.154 removed `codex mcp-server`. When that subcommand is missing, DOTS
 registers a thin stdio MCP bridge (`~/.local/bin/codex-mcp` → `codex exec`) so
 Hermes can still delegate. Auth stays in `~/.codex/`.
 
-Hermes also ships a builtin **codex** skill that drives `codex exec` via the
-terminal — complementary to MCP.
-
-If an old npm `@openai/codex` is blocking `/opt/homebrew/bin/codex`, setup migrates the
-Homebrew-prefix npm package when safe, then installs the cask. Manual cleanup:
-
-```bash
-/opt/homebrew/bin/npm uninstall -g --prefix /opt/homebrew @openai/codex
-brew install --cask codex
-```
-
-```bash
-hermes mcp list
-hermes mcp test codex
-./scripts/codex_mcp_smoke.sh   # connection/discovery only
-```
-
-Hermes prompts (manual):
-
-- “Use Codex to review this architecture.”
-- “Escalate this difficult refactor to Codex.”
-
-Hermes↔Codex tool-callback / app-server bidirectionality is **deferred** unless Hermes
-creates it naturally; this pass only requires Hermes → Codex as a coding specialist.
-
-## Images toolkit (`--with images`)
-
-Deterministic conversion / optimization / metadata — **not** generative.
-
-```bash
-./setup.sh --with images
-./setup.sh --with images,drawthings   # toolkit + generative backend
-```
-
-| Tool | Role |
-|------|------|
-| `magick` | convert / trim / resize |
-| `gs` | Ghostscript / PDF |
-| `rsvg-convert` | SVG → raster |
-| `exiftool` | metadata |
-| `pngquant` | lossy PNG optimize |
-| `cwebp` / `dwebp` | WebP |
-| `oxipng` | lossless PNG |
-
-Examples:
-
-```bash
-magick input.webp output.png
-magick input.png -background none -trim output.png
-exiftool image.png
-pngquant image.png
-rsvg-convert input.svg > output.png
-```
-
-## TeX Live (`--with tex`)
-
-```bash
-./setup.sh --with tex
-pdflatex --version
-xelatex --version
-kpsewhich article.cls
-```
-
-Homebrew formula `texlive` (CLI). No MacTeX / BasicTeX GUI bundle.
-
-## Agent router (explicit policy)
-
-Version-controlled skill: `skills/agent-router/` (linked into `~/.agents/skills` and
-`~/.hermes/skills` when an AI stack component is requested).
-
-| Kind | Destination |
-|------|-------------|
-| general reasoning | Hermes / Ollama |
-| architecture | Archify |
-| routine coding | OpenCode |
-| difficult coding | Codex |
-| generative imagery | Draw Things |
-| image manipulation | images CLI |
-| TeX/LaTeX | TeX Live |
-
-User overrides always win (“Use Codex…”, “Keep this local…”). At most one automatic
-coding escalation: OpenCode → Codex. Policy tests (no model calls):
-
-```bash
-./scripts/router_policy_test.sh
-```
-
-## Layout
-
-```
-shell/     shared aliases, exports, functions, paths, tools, multiplexer, theme
-bash/      Bash-only
-zsh/       Zsh-only + Oh My Zsh
-distro/    platform hooks
-syms/      $HOME symlink sources
-ranger/    Ranger overrides + Catppuccin colorscheme
-configs/   bat, btop, herdr, drawthings, opencode, agents, templates
-brew/      Brewfile (+ optional fragments)
-helpers/   setup helpers (…, drawthings, opencode, codex, agent_router)
-skills/    DOTS-local Hermes skills (agent-router)
-tools/     MCP bridges (drawthings_mcp, opencode_mcp)
-```
-
-## Multiplexers
-
-| Tool | Prefix | Auto via |
-|------|--------|----------|
-| tmux | **Ctrl-Space** | `DOTS_MULTIPLEXER=tmux` (default) |
-| Herdr | **Ctrl-A** | `DOTS_MULTIPLEXER=herdr` |
-| none | — | `DOTS_MULTIPLEXER=none` or `DOTS_AUTO_TMUX=0` |
-
-Suggested iTerm profiles (set env in the profile — not hard-coded):
-
-- general: `DOTS_MULTIPLEXER=tmux`
-- agents: `DOTS_MULTIPLEXER=herdr`
-- plain: `DOTS_MULTIPLEXER=none`
-
-Never nests tmux inside Herdr (detects `HERDR_*` env).
-
-### Herdr keys (Ctrl-A)
-
-Aligned to this repo’s tmux muscle memory where Herdr has an equivalent. tmux stays on Ctrl-Space; Herdr is not changed to match tmux’s prefix.
-
-| Key | Action | vs tmux |
-|-----|--------|---------|
-| h/j/k/l | focus panes | identical |
-| **&** | side-by-side split (`split_vertical`) | Herdr-specific (tmux uses `v`) |
-| **"** | top/bottom split (`split_horizontal`) | Herdr-specific; matches classic tmux `"` |
-| **b** | **sidebar** | intentional exception (tmux `b` = top/bottom split) |
-| c / n / p / 1–9 | tabs | identical to tmux windows |
-| z / x | zoom / close pane | identical |
-| Shift-K | close tab | mirrors tmux `K` (kill-window) |
-| d | detach | mirrors tmux default detach |
-| w / g | workspace picker / goto | Herdr-native |
-| r | resize mode | intentional (tmux `r` = reload) |
-| Shift-R | reload config | Herdr default; tmux reload is `r` |
-| `[` | edit scrollback | closest to tmux copy-mode `[` |
-
-Split naming: Herdr `split_vertical` = side-by-side (tmux `-h`); `split_horizontal` = top/bottom (tmux `-v`).
-
-Not mirrored (no faithful Herdr equivalent): tmux man (`/`), process viewer (`~`), paste (`P`), copy-mode vi chords.
-
-Deploy: `setup.sh` merges managed `[theme]`/`[keys]` into `~/.config/herdr/config.toml` (regular file — Herdr rewrites local UI/onboarding; symlink is unsafe).
-
-Theme: Catppuccin (Mocha dark / Latte light with auto_switch).
-
-## Ranger
-
-Managed overrides under `ranger/` (not a full upstream dump). Setup deploys
-file-level links into `~/.config/ranger/` without wiping bookmarks/history.
-
-Previews: bat, jq, yq, chafa, pdftotext, mediainfo/ffprobe, exiftool, sqlite3.
-Explicit trash: `dt` (normal Ranger delete unchanged).
-
-## Hermes
-
-Install via Homebrew when opted in (`--with hermes`). Existing `~/.hermes/`
-config and secrets remain **user-owned** and are never overwritten.
-
-If `~/.local/bin/hermes` still wins PATH after Brew install, rename/remove that
-shim manually after verifying `brew`'s `hermes-agent`.
-
-Agent skills such as Archify are installed with `--with archify` (see **Agent
-skills** above); Hermes picks them up from `~/.hermes/skills/`.
-
-Non-secret example notes: `configs/templates/hermes/config.yaml.example`.
-
-## Ollama
-
-```bash
-./setup.sh --with ollama
-brew services start ollama   # manual
-brew services stop ollama
-ollama list
-```
-
-No model downloads from setup.
-
-## Catppuccin
-
-| Tool | Flavor |
-|------|--------|
-| Herdr | built-in catppuccin + latte auto |
-| tmux | catppuccin/tmux `#v2.1.3` Mocha |
-| Ranger | `colorschemes/catppuccin.py` |
-| bat | Catppuccin Mocha theme (setup builds cache) |
-| btop | catppuccin_mocha.theme |
-| fzf | Mocha colors via `shell/theme.sh` |
-
-Shell prompts stay custom (no Starship / Powerlevel10k).
-
-## Troubleshooting
-
-- Old Hermes PATH: `type -a hermes`
-- Herdr integrations: `herdr integration status`
-- tmux plugins: Prefix `Ctrl-Space` then `I`
-- bat theme: `bat cache --build` (setup does this when themes present)
-- Health: `./scripts/check.sh`
-
-## License
-
-Personal dotfiles — use as you wish.
