@@ -9,15 +9,26 @@ dots_node_default_version() {
     printf '%s\n' "24"
     return 0
   fi
-  python3 - "${policy}" <<'PY'
-import sys
+  # Prefer tomllib / toml_min via shared helper when available
+  if declare -F dots_toml_query >/dev/null 2>&1; then
+    dots_toml_query "${policy}" <<'PY'
+print(str(data.get("version") or "24").strip() or "24")
+PY
+    return 0
+  fi
+  python3 - "${policy}" "${DIR}/tools/toml_min.py" <<'PY'
+import importlib.util, sys
 from pathlib import Path
+path = Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
 try:
     import tomllib
-except ImportError:
-    print("24")
-    raise SystemExit(0)
-data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+    data = tomllib.loads(text)
+except Exception:
+    spec = importlib.util.spec_from_file_location("toml_min", sys.argv[2])
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    data = mod.loads(text)
 print(str(data.get("version") or "24").strip() or "24")
 PY
 }

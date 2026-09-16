@@ -1,7 +1,11 @@
+# shellcheck shell=bash
 # helpers/components.sh — load optional-component registry
 #
 # Authority: configs/components.toml
-# Requires: DIR
+# Requires: DIR, helpers/toml.sh
+
+# shellcheck source=toml.sh
+source "${DIR}/helpers/toml.sh"
 
 dots_components_registry_path() {
   printf '%s\n' "${DIR}/configs/components.toml"
@@ -9,14 +13,7 @@ dots_components_registry_path() {
 
 # Print all component ids (one per line), registry order.
 dots_component_ids() {
-  python3 - "$(dots_components_registry_path)" <<'PY'
-import sys
-from pathlib import Path
-try:
-    import tomllib
-except ImportError:
-    sys.exit(1)
-data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+  dots_toml_query "$(dots_components_registry_path)" <<'PY'
 for c in data.get("components") or []:
     cid = (c.get("id") or "").strip()
     if cid:
@@ -26,14 +23,7 @@ PY
 
 # Print ids suitable for profile `all` (omit_from_all skipped).
 dots_component_ids_for_all() {
-  python3 - "$(dots_components_registry_path)" <<'PY'
-import sys
-from pathlib import Path
-try:
-    import tomllib
-except ImportError:
-    sys.exit(1)
-data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+  dots_toml_query "$(dots_components_registry_path)" <<'PY'
 for c in data.get("components") or []:
     cid = (c.get("id") or "").strip()
     if not cid:
@@ -73,16 +63,11 @@ dots_validate_components() {
 
 # Cloud/external AI notice for selected components.
 dots_print_cloud_notice() {
-  local cloud=()
-  python3 - "$(dots_components_registry_path)" "$@" <<'PY'
-import sys
-from pathlib import Path
-try:
-    import tomllib
-except ImportError:
-    sys.exit(0)
-data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-wanted = set(sys.argv[2:])
+  local wanted
+  wanted="$(printf '%s\n' "$@")"
+  WANTED="${wanted}" dots_toml_query "$(dots_components_registry_path)" <<'PY'
+import os
+wanted = {x.strip() for x in os.environ.get("WANTED", "").splitlines() if x.strip()}
 for c in data.get("components") or []:
     cid = (c.get("id") or "").strip()
     if cid in wanted and c.get("cloud"):
@@ -91,15 +76,11 @@ PY
 }
 
 dots_print_provider_implications() {
-  python3 - "$(dots_components_registry_path)" "$@" <<'PY'
-import sys
-from pathlib import Path
-try:
-    import tomllib
-except ImportError:
-    sys.exit(0)
-data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-wanted = set(sys.argv[2:])
+  local wanted
+  wanted="$(printf '%s\n' "$@")"
+  WANTED="${wanted}" dots_toml_query "$(dots_components_registry_path)" <<'PY'
+import os
+wanted = {x.strip() for x in os.environ.get("WANTED", "").splitlines() if x.strip()}
 local_ai, cloud_ai, image_ai = [], [], []
 for c in data.get("components") or []:
     cid = (c.get("id") or "").strip()
@@ -113,9 +94,9 @@ for c in data.get("components") or []:
     if cat == "image_ai":
         image_ai.append(cid)
 print("explicit provider implications:")
-print(f"  local AI: {', '.join(local_ai) if local_ai else '(none)'}")
-print(f"  cloud AI: {', '.join(cloud_ai) if cloud_ai else '(none)'}")
-print(f"  image AI: {', '.join(image_ai) if image_ai else '(none)'}")
+print("  local AI: %s" % (", ".join(local_ai) if local_ai else "(none)"))
+print("  cloud AI: %s" % (", ".join(cloud_ai) if cloud_ai else "(none)"))
+print("  image AI: %s" % (", ".join(image_ai) if image_ai else "(none)"))
 PY
 }
 

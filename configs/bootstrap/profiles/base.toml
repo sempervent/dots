@@ -1,12 +1,14 @@
 # configs/bootstrap/profiles/base.toml
 # Universally safe DOTS baseline — NO optional AI providers or skill packs.
-#
-# Use: ./bootstrap.sh --profile base
 
 [profile]
 name = "base"
 description = "Core shell UX only — safe on any machine"
-
 with = []
-
+packages = ["core", "modern"]
 open_apps = ["iTerm"]
+
+[runtime]
+multiplexer = "tmux"
+greeting = true
+prompt_stats = false
