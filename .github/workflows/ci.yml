@@ -14,7 +14,8 @@ jobs:
       - name: Install shellcheck + shfmt
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y shellcheck
+          # ripgrep: test harnesses use `rg` (not always preinstalled on ubuntu-latest)
+          sudo apt-get install -y shellcheck ripgrep
           curl -fsSL https://github.com/mvdan/sh/releases/download/v3.8.0/shfmt_v3.8.0_linux_amd64 -o /tmp/shfmt
           chmod +x /tmp/shfmt
           sudo mv /tmp/shfmt /usr/local/bin/shfmt
