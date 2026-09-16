@@ -25,7 +25,7 @@ drawthings_live_config() {
 drawthings_output_dir_from() {
   local cfg="$1"
   local raw
-  raw="$(python3 - "${cfg}" <<'PY'
+  raw="$(dots_python3 - "${cfg}" <<'PY'
 import sys, tomllib
 from pathlib import Path
 path = Path(sys.argv[1])
@@ -39,7 +39,7 @@ PY
 drawthings_app_present() {
   local app="/Applications/Draw Things.app"
   if [[ -f "$(drawthings_live_config)" ]]; then
-    app="$(python3 - "$(drawthings_live_config)" <<'PY'
+    app="$(dots_python3 - "$(drawthings_live_config)" <<'PY'
 import sys, tomllib
 from pathlib import Path
 path = Path(sys.argv[1])
@@ -156,7 +156,7 @@ verify_drawthings_cli() {
   # Lightweight model inventory (no generation)
   if draw-things-cli models list --downloaded-only --offline >/tmp/dots-dt-models.$$ 2>&1; then
     local count
-    count="$(python3 - /tmp/dots-dt-models.$$ <<'PY'
+    count="$(dots_python3 - /tmp/dots-dt-models.$$ <<'PY'
 import re, sys
 from pathlib import Path
 text = Path(sys.argv[1]).read_text()
@@ -262,7 +262,7 @@ write_drawthings_client_snippet() {
     return 0
   fi
   ensure_dir "${gen_dir}"
-  python3 - "${gen_snippet}" "${DOTS_DRAWTHINGS_LAUNCHER}" "$(drawthings_live_config)" "${DIR}" <<'PY'
+  dots_python3 - "${gen_snippet}" "${DOTS_DRAWTHINGS_LAUNCHER}" "$(drawthings_live_config)" "${DIR}" <<'PY'
 import json, sys
 from pathlib import Path
 dest, launcher, cfg, dots = sys.argv[1:5]

@@ -457,10 +457,13 @@ dots_setup_agent_router || exit 1
 dots_ensure_launchers
 
 # leaf markdown viewer + shell completions (zsh/bash/fish; any host)
-dots_setup_leaf || echo "Warn: leaf setup reported errors"
+dots_setup_leaf || echo "Warn: leaf setup reported errors (optional)"
 
-# rsync: Homebrew on macOS/Linuxbrew; native packages on Linux without brew
-dots_ensure_rsync || echo "Warn: rsync setup reported errors"
+# rsync: required in core — fail closed
+if ! dots_ensure_rsync; then
+	echo "Error: rsync setup failed (required)" >&2
+	exit 1
+fi
 
 # bat theme cache (Catppuccin) if theme files present
 if command -v bat >/dev/null 2>&1 && [[ -d "${DIR}/configs/bat/themes" ]]; then

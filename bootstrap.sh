@@ -81,7 +81,8 @@ parse_csv_add() {
 	local dest_name="$1" raw="$2" item
 	local -a _parts=()
 	IFS=',' read -r -a _parts <<<"${raw}"
-	for item in "${_parts[@]}"; do
+	# Bash 3.2 + set -u: empty array expansion is unbound
+	for item in "${_parts[@]+"${_parts[@]}"}"; do
 		item="$(echo "${item}" | tr -d '[:space:]')"
 		[[ -z ${item} ]] && continue
 		eval "${dest_name}+=(\"\${item}\")"
@@ -310,7 +311,8 @@ fi
 
 if [[ ${CHECK_ONLY} -eq 1 ]]; then
 	echo "=== check-only (profile=${PROFILE_NAME}) ==="
-	exec "${DIR}/scripts/check.sh" --profile "${PROFILE_NAME}"
+	# Prefer absolute profile path so custom TOML files are not remapped to builtins.
+	DOTS_DIR="${DIR}" exec "${DIR}/scripts/check.sh" --profile "${PROFILE_FILE}"
 fi
 
 # Persist runtime policy before setup so shells see it after install
@@ -336,7 +338,7 @@ echo "=== Invoking setup.sh ${SETUP_ARGS[*]:-} ==="
 CHECK_STATUS=0
 if [[ ${DRY_RUN} -eq 0 ]]; then
 	echo "=== Verification (profile=${PROFILE_NAME}) ==="
-	if ! "${DIR}/scripts/check.sh" --profile "${PROFILE_NAME}"; then
+	if ! DOTS_DIR="${DIR}" "${DIR}/scripts/check.sh" --profile "${PROFILE_FILE}"; then
 		CHECK_STATUS=1
 	fi
 fi

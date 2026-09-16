@@ -27,7 +27,7 @@ PROFILE_NAME_OUT=""
 DESCRIPTION=""
 
 usage() {
-  cat <<'EOF'
+	cat <<'EOF'
 Usage: ./configure.sh [options]
 
 Create or edit a bootstrap profile TOML. Never installs packages or mutates AI configs.
@@ -56,23 +56,24 @@ EOF
 }
 
 parse_csv_add() {
-  local dest_name="$1" raw="$2" item
-  local -a _parts=()
-  IFS=',' read -r -a _parts <<<"${raw}"
-  for item in "${_parts[@]}"; do
-    item="$(echo "${item}" | tr -d '[:space:]')"
-    [[ -z "${item}" ]] && continue
-    eval "${dest_name}+=(\"\${item}\")"
-  done
+	local dest_name="$1" raw="$2" item
+	local -a _parts=()
+	IFS=',' read -r -a _parts <<<"${raw}"
+	# Bash 3.2 + set -u: empty array expansion is unbound
+	for item in "${_parts[@]+"${_parts[@]}"}"; do
+		item="$(echo "${item}" | tr -d '[:space:]')"
+		[[ -z ${item} ]] && continue
+		eval "${dest_name}+=(\"\${item}\")"
+	done
 }
 
 write_profile_toml() {
-  local dest="$1"
-  local name="${2:-}"
-  local desc="${3:-}"
-  shift 3 || true
-  local comps=("$@")
-  python3 - "${dest}" "${name}" "${desc}" "${comps[@]}" <<'PY'
+	local dest="$1"
+	local name="${2:-}"
+	local desc="${3:-}"
+	shift 3 || true
+	local comps=("$@")
+	python3 - "${dest}" "${name}" "${desc}" "${comps[@]}" <<'PY'
 import sys
 from pathlib import Path
 dest = Path(sys.argv[1])
@@ -101,36 +102,48 @@ PY
 }
 
 interactive() {
-  echo "DOTS profile configure (writes TOML only — no installs)"
-  echo ""
-  echo "Select target:"
-  echo "  1) home   → configs/bootstrap/profiles/home.toml"
-  echo "  2) work   → configs/bootstrap/profiles/work.toml"
-  echo "  3) custom → path of your choosing"
-  local choice
-  read -r -p "Choice [1-3]: " choice
-  case "${choice}" in
-    1) OUTPUT="$(dots_builtin_profile_dir)/home.toml"; PROFILE_NAME_OUT="home"; DESCRIPTION="Personal workstation" ;;
-    2) OUTPUT="$(dots_builtin_profile_dir)/work.toml"; PROFILE_NAME_OUT="work"; DESCRIPTION="Conservative work allowlist" ;;
-    3)
-      read -r -p "Output path: " OUTPUT
-      OUTPUT="${OUTPUT/#\~/${HOME}}"
-      PROFILE_NAME_OUT="$(basename "${OUTPUT}" .toml)"
-      read -r -p "Description: " DESCRIPTION
-      ;;
-    *) echo "Error: invalid choice" >&2; exit 1 ;;
-  esac
+	echo "DOTS profile configure (writes TOML only — no installs)"
+	echo ""
+	echo "Select target:"
+	echo "  1) home   → configs/bootstrap/profiles/home.toml"
+	echo "  2) work   → configs/bootstrap/profiles/work.toml"
+	echo "  3) custom → path of your choosing"
+	local choice
+	read -r -p "Choice [1-3]: " choice
+	case "${choice}" in
+	1)
+		OUTPUT="$(dots_builtin_profile_dir)/home.toml"
+		PROFILE_NAME_OUT="home"
+		DESCRIPTION="Personal workstation"
+		;;
+	2)
+		OUTPUT="$(dots_builtin_profile_dir)/work.toml"
+		PROFILE_NAME_OUT="work"
+		DESCRIPTION="Conservative work allowlist"
+		;;
+	3)
+		read -r -p "Output path: " OUTPUT
+		OUTPUT="${OUTPUT/#\~/${HOME}}"
+		PROFILE_NAME_OUT="$(basename "${OUTPUT}" .toml)"
+		read -r -p "Description: " DESCRIPTION
+		;;
+	*)
+		echo "Error: invalid choice" >&2
+		exit 1
+		;;
+	esac
 
-  echo ""
-  echo "Select optional components (y/N for each):"
-  local id label ans
-  while IFS=$'\t' read -r id label; do
-    [[ -z "${id}" ]] && continue
-    read -r -p "  [ ] ${label} (${id})? " ans
-    case "${ans}" in
-      y|Y|yes|YES) SELECTED+=("${id}") ;;
-    esac
-  done < <(python3 - "$(dots_components_registry_path)" <<'PY'
+	echo ""
+	echo "Select optional components (y/N for each):"
+	local id label ans
+	while IFS=$'\t' read -r id label; do
+		[[ -z ${id} ]] && continue
+		read -r -p "  [ ] ${label} (${id})? " ans
+		case "${ans}" in
+		y | Y | yes | YES) SELECTED+=("${id}") ;;
+		esac
+	done < <(
+		python3 - "$(dots_components_registry_path)" <<'PY'
 import sys
 from pathlib import Path
 import tomllib
@@ -144,98 +157,150 @@ for c in data.get("components") or []:
     if cid:
         print(f"{cid}\t{label}")
 PY
-)
+	)
 
-  echo ""
-  echo "Will write:"
-  echo "  ${OUTPUT}"
-  echo "  components: ${SELECTED[*]:-(none)}"
-  read -r -p "Save? [y/N] " ans
-  case "${ans}" in
-    y|Y|yes|YES) ;;
-    *) echo "Aborted."; exit 0 ;;
-  esac
+	echo ""
+	echo "Will write:"
+	echo "  ${OUTPUT}"
+	echo "  components: ${SELECTED[*]:-(none)}"
+	read -r -p "Save? [y/N] " ans
+	case "${ans}" in
+	y | Y | yes | YES) ;;
+	*)
+		echo "Aborted."
+		exit 0
+		;;
+	esac
 }
 
 # --- args ---
 while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --output) OUTPUT="${2:-}"; shift 2 ;;
-    --output=*) OUTPUT="${1#*=}"; shift ;;
-    --with) parse_csv_add CLI_WITH "${2:-}"; shift 2 ;;
-    --with=*) parse_csv_add CLI_WITH "${1#*=}"; shift ;;
-    --without) parse_csv_add CLI_WITHOUT "${2:-}"; shift 2 ;;
-    --without=*) parse_csv_add CLI_WITHOUT "${1#*=}"; shift ;;
-    --from) FROM_PROFILE="${2:-}"; shift 2 ;;
-    --from=*) FROM_PROFILE="${1#*=}"; shift ;;
-    --name) PROFILE_NAME_OUT="${2:-}"; shift 2 ;;
-    --description) DESCRIPTION="${2:-}"; shift 2 ;;
-    --force) FORCE=1; shift ;;
-    --show) SHOW_TARGET="${2:-}"; shift 2 ;;
-    --show=*) SHOW_TARGET="${1#*=}"; shift ;;
-    -h|--help) usage; exit 0 ;;
-    *) echo "Error: unknown option: $1" >&2; usage >&2; exit 1 ;;
-  esac
+	case "$1" in
+	--output)
+		OUTPUT="${2:-}"
+		shift 2
+		;;
+	--output=*)
+		OUTPUT="${1#*=}"
+		shift
+		;;
+	--with)
+		parse_csv_add CLI_WITH "${2:-}"
+		shift 2
+		;;
+	--with=*)
+		parse_csv_add CLI_WITH "${1#*=}"
+		shift
+		;;
+	--without)
+		parse_csv_add CLI_WITHOUT "${2:-}"
+		shift 2
+		;;
+	--without=*)
+		parse_csv_add CLI_WITHOUT "${1#*=}"
+		shift
+		;;
+	--from)
+		FROM_PROFILE="${2:-}"
+		shift 2
+		;;
+	--from=*)
+		FROM_PROFILE="${1#*=}"
+		shift
+		;;
+	--name)
+		PROFILE_NAME_OUT="${2:-}"
+		shift 2
+		;;
+	--description)
+		DESCRIPTION="${2:-}"
+		shift 2
+		;;
+	--force)
+		FORCE=1
+		shift
+		;;
+	--show)
+		SHOW_TARGET="${2:-}"
+		shift 2
+		;;
+	--show=*)
+		SHOW_TARGET="${1#*=}"
+		shift
+		;;
+	-h | --help)
+		usage
+		exit 0
+		;;
+	*)
+		echo "Error: unknown option: $1" >&2
+		usage >&2
+		exit 1
+		;;
+	esac
 done
 
-if [[ -n "${SHOW_TARGET}" ]]; then
-  PROFILE_FILE="$(dots_resolve_profile_path "${SHOW_TARGET}")"
-  dots_load_profile_file "${PROFILE_FILE}"
-  CLI_WITH=()
-  CLI_WITHOUT=()
-  dots_compute_effective_with
-  dots_show_profile_resolution
-  exit 0
+if [[ -n ${SHOW_TARGET} ]]; then
+	PROFILE_FILE="$(dots_resolve_profile_path "${SHOW_TARGET}")"
+	dots_load_profile_file "${PROFILE_FILE}"
+	CLI_WITH=()
+	CLI_WITHOUT=()
+	dots_compute_effective_with
+	dots_show_profile_resolution
+	exit 0
 fi
 
 # Noninteractive path
-if [[ -n "${OUTPUT}" ]] || [[ ${#CLI_WITH[@]} -gt 0 ]] || [[ -n "${FROM_PROFILE}" ]]; then
-  if [[ -z "${OUTPUT}" ]]; then
-    echo "Error: --output is required in noninteractive mode" >&2
-    exit 1
-  fi
-  OUTPUT="${OUTPUT/#\~/${HOME}}"
-  PROFILE_WITH=()
-  if [[ -n "${FROM_PROFILE}" ]]; then
-    FROM_FILE="$(dots_resolve_profile_path "${FROM_PROFILE}")"
-    dots_load_profile_file "${FROM_FILE}"
-  fi
-  SELECTED=()
-  local_c=""
-  for local_c in "${PROFILE_WITH[@]+"${PROFILE_WITH[@]}"}"; do
-    SELECTED+=("${local_c}")
-  done
-  for local_c in "${CLI_WITH[@]+"${CLI_WITH[@]}"}"; do
-    SELECTED+=("${local_c}")
-  done
-  # apply without + dedupe
-  filtered=()
-  for local_c in "${SELECTED[@]+"${SELECTED[@]}"}"; do
-    dots_array_contains "${local_c}" "${CLI_WITHOUT[@]+"${CLI_WITHOUT[@]}"}" && continue
-    dots_array_contains "${local_c}" "${filtered[@]+"${filtered[@]}"}" && continue
-    filtered+=("${local_c}")
-  done
-  SELECTED=("${filtered[@]+"${filtered[@]}"}")
-  if [[ ${#SELECTED[@]} -gt 0 ]]; then
-    dots_validate_components "${SELECTED[@]}" || exit 1
-  fi
-  [[ -z "${PROFILE_NAME_OUT}" ]] && PROFILE_NAME_OUT="$(basename "${OUTPUT}" .toml)"
-  [[ -z "${DESCRIPTION}" ]] && DESCRIPTION="Custom profile ${PROFILE_NAME_OUT}"
+if [[ -n ${OUTPUT} ]] || [[ ${#CLI_WITH[@]} -gt 0 ]] || [[ -n ${FROM_PROFILE} ]]; then
+	if [[ -z ${OUTPUT} ]]; then
+		echo "Error: --output is required in noninteractive mode" >&2
+		exit 1
+	fi
+	OUTPUT="${OUTPUT/#\~/${HOME}}"
+	PROFILE_WITH=()
+	if [[ -n ${FROM_PROFILE} ]]; then
+		FROM_FILE="$(dots_resolve_profile_path "${FROM_PROFILE}")"
+		dots_load_profile_file "${FROM_FILE}"
+	fi
+	SELECTED=()
+	local_c=""
+	for local_c in "${PROFILE_WITH[@]+"${PROFILE_WITH[@]}"}"; do
+		SELECTED+=("${local_c}")
+	done
+	for local_c in "${CLI_WITH[@]+"${CLI_WITH[@]}"}"; do
+		SELECTED+=("${local_c}")
+	done
+	# apply without + dedupe
+	filtered=()
+	for local_c in "${SELECTED[@]+"${SELECTED[@]}"}"; do
+		dots_array_contains "${local_c}" "${CLI_WITHOUT[@]+"${CLI_WITHOUT[@]}"}" && continue
+		dots_array_contains "${local_c}" "${filtered[@]+"${filtered[@]}"}" && continue
+		filtered+=("${local_c}")
+	done
+	SELECTED=("${filtered[@]+"${filtered[@]}"}")
+	if [[ ${#SELECTED[@]} -gt 0 ]]; then
+		dots_validate_components "${SELECTED[@]}" || exit 1
+	fi
+	[[ -z ${PROFILE_NAME_OUT} ]] && PROFILE_NAME_OUT="$(basename "${OUTPUT}" .toml)"
+	[[ -z ${DESCRIPTION} ]] && DESCRIPTION="Custom profile ${PROFILE_NAME_OUT}"
 else
-  interactive
+	interactive
 fi
 
-if [[ -f "${OUTPUT}" ]] && [[ "${FORCE}" -ne 1 ]]; then
-  if [[ -t 0 ]]; then
-    read -r -p "Overwrite existing ${OUTPUT}? [y/N] " ans
-    case "${ans}" in
-      y|Y|yes|YES) ;;
-      *) echo "Aborted (use --force to overwrite)."; exit 0 ;;
-    esac
-  else
-    echo "Error: ${OUTPUT} exists (pass --force to overwrite)" >&2
-    exit 1
-  fi
+if [[ -f ${OUTPUT} ]] && [[ ${FORCE} -ne 1 ]]; then
+	if [[ -t 0 ]]; then
+		read -r -p "Overwrite existing ${OUTPUT}? [y/N] " ans
+		case "${ans}" in
+		y | Y | yes | YES) ;;
+		*)
+			echo "Aborted (use --force to overwrite)."
+			exit 0
+			;;
+		esac
+	else
+		echo "Error: ${OUTPUT} exists (pass --force to overwrite)" >&2
+		exit 1
+	fi
 fi
 
 write_profile_toml "${OUTPUT}" "${PROFILE_NAME_OUT}" "${DESCRIPTION}" "${SELECTED[@]+"${SELECTED[@]}"}"

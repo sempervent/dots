@@ -55,7 +55,7 @@ dots_resolve_package_groups() {
 	DOTS_RESOLVED_GROUPS=()
 	local g
 	if [[ ${#PROFILE_PACKAGES[@]} -gt 0 ]]; then
-		for g in "${PROFILE_PACKAGES[@]}"; do
+		for g in "${PROFILE_PACKAGES[@]+"${PROFILE_PACKAGES[@]}"}"; do
 			DOTS_RESOLVED_GROUPS+=("${g}")
 		done
 	elif [[ -n ${DOTS_PACKAGE_GROUPS:-} ]]; then
@@ -155,13 +155,13 @@ dots_linux_install_packages() {
 	esac
 
 	echo "=== Linux packages (${mgr}) groups: ${DOTS_RESOLVED_GROUPS[*]} ==="
-	local tools pkgs=() skip_opt=() skip_req=() t native
+	local tools=() pkgs=() skip_opt=() skip_req=() t native
 	while IFS= read -r t; do
 		[[ -z ${t} ]] && continue
 		tools+=("${t}")
 	done < <(dots_tools_for_groups all)
 
-	for t in "${tools[@]}"; do
+	for t in "${tools[@]+"${tools[@]}"}"; do
 		native="$(
 			TOOL="${t}" dots_toml_query "${mapfile}" <<'PY'
 import os

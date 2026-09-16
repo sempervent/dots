@@ -16,7 +16,7 @@ print(str(data.get("version") or "24").strip() or "24")
 PY
     return 0
   fi
-  python3 - "${policy}" "${DIR}/tools/toml_min.py" <<'PY'
+  dots_python3 - "${policy}" "${DIR}/tools/toml_min.py" <<'PY'
 import importlib.util, sys
 from pathlib import Path
 path = Path(sys.argv[1])
