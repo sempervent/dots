@@ -1,0 +1,103 @@
+# configs/links.toml — declarative managed file links
+#
+# Consumed by helpers/links.sh (setup) and scripts/check.sh.
+# profiles: omit = all profiles; else list of profile names.
+# platforms: omit = all; else ["darwin", "linux"]
+
+version = 1
+
+[[links]]
+source = "syms/zshrc"
+target = "~/.zshrc"
+
+[[links]]
+source = "syms/zshenv"
+target = "~/.zshenv"
+
+[[links]]
+source = "syms/zprofile"
+target = "~/.zprofile"
+
+[[links]]
+source = "syms/bashrc"
+target = "~/.bashrc"
+
+[[links]]
+source = "syms/tmux.conf"
+target = "~/.tmux.conf"
+
+[[links]]
+source = "syms/vimrc"
+target = "~/.vimrc"
+
+[[links]]
+source = "syms/sqliterc"
+target = "~/.sqliterc"
+
+[[links]]
+source = "syms/psqlrc"
+target = "~/.psqlrc"
+
+[[links]]
+source = "syms/npmrc"
+target = "~/.npmrc"
+
+[[links]]
+source = "syms/inputrc"
+target = "~/.inputrc"
+
+[[links]]
+source = "syms/editorconfig"
+target = "~/.editorconfig"
+
+[[links]]
+source = "syms/gitignore_global"
+target = "~/.config/git/ignore"
+
+[[links]]
+source = "configs/bat.conf"
+target = "~/.config/bat/config"
+
+[[links]]
+source = "configs/starship/starship.toml"
+target = "~/.config/starship.toml"
+
+[[links]]
+source = "configs/btop/btop.conf"
+target = "~/.config/btop/btop.conf"
+
+[[links]]
+source = "configs/git/common"
+target = "~/.config/git/common"
+
+[[links]]
+source = "ranger/rc.conf"
+target = "~/.config/ranger/rc.conf"
+profiles = ["base", "home", "work", "all"]
+
+[[links]]
+source = "ranger/rifle.conf"
+target = "~/.config/ranger/rifle.conf"
+profiles = ["base", "home", "work", "all"]
+
+[[links]]
+source = "ranger/scope.sh"
+target = "~/.config/ranger/scope.sh"
+profiles = ["base", "home", "work", "all"]
+
+[[links]]
+source = "ranger/commands.py"
+target = "~/.config/ranger/commands.py"
+profiles = ["base", "home", "work", "all"]
+
+[[links]]
+source = "ranger/colorschemes/catppuccin.py"
+target = "~/.config/ranger/colorschemes/catppuccin.py"
+profiles = ["base", "home", "work", "all"]
+
+# --- classification of other syms/ entries (not auto-linked) ---
+# active: listed above
+# template: gitconfig.template, docker_config.json.template
+# legacy/deprecated: init.vim (Neovim uses configs/nvim), screenrc, xonshrc
+# unknown/optional: curlrc, dircolors, exrc, gemrc, gitattributes, irbrc,
+#   pythonrc.py, Renviron, Rprofile, terraformrc, wgetrc, config.fish

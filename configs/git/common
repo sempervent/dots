@@ -1,0 +1,47 @@
+# Shared Git ergonomics managed by DOTS.
+# Identity (user.name / user.email / signing) lives in personal or work includes.
+# See configs/git/README.md
+
+[core]
+	editor = nvim
+	autocrlf = input
+	excludesfile = ~/.config/git/ignore
+
+[init]
+	defaultBranch = main
+
+[push]
+	default = simple
+	autoSetupRemote = true
+
+[pull]
+	rebase = false
+
+[fetch]
+	prune = true
+
+[rerere]
+	enabled = true
+
+[color]
+	ui = auto
+
+[diff]
+	algorithm = histogram
+
+[merge]
+	conflictstyle = zdiff3
+
+[rebase]
+	autoStash = true
+
+[alias]
+	st = status -sb
+	co = checkout
+	br = branch
+	ci = commit
+	lg = log --oneline --graph --decorate --all
+	last = log -1 HEAD
+	unstage = reset HEAD --
+	amend = commit --amend --no-edit
+	undo = reset --soft HEAD~1

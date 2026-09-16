@@ -40,6 +40,10 @@ esac
 # shellcheck disable=SC1091
 [ -f "${DOTS_DIR}/shell/paths.sh" ] && . "${DOTS_DIR}/shell/paths.sh"
 # shellcheck disable=SC1091
+[ -f "${DOTS_DIR}/shell/runtime.sh" ] && . "${DOTS_DIR}/shell/runtime.sh"
+# shellcheck disable=SC1091
+[ -f "${DOTS_DIR}/shell/fnm.sh" ] && . "${DOTS_DIR}/shell/fnm.sh"
+# shellcheck disable=SC1091
 [ -f "${DOTS_DIR}/shell/exports.sh" ] && . "${DOTS_DIR}/shell/exports.sh"
 # shellcheck disable=SC1091
 [ -f "${DOTS_DIR}/shell/theme.sh" ] && . "${DOTS_DIR}/shell/theme.sh"
@@ -109,11 +113,7 @@ esac
 # 1}}}
 
 # Version managers {{{1
-export NVM_DIR="${NVM_DIR:-${HOME}/.nvm}"
-# shellcheck disable=SC1091
-[ -s "${NVM_DIR}/nvm.sh" ] && . "${NVM_DIR}/nvm.sh"
-# shellcheck disable=SC1091
-[ -s "${NVM_DIR}/bash_completion" ] && . "${NVM_DIR}/bash_completion"
+# Node: fnm only (DOTS policy). ~/.nvm data is never deleted; NVM is not sourced.
 # shellcheck disable=SC1091
 [ -f "${HOME}/.cargo/env" ] && . "${HOME}/.cargo/env"
 # 1}}}
@@ -136,7 +136,10 @@ if [ -z "${TMUX:-}" ] || [ -n "${SSH_TTY:-}" ]; then
 fi
 # 1}}}
 
-# Optional per-machine overrides
+# Optional per-machine overrides (canonical: ~/.config/dots/local.sh)
+# shellcheck disable=SC1091
+[ -f "${HOME}/.config/dots/local.sh" ] && . "${HOME}/.config/dots/local.sh"
+# Compatibility: legacy bash-only local file
 # shellcheck disable=SC1091
 [ -f "${HOME}/.bash_aliases" ] && . "${HOME}/.bash_aliases"
 # shellcheck disable=SC1091

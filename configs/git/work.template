@@ -1,0 +1,6 @@
+# Work Git identity — NOT managed/overwritten by DOTS after first create.
+# Fill in employer name/email. Used via includeIf for ~/work/ (configurable).
+
+[user]
+	name = YOUR_WORK_NAME
+	email = YOUR_WORK_EMAIL
