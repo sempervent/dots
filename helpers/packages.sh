@@ -9,7 +9,11 @@
 # Optional globals: PROFILE_PACKAGES[], DOTS_PACKAGE_GROUPS, brew_failed
 
 # shellcheck source=toml.sh
-[[ -n ${DIR:-} ]] && source "${DIR}/helpers/toml.sh" 2>/dev/null || true
+if [[ -n ${DIR:-} ]]; then
+	# Optional when packages.sh is sourced before DIR is set (unit tests).
+	# shellcheck disable=SC1091
+	source "${DIR}/helpers/toml.sh" 2>/dev/null || true
+fi
 
 dots_known_package_groups() {
 	printf '%s\n' core modern workstation infra media gui server

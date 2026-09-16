@@ -123,7 +123,9 @@ maybe_open_apps() {
 	for app in "${PROFILE_OPEN_APPS[@]+"${PROFILE_OPEN_APPS[@]}"}"; do
 		case "${app}" in
 		iTerm | iTerm2)
-			[[ -d "/Applications/iTerm.app" ]] && open -a iTerm || true
+			if [[ -d "/Applications/iTerm.app" ]]; then
+				open -a iTerm || true
+			fi
 			;;
 		"Draw Things")
 			if dots_array_contains drawthings "${EFFECTIVE_WITH[@]+"${EFFECTIVE_WITH[@]}"}" &&
@@ -288,7 +290,7 @@ dots_warn_cloud_components
 
 if [[ ${SHOW_ONLY} -eq 1 ]]; then
 	echo ""
-	dots_show_profile_resolution
+	dots_show_profile_resolution "resolved"
 	exit 0
 fi
 
