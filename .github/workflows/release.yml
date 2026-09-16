@@ -14,29 +14,21 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Publish GitHub Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          TAG="${GITHUB_REF_NAME}"
-          TITLE="DOTS ${TAG}"
-          if [[ ${TAG} == v1.2.0 ]]; then
-            TITLE="DOTS v1.2.0 - Unified Interactive Setup"
-          fi
-          if gh release view "${TAG}" >/dev/null 2>&1; then
-            echo "Release ${TAG} already exists"
-            exit 0
-          fi
-          gh release create "${TAG}" --title "${TITLE}" --notes "## Highlights
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name == 'v1.2.0' && 'DOTS v1.2.0 - Unified Interactive Setup' || format('DOTS {0}', github.ref_name) }}
+          generate_release_notes: false
+          body: |
+            ## Highlights
 
-- \`./dots\` is now the primary human interface for machine setup
-- Single interactive flow from fresh machine through verification
-- Profiles, components, and models managed in one wizard
-- Existing scripts remain supported for automation
-- Configuration remains declarative and reproducible
+            - `./dots` is now the primary human interface for machine setup
+            - Single interactive flow from fresh machine through verification
+            - Profiles, components, and models managed in one wizard
+            - Existing scripts remain supported for automation
+            - Configuration remains declarative and reproducible
 
-## Notes
+            ## Notes
 
-- Pure-Bash UI (no gum/dialog/fzf required)
-- Model downloads remain opt-in
-- FluidVoice model setup remains MANUAL"
+            - Pure-Bash UI (no gum/dialog/fzf required)
+            - Model downloads remain opt-in
+            - FluidVoice model setup remains MANUAL
