@@ -47,10 +47,10 @@ Preview without installing:
 with `tomllib` when available, otherwise `tools/toml_min.py`. On macOS, Xcode
 CLT typically provides `/usr/bin/python3` (`xcode-select --install`).
 
-**Skill packs** (`--with skills` / `ai-skills`, and the `home` profile’s default
-skill selection) need **Python 3.11+** (`tomllib`) because
-`configs/skills/manifest.toml` uses dotted table syntax. Without it, omit those
-components or install a newer Python.
+Components with stronger Python needs (skill packs use dotted TOML → `tomllib`)
+are provisioned automatically when selected: Homebrew `python@3.12` on macOS, or
+the platform’s `python3.11`/`python3.12` packages on Linux. System Python and
+shell aliases are not replaced.
 
 **macOS Homebrew policy:** Homebrew is required for package install. DOTS does
 **not** auto-install it. If missing, bootstrap exits with the install command

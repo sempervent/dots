@@ -68,6 +68,7 @@ jobs:
           bash scripts/tests/idempotence_test.sh
           bash scripts/tests/check_contract_test.sh
           bash scripts/tests/shell_startup_test.sh
+          bash scripts/tests/python_runtime_test.sh
 
       - name: Bootstrap + setup dry-run
         run: |
