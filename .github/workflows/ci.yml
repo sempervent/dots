@@ -56,9 +56,24 @@ jobs:
           bash scripts/profile_resolution_test.sh
           bash scripts/provider_isolation_test.sh
           bash scripts/tests/custom_profile_test.sh
+          bash scripts/tests/component_supergroups_test.sh
           bash scripts/tests/multiplexer_nesting_test.sh
           bash scripts/tests/stage0_prereqs_test.sh
           bash scripts/tests/provider_mapping_test.sh
+
+      - name: Bootstrap + setup dry-run
+        run: |
+          ./bootstrap.sh --profile server --dry-run
+          ./setup.sh --dry-run
+          ./setup.sh --dry-run --with herdr
+          ./setup.sh --dry-run --with hermes,ollama
+          ./setup.sh --dry-run --with ai
+          ./setup.sh --dry-run --profile base --packages core,modern
+          # Explicit unsupported component must fail on Linux
+          if ./setup.sh --dry-run --with fluidvoice; then
+            echo "expected fluidvoice to fail on Linux" >&2
+            exit 1
+          fi
 
       - name: Runtime precedence / dry-run / links / git / transitions
         run: |
@@ -73,14 +88,6 @@ jobs:
           bash scripts/tests/check_contract_test.sh
           bash scripts/tests/shell_startup_test.sh
           bash scripts/tests/python_runtime_test.sh
-
-      - name: Bootstrap + setup dry-run
-        run: |
-          ./bootstrap.sh --profile server --dry-run
-          ./setup.sh --dry-run
-          ./setup.sh --dry-run --with herdr
-          ./setup.sh --dry-run --with hermes,ollama
-          ./setup.sh --dry-run --profile base --packages core,modern
 
   linux-distros:
     runs-on: ubuntu-latest
@@ -136,5 +143,9 @@ jobs:
       - name: Dry-run + runtime tests
         run: |
           /bin/bash ./bootstrap.sh --profile work --dry-run
+          /bin/bash ./setup.sh --dry-run --with ai
+          /bin/bash ./setup.sh --dry-run --with fluidvoice
+          brew info --cask fluidvoice || true
           bash scripts/tests/runtime_precedence_test.sh
           bash scripts/tests/dry_run_test.sh
+          bash scripts/tests/component_supergroups_test.sh
