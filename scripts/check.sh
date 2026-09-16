@@ -144,6 +144,8 @@ while IFS= read -r _tool; do
   case "${_tool}" in
     ripgrep) _cmd=rg ;;
     fd) _cmd=fd; command -v fd >/dev/null 2>&1 || _cmd=fdfind ;;
+    neovim) _cmd=nvim ;;
+    bat) _cmd=bat; command -v bat >/dev/null 2>&1 || _cmd=batcat ;;
     git-delta) _cmd=delta ;;
     font-jetbrains-mono-nerd-font) continue ;;
     terminal-notifier)
@@ -167,6 +169,8 @@ while IFS= read -r _tool; do
   case "${_tool}" in
     ripgrep) _cmd=rg ;;
     fd) _cmd=fd; command -v fd >/dev/null 2>&1 || _cmd=fdfind ;;
+    neovim) _cmd=nvim ;;
+    bat) _cmd=bat; command -v bat >/dev/null 2>&1 || _cmd=batcat ;;
     git-delta) _cmd=delta ;;
     font-jetbrains-mono-nerd-font) continue ;;
     terminal-notifier)

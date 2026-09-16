@@ -17,6 +17,9 @@
 set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+# Stage 0 first — no Python required
+# shellcheck source=helpers/bootstrap_prereqs.sh
+source "${DIR}/helpers/bootstrap_prereqs.sh"
 # shellcheck source=helpers/toml.sh
 source "${DIR}/helpers/toml.sh"
 # shellcheck source=helpers/components.sh
@@ -31,6 +34,7 @@ DRY_RUN=0
 CHECK_ONLY=0
 OPEN_APPS=0
 SHOW_ONLY=0
+NO_INSTALL=0
 CLI_WITH=()
 CLI_WITHOUT=()
 PROFILE_NAME=""
@@ -60,21 +64,24 @@ Options:
   --without <list>       Remove components from the effective set
   --show                 Print resolved components/packages/runtime and exit
   --dry-run              Preview (passed through to setup.sh; no mutations)
+  --no-install           Resolve/verify only; do not install missing software
   --check-only           Run scripts/check.sh for the profile (no setup)
   --open-apps            After setup, open selected/installed apps (macOS GUI)
   --no-open              Never open apps (default)
   -h, --help             Show this help
 
 Happy paths:
-  ./bootstrap.sh --profile home      # personal Mac
+  ./bootstrap.sh --profile home      # personal Mac (auto-provisions brew/python)
   ./bootstrap.sh --profile work      # employer Mac
   ./bootstrap.sh --profile server    # headless Linux
   ./bootstrap.sh --profile base      # minimal core
+  ./bootstrap.sh --profile work --no-install   # managed hosts: fail if deps missing
 
 Policy:
   Profiles are explicit authorization for THAT run.
   Binary presence alone never authorizes configuration.
-  Homebrew is required on macOS (DOTS does not auto-install it).
+  Stage 0 auto-provisions Homebrew/Python via official channels when needed.
+  --show / --dry-run never mutate.
 
 See README.md for package groups, runtime policy, and local overrides.
 EOF
@@ -90,39 +97,6 @@ parse_csv_add() {
 		[[ -z ${item} ]] && continue
 		eval "${dest_name}+=(\"\${item}\")"
 	done
-}
-
-detect_platform() {
-	local require_pkg_mgr="${1:-1}"
-	echo "=== Platform ==="
-	echo "OS: $(uname -s)  arch: $(uname -m)"
-	if [[ "$(uname -s)" == "Darwin" ]]; then
-		if command -v brew >/dev/null 2>&1; then
-			echo "OK: Homebrew → $(command -v brew)"
-		elif [[ ${require_pkg_mgr} -eq 0 ]]; then
-			echo "Note: Homebrew not found (ok for --show; required for install)"
-		else
-			dots_require_homebrew_macos
-			exit 1
-		fi
-	else
-		if command -v brew >/dev/null 2>&1; then
-			echo "OK: Linuxbrew → $(command -v brew)"
-		else
-			local mgr
-			mgr="$(dots_detect_linux_pkg_mgr)"
-			if [[ ${mgr} == "unknown" ]]; then
-				if [[ ${require_pkg_mgr} -eq 0 ]]; then
-					echo "Note: no Linux package manager detected (ok for --show)"
-				else
-					echo "Error: no supported package manager (apt/pacman/xbps/dnf) and no Homebrew." >&2
-					exit 1
-				fi
-			else
-				echo "OK: Linux package manager → ${mgr}"
-			fi
-		fi
-	fi
 }
 
 maybe_open_apps() {
@@ -241,6 +215,10 @@ while [[ $# -gt 0 ]]; do
 		DRY_RUN=1
 		shift
 		;;
+	--no-install)
+		NO_INSTALL=1
+		shift
+		;;
 	--check-only)
 		CHECK_ONLY=1
 		shift
@@ -267,28 +245,28 @@ done
 
 PROFILE_FILE="$(dots_resolve_profile_path "${PROFILE}")"
 
-# Python ≥3.11 (tomllib) is required. Prefer an existing interpreter; provision
-# only on mutating runs. --show/--dry-run report intent without installing.
+# Stage 0 before any Python/TOML requirement.
+# --show/--dry-run: report only. Real runs: install CLT/brew/python as needed.
+if [[ ${SHOW_ONLY} -eq 1 || ${DRY_RUN} -eq 1 ]]; then
+	dots_stage0_ensure 1 || true
+else
+	dots_stage0_ensure 0 || exit 1
+fi
+
+# Python ≥3.11 for Stage 1 TOML. Soft on show/dry-run; may already be provisioned.
 _py_soft=0
 [[ ${SHOW_ONLY} -eq 1 || ${DRY_RUN} -eq 1 ]] && _py_soft=1
 if ! dots_require_python "${_py_soft}"; then
-	cat >&2 <<'EOF'
-
-Platform hints:
-  macOS:  brew install python@3.12   # after Homebrew exists
-  Debian/Ubuntu:  sudo apt-get install -y python3.12   # or python3.11
-  Arch:           sudo pacman -S --needed python
-  Void:           sudo xbps-install -S python3
-  Fedora:         sudo dnf install -y python3.12
-EOF
+	if [[ ${SHOW_ONLY} -eq 1 ]]; then
+		# Useful non-mutating UX without Python: Stage 0 already reported.
+		local_prof="${PROFILE}"
+		[[ ${local_prof} == *.toml ]] && local_prof="$(basename "${local_prof}" .toml)"
+		[[ ${local_prof} == */* ]] && local_prof="$(basename "${local_prof}" .toml)"
+		dots_show_builtin_profile_fallback "${local_prof}"
+		exit 0
+	fi
+	echo "Error: Python >=3.11 required for profile resolution and was not provisioned." >&2
 	exit 1
-fi
-
-# --show must work without package managers; install/dry-run need them.
-if [[ ${SHOW_ONLY} -eq 1 ]]; then
-	detect_platform 0
-else
-	detect_platform 1
 fi
 
 dots_load_profile_file "${PROFILE_FILE}"
@@ -316,8 +294,33 @@ fi
 
 if [[ ${CHECK_ONLY} -eq 1 ]]; then
 	echo "=== check-only (profile=${PROFILE_NAME}) ==="
-	# Prefer absolute profile path so custom TOML files are not remapped to builtins.
 	DOTS_DIR="${DIR}" exec "${DIR}/scripts/check.sh" --profile "${PROFILE_FILE}"
+fi
+
+if [[ ${NO_INSTALL} -eq 1 ]]; then
+	echo "=== --no-install: verifying prerequisites without provisioning ==="
+	missing=0
+	if [[ "$(uname -s)" == "Darwin" ]] && ! dots_find_brew >/dev/null 2>&1; then
+		echo "Error: Homebrew missing (--no-install)" >&2
+		missing=1
+	fi
+	if ! dots_stage0_python_present; then
+		echo "Error: Python >=3.11 missing (--no-install)" >&2
+		missing=1
+	fi
+	if dots_array_contains herdr "${EFFECTIVE_WITH[@]+"${EFFECTIVE_WITH[@]}"}"; then
+		if ! command -v herdr >/dev/null 2>&1; then
+			echo "Error: herdr missing (--no-install)" >&2
+			missing=1
+		fi
+	fi
+	if [[ ${missing} -ne 0 ]]; then
+		exit 1
+	fi
+	echo "OK: --no-install prerequisites present; skipping setup package installs"
+	# Still allow check-only style verification of current machine
+	DOTS_DIR="${DIR}" "${DIR}/scripts/check.sh" --profile "${PROFILE_FILE}" || exit 1
+	exit 0
 fi
 
 # Persist runtime policy before setup so shells see it after install
@@ -343,6 +346,8 @@ echo "=== Invoking setup.sh ${SETUP_ARGS[*]:-} ==="
 CHECK_STATUS=0
 if [[ ${DRY_RUN} -eq 0 ]]; then
 	echo "=== Verification (profile=${PROFILE_NAME}) ==="
+	# Herdr/official installers often land in ~/.local/bin
+	export PATH="${HOME}/.local/bin:${PATH}"
 	if ! DOTS_DIR="${DIR}" "${DIR}/scripts/check.sh" --profile "${PROFILE_FILE}"; then
 		CHECK_STATUS=1
 	fi

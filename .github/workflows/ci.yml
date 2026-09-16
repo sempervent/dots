@@ -26,6 +26,7 @@ jobs:
             bootstrap.sh \
             helpers/toml.sh helpers/packages.sh helpers/links.sh \
             helpers/git_config.sh helpers/profiles.sh helpers/components.sh \
+            helpers/bootstrap_prereqs.sh helpers/python_runtime.sh \
             shell/runtime.sh shell/fnm.sh shell/exports.sh \
             scripts/tests/runtime_precedence_test.sh \
             scripts/tests/dry_run_test.sh \
@@ -37,7 +38,7 @@ jobs:
           shfmt -d -s \
             bootstrap.sh \
             helpers/packages.sh helpers/links.sh helpers/git_config.sh \
-            helpers/toml.sh \
+            helpers/toml.sh helpers/bootstrap_prereqs.sh \
             shell/runtime.sh shell/fnm.sh
 
       - name: Profile --show (all builtins)
@@ -54,6 +55,8 @@ jobs:
           bash scripts/provider_isolation_test.sh
           bash scripts/tests/custom_profile_test.sh
           bash scripts/tests/multiplexer_nesting_test.sh
+          bash scripts/tests/stage0_prereqs_test.sh
+          bash scripts/tests/provider_mapping_test.sh
 
       - name: Runtime precedence / dry-run / links / git / transitions
         run: |

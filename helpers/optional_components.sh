@@ -9,7 +9,15 @@
 
 apply_optional_brewfiles() {
   if has_component herdr; then
-    apply_brewfile "${DIR}/brew/Brewfile.herdr"
+    if command -v brew >/dev/null 2>&1; then
+      apply_brewfile "${DIR}/brew/Brewfile.herdr"
+    elif declare -F dots_ensure_herdr >/dev/null 2>&1; then
+      # Linux without brew: official Herdr installer (Stage 0 helper)
+      dots_ensure_herdr || brew_failed=1
+    else
+      echo "Error: herdr selected but no Homebrew and no dots_ensure_herdr" >&2
+      brew_failed=1
+    fi
   fi
   if has_component hermes; then
     apply_brewfile "${DIR}/brew/Brewfile.hermes"
@@ -147,6 +155,11 @@ dots_check_hermes_path() {
 
 ensure_herdr_integration() {
   local name="$1" need_cli="$2"
+  # Dry-run announces intent even when herdr is not yet on PATH (Stage 0/install follows).
+  if [[ "${DRY_RUN}" -eq 1 ]]; then
+    echo "[dry-run] herdr integration install ${name}"
+    return 0
+  fi
   if ! command -v herdr >/dev/null 2>&1; then
     echo "Skip integration ${name}: herdr not on PATH"
     return 0
@@ -162,10 +175,6 @@ ensure_herdr_integration() {
       echo "Skip integration ${name}: ${need_cli} not installed"
       return 0
     fi
-  fi
-  if [[ "${DRY_RUN}" -eq 1 ]]; then
-    echo "[dry-run] herdr integration install ${name}"
-    return 0
   fi
   # Idempotent: skip when status already reports current
   if herdr integration status 2>/dev/null | rg -q "^${name}:[[:space:]]*current"; then

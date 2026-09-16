@@ -91,13 +91,17 @@ dots_provision_python311() {
 	case "${mgr}" in
 	apt)
 		sudo apt-get update -qq || true
-		if sudo DEBIAN_FRONTEND=noninteractive apt-get install -y python3.12; then
+		# Prefer python3 metapackage (provides /usr/bin/python3) plus 3.12 when available
+		if sudo DEBIAN_FRONTEND=noninteractive apt-get install -y python3.12 python3; then
 			return 0
 		fi
-		if sudo DEBIAN_FRONTEND=noninteractive apt-get install -y python3.11; then
+		if sudo DEBIAN_FRONTEND=noninteractive apt-get install -y python3.11 python3; then
 			return 0
 		fi
-		echo "Error: apt could not install python3.12 or python3.11" >&2
+		if sudo DEBIAN_FRONTEND=noninteractive apt-get install -y python3; then
+			return 0
+		fi
+		echo "Error: apt could not install python3.12/python3.11/python3" >&2
 		return 1
 		;;
 	pacman)

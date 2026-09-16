@@ -20,7 +20,12 @@ TMUX_PLUGIN_DIR="${HOME}/.tmux/plugins/tpm"
 ZSH="${ZSH:-${HOME}/.oh-my-zsh}"
 ZSH_CUSTOM="${ZSH_CUSTOM:-${ZSH}/custom}"
 DRY_RUN=0
+NO_INSTALL=0
 DOTS_WITH_COMPONENTS=()
+
+# Stage 0 shared with bootstrap.sh (Homebrew / Python / CLT)
+# shellcheck source=helpers/bootstrap_prereqs.sh
+source "${DIR}/helpers/bootstrap_prereqs.sh"
 
 # shellcheck source=helpers/components.sh
 source "${DIR}/helpers/components.sh"
@@ -203,6 +208,10 @@ while [[ $# -gt 0 ]]; do
 		DRY_RUN=1
 		shift
 		;;
+	--no-install)
+		NO_INSTALL=1
+		shift
+		;;
 	--with=*)
 		parse_with_list "${1#--with=}"
 		shift
@@ -321,10 +330,42 @@ clone_if_missing() {
 
 echo "=== dots setup ==="
 [[ ${DRY_RUN} -eq 1 ]] && echo "(dry-run mode — no mutations)"
+[[ ${NO_INSTALL} -eq 1 ]] && echo "(--no-install — will not provision missing packages)"
 if [[ ${#DOTS_WITH_COMPONENTS[@]} -gt 0 ]]; then
 	echo "Optional components: ${DOTS_WITH_COMPONENTS[*]}"
 else
 	echo "Optional components: (none — AI tooling not installed by default)"
+fi
+
+# Stage 0: shared prerequisite layer (CLT / Homebrew / Python / native pkg mgr)
+if [[ ${DRY_RUN} -eq 1 ]]; then
+	dots_stage0_ensure 1 || true
+elif [[ ${NO_INSTALL} -eq 1 ]]; then
+	dots_stage0_report
+	if [[ "$(uname -s)" == "Darwin" ]] && ! dots_find_brew >/dev/null 2>&1; then
+		echo "Error: Homebrew missing (--no-install)" >&2
+		exit 1
+	fi
+	if ! dots_stage0_python_present; then
+		echo "Error: Python >=3.11 missing (--no-install)" >&2
+		exit 1
+	fi
+	dots_activate_brew 2>/dev/null || true
+else
+	dots_stage0_ensure 0 || exit 1
+fi
+
+echo "=== Packages (early — needed before plugin clones) ==="
+if declare -F _dots_leaf_retire_conflicting_brew_leaf >/dev/null 2>&1; then
+	_dots_leaf_retire_conflicting_brew_leaf
+fi
+if [[ ${NO_INSTALL:-0} -eq 1 ]]; then
+	echo "Skipping package install (--no-install)"
+else
+	if ! dots_provision_packages; then
+		echo "Error: package provisioning failed" >&2
+		exit 1
+	fi
 fi
 
 echo "=== Symlinks ==="
@@ -377,19 +418,8 @@ elif [[ ${DRY_RUN} -eq 1 ]]; then
 	echo "[dry-run] TPM install_plugins"
 fi
 
-echo "=== Packages ==="
-# leaf-markdown-viewer conflicts with deprecated formula `leaf` (reloader)
-if declare -F _dots_leaf_retire_conflicting_brew_leaf >/dev/null 2>&1; then
-	_dots_leaf_retire_conflicting_brew_leaf
-fi
-
-# Profile-aware groups (brew/groups/*.Brewfile or Linux native maps)
-if ! dots_provision_packages; then
-	echo "Error: package provisioning failed" >&2
-	exit 1
-fi
-
-# Optional AI/component Brewfiles (explicit --with only)
+echo "=== Optional components ==="
+# Optional AI/component Brewfiles (explicit --with only) + non-brew Herdr
 if command -v brew >/dev/null 2>&1; then
 	brew_failed=0
 	apply_brewfile() {
@@ -413,6 +443,16 @@ if command -v brew >/dev/null 2>&1; then
 	if [[ ${brew_failed} -ne 0 ]]; then
 		echo "Error: optional component Brewfile(s) failed" >&2
 		exit 1
+	fi
+elif has_component herdr; then
+	# Linux native path: official Herdr installer (no Homebrew required)
+	if [[ ${NO_INSTALL:-0} -eq 1 ]]; then
+		if ! command -v herdr >/dev/null 2>&1; then
+			echo "Error: herdr missing (--no-install)" >&2
+			exit 1
+		fi
+	else
+		dots_ensure_herdr || exit 1
 	fi
 fi
 
