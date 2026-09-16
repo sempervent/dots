@@ -49,17 +49,24 @@ if [[ ${#EFFECTIVE_WITH[@]} -eq 0 ]]; then ok "base → []"; else bad "base expe
 resolve_named work
 if [[ ${#EFFECTIVE_WITH[@]} -eq 0 ]]; then ok "work → []"; else bad "work expected [] got ${EFFECTIVE_WITH[*]}"; fi
 
-# HOME exact list
+# HOME set (order-independent; Darwin 15+ equivalence via ai − fluidvoice)
+export DOTS_FORCE_OS=darwin DOTS_FORCE_DARWIN_MAJOR=15
 resolve_named home
-home_got="${EFFECTIVE_WITH[*]}"
-home_want="hermes herdr ollama skills ai-skills drawthings opencode codex cursor images tex"
-if [[ "${home_got}" == "${home_want}" ]]; then ok "home exact list"; else bad "home want='${home_want}' got='${home_got}'"; fi
+home_got="$(printf '%s\n' "${EFFECTIVE_WITH[@]}" | sort | tr '\n' ' ')"
+home_want="$(printf '%s\n' hermes herdr ollama skills ai-skills drawthings opencode codex cursor images tex | sort | tr '\n' ' ')"
+if [[ "${home_got}" == "${home_want}" ]]; then ok "home Darwin set"; else bad "home want='${home_want}' got='${home_got}'"; fi
+unset DOTS_FORCE_OS DOTS_FORCE_DARWIN_MAJOR || true
 
-# ALL from registry (no archify, no dupes)
+# ALL from registry (platform-filtered; no archify, no dupes)
+export DOTS_FORCE_OS=darwin DOTS_FORCE_DARWIN_MAJOR=15
 resolve_named all
 all_count=${#EFFECTIVE_WITH[@]}
-reg_count="$(dots_component_ids_for_all | wc -l | tr -d ' ')"
-if [[ "${all_count}" -eq "${reg_count}" ]]; then ok "all count=${all_count} matches registry"; else bad "all count ${all_count} != registry ${reg_count}"; fi
+# Count supported registry members for this forced platform
+reg_count=0
+while IFS= read -r _cid; do
+  dots_component_supported_here "${_cid}" && reg_count=$((reg_count + 1))
+done < <(dots_component_ids_for_all)
+if [[ "${all_count}" -eq "${reg_count}" ]]; then ok "all count=${all_count} matches platform registry"; else bad "all count ${all_count} != registry ${reg_count}"; fi
 if dots_array_contains archify "${EFFECTIVE_WITH[@]+"${EFFECTIVE_WITH[@]}"}"; then
   bad "all should omit archify"
 else
@@ -69,10 +76,43 @@ fi
 uniq="$(printf '%s\n' "${EFFECTIVE_WITH[@]}" | sort -u | wc -l | tr -d ' ')"
 if [[ "${uniq}" -eq "${all_count}" ]]; then ok "all has no duplicates"; else bad "all has duplicates"; fi
 if ! dots_array_contains cursor "${EFFECTIVE_WITH[@]+"${EFFECTIVE_WITH[@]}"}"; then
-  bad "all should include cursor"
+  bad "all should include cursor on Darwin"
 else
   ok "all includes cursor"
 fi
+if ! dots_array_contains fluidvoice "${EFFECTIVE_WITH[@]+"${EFFECTIVE_WITH[@]}"}"; then
+  bad "all should include fluidvoice on Darwin 15+"
+else
+  ok "all includes fluidvoice"
+fi
+unset DOTS_FORCE_OS DOTS_FORCE_DARWIN_MAJOR || true
+
+# Linux all omits fluidvoice/cursor/codex
+export DOTS_FORCE_OS=linux
+resolve_named all
+if dots_array_contains fluidvoice "${EFFECTIVE_WITH[@]+"${EFFECTIVE_WITH[@]}"}"; then
+  bad "linux all should omit fluidvoice"
+else
+  ok "linux all omits fluidvoice"
+fi
+if dots_array_contains cursor "${EFFECTIVE_WITH[@]+"${EFFECTIVE_WITH[@]}"}"; then
+  bad "linux all should omit cursor"
+else
+  ok "linux all omits cursor"
+fi
+unset DOTS_FORCE_OS || true
+
+# Linux home: AI apps from group that are portable + extras (no cursor/codex)
+export DOTS_FORCE_OS=linux
+resolve_named home
+if dots_array_contains cursor "${EFFECTIVE_WITH[@]+"${EFFECTIVE_WITH[@]}"}"; then
+  bad "linux home should omit cursor"
+else
+  ok "linux home omits cursor"
+fi
+if dots_array_contains herdr "${EFFECTIVE_WITH[@]+"${EFFECTIVE_WITH[@]}"}"; then ok "linux home keeps herdr"; else bad "linux home lost herdr"; fi
+if dots_array_contains hermes "${EFFECTIVE_WITH[@]+"${EFFECTIVE_WITH[@]}"}"; then ok "linux home keeps hermes"; else bad "linux home lost hermes"; fi
+unset DOTS_FORCE_OS || true
 
 # CUSTOM TOML
 tmp="$(mktemp /tmp/dots-profile-XXXXXX.toml)"
@@ -87,6 +127,7 @@ resolve_named "${tmp}"
 if [[ "${EFFECTIVE_WITH[*]}" == "hermes ollama images" ]]; then ok "custom TOML"; else bad "custom got ${EFFECTIVE_WITH[*]}"; fi
 
 # ADDITIONS
+export DOTS_FORCE_OS=darwin DOTS_FORCE_DARWIN_MAJOR=15
 PROFILE_NAME=""; PROFILE_DESC=""; PROFILE_WITH=(); PROFILE_OPEN_APPS=()
 CLI_WITH=(tex); CLI_WITHOUT=(); EFFECTIVE_WITH=()
 file="$(dots_resolve_profile_path home)"
@@ -108,6 +149,7 @@ else
   ok "home --without cursor"
 fi
 if dots_array_contains codex "${EFFECTIVE_WITH[@]}"; then ok "codex remains after removing cursor"; else bad "codex missing unexpectedly"; fi
+unset DOTS_FORCE_OS DOTS_FORCE_DARWIN_MAJOR || true
 
 # UNKNOWN component
 if dots_validate_components "not-a-real-component" 2>/dev/null; then
