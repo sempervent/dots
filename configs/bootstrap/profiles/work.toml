@@ -2,26 +2,16 @@
 # Conservative work-machine template.
 #
 # IMPORTANT: Do NOT infer employer AI policy. Start with NO AI clients.
-# Add approved components explicitly after policy review.
-#
 # Cursor MUST NOT be included without approval.
-#
-# Use: ./bootstrap.sh --profile work
-# Example: ./bootstrap.sh --profile work --with hermes,ollama
-# Or: ./configure.sh  (save as work or a custom path)
 
 [profile]
 name = "work"
 description = "Conservative allowlist — no AI clients by default"
-
-# Explicit allowlist only. Empty = core shell UX, zero AI configuration.
-# Approved examples (uncomment as needed):
-#   "images"
-#   "tex"
-#   "hermes"
-#   "ollama"
-#   "skills"
 with = []
-
-# Do not list Cursor here.
+packages = ["core", "modern", "workstation"]
 open_apps = ["iTerm"]
+
+[runtime]
+multiplexer = "tmux"
+greeting = true
+prompt_stats = false

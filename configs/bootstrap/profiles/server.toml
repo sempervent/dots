@@ -1,0 +1,18 @@
+# configs/bootstrap/profiles/server.toml
+# Headless Linux (or conservative remote) — no GUI, no AI by default.
+#
+# Use: ./bootstrap.sh --profile server
+# Example: ./bootstrap.sh --profile server --with hermes,ollama
+
+[profile]
+name = "server"
+description = "Headless server — core CLI UX, tmux, no GUI/AI by default"
+with = []
+packages = ["core", "modern", "server"]
+open_apps = []
+
+[runtime]
+multiplexer = "tmux"
+greeting = true
+prompt_stats = false
+auto_tmux = true

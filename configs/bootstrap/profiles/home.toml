@@ -1,13 +1,9 @@
 # configs/bootstrap/profiles/home.toml
-# EDITABLE home-machine template. Adjust `with` to your preferred stack.
-#
-# Use: ./bootstrap.sh --profile home
-# Or edit via: ./configure.sh
+# EDITABLE home-machine template.
 
 [profile]
 name = "home"
 description = "Personal workstation — edit before relying on it"
-
 with = [
   "hermes",
   "herdr",
@@ -21,5 +17,10 @@ with = [
   "images",
   "tex",
 ]
-
+packages = ["core", "modern", "workstation", "infra", "media", "gui"]
 open_apps = ["iTerm", "Draw Things", "Cursor"]
+
+[runtime]
+multiplexer = "herdr"
+greeting = true
+prompt_stats = false

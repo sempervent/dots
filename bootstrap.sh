@@ -7,19 +7,24 @@
 #   profile baseline + CLI --with − CLI --without → effective set → setup.sh
 #
 # Examples:
-#   ./bootstrap.sh --profile base
+#   ./bootstrap.sh --profile home
+#   ./bootstrap.sh --profile work
+#   ./bootstrap.sh --profile server
 #   ./bootstrap.sh --profile home --without cursor
 #   ./bootstrap.sh --profile work --with hermes,ollama
-#   ./bootstrap.sh --profile all --dry-run
-#   ./bootstrap.sh --profile ~/.config/dots/profiles/studio.toml
 #   ./bootstrap.sh --profile home --show
+#   ./bootstrap.sh --profile server --dry-run
 set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+# shellcheck source=helpers/toml.sh
+source "${DIR}/helpers/toml.sh"
 # shellcheck source=helpers/components.sh
 source "${DIR}/helpers/components.sh"
 # shellcheck source=helpers/profiles.sh
 source "${DIR}/helpers/profiles.sh"
+# shellcheck source=helpers/packages.sh
+source "${DIR}/helpers/packages.sh"
 
 PROFILE="base"
 DRY_RUN=0
@@ -32,6 +37,11 @@ PROFILE_NAME=""
 PROFILE_DESC=""
 PROFILE_WITH=()
 PROFILE_OPEN_APPS=()
+PROFILE_PACKAGES=()
+PROFILE_RUNTIME_MULTIPLEXER=""
+PROFILE_RUNTIME_GREETING=""
+PROFILE_RUNTIME_PROMPT_STATS=""
+PROFILE_RUNTIME_AUTO_TMUX=""
 EFFECTIVE_WITH=()
 
 usage() {
@@ -41,36 +51,29 @@ Usage: ./bootstrap.sh [options]
 Onboard / refresh a machine using a declarative profile, then invoke setup.sh.
 
 Options:
-  --profile <name|path>  Builtin: base | home | work | all
+  --profile <name|path>  Builtin: base | home | work | server | all | current
                          Or a custom TOML path (absolute, relative, or ~/…)
   --with <list>          Add components onto the profile baseline
   --without <list>       Remove components from the effective set
-  --show                 Print resolved components and exit (no install)
-  --dry-run              Preview (passed through to setup.sh)
-  --check-only           Run scripts/check.sh only (no setup)
+  --show                 Print resolved components/packages/runtime and exit
+  --dry-run              Preview (passed through to setup.sh; no mutations)
+  --check-only           Run scripts/check.sh for the profile (no setup)
   --open-apps            After setup, open selected/installed apps (macOS GUI)
   --no-open              Never open apps (default)
   -h, --help             Show this help
 
-Semantics:
-  profile provides baseline optional components
-  --with adds components
-  --without removes components
-  Final list is printed before execution.
+Happy paths:
+  ./bootstrap.sh --profile home      # personal Mac
+  ./bootstrap.sh --profile work      # employer Mac
+  ./bootstrap.sh --profile server    # headless Linux
+  ./bootstrap.sh --profile base      # minimal core
 
 Policy:
   Profiles are explicit authorization for THAT run.
   Binary presence alone never authorizes configuration.
-  See helpers/ai_consent.sh and README.
+  Homebrew is required on macOS (DOTS does not auto-install it).
 
-Examples:
-  ./bootstrap.sh --profile base
-  ./bootstrap.sh --profile home --dry-run
-  ./bootstrap.sh --profile home --without cursor,codex
-  ./bootstrap.sh --profile work --with hermes,ollama
-  ./bootstrap.sh --profile all --dry-run
-  ./bootstrap.sh --profile ~/.config/dots/profiles/studio.toml --show
-  ./configure.sh
+See README.md for package groups, runtime policy, and local overrides.
 EOF
 }
 
@@ -88,13 +91,25 @@ parse_csv_add() {
 detect_platform() {
   echo "=== Platform ==="
   echo "OS: $(uname -s)  arch: $(uname -m)"
-  if [[ "$(uname -s)" != "Darwin" ]]; then
-    echo "Warn: bootstrap is optimized for macOS; continuing carefully."
-  fi
-  if command -v brew >/dev/null 2>&1; then
-    echo "OK: Homebrew → $(command -v brew)"
+  if [[ "$(uname -s)" == "Darwin" ]]; then
+    if command -v brew >/dev/null 2>&1; then
+      echo "OK: Homebrew → $(command -v brew)"
+    else
+      dots_require_homebrew_macos
+      exit 1
+    fi
   else
-    echo "Note: Homebrew not found. setup.sh will skip brew bundle until brew exists."
+    if command -v brew >/dev/null 2>&1; then
+      echo "OK: Linuxbrew → $(command -v brew)"
+    else
+      local mgr
+      mgr="$(dots_detect_linux_pkg_mgr)"
+      if [[ "${mgr}" == "unknown" ]]; then
+        echo "Error: no supported package manager (apt/pacman/xbps/dnf) and no Homebrew." >&2
+        exit 1
+      fi
+      echo "OK: Linux package manager → ${mgr}"
+    fi
   fi
 }
 
@@ -143,9 +158,13 @@ maybe_open_apps() {
 
 manual_followups() {
   echo ""
-  echo "=== Manual follow-ups (selected components only) ==="
-  echo "• Set iTerm font to JetBrainsMono Nerd Font (Profiles → Text)"
-  echo "• Enable terminal-notifier notification permission if prompted"
+  echo "=== Manual follow-ups ==="
+  if dots_array_contains_pkg gui; then
+    echo "• Set iTerm font to JetBrainsMono Nerd Font (Profiles → Text)"
+  fi
+  if dots_array_contains_pkg workstation && [[ "$(uname -s)" == "Darwin" ]]; then
+    echo "• Enable terminal-notifier notification permission if prompted"
+  fi
   if dots_array_contains hermes "${EFFECTIVE_WITH[@]+"${EFFECTIVE_WITH[@]}"}"; then
     echo "• Authenticate Hermes (hermes login / first-run flow)"
   fi
@@ -161,9 +180,19 @@ manual_followups() {
   if dots_array_contains drawthings "${EFFECTIVE_WITH[@]+"${EFFECTIVE_WITH[@]}"}"; then
     echo "• Ensure Draw Things models are downloaded (GUI or DRAWTHINGS_MODELS_DIR)"
   fi
+  echo "• Edit ~/.config/git/personal and ~/.config/git/work with your identities"
+  echo "• Machine overrides: ~/.config/dots/local.sh"
   if [[ ${#EFFECTIVE_WITH[@]} -eq 0 ]]; then
     echo "• No AI clients selected — no AI auth steps required"
   fi
+}
+
+dots_array_contains_pkg() {
+  local needle="$1" x
+  for x in "${PROFILE_PACKAGES[@]+"${PROFILE_PACKAGES[@]}"}"; do
+    [[ "${x}" == "${needle}" ]] && return 0
+  done
+  return 1
 }
 
 while [[ $# -gt 0 ]]; do
@@ -188,6 +217,7 @@ PROFILE_FILE="$(dots_resolve_profile_path "${PROFILE}")"
 detect_platform
 dots_load_profile_file "${PROFILE_FILE}"
 dots_compute_effective_with
+dots_validate_package_groups "${PROFILE_PACKAGES[@]}" || exit 1
 
 echo ""
 echo "=== Effective optional components (profile + --with − --without) ==="
@@ -196,6 +226,10 @@ if [[ ${#EFFECTIVE_WITH[@]} -eq 0 ]]; then
 else
   printf '  %s\n' "${EFFECTIVE_WITH[@]}"
 fi
+echo "=== Package groups ==="
+printf '  %s\n' "${PROFILE_PACKAGES[@]}"
+echo "=== Runtime multiplexer ==="
+echo "  ${PROFILE_RUNTIME_MULTIPLEXER:-tmux}"
 dots_warn_cloud_components
 
 if [[ "${SHOW_ONLY}" -eq 1 ]]; then
@@ -205,12 +239,20 @@ if [[ "${SHOW_ONLY}" -eq 1 ]]; then
 fi
 
 if [[ "${CHECK_ONLY}" -eq 1 ]]; then
-  echo "=== check-only ==="
-  exec "${DIR}/scripts/check.sh"
+  echo "=== check-only (profile=${PROFILE_NAME}) ==="
+  exec "${DIR}/scripts/check.sh" --profile "${PROFILE_NAME}"
 fi
 
-SETUP_ARGS=()
+# Persist runtime policy before setup so shells see it after install
+dots_write_runtime_policy "${PROFILE_FILE}"
+
+SETUP_ARGS=(--profile "${PROFILE_NAME}")
 [[ "${DRY_RUN}" -eq 1 ]] && SETUP_ARGS+=(--dry-run)
+if [[ ${#PROFILE_PACKAGES[@]} -gt 0 ]]; then
+  IFS=','
+  SETUP_ARGS+=(--packages "${PROFILE_PACKAGES[*]}")
+  unset IFS
+fi
 if [[ ${#EFFECTIVE_WITH[@]} -gt 0 ]]; then
   IFS=','
   SETUP_ARGS+=(--with "${EFFECTIVE_WITH[*]}")
@@ -221,14 +263,29 @@ echo ""
 echo "=== Invoking setup.sh ${SETUP_ARGS[*]:-} ==="
 "${DIR}/setup.sh" "${SETUP_ARGS[@]+"${SETUP_ARGS[@]}"}"
 
+CHECK_STATUS=0
 if [[ "${DRY_RUN}" -eq 0 ]]; then
-  echo "=== Verification ==="
-  "${DIR}/scripts/check.sh" || true
+  echo "=== Verification (profile=${PROFILE_NAME}) ==="
+  if ! "${DIR}/scripts/check.sh" --profile "${PROFILE_NAME}"; then
+    CHECK_STATUS=1
+  fi
 fi
 
 maybe_open_apps
 manual_followups
 
 echo ""
-echo "Bootstrap complete (profile=${PROFILE_NAME:-${PROFILE}}$([ "${DRY_RUN}" -eq 1 ] && echo ', dry-run'))."
-echo "Consent model: binary presence ≠ configuration authorization."
+if [[ "${DRY_RUN}" -eq 1 ]]; then
+  echo "Bootstrap dry-run finished (profile=${PROFILE_NAME}). No health-check gate."
+  exit 0
+fi
+
+if [[ "${CHECK_STATUS}" -eq 0 ]]; then
+  echo "Bootstrap complete: profile contract satisfied (profile=${PROFILE_NAME})."
+  echo "Consent model: binary presence ≠ configuration authorization."
+  exit 0
+else
+  echo "Bootstrap FAILED: required health checks failed (profile=${PROFILE_NAME})." >&2
+  echo "Fix the errors above, then re-run: ./bootstrap.sh --profile ${PROFILE_NAME}" >&2
+  exit 1
+fi
