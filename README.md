@@ -43,18 +43,35 @@ Preview without installing:
 | `server` | core, modern, server | **Herdr** (no AI providers) | tmux | no |
 | `all` | full workstation | all optional | tmux | yes |
 
-**Prerequisites:** `bash` and **Python ≥ 3.11** (stdlib `tomllib`). Preferred
-provisioned interpreter is **Python 3.12+** via Homebrew (`python@3.12`) on macOS,
-or the distribution’s `python3.11`/`python3.12` on Linux. System Python and shell
-aliases are never replaced; DOTS selects an interpreter only for its own TOML
-operations. `--show` / `--dry-run` never install Python — they report what would
-be provisioned.
+**Irreducible bootstrap seed** (DOTS cannot create these for you):
 
-**macOS Homebrew policy:** Homebrew is required for package install. DOTS does
-**not** auto-install it. If missing, bootstrap exits with the install command
-and asks you to re-run. `--show` works without Homebrew.
+```text
+a supported OS (macOS or Linux)
+/bin/bash able to start bootstrap.sh / setup.sh
+network connectivity for official installers/packages
+OS elevation (root or sudo) when system packages require it
+```
 
-**Linux servers:** native `apt` / `pacman` / `xbps` / `dnf` (no Homebrew required).
+Everything else declared by the selected profile is provisioned automatically:
+
+| Requirement | How DOTS installs it |
+|-------------|----------------------|
+| Apple CLT (macOS) | official `xcode-select --install` |
+| Homebrew (macOS) | official Homebrew installer (HTTPS) |
+| Python ≥3.11 | Homebrew `python@3.12` or apt/pacman/xbps/dnf |
+| Profile packages | brew groups or native Linux maps |
+| Herdr | `brew install herdr` or official `https://herdr.dev/install.sh` |
+
+`--show` / `--dry-run` never mutate — they report Stage 0 actions such as
+`Would install Homebrew` / `Would install Python 3.12`.
+
+Managed hosts that prohibit package installs:
+
+```bash
+./bootstrap.sh --profile work --no-install
+```
+
+**Linux servers:** native `apt` / `pacman` / `xbps` / `dnf` (Homebrew not required).
 `tmux` and `herdr` are both first-class on the server profile; Herdr does **not**
 authorize Hermes, Codex, Cursor, Ollama, or any other provider.
 

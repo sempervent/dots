@@ -42,6 +42,11 @@ cursor_resolve_upstream_bin() {
 ensure_cursor_agent_links() {
   local upstream
   if ! upstream="$(cursor_resolve_upstream_bin)"; then
+    if [[ "${DRY_RUN}" -eq 1 ]]; then
+      echo "[dry-run] would install Cursor Agent CLI via Brewfile.cursor (or official installer)"
+      echo "[dry-run] link ${DOTS_CURSOR_AGENT_BIN} → upstream cursor-agent"
+      return 0
+    fi
     echo "Error: cursor-agent binary not found after Brewfile.cursor" >&2
     return 1
   fi
