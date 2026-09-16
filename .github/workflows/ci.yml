@@ -6,146 +6,34 @@ on:
   pull_request:
 
 jobs:
-  lint-and-profiles:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-
-      - name: Install shellcheck + shfmt
-        run: |
-          sudo apt-get update -qq
-          # ripgrep: test harnesses use `rg`
-          # zsh: runtime_precedence_test covers Bash + Zsh init paths
-          sudo apt-get install -y shellcheck ripgrep zsh
-          curl -fsSL https://github.com/mvdan/sh/releases/download/v3.8.0/shfmt_v3.8.0_linux_amd64 -o /tmp/shfmt
-          chmod +x /tmp/shfmt
-          sudo mv /tmp/shfmt /usr/local/bin/shfmt
-
-      - name: ShellCheck (strict gate)
-        run: |
-          # Intentional SC1091 disables live in sourced helpers for dynamic paths.
-          shellcheck -x -e SC1091,SC2011,SC2016,SC1007,SC2034 \
-            bootstrap.sh \
-            helpers/toml.sh helpers/packages.sh helpers/links.sh \
-            helpers/git_config.sh helpers/profiles.sh helpers/components.sh \
-            helpers/bootstrap_prereqs.sh helpers/python_runtime.sh \
-            shell/runtime.sh shell/fnm.sh shell/exports.sh \
-            scripts/tests/runtime_precedence_test.sh \
-            scripts/tests/dry_run_test.sh \
-            scripts/tests/bootstrap_test.sh \
-            scripts/profile_resolution_test.sh
-
-      - name: shfmt check
-        run: |
-          shfmt -d -s \
-            bootstrap.sh \
-            helpers/packages.sh helpers/links.sh helpers/git_config.sh \
-            helpers/toml.sh helpers/bootstrap_prereqs.sh \
-            shell/runtime.sh shell/fnm.sh
-
-      - name: Profile --show (all builtins)
-        run: |
-          ./bootstrap.sh --profile base --show
-          ./bootstrap.sh --profile home --show
-          ./bootstrap.sh --profile work --show
-          ./bootstrap.sh --profile server --show
-          ./bootstrap.sh --profile all --show
-
-      - name: Profile resolution + provider isolation
-        run: |
-          bash scripts/profile_resolution_test.sh
-          bash scripts/provider_isolation_test.sh
-          bash scripts/tests/custom_profile_test.sh
-          bash scripts/tests/component_supergroups_test.sh
-          bash scripts/tests/multiplexer_nesting_test.sh
-          bash scripts/tests/stage0_prereqs_test.sh
-          bash scripts/tests/provider_mapping_test.sh
-
-      - name: Bootstrap + setup dry-run
-        run: |
-          ./bootstrap.sh --profile server --dry-run
-          ./setup.sh --dry-run
-          ./setup.sh --dry-run --with herdr
-          ./setup.sh --dry-run --with hermes,ollama
-          ./setup.sh --dry-run --with ai
-          ./setup.sh --dry-run --profile base --packages core,modern
-          # Explicit unsupported component must fail on Linux
-          if ./setup.sh --dry-run --with fluidvoice; then
-            echo "expected fluidvoice to fail on Linux" >&2
-            exit 1
-          fi
-
-      - name: Runtime precedence / dry-run / links / git / transitions
-        run: |
-          bash scripts/tests/runtime_precedence_test.sh
-          bash scripts/tests/dry_run_test.sh
-          bash scripts/tests/link_manifest_test.sh
-          bash scripts/tests/git_identity_test.sh
-          bash scripts/tests/provider_transition_test.sh
-          bash scripts/tests/bootstrap_test.sh
-          bash scripts/tests/profile_transition_test.sh
-          bash scripts/tests/idempotence_test.sh
-          bash scripts/tests/check_contract_test.sh
-          bash scripts/tests/shell_startup_test.sh
-          bash scripts/tests/python_runtime_test.sh
+      - name: Prepare runner
+        run: ./scripts/ci/prepare_runner.sh
+      - name: Lint
+        run: ./scripts/ci/lint.sh
+      - name: Test
+        run: ./scripts/ci/test.sh
 
   linux-distros:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        # Prefer official Void OCI images (ghcr). Docker Hub voidlinux/voidlinux
-        # still points at alpha.de.repo.voidlinux.org whose TLS cert no longer matches.
         image:
           - "ubuntu:24.04"
           - "archlinux:latest"
           - "ghcr.io/void-linux/void-glibc:latest"
     steps:
       - uses: actions/checkout@v7
-      - name: Profile show + dry-run inside ${{ matrix.image }}
-        run: |
-          docker run --rm -v "$PWD:/dots:ro" -w /dots "${{ matrix.image }}" sh -c '
-            set -e
-            if command -v apt-get >/dev/null 2>&1; then
-              apt-get update -qq
-              DEBIAN_FRONTEND=noninteractive apt-get install -y -qq python3 bash >/dev/null
-            elif command -v pacman >/dev/null 2>&1; then
-              # Docker/CI: alpm sandbox can fail under nested virtualization
-              grep -q "^DisableSandbox" /etc/pacman.conf || echo DisableSandbox >> /etc/pacman.conf
-              pacman -Sy --noconfirm python bash >/dev/null
-            elif command -v xbps-install >/dev/null 2>&1; then
-              # Ensure repo URL is the current default mirror (not legacy alpha.de).
-              mkdir -p /etc/xbps.d
-              printf "%s\n" "repository=https://repo-default.voidlinux.org/current" \
-                > /etc/xbps.d/00-repository-main.conf
-              # Old container CA bundles may need a one-shot peer-verify bypass
-              # to refresh ca-certificates; packages remain signature-checked.
-              export SSL_NO_VERIFY_PEER=1
-              xbps-install -Syu xbps ca-certificates >/dev/null
-              unset SSL_NO_VERIFY_PEER
-              xbps-install -Sy python3 bash >/dev/null
-            fi
-            command -v python3
-            command -v bash
-            bash ./bootstrap.sh --profile server --show
-            bash ./bootstrap.sh --profile server --dry-run
-          '
+      - name: Distro smoke (${{ matrix.image }})
+        run: ./scripts/ci/distro_smoke.sh "${{ matrix.image }}"
 
   macos-smoke:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
-      - name: /bin/bash profile show
-        run: |
-          /bin/bash ./bootstrap.sh --profile work --show
-          /bin/bash ./bootstrap.sh --profile home --show
-          /bin/bash ./bootstrap.sh --profile server --show
-      - name: Dry-run + runtime tests
-        run: |
-          /bin/bash ./bootstrap.sh --profile work --dry-run
-          /bin/bash ./setup.sh --dry-run --with ai
-          /bin/bash ./setup.sh --dry-run --with fluidvoice
-          brew info --cask fluidvoice || true
-          bash scripts/tests/runtime_precedence_test.sh
-          bash scripts/tests/dry_run_test.sh
-          bash scripts/tests/component_supergroups_test.sh
+      - name: macOS smoke
+        run: ./scripts/ci/macos_smoke.sh
