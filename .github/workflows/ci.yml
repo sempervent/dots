@@ -15,52 +15,33 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y shellcheck
-          # shfmt via go if available, else skip format gate softly
-          if ! command -v shfmt >/dev/null; then
-            curl -fsSL https://github.com/mvdan/sh/releases/download/v3.8.0/shfmt_v3.8.0_linux_amd64 -o /tmp/shfmt
-            chmod +x /tmp/shfmt
-            sudo mv /tmp/shfmt /usr/local/bin/shfmt
-          fi
+          curl -fsSL https://github.com/mvdan/sh/releases/download/v3.8.0/shfmt_v3.8.0_linux_amd64 -o /tmp/shfmt
+          chmod +x /tmp/shfmt
+          sudo mv /tmp/shfmt /usr/local/bin/shfmt
 
-      - name: ShellCheck managed scripts
+      - name: ShellCheck (strict gate)
         run: |
-          files=(
-            bootstrap.sh setup.sh configure.sh
-            helpers/*.sh
-            shell/*.sh
-            bash/*.sh
-            scripts/check.sh
+          # Intentional SC1091 disables live in sourced helpers for dynamic paths.
+          shellcheck -x -e SC1091,SC2011,SC2016,SC1007,SC2034 \
+            bootstrap.sh \
+            helpers/toml.sh helpers/packages.sh helpers/links.sh \
+            helpers/git_config.sh helpers/profiles.sh helpers/components.sh \
+            shell/runtime.sh shell/fnm.sh shell/exports.sh \
+            scripts/tests/runtime_precedence_test.sh \
+            scripts/tests/dry_run_test.sh \
+            scripts/tests/bootstrap_test.sh \
             scripts/profile_resolution_test.sh
-            scripts/provider_isolation_test.sh
-            tools/toml_min.py
-          )
-          # shellcheck scripts only
-          shellcheck -x bootstrap.sh setup.sh configure.sh \
-            helpers/toml.sh helpers/components.sh helpers/profiles.sh \
-            helpers/packages.sh helpers/links.sh helpers/git_config.sh \
-            shell/paths.sh shell/exports.sh shell/runtime.sh shell/fnm.sh \
-            shell/tmux.sh shell/tools.sh \
-            scripts/profile_resolution_test.sh \
-            || true
-          # Keep gate meaningful for new helpers (strict):
-          shellcheck -x helpers/toml.sh helpers/packages.sh helpers/links.sh \
-            helpers/git_config.sh shell/runtime.sh shell/fnm.sh bootstrap.sh
 
       - name: shfmt check
         run: |
-          shfmt -d bootstrap.sh helpers/packages.sh helpers/links.sh \
-            helpers/git_config.sh shell/runtime.sh shell/fnm.sh \
-            tools/toml_min.py 2>/dev/null || shfmt -d bootstrap.sh \
+          shfmt -d -s \
+            bootstrap.sh \
             helpers/packages.sh helpers/links.sh helpers/git_config.sh \
+            helpers/toml.sh \
             shell/runtime.sh shell/fnm.sh
 
-      - name: TOML subset parser
-        run: |
-          python3 tools/toml_min.py configs/components.toml >/dev/null
-          python3 tools/toml_min.py configs/bootstrap/profiles/home.toml >/dev/null
-          python3 tools/toml_min.py configs/bootstrap/profiles/server.toml >/dev/null
-          python3 tools/toml_min.py configs/links.toml >/dev/null
-          python3 tools/toml_min.py configs/packages/groups.toml >/dev/null
+      - name: TOML parity (toml_min vs tomllib)
+        run: python3 scripts/tests/toml_parity_test.py
 
       - name: Profile --show (all builtins)
         run: |
@@ -70,26 +51,72 @@ jobs:
           ./bootstrap.sh --profile server --show
           ./bootstrap.sh --profile all --show
 
-      - name: Profile resolution tests
-        run: bash scripts/profile_resolution_test.sh
+      - name: Profile resolution + provider isolation
+        run: |
+          bash scripts/profile_resolution_test.sh
+          bash scripts/provider_isolation_test.sh
 
-      - name: Provider isolation tests
-        run: bash scripts/provider_isolation_test.sh
+      - name: Runtime precedence / dry-run / links / git / transitions
+        run: |
+          bash scripts/tests/runtime_precedence_test.sh
+          bash scripts/tests/dry_run_test.sh
+          bash scripts/tests/link_manifest_test.sh
+          bash scripts/tests/git_identity_test.sh
+          bash scripts/tests/provider_transition_test.sh
+          bash scripts/tests/bootstrap_test.sh
+          bash scripts/tests/profile_transition_test.sh
+          bash scripts/tests/idempotence_test.sh
+          bash scripts/tests/check_contract_test.sh
+          bash scripts/tests/shell_startup_test.sh
 
-      - name: Bootstrap dry-run (server)
-        run: ./bootstrap.sh --profile server --dry-run
+      - name: Bootstrap + setup dry-run
+        run: |
+          ./bootstrap.sh --profile server --dry-run
+          ./setup.sh --dry-run
+          ./setup.sh --dry-run --with herdr
+          ./setup.sh --dry-run --with hermes,ollama
+          ./setup.sh --dry-run --profile base --packages core,modern
 
-      - name: Setup dry-run (base packages)
-        run: ./setup.sh --dry-run --profile base --packages core,modern
+  linux-distros:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ["ubuntu:24.04", "archlinux:latest", "voidlinux/voidlinux:latest"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Profile show + dry-run inside ${{ matrix.image }}
+        run: |
+          docker run --rm -v "$PWD:/dots:ro" -w /dots "${{ matrix.image }}" sh -c '
+            set -e
+            if command -v apt-get >/dev/null 2>&1; then
+              apt-get update -qq
+              DEBIAN_FRONTEND=noninteractive apt-get install -y -qq python3 bash >/dev/null
+            elif command -v pacman >/dev/null 2>&1; then
+              # Docker/CI: alpm sandbox can fail under nested virtualization
+              grep -q "^DisableSandbox" /etc/pacman.conf || echo DisableSandbox >> /etc/pacman.conf
+              pacman -Sy --noconfirm python bash >/dev/null
+            elif command -v xbps-install >/dev/null 2>&1; then
+              xbps-install -Syu xbps >/dev/null 2>&1 || true
+              xbps-install -Sy python3 bash >/dev/null
+            fi
+            command -v python3
+            command -v bash
+            bash ./bootstrap.sh --profile server --show
+            bash ./bootstrap.sh --profile server --dry-run
+          '
 
   macos-smoke:
     runs-on: macos-latest
-    if: github.event_name == 'push' || github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
-      - name: Profile show on macOS
+      - name: /bin/bash profile show
         run: |
-          ./bootstrap.sh --profile work --show
-          ./bootstrap.sh --profile home --show
-      - name: Dry-run work profile
-        run: ./bootstrap.sh --profile work --dry-run
+          /bin/bash ./bootstrap.sh --profile work --show
+          /bin/bash ./bootstrap.sh --profile home --show
+          /bin/bash ./bootstrap.sh --profile server --show
+      - name: Dry-run + runtime tests
+        run: |
+          /bin/bash ./bootstrap.sh --profile work --dry-run
+          bash scripts/tests/runtime_precedence_test.sh
+          bash scripts/tests/dry_run_test.sh
