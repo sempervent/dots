@@ -1,59 +1,71 @@
-# configs/packages/groups.toml — logical package groups (platform-neutral ids)
+# configs/packages/groups.toml — logical package groups with explicit required/optional
 #
-# Each group lists portable tool ids. Platform maps in apt/pacman/xbps/dnf.toml
-# translate ids → native package names. Unknown ids fail provisioning.
+# required: must be present after install for the profile contract (ERROR if missing)
+# optional: nice-to-have; WARN if missing; may be SKIP on some package managers
+# Platform maps (apt/pacman/…) translate ids → native names; empty = cannot install via mgr
 
 version = 1
 
 [[groups]]
 name = "core"
 description = "Portable essentials"
-tools = [
+required = [
   "bash", "zsh", "tmux", "git", "curl", "wget", "jq",
-  "ripgrep", "fd", "fzf", "shellcheck", "neovim",
-  "fnm", "starship", "rsync",
+  "ripgrep", "fd", "fzf", "neovim", "rsync",
+]
+optional = [
+  "shellcheck", "fnm", "starship",
 ]
 
 [[groups]]
 name = "modern"
 description = "Shared ergonomic CLI"
-tools = [
-  "eza", "bat", "zoxide", "direnv", "atuin", "lazygit",
-  "htop", "btop", "yq", "uv", "gh", "just", "git-delta",
-  "tree", "leaf",
+required = [
+  "bat", "zoxide", "direnv", "htop", "tree",
+]
+optional = [
+  "eza", "atuin", "lazygit", "btop", "yq", "uv", "gh", "just",
+  "git-delta", "leaf",
 ]
 
 [[groups]]
 name = "workstation"
 description = "Desktop-user tools (not headless)"
-tools = [
-  "terminal-notifier", "ranger", "chafa", "poppler",
+required = [
+  "ranger",
+]
+optional = [
+  "terminal-notifier", "chafa", "poppler",
 ]
 
 [[groups]]
 name = "infra"
 description = "Containers / k8s / terraform"
-tools = [
+required = []
+optional = [
   "docker", "docker-compose", "helm", "k9s", "terraform",
 ]
 
 [[groups]]
 name = "media"
 description = "Image / video processing"
-tools = [
+required = []
+optional = [
   "ffmpeg", "imagemagick", "exiftool",
 ]
 
 [[groups]]
 name = "gui"
 description = "macOS GUI / fonts"
-tools = [
+required = [
   "font-jetbrains-mono-nerd-font",
 ]
+optional = []
 
 [[groups]]
 name = "server"
 description = "Headless extras"
-tools = [
+required = [
   "htop",
 ]
+optional = []

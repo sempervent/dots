@@ -109,9 +109,7 @@ esac
 [[ -f "${HOME}/.cargo/env" ]] && source "${HOME}/.cargo/env"
 # 1}}}
 
-# Machine-local overrides (canonical shared Bash+Zsh contract)
-[[ -f "${HOME}/.config/dots/local.sh" ]] && source "${HOME}/.config/dots/local.sh"
-# Compatibility
+# local.sh is applied in shell/runtime.sh (process-env lock). Legacy zsh-only file:
 [[ -f "${HOME}/.zshrc.local" ]] && source "${HOME}/.zshrc.local"
 
 # Multiplexer auto-start (tmux | herdr | none) {{{1

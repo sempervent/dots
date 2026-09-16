@@ -27,6 +27,8 @@ source "${DOTS_DIR}/helpers/toml.sh"
 source "${DOTS_DIR}/helpers/components.sh"
 # shellcheck source=../helpers/profiles.sh
 source "${DOTS_DIR}/helpers/profiles.sh"
+# shellcheck source=../helpers/packages.sh
+source "${DOTS_DIR}/helpers/packages.sh"
 
 ok() { echo -e "${GREEN}✓${NC} $1"; PASSED=$((PASSED + 1)); }
 warn() { echo -e "${YELLOW}⚠${NC} $1"; WARNINGS=$((WARNINGS + 1)); }
@@ -127,15 +129,58 @@ if bash -n "${SYM_DIR}/bashrc" 2>/dev/null; then ok "bashrc syntax"; else fail "
 if zsh -n "${SYM_DIR}/zshrc" 2>/dev/null; then ok "zshrc syntax"; else fail "zshrc syntax"; fi
 if zsh -n "${SYM_DIR}/zprofile" 2>/dev/null; then ok "zprofile syntax"; else fail "zprofile syntax"; fi
 
-echo -e "\n${BLUE}Node / fnm (default)${NC}"
+# Required CLI tools for selected package groups (profile-aware)
+echo -e "\n${BLUE}Required tools (profile groups)${NC}"
+DOTS_RESOLVED_GROUPS=("${PROFILE_PACKAGES[@]+"${PROFILE_PACKAGES[@]}"}")
+if [[ ${#DOTS_RESOLVED_GROUPS[@]} -eq 0 ]]; then
+  dots_resolve_package_groups || true
+fi
+while IFS= read -r _tool; do
+  [[ -z "${_tool}" ]] && continue
+  _cmd="${_tool}"
+  case "${_tool}" in
+    ripgrep) _cmd=rg ;;
+    fd) _cmd=fd; command -v fd >/dev/null 2>&1 || _cmd=fdfind ;;
+    git-delta) _cmd=delta ;;
+    font-jetbrains-mono-nerd-font) continue ;;
+    terminal-notifier)
+      if [[ "$(uname -s)" != "Darwin" ]]; then
+        info "terminal-notifier not applicable on $(uname -s)"
+        continue
+      fi
+      ;;
+    docker-compose) _cmd=docker ;;
+  esac
+  if command -v "${_cmd}" >/dev/null 2>&1; then
+    ok "required ${_tool}"
+  else
+    fail "required tool missing: ${_tool}"
+  fi
+done < <(dots_tools_for_groups required 2>/dev/null || true)
+
+while IFS= read -r _tool; do
+  [[ -z "${_tool}" ]] && continue
+  _cmd="${_tool}"
+  case "${_tool}" in
+    ripgrep) _cmd=rg ;;
+    fd) _cmd=fd; command -v fd >/dev/null 2>&1 || _cmd=fdfind ;;
+    git-delta) _cmd=delta ;;
+    font-jetbrains-mono-nerd-font) continue ;;
+    terminal-notifier)
+      [[ "$(uname -s)" != "Darwin" ]] && continue
+      ;;
+  esac
+  if command -v "${_cmd}" >/dev/null 2>&1; then
+    ok "optional ${_tool}"
+  else
+    warn "optional tool missing: ${_tool}"
+  fi
+done < <(dots_tools_for_groups optional 2>/dev/null || true)
+echo -e "\n${BLUE}Node / fnm${NC}"
 if command -v fnm >/dev/null 2>&1; then
   ok "fnm $(fnm --version 2>/dev/null | head -1)"
 else
-  if profile_has_group gui || profile_has_group workstation || [[ "$(uname -s)" == "Darwin" ]]; then
-    fail "fnm missing (required for this profile/platform)"
-  else
-    warn "fnm missing (optional on headless Linux until installed manually)"
-  fi
+  warn "fnm missing (optional per package policy; install via brew/curl when needed)"
 fi
 if command -v node >/dev/null 2>&1; then
   ok "node $(node --version 2>/dev/null) @ $(command -v node)"

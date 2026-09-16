@@ -311,11 +311,13 @@ export DOTS_PROFILE DOTS_MULTIPLEXER DOTS_GREETING DOTS_PROMPT_STATS DOTS_AUTO_T
 EOF
 
   cat >"${active}" <<EOF
-# Last bootstrap profile selection (non-secret)
+# Last bootstrap profile selection (non-secret).
+# DOTS_EFFECTIVE_WITH is informational only — NOT configuration consent.
+# AI consent remains invocation-scoped via setup.sh --with for that run.
 DOTS_PROFILE='${PROFILE_NAME:-unknown}'
 DOTS_PROFILE_FILE='${profile_file}'
 DOTS_PACKAGE_GROUPS='${PROFILE_PACKAGES[*]}'
-DOTS_EFFECTIVE_WITH='${EFFECTIVE_WITH[*]:-}'
+DOTS_LAST_WITH_INFO='${EFFECTIVE_WITH[*]:-}'
 EOF
 
   # Seed local.sh once (never overwrite)

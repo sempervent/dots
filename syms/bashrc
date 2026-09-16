@@ -136,10 +136,8 @@ if [ -z "${TMUX:-}" ] || [ -n "${SSH_TTY:-}" ]; then
 fi
 # 1}}}
 
-# Optional per-machine overrides (canonical: ~/.config/dots/local.sh)
-# shellcheck disable=SC1091
-[ -f "${HOME}/.config/dots/local.sh" ] && . "${HOME}/.config/dots/local.sh"
-# Compatibility: legacy bash-only local file
+# Machine-local overrides are applied in shell/runtime.sh (with process-env lock).
+# Legacy bash-only local file still sourced late for compatibility.
 # shellcheck disable=SC1091
 [ -f "${HOME}/.bash_aliases" ] && . "${HOME}/.bash_aliases"
 # shellcheck disable=SC1091

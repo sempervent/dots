@@ -118,6 +118,8 @@ def loads(text):
         m = re.match(r"^\[\[([A-Za-z0-9_.-]+)\]\]\s*(?:#.*)?$", stripped)
         if m:
             name = m.group(1)
+            if "." in name:
+                raise ValueError("dotted array-of-tables names unsupported: %r" % (name,))
             if name not in root or not isinstance(root[name], list):
                 root[name] = []
             current = {}
@@ -127,6 +129,8 @@ def loads(text):
         m = re.match(r"^\[([A-Za-z0-9_.-]+)\]\s*(?:#.*)?$", stripped)
         if m:
             name = m.group(1)
+            if "." in name:
+                raise ValueError("dotted table names unsupported: %r (use nested tables)" % (name,))
             if name not in root or not isinstance(root[name], dict):
                 root[name] = {}
             current = root[name]
