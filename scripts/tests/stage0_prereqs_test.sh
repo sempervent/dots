@@ -23,11 +23,13 @@ source "$ROOT/helpers/python_runtime.sh"
 
 echo "=== Stage 0 prerequisite tests ==="
 
-# Existing brew detection (this machine likely has brew)
+# Existing brew detection (this machine likely has brew on macOS / sometimes Linuxbrew on CI)
 if brew_bin="$(dots_find_brew)"; then
 	ok "dots_find_brew locates brew ($brew_bin)"
+elif [[ "$(uname -s)" == "Darwin" ]]; then
+	bad "dots_find_brew failed on Darwin (Homebrew expected)"
 else
-	bad "dots_find_brew failed on this host"
+	ok "brew absent on Linux host (native pkg mgr OK)"
 fi
 
 # Homebrew present but not on PATH
@@ -69,8 +71,18 @@ SHOW_ONLY=0 DRY_RUN=1
 dots_find_brew() { return 1; }
 dots_apple_clt_present() { return 1; }
 dots_stage0_python_present() { return 1; }
-out="$(dots_ensure_apple_clt 2>&1)"
-echo "$out" | grep -q 'Would install Apple Command Line Tools' && ok "dry-run CLT announce" || bad "CLT dry-run: $out"
+if [[ "$(uname -s)" == "Darwin" ]]; then
+	out="$(dots_ensure_apple_clt 2>&1)"
+	echo "$out" | grep -q 'Would install Apple Command Line Tools' && ok "dry-run CLT announce" || bad "CLT dry-run: $out"
+else
+	# CLT is Darwin-only; ensure Linux is a no-op
+	out="$(dots_ensure_apple_clt 2>&1)"
+	if [[ -z ${out} ]]; then
+		ok "CLT ensure is no-op on Linux"
+	else
+		bad "CLT ensure should be silent on Linux: $out"
+	fi
+fi
 out="$(dots_ensure_homebrew 2>&1)"
 echo "$out" | grep -q 'Would install Homebrew from official' && ok "dry-run Homebrew announce" || bad "brew dry-run: $out"
 # Ensure download was not attempted — override curl to fail loudly if called
