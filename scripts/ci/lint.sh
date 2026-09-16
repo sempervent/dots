@@ -11,6 +11,7 @@ SCRIPTS=(
 	bootstrap.sh
 	setup.sh
 	configure.sh
+	dots
 	helpers/toml.sh
 	helpers/packages.sh
 	helpers/links.sh
@@ -23,6 +24,9 @@ SCRIPTS=(
 	helpers/models.sh
 	helpers/model_providers.sh
 	helpers/optional_components.sh
+	helpers/ui.sh
+	helpers/state.sh
+	helpers/wizard.sh
 	shell/runtime.sh
 	shell/fnm.sh
 	shell/exports.sh
@@ -39,6 +43,8 @@ SCRIPTS=(
 	scripts/tests/component_supergroups_test.sh
 	scripts/tests/model_policy_test.sh
 	scripts/tests/model_plan_test.sh
+	scripts/tests/dots_cli_test.sh
+	scripts/tests/dots_wizard_test.sh
 )
 
 missing=0
@@ -57,10 +63,11 @@ shellcheck -x -e SC1091,SC2011,SC2016,SC1007,SC2034,SC2015,SC2317,SC2119,SC2329,
 
 echo "=== shfmt ==="
 shfmt -d -s \
-	bootstrap.sh setup.sh configure.sh \
+	bootstrap.sh setup.sh configure.sh dots \
 	helpers/packages.sh helpers/links.sh helpers/git_config.sh \
 	helpers/toml.sh helpers/bootstrap_prereqs.sh \
 	helpers/hardware.sh helpers/models.sh helpers/model_providers.sh \
+	helpers/ui.sh helpers/state.sh helpers/wizard.sh \
 	shell/runtime.sh shell/fnm.sh \
 	scripts/pull_models.sh \
 	scripts/ci/prepare_runner.sh \

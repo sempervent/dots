@@ -56,4 +56,8 @@ echo "=== Model policy (mocked; no downloads) ==="
 run scripts/tests/model_policy_test.sh
 run scripts/tests/model_plan_test.sh
 
+echo "=== Unified ./dots CLI + wizard ==="
+run scripts/tests/dots_cli_test.sh
+run scripts/tests/dots_wizard_test.sh
+
 echo "OK: all CI tests passed"
