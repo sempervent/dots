@@ -85,7 +85,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image: ["ubuntu:24.04", "archlinux:latest", "voidlinux/voidlinux:latest"]
+        # Prefer official Void OCI images (ghcr). Docker Hub voidlinux/voidlinux
+        # still points at alpha.de.repo.voidlinux.org whose TLS cert no longer matches.
+        image:
+          - "ubuntu:24.04"
+          - "archlinux:latest"
+          - "ghcr.io/void-linux/void-glibc:latest"
     steps:
       - uses: actions/checkout@v4
       - name: Profile show + dry-run inside ${{ matrix.image }}
@@ -100,7 +105,15 @@ jobs:
               grep -q "^DisableSandbox" /etc/pacman.conf || echo DisableSandbox >> /etc/pacman.conf
               pacman -Sy --noconfirm python bash >/dev/null
             elif command -v xbps-install >/dev/null 2>&1; then
-              xbps-install -Syu xbps >/dev/null 2>&1 || true
+              # Ensure repo URL is the current default mirror (not legacy alpha.de).
+              mkdir -p /etc/xbps.d
+              printf "%s\n" "repository=https://repo-default.voidlinux.org/current" \
+                > /etc/xbps.d/00-repository-main.conf
+              # Old container CA bundles may need a one-shot peer-verify bypass
+              # to refresh ca-certificates; packages remain signature-checked.
+              export SSL_NO_VERIFY_PEER=1
+              xbps-install -Syu xbps ca-certificates >/dev/null
+              unset SSL_NO_VERIFY_PEER
               xbps-install -Sy python3 bash >/dev/null
             fi
             command -v python3
