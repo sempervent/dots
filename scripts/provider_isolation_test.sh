@@ -157,25 +157,41 @@ must_not "ch" "${out}" 'herdr integration install hermes' || ok=0
 [[ "${ok}" -eq 1 ]] && { echo "OK: cursor+herdr"; pass=$((pass+1)); } || fail=$((fail+1))
 
 # --- ai-skills isolation ---
-# Skill manifest uses dotted TOML tables → requires tomllib (Python 3.11+).
-if ! python3 -c 'import tomllib' 2>/dev/null; then
-  echo "SKIP: skill-pack content assertions (tomllib unavailable; dry-run skips resolution)"
+# Skill manifests need tomllib; on hosts without Python ≥3.11, dry-run must
+# announce managed provisioning rather than fail or ask for manual install.
+if ! python3 -c 'import tomllib' 2>/dev/null && ! command -v python3.12 >/dev/null 2>&1 && ! command -v python3.11 >/dev/null 2>&1; then
+  echo "NOTE: no Python ≥3.11 on PATH — expecting dry-run provisioning message"
   out="$(run_capture "\"${SETUP}\" --dry-run --with ai-skills" || true)"
   ok=1
-  must "ai-skip" "${out}" 'Skill packs: ai-skills' || ok=0
-  must "ai-skip" "${out}" 'tomllib unavailable' || ok=0
-  must_not "ai-skip" "${out}" 'Brewfile.cursor' || ok=0
-  [[ "${ok}" -eq 1 ]] && { echo "OK: ai-skills alone (skip path)"; pass=$((pass+1)); } || fail=$((fail+1))
+  must "ai-prov" "${out}" 'Skill packs: ai-skills' || ok=0
+  must "ai-prov" "${out}" 'Would provision Python >=3.11 for:' || ok=0
+  must_not "ai-prov" "${out}" 'Brewfile.cursor' || ok=0
+  [[ "${ok}" -eq 1 ]] && { echo "OK: ai-skills alone (provision announce)"; pass=$((pass+1)); } || fail=$((fail+1))
   out="$(run_capture "\"${SETUP}\" --dry-run --with hermes,skills,ai-skills" || true)"
   ok=1
-  must "hs-skip" "${out}" 'Hermes skill exposure: enabled' || ok=0
-  must_not "hs-skip" "${out}" 'Brewfile.cursor' || ok=0
-  [[ "${ok}" -eq 1 ]] && { echo "OK: hermes+skills+ai-skills (skip path)"; pass=$((pass+1)); } || fail=$((fail+1))
+  must "hs-prov" "${out}" 'Hermes skill exposure: enabled' || ok=0
+  must "hs-prov" "${out}" 'Would provision Python >=3.11 for:' || ok=0
+  must_not "hs-prov" "${out}" 'Brewfile.cursor' || ok=0
+  [[ "${ok}" -eq 1 ]] && { echo "OK: hermes+skills+ai-skills (provision announce)"; pass=$((pass+1)); } || fail=$((fail+1))
   out="$(run_capture "\"${SETUP}\" --dry-run --with cursor,ai-skills" || true)"
   ok=1
-  must "ca-skip" "${out}" 'Cursor Agent CLI' || ok=0
-  must_not "ca-skip" "${out}" 'Brewfile.hermes' || ok=0
-  [[ "${ok}" -eq 1 ]] && { echo "OK: cursor+ai-skills (skip path)"; pass=$((pass+1)); } || fail=$((fail+1))
+  must "ca-prov" "${out}" 'Cursor Agent CLI' || ok=0
+  must "ca-prov" "${out}" 'Would provision Python >=3.11 for:' || ok=0
+  must_not "ca-prov" "${out}" 'Brewfile.hermes' || ok=0
+  [[ "${ok}" -eq 1 ]] && { echo "OK: cursor+ai-skills (provision announce)"; pass=$((pass+1)); } || fail=$((fail+1))
+  out="$(run_capture "\"${BOOT}\" --profile home --dry-run" || true)"
+  ok=1
+  must "home-prov" "${out}" 'Would provision Python >=3.11 for:' || ok=0
+  must_not "home-prov" "${out}" 'Install python3.11+ or omit' || ok=0
+  [[ "${ok}" -eq 1 ]] && { echo "OK: home dry-run announces Python provisioning"; pass=$((pass+1)); } || fail=$((fail+1))
+  out="$(run_capture "\"${BOOT}\" --profile work --dry-run" || true)"
+  ok=1
+  must_not "work-noprov" "${out}" 'Would provision Python >=3.11' || ok=0
+  [[ "${ok}" -eq 1 ]] && { echo "OK: work dry-run does not provision Python 3.11"; pass=$((pass+1)); } || fail=$((fail+1))
+  out="$(run_capture "\"${BOOT}\" --profile server --dry-run" || true)"
+  ok=1
+  must_not "server-noprov" "${out}" 'Would provision Python >=3.11' || ok=0
+  [[ "${ok}" -eq 1 ]] && { echo "OK: server dry-run does not provision Python 3.11"; pass=$((pass+1)); } || fail=$((fail+1))
 else
 out="$(run_capture "\"${SETUP}\" --dry-run --with ai-skills")"
 ok=1
