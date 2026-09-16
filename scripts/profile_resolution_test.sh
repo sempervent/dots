@@ -53,7 +53,7 @@ if [[ ${#EFFECTIVE_WITH[@]} -eq 0 ]]; then ok "work → []"; else bad "work expe
 export DOTS_FORCE_OS=darwin DOTS_FORCE_DARWIN_MAJOR=15
 resolve_named home
 home_got="$(printf '%s\n' "${EFFECTIVE_WITH[@]}" | sort | tr '\n' ' ')"
-home_want="$(printf '%s\n' hermes herdr ollama skills ai-skills drawthings opencode codex cursor images tex | sort | tr '\n' ' ')"
+home_want="$(printf '%s\n' hermes herdr ollama llamacpp skills ai-skills drawthings opencode codex cursor images tex | sort | tr '\n' ' ')"
 if [[ "${home_got}" == "${home_want}" ]]; then ok "home Darwin set"; else bad "home want='${home_want}' got='${home_got}'"; fi
 unset DOTS_FORCE_OS DOTS_FORCE_DARWIN_MAJOR || true
 
