@@ -1,14 +1,13 @@
-# Authoritative Homebrew manifest for dots (macOS / Linuxbrew).
-# Optional AI / agent-skill components live in Brewfile.<component> and are applied by:
-#   ./setup.sh --with herdr,hermes,ollama,archify,skills,drawthings,…
+# Authoritative Homebrew entrypoint for dots.
+# Prefer profile package groups via bootstrap; this file aggregates all
+# workstation groups for bare `./setup.sh` (backward compatible).
 #
-# Notes:
-# - bash-completion@2 (conflicts with bash-completion v1)
-# - moreutils (do NOT add GNU parallel — both ship `parallel`)
-# - No neofetch / git-flow / tldr / openssl@1.1
-# - Node runtime: fnm (not raw brew node / not nvm). Default version: configs/node/default.toml
-# - draw-things-cli is NOT in the default Brewfile; use --with drawthings
+# Groups live in brew/groups/*.Brewfile and are selected by profile:
+#   core | modern | workstation | infra | media | gui | server
+#
+# Optional AI / agent components: brew/Brewfile.<component> via --with
 
+# Core + modern (universal CLI)
 brew "bash"
 brew "bash-completion@2"
 brew "zsh"
@@ -44,33 +43,32 @@ brew "rsync"
 brew "neovim"
 brew "fnm"
 brew "starship"
-brew "terminal-notifier"
-brew "ranger"
-brew "lazygit"
-# Terminal Markdown previewer (binary: leaf). Conflicts with deprecated brew "leaf" reloader.
 brew "leaf-markdown-viewer"
 brew "coreutils"
 brew "findutils"
 brew "gnu-sed"
 
-# Nerd Font for Starship / tmux / Neovim / Herdr / iTerm (glyphs)
-cask "font-jetbrains-mono-nerd-font"
-
-# Preview / media helpers used by Ranger and terminal workflows
-brew "ffmpeg"
-brew "imagemagick"
+# Workstation (skipped on server profile via groups)
+brew "terminal-notifier"
+brew "ranger"
 brew "chafa"
 brew "media-info"
-brew "exiftool"
 brew "poppler"
 
-# Common infra (reproducible workstation; already used locally)
+# Media
+brew "ffmpeg"
+brew "imagemagick"
+brew "exiftool"
+
+# GUI
+cask "font-jetbrains-mono-nerd-font"
+
+# Infra (skipped on base/server by default via groups)
 brew "docker"
 brew "docker-compose"
 brew "docker-buildx"
 brew "helm"
 brew "k9s"
-
 tap "hashicorp/tap"
 brew "hashicorp/tap/terraform"
 brew "terraform-ls"
