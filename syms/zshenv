@@ -1,0 +1,27 @@
+#!/usr/bin/env zsh
+# ~/.zshenv — always sourced (interactive, non-interactive, script).
+# Keep this minimal: PATH only. Interactive UX lives in .zshrc.
+#
+# Ensures ~/.local/bin (img, notify, agent-stats, *-mcp, …) is available
+# even when a new session skips .zshrc (non-interactive / some IDE terminals).
+
+export DOTS_DIR="${DOTS_DIR:-${HOME}/dots}"
+
+# Resolve DOTS_DIR from this file when symlinked from the repo
+if [[ ! -d "${DOTS_DIR}/shell" ]]; then
+  _zshenv_src="${(%):-%N}"
+  if [[ -L "${_zshenv_src}" ]]; then
+    _zshenv_src="$(readlink "${_zshenv_src}")"
+    [[ "${_zshenv_src}" != /* ]] && _zshenv_src="${HOME}/${_zshenv_src}"
+  fi
+  _cand="${_zshenv_src:A:h:h}"
+  if [[ -d "${_cand}/shell" ]]; then
+    export DOTS_DIR="${_cand}"
+  fi
+  unset _zshenv_src _cand
+fi
+
+if [[ -f "${DOTS_DIR}/shell/paths.sh" ]]; then
+  # shellcheck disable=SC1091
+  source "${DOTS_DIR}/shell/paths.sh"
+fi

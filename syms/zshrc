@@ -54,7 +54,8 @@ unset _zshrc_src
 
 # Oh My Zsh + third-party plugins {{{1
 [[ -f "${DOTS_DIR}/zsh/oh-my-zsh.zsh" ]] && source "${DOTS_DIR}/zsh/oh-my-zsh.zsh"
-# Re-assert fnm PATH after OMZ (wins over ~/.local/bin/node)
+# Re-assert brew → ~/.local/bin → rest, then fnm (Node wins over any local shims)
+[[ -f "${DOTS_DIR}/shell/paths.sh" ]] && source "${DOTS_DIR}/shell/paths.sh"
 [[ -f "${DOTS_DIR}/zsh/fnm.zsh" ]] && source "${DOTS_DIR}/zsh/fnm.zsh"
 # 1}}}
 

@@ -53,14 +53,14 @@ declare -a MEDIA_PACKAGES=()
 declare -a FUN_PACKAGES=()
 
 if [[ "$PKG_MGR" == "brew" ]]; then
-  ESSENTIAL_PACKAGES=(tmux vim git bash)
+  ESSENTIAL_PACKAGES=(tmux vim git bash rsync)
   MODERN_PACKAGES=(bat dust fd ripgrep eza zoxide git-delta direnv atuin procs htop)
   DEV_PACKAGES=(jq yq fzf tig lazygit gh shellcheck)
   MEDIA_PACKAGES=(imagemagick ffmpeg)
   FUN_PACKAGES=(figlet fortune cowsay)
   LOLCAT_INSTALL="gem install lolcat"
 elif [[ "$PKG_MGR" == "apt" ]]; then
-  ESSENTIAL_PACKAGES=(tmux vim git bash)
+  ESSENTIAL_PACKAGES=(tmux vim git bash rsync)
   MODERN_PACKAGES=(bat fd-find ripgrep eza zoxide direnv htop)
   DEV_PACKAGES=(jq yq fzf tig lazygit gh)
   MEDIA_PACKAGES=(imagemagick ffmpeg)
@@ -69,7 +69,7 @@ elif [[ "$PKG_MGR" == "apt" ]]; then
   CARGO_PACKAGES=(dust procs)
   LOLCAT_INSTALL="gem install lolcat"
 elif [[ "$PKG_MGR" == "yay" ]] || [[ "$PKG_MGR" == "pacman" ]]; then
-  ESSENTIAL_PACKAGES=(tmux vim git bash)
+  ESSENTIAL_PACKAGES=(tmux vim git bash rsync)
   MODERN_PACKAGES=(bat dust fd ripgrep eza procs htop)
   DEV_PACKAGES=(jq yq fzf tig lazygit github-cli)
   MEDIA_PACKAGES=(imagemagick ffmpeg)

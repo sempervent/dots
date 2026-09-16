@@ -163,6 +163,45 @@ else
   warn "notify helper missing (run setup.sh)"
 fi
 
+echo -e "\n${BLUE}leaf (markdown viewer)${NC}"
+if command -v leaf >/dev/null 2>&1 && leaf -V >/dev/null 2>&1 && leaf --help 2>&1 | grep -q -- '--auto-complete'; then
+  ok "leaf markdown viewer: $(leaf -V 2>/dev/null | head -1)"
+  if [[ -f "${HOME}/.local/share/leaf/completions/_leaf" ]] \
+    && [[ -f "${HOME}/.local/share/leaf/completions/leaf.bash" ]]; then
+    ok "leaf completions installed (~/.local/share/leaf/completions)"
+  else
+    warn "leaf completions missing (re-run ./setup.sh)"
+  fi
+  if [[ -f "${HOME}/.config/fish/completions/leaf.fish" ]]; then
+    ok "leaf fish completion present"
+  else
+    info "leaf fish completion not present (optional)"
+  fi
+elif brew list --formula leaf >/dev/null 2>&1; then
+  warn "Homebrew leaf (reloader) installed — conflicts with leaf-markdown-viewer; re-run ./setup.sh"
+else
+  warn "leaf markdown viewer missing (default Brewfile / setup.sh)"
+fi
+
+echo -e "\n${BLUE}rsync${NC}"
+if command -v rsync >/dev/null 2>&1; then
+  rsync_bin="$(command -v rsync)"
+  rsync_ver="$(rsync --version 2>/dev/null | head -1 || true)"
+  if [[ "$(uname -s)" == "Darwin" ]]; then
+    if brew list --formula rsync >/dev/null 2>&1 \
+      || [[ "${rsync_bin}" == /opt/homebrew/* ]] \
+      || [[ "${rsync_bin}" == /usr/local/* ]]; then
+      ok "Homebrew rsync: ${rsync_bin} (${rsync_ver})"
+    else
+      warn "system openrsync only (${rsync_bin}) — prefer: brew install rsync"
+    fi
+  else
+    ok "rsync: ${rsync_bin} (${rsync_ver})"
+  fi
+else
+  fail "rsync missing (macOS: Brewfile; Linux: apt/dnf/pacman/apk install rsync)"
+fi
+
 # Font check (macOS) — PASS if files/cask present; INFO if cache may lag GUI apps
 info() { echo -e "${BLUE}ℹ${NC} $1"; }
 
@@ -507,11 +546,17 @@ fi
 
 if [[ -L "${HOME}/.local/bin/img" ]] || [[ -x "${HOME}/.local/bin/img" ]]; then
   ok "img launcher present (~/.local/bin/img)"
-  command -v img >/dev/null 2>&1 && ok "img on PATH" || info "img not on PATH (ensure ~/.local/bin)"
+  command -v img >/dev/null 2>&1 && ok "img on PATH" || info "img not on PATH (ensure ~/.local/bin via ~/.zshenv)"
 else
   if [[ -f "${DT_LIVE_CFG}" ]]; then
-    info "img launcher missing (re-run: ./setup.sh --with drawthings)"
+    info "img launcher missing (re-run: ./setup.sh — launchers pass)"
   fi
+fi
+
+if [[ -L "${HOME}/.zshenv" ]] || [[ -f "${HOME}/.zshenv" ]]; then
+  ok "~/.zshenv present (PATH for non-interactive zsh)"
+else
+  info "~/.zshenv missing — new zsh sessions may miss ~/.local/bin (re-run ./setup.sh)"
 fi
 echo -e "\n${BLUE}Hermes (optional)${NC}"
 if command -v hermes >/dev/null 2>&1; then
