@@ -15,47 +15,63 @@ shell. Shared logic lives in `shell/`; shell-specific behavior in `bash/` and
 ```bash
 git clone https://github.com/sempervent/dots.git ~/dots
 cd ~/dots
+./dots
+```
 
-# Personal workstation
+`./dots` is the primary human interface: machine role → profile → components →
+runtime → models → review → bootstrap → verify. Expert scripts remain available
+underneath for automation.
+
+```bash
+./dots                     # interactive setup (same as ./dots setup)
+./dots status              # read-only dashboard
+./dots profile             # create / preview / switch profiles
+./dots models              # local model plan & pull
+./dots check               # health verification
+./dots update              # git pull + optional reapply
+./dots --version
+```
+
+Preview without mutating the machine:
+
+```bash
+./dots setup --dry-run
+```
+
+Automation / advanced use (unchanged):
+
+```bash
 ./bootstrap.sh --profile home
-
-# Employer-owned workstation
 ./bootstrap.sh --profile work
-
-# Headless Linux server
 ./bootstrap.sh --profile server
+./bootstrap.sh --profile home --show
+./bootstrap.sh --profile home --dry-run
+./setup.sh --dry-run --with ai
+./configure.sh
+./scripts/pull_models.sh --list
+./scripts/check.sh
 ```
 
 ### Which profile?
 
 ```text
-I am a normal home user          →  --profile home
-I am configuring a work machine  →  --profile work
-I am configuring a Linux server  →  --profile server
+I am a normal home user          →  home   (via ./dots or --profile home)
+I am configuring a work machine  →  work
+I am configuring a Linux server  →  server
 My machine differs slightly      →  ~/.config/dots/profiles/<name>.toml
                                     with extends = "<base>"
 ```
 
-Short example (server host with infra tools, keep tmux auto-mux):
+Short example (custom server host — or just answer the wizard):
 
 ```bash
 mkdir -p ~/.config/dots/profiles
 cp examples/profiles/bertha.toml ~/.config/dots/profiles/bertha.toml
-# edit if needed, then:
 ./bootstrap.sh --profile ~/.config/dots/profiles/bertha.toml --show
 ./bootstrap.sh --profile ~/.config/dots/profiles/bertha.toml
 ```
 
 More templates: [`examples/profiles/`](examples/profiles/).
-
-Preview without installing:
-
-```bash
-./bootstrap.sh --profile home --show
-./bootstrap.sh --profile work --show
-./bootstrap.sh --profile server --show
-./bootstrap.sh --profile home --dry-run
-```
 
 | Profile | Package groups | Optional components | Multiplexer | GUI |
 |---------|----------------|---------------------|-------------|-----|
@@ -252,6 +268,7 @@ Skill packs are declared in `configs/skills/manifest.toml`.
 
 | Script | Role |
 |--------|------|
+| `dots` | Unified human entrypoint (wizard + status/models/check) |
 | `setup.sh` | Install / refresh mechanism |
 | `bootstrap.sh` | Profile orchestration → setup + health gate |
 | `configure.sh` | Profile creation/editing (writes TOML only) |

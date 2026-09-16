@@ -1,0 +1,344 @@
+#!/usr/bin/env bash
+# dots — unified human-facing entrypoint for sempervent/dots
+#
+# Orchestrates existing subsystems; does not duplicate install/model logic.
+# Pure-Bash UI (no gum/dialog/fzf required).
+set -euo pipefail
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+
+DOTS_APPLY_STARTED=0
+dots_on_interrupt() {
+	if [[ ${DOTS_APPLY_STARTED} -eq 1 ]]; then
+		echo "" >&2
+		echo "Setup interrupted." >&2
+		echo "Re-run ./dots; operations are idempotent." >&2
+	else
+		echo "" >&2
+		echo "No changes made." >&2
+	fi
+	exit 130
+}
+trap dots_on_interrupt INT
+
+# shellcheck source=helpers/ui.sh
+source "${DIR}/helpers/ui.sh"
+# shellcheck source=helpers/state.sh
+source "${DIR}/helpers/state.sh"
+# shellcheck source=helpers/wizard.sh
+source "${DIR}/helpers/wizard.sh"
+
+dots_usage() {
+	cat <<EOF
+DOTS — machine environment manager  (v$(dots_version))
+
+Usage:
+  ./dots                     interactive setup
+  ./dots setup               setup / reconfigure
+  ./dots status              current state (read-only)
+  ./dots profile             profile management
+  ./dots models              local model management
+  ./dots check               verify machine
+  ./dots update              update DOTS repo + reapply
+  ./dots help                this help
+  ./dots --version
+
+Automation / expert scripts (still supported):
+  ./bootstrap.sh   ./setup.sh   ./configure.sh
+  ./scripts/pull_models.sh   ./scripts/check.sh
+EOF
+}
+
+dots_cmd_status() {
+	dots_ui_header "DOTS Status"
+	echo ""
+	echo "Version:"
+	echo "  $(dots_version)"
+	echo ""
+
+	local profile="(none)" profile_file="" mux="(unknown)"
+	if dots_state_load_active 2>/dev/null; then
+		profile="${DOTS_ACTIVE_PROFILE:-unknown}"
+		profile_file="${DOTS_ACTIVE_PROFILE_FILE:-}"
+	fi
+	echo "Profile:"
+	echo "  ${profile}"
+	[[ -n ${profile_file} ]] && echo "  file: ${profile_file}"
+
+	if [[ -f "$(dots_runtime_env_file)" ]]; then
+		# shellcheck disable=SC1090
+		source "$(dots_runtime_env_file)" 2>/dev/null || true
+		mux="${DOTS_MULTIPLEXER:-tmux}"
+		echo ""
+		echo "Packages:"
+		echo "  ${DOTS_PACKAGE_GROUPS:-(see profile)}"
+		echo ""
+		echo "Runtime:"
+		echo "  multiplexer: ${mux}"
+	fi
+
+	echo ""
+	echo "Models:"
+	if [[ -f "$(dots_user_models_file)" ]]; then
+		echo "  override: $(dots_user_models_file)"
+	else
+		echo "  override: (none — registry defaults)"
+	fi
+	# Best-effort inventory without requiring Stage 0
+	if command -v ollama >/dev/null 2>&1; then
+		local n
+		n="$(ollama ls 2>/dev/null | awk 'NR>1 && NF{c++} END{print c+0}')"
+		echo "  Ollama: ${n} model(s)"
+	else
+		echo "  Ollama: not installed"
+	fi
+	if command -v llama-cli >/dev/null 2>&1 || command -v llama >/dev/null 2>&1; then
+		echo "  llama.cpp: installed (see llama-cli --cache-list)"
+	else
+		echo "  llama.cpp: not installed"
+	fi
+	if command -v draw-things-cli >/dev/null 2>&1; then
+		echo "  Draw Things: CLI present"
+	else
+		echo "  Draw Things: not installed"
+	fi
+	if [[ -d /Applications/FluidVoice.app ]]; then
+		echo "  FluidVoice: app present (models app-managed)"
+	else
+		echo "  FluidVoice: not installed"
+	fi
+
+	echo ""
+	echo "Health:"
+	local p="${profile_file:-${profile}}"
+	if [[ ${p} == "(none)" || -z ${p} ]]; then
+		p="base"
+	fi
+	if [[ -x ${DIR}/scripts/check.sh ]]; then
+		local tmpc
+		tmpc="$(mktemp "${TMPDIR:-/tmp}/dots-status.XXXXXX")"
+		if "${DIR}/scripts/check.sh" --profile "${p}" >"${tmpc}" 2>&1; then
+			echo "  check: OK (details via ./dots check)"
+		else
+			echo "  check: issues reported (run ./dots check)"
+		fi
+		rm -f "${tmpc}"
+	else
+		echo "  check: unavailable"
+	fi
+}
+
+dots_cmd_profile() {
+	dots_ui_load_answers
+	dots_ui_header "Profiles"
+	DOTS_UI_CHOICE_DEFAULT=1
+	local c
+	c="$(dots_prompt_choice "Profiles:" \
+		"Show active" \
+		"Create (configure.sh)" \
+		"Preview resolved (--show)" \
+		"Switch / reapply (bootstrap)" \
+		"Back")"
+	case "${c}" in
+	1)
+		dots_cmd_status
+		;;
+	2)
+		exec "${DIR}/configure.sh"
+		;;
+	3)
+		local p
+		p="$(dots_prompt_text "Profile name or path" "home")"
+		exec "${DIR}/bootstrap.sh" --profile "${p}" --show
+		;;
+	4)
+		local p
+		p="$(dots_prompt_text "Profile name or path" "home")"
+		exec "${DIR}/bootstrap.sh" --profile "${p}"
+		;;
+	5) return 0 ;;
+	esac
+}
+
+dots_cmd_models() {
+	dots_ui_load_answers
+	# Prefer loading hardware helpers when available
+	# shellcheck source=hardware.sh
+	source "${DIR}/helpers/hardware.sh" 2>/dev/null || true
+	dots_ui_header "Models"
+	if declare -F dots_hw_summary >/dev/null 2>&1; then
+		dots_hw_summary
+	fi
+	DOTS_UI_CHOICE_DEFAULT=1
+	local c
+	c="$(dots_prompt_choice "Models:" \
+		"Show model plan (--list)" \
+		"Pull recommended missing models" \
+		"Choose provider" \
+		"Choose tier + pull" \
+		"Update to registry targets (--update)" \
+		"Edit model policy file" \
+		"Back")"
+	case "${c}" in
+	1) exec "${DIR}/scripts/pull_models.sh" --list ;;
+	2) exec "${DIR}/scripts/pull_models.sh" ;;
+	3)
+		local p
+		DOTS_UI_CHOICE_DEFAULT=1
+		p="$(dots_prompt_choice "Provider:" "ollama" "llamacpp" "drawthings" "fluidvoice" "all")"
+		case "${p}" in
+		1) exec "${DIR}/scripts/pull_models.sh" --provider ollama ;;
+		2) exec "${DIR}/scripts/pull_models.sh" --provider llamacpp ;;
+		3) exec "${DIR}/scripts/pull_models.sh" --provider drawthings ;;
+		4) exec "${DIR}/scripts/pull_models.sh" --provider fluidvoice ;;
+		5) exec "${DIR}/scripts/pull_models.sh" --provider all ;;
+		esac
+		;;
+	4)
+		local t
+		DOTS_UI_CHOICE_DEFAULT=1
+		t="$(dots_prompt_choice "Tier:" "auto" "minimal" "balanced" "large" "max")"
+		case "${t}" in
+		1) exec "${DIR}/scripts/pull_models.sh" --tier auto ;;
+		2) exec "${DIR}/scripts/pull_models.sh" --tier minimal ;;
+		3) exec "${DIR}/scripts/pull_models.sh" --tier balanced ;;
+		4) exec "${DIR}/scripts/pull_models.sh" --tier large ;;
+		5) exec "${DIR}/scripts/pull_models.sh" --tier max ;;
+		esac
+		;;
+	5) exec "${DIR}/scripts/pull_models.sh" --update --yes ;;
+	6)
+		mkdir -p "$(dots_config_dir)"
+		local mf
+		mf="$(dots_user_models_file)"
+		if [[ ! -f ${mf} ]]; then
+			dots_write_models_override_bash "${mf}" "auto" "false" "" 0
+			echo "Created ${mf}"
+		fi
+		echo "Edit: ${mf}"
+		echo "Then: ./dots models → pull"
+		;;
+	7) return 0 ;;
+	esac
+}
+
+dots_cmd_check() {
+	local profile=""
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+		--profile)
+			profile="${2:-}"
+			shift
+			;;
+		--profile=*) profile="${1#*=}" ;;
+		-h | --help)
+			echo "Usage: ./dots check [--profile NAME|path]"
+			return 0
+			;;
+		*)
+			echo "Unknown: $1" >&2
+			return 1
+			;;
+		esac
+		shift
+	done
+	if [[ -z ${profile} ]]; then
+		if dots_state_load_active 2>/dev/null; then
+			profile="${DOTS_ACTIVE_PROFILE_FILE:-${DOTS_ACTIVE_PROFILE}}"
+		else
+			profile="base"
+		fi
+	fi
+	exec "${DIR}/scripts/check.sh" --profile "${profile}"
+}
+
+dots_cmd_update() {
+	dots_ui_load_answers
+	dots_ui_header "Update DOTS"
+	echo "  Current: v$(dots_version)"
+	echo "  Repo: ${DIR}"
+	local ans
+	ans="$(dots_prompt_yesno "Fetch latest from git" y)"
+	if [[ ${ans} != y ]]; then
+		echo "Aborted."
+		return 0
+	fi
+	# Delegate to scripts/update.sh when present (does not pull multi-GB models)
+	if [[ -x ${DIR}/scripts/update.sh ]]; then
+		ans="$(dots_prompt_yesno "Also reapply setup.sh after pull" y)"
+		(
+			cd "${DIR}"
+			if [[ ${ans} == y ]]; then
+				DOTS_DIR="${DIR}" bash "${DIR}/scripts/update.sh"
+			else
+				git pull --ff-only || git pull
+			fi
+		)
+	else
+		(
+			cd "${DIR}"
+			git pull --ff-only || git pull
+		)
+	fi
+	echo ""
+	echo "Note: model downloads and AI provider reconfiguration were NOT run."
+	ans="$(dots_prompt_yesno "Show model plan (--list only)" n)"
+	[[ ${ans} == y ]] && "${DIR}/scripts/pull_models.sh" --list || true
+	ans="$(dots_prompt_yesno "Run health check" y)"
+	if [[ ${ans} == y ]]; then
+		local p="base"
+		dots_state_load_active 2>/dev/null && p="${DOTS_ACTIVE_PROFILE_FILE:-${DOTS_ACTIVE_PROFILE:-base}}"
+		"${DIR}/scripts/check.sh" --profile "${p}" || true
+	fi
+	echo "Update flow complete."
+}
+
+# --- dispatch ---
+cmd="${1:-setup}"
+case "${cmd}" in
+-h | --help | help)
+	dots_usage
+	exit 0
+	;;
+--version | -V | version)
+	echo "dots $(dots_version)"
+	exit 0
+	;;
+setup)
+	shift || true
+	dots_cmd_setup "$@"
+	;;
+status)
+	shift || true
+	dots_cmd_status "$@"
+	;;
+profile)
+	shift || true
+	dots_cmd_profile "$@"
+	;;
+models)
+	shift || true
+	dots_cmd_models "$@"
+	;;
+check)
+	shift || true
+	dots_cmd_check "$@"
+	;;
+update)
+	shift || true
+	dots_cmd_update "$@"
+	;;
+"")
+	dots_cmd_setup
+	;;
+*)
+	# Bare ./dots with no known subcommand: if first arg looks like a flag for setup
+	if [[ ${cmd} == --* ]]; then
+		dots_cmd_setup "$@"
+	else
+		echo "Unknown command: ${cmd}" >&2
+		dots_usage >&2
+		exit 1
+	fi
+	;;
+esac

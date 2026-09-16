@@ -27,5 +27,10 @@ bash scripts/tests/dry_run_test.sh
 bash scripts/tests/component_supergroups_test.sh
 bash scripts/tests/model_policy_test.sh
 bash scripts/tests/model_plan_test.sh
+bash scripts/tests/dots_cli_test.sh
+bash scripts/tests/dots_wizard_test.sh
+
+/bin/bash ./dots --version
+/bin/bash ./dots help >/dev/null
 
 echo "OK: macos smoke"
