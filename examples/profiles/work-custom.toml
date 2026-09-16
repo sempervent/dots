@@ -1,0 +1,19 @@
+# examples/profiles/work-custom.toml — EXAMPLE ONLY (not applied automatically)
+#
+# Extends the conservative work preset: shared CLI/editor muscle memory,
+# NO AI providers unless you add them here intentionally.
+#
+# Copy to ~/.config/dots/profiles/corp-work.toml (or similar), then:
+#   ./bootstrap.sh --profile ~/.config/dots/profiles/corp-work.toml --show
+
+[profile]
+name = "corp-work"
+description = "Work machine with infra tools + images toolkit (no AI)"
+extends = "work"
+
+[packages]
+add = ["infra"]
+
+[components]
+# images = ImageMagick/exiftool/etc — not an AI coding agent
+with = ["images"]

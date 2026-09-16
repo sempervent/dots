@@ -1,0 +1,20 @@
+# examples/profiles/bertha.toml — EXAMPLE ONLY (not applied automatically)
+#
+# Headless Linux host extending the server preset.
+# Copy to ~/.config/dots/profiles/bertha.toml, then:
+#   ./bootstrap.sh --profile ~/.config/dots/profiles/bertha.toml --show
+#   ./bootstrap.sh --profile ~/.config/dots/profiles/bertha.toml
+
+[profile]
+name = "bertha"
+description = "Headless server with infra package group"
+extends = "server"
+
+[packages]
+add = ["infra"]
+
+[runtime]
+# Server default is tmux. Herdr is still installed by the server profile —
+# you can start it manually anytime. To auto-attach Herdr instead, use:
+#   multiplexer = "herdr"
+multiplexer = "tmux"

@@ -26,6 +26,28 @@ cd ~/dots
 ./bootstrap.sh --profile server
 ```
 
+### Which profile?
+
+```text
+I am a normal home user          →  --profile home
+I am configuring a work machine  →  --profile work
+I am configuring a Linux server  →  --profile server
+My machine differs slightly      →  ~/.config/dots/profiles/<name>.toml
+                                    with extends = "<base>"
+```
+
+Short example (server host with infra tools, keep tmux auto-mux):
+
+```bash
+mkdir -p ~/.config/dots/profiles
+cp examples/profiles/bertha.toml ~/.config/dots/profiles/bertha.toml
+# edit if needed, then:
+./bootstrap.sh --profile ~/.config/dots/profiles/bertha.toml --show
+./bootstrap.sh --profile ~/.config/dots/profiles/bertha.toml
+```
+
+More templates: [`examples/profiles/`](examples/profiles/).
+
 Preview without installing:
 
 ```bash
@@ -109,7 +131,8 @@ policy only. Do not store secrets in `local.sh`.
 ### Custom profiles (extends)
 
 Built-in `home` / `work` / `server` are presets, not prisons. Prefer a user-owned
-overlay instead of editing repository TOML:
+overlay instead of editing repository TOML. Start from
+[`examples/profiles/`](examples/profiles/) or generate with `./configure.sh`.
 
 ```toml
 # ~/.config/dots/profiles/bertha.toml
@@ -119,7 +142,7 @@ name = "bertha"
 extends = "server"
 
 [runtime]
-multiplexer = "herdr"
+multiplexer = "tmux"   # or "herdr" — both valid; Herdr is installed either way
 
 [packages]
 add = ["infra"]
@@ -145,7 +168,7 @@ with = ["images"]
 add = ["infra"]
 ```
 
-Home without Cursor, keep Herdr, auto-tmux:
+Home without Cursor, keep Herdr as automatic multiplexer:
 
 ```toml
 # ~/.config/dots/profiles/home-studio.toml
@@ -155,7 +178,7 @@ extends = "home"
 without = ["cursor"]
 
 [runtime]
-multiplexer = "tmux"
+multiplexer = "herdr"
 ```
 
 Builtin names (`home`, `work`, …) always resolve to repository presets — never
@@ -183,13 +206,21 @@ created once from templates — never overwritten. See `configs/git/README.md`.
 
 ## Verify
 
+After bootstrap (or anytime):
+
 ```bash
+# Health check for the profile you just applied (or omit --profile for defaults)
 ./scripts/check.sh --profile home
 ./scripts/check.sh --profile server
-./bootstrap.sh --profile current --show   # last bootstrapped profile
+
+# Inspect resolved config without mutating the machine
+./bootstrap.sh --profile home --show
+./bootstrap.sh --profile ~/.config/dots/profiles/bertha.toml --show
 ```
 
 Required check failures make bootstrap **fail**. Warnings do not.
+Success looks like a zero-failure summary from `./scripts/check.sh` and
+`Bootstrap complete: profile contract satisfied` from a real bootstrap.
 
 ## Consent vs presence
 
