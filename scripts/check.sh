@@ -986,6 +986,41 @@ else
   info "FluidVoice not selected by resolved profile (optional)"
 fi
 
+echo -e "\n${BLUE}Local models (optional; not pulled by bootstrap)${NC}"
+if command -v ollama >/dev/null 2>&1; then
+  _om_count="$(ollama ls 2>/dev/null | awk 'NR>1 && NF{c++} END{print c+0}')"
+  info "ollama installed; ${_om_count} model(s) present (pull: ./scripts/pull_models.sh --provider ollama)"
+else
+  info "ollama not installed"
+fi
+if command -v llama-cli >/dev/null 2>&1 || command -v llama >/dev/null 2>&1; then
+  info "llama.cpp installed; model cache via llama-cli --cache-list (pull: ./scripts/pull_models.sh --provider llamacpp)"
+else
+  info "llama.cpp not installed"
+fi
+_dt_sel=0
+for _c in "${EFFECTIVE_WITH[@]+"${EFFECTIVE_WITH[@]}"}"; do
+  [[ "${_c}" == "drawthings" ]] && _dt_sel=1 && break
+done
+if [[ "${_dt_sel}" -eq 1 ]]; then
+  if command -v draw-things-cli >/dev/null 2>&1; then
+    if draw-things-cli models list --downloaded-only 2>/dev/null | awk 'NF{c++} END{exit !(c>0)}'; then
+      ok "drawthings has downloaded generation model(s)"
+    else
+      warn "drawthings selected but no generation model installed (./scripts/pull_models.sh --provider drawthings)"
+    fi
+  else
+    warn "drawthings selected but draw-things-cli missing"
+  fi
+fi
+_fv_sel=0
+for _c in "${EFFECTIVE_WITH[@]+"${EFFECTIVE_WITH[@]}"}"; do
+  [[ "${_c}" == "fluidvoice" ]] && _fv_sel=1 && break
+done
+if [[ "${_fv_sel}" -eq 1 ]]; then
+  info "FluidVoice installed; model state managed by the app (no supported CLI pull)"
+fi
+
 echo -e "\n${BLUE}Images toolkit (optional)${NC}"
 # Soft checks: warn when missing (base Brewfile already has magick/exiftool for many users)
 for cmd in magick exiftool pngquant rsvg-convert gs; do

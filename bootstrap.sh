@@ -35,6 +35,8 @@ CHECK_ONLY=0
 OPEN_APPS=0
 SHOW_ONLY=0
 NO_INSTALL=0
+PULL_MODELS=0
+MODEL_TIER=""
 CLI_WITH=()
 CLI_WITHOUT=()
 PROFILE_NAME=""
@@ -68,6 +70,8 @@ Options:
   --check-only           Run scripts/check.sh for the profile (no setup)
   --open-apps            After setup, open selected/installed apps (macOS GUI)
   --no-open              Never open apps (default)
+  --pull-models          After setup, run scripts/pull_models.sh (explicit)
+  --model-tier <tier>    Pass-through to pull_models when --pull-models is set
   -h, --help             Show this help
 
 Selectors (--with / --without):
@@ -90,6 +94,8 @@ Policy:
   --without ai removes every AI-supergroup member (even if from the profile).
   Stage 0 auto-provisions Homebrew/Python via official channels when needed.
   --show / --dry-run never mutate.
+  Large model downloads are never implied by ordinary bootstrap (use --pull-models
+  or ./scripts/pull_models.sh explicitly).
 
 See README.md for package groups, runtime policy, and local overrides.
 EOF
@@ -241,6 +247,18 @@ while [[ $# -gt 0 ]]; do
 		OPEN_APPS=0
 		shift
 		;;
+	--pull-models)
+		PULL_MODELS=1
+		shift
+		;;
+	--model-tier)
+		MODEL_TIER="${2:-}"
+		shift 2
+		;;
+	--model-tier=*)
+		MODEL_TIER="${1#*=}"
+		shift
+		;;
 	-h | --help)
 		usage
 		exit 0
@@ -365,6 +383,15 @@ fi
 
 maybe_open_apps
 manual_followups
+
+if [[ ${PULL_MODELS} -eq 1 ]]; then
+	echo ""
+	echo "=== --pull-models → scripts/pull_models.sh ==="
+	PM_ARGS=()
+	[[ ${DRY_RUN} -eq 1 ]] && PM_ARGS+=(--dry-run)
+	[[ -n ${MODEL_TIER} ]] && PM_ARGS+=(--tier "${MODEL_TIER}")
+	"${DIR}/scripts/pull_models.sh" "${PM_ARGS[@]+"${PM_ARGS[@]}"}" || CHECK_STATUS=1
+fi
 
 echo ""
 if [[ ${DRY_RUN} -eq 1 ]]; then
