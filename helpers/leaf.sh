@@ -39,24 +39,24 @@ _dots_leaf_retire_conflicting_brew_leaf() {
   if ! command -v brew >/dev/null 2>&1; then
     return 0
   fi
+  if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+    echo "[dry-run] would check/uninstall conflicting brew leaf (reloader)"
+    return 0
+  fi
   if brew list --formula leaf >/dev/null 2>&1; then
     echo "Note: uninstalling deprecated Homebrew leaf (reloader) — conflicts with leaf-markdown-viewer"
-    if [[ "${DRY_RUN}" -eq 1 ]]; then
-      echo "[dry-run] brew uninstall leaf"
-      return 0
-    fi
     brew uninstall --formula leaf || echo "Warn: could not uninstall brew leaf" >&2
   fi
 }
 
 _dots_leaf_install_brew() {
   command -v brew >/dev/null 2>&1 || return 1
-  if brew list --formula leaf-markdown-viewer >/dev/null 2>&1; then
-    echo "OK: leaf-markdown-viewer already installed (brew)"
+  if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+    echo "[dry-run] brew install leaf-markdown-viewer"
     return 0
   fi
-  if [[ "${DRY_RUN}" -eq 1 ]]; then
-    echo "[dry-run] brew install leaf-markdown-viewer"
+  if brew list --formula leaf-markdown-viewer >/dev/null 2>&1; then
+    echo "OK: leaf-markdown-viewer already installed (brew)"
     return 0
   fi
   brew install leaf-markdown-viewer

@@ -5,16 +5,21 @@
 # Provides: dots_toml_python, dots_require_python, and a shared PY prelude snippet.
 
 dots_require_python() {
-  if ! command -v python3 >/dev/null 2>&1; then
-    echo "Error: python3 is required to parse DOTS configuration (profiles, components, packages)." >&2
-    echo "Install Python 3.6+ (system package or python.org), then re-run bootstrap." >&2
-    return 1
-  fi
+	if ! command -v python3 >/dev/null 2>&1; then
+		echo "Error: python3 is required to parse DOTS configuration (profiles, components, packages)." >&2
+		echo "DOTS uses tomllib (3.11+) when available, otherwise tools/toml_min.py (needs Python 3.6+)." >&2
+		return 1
+	fi
+	# Reject macOS Xcode CLT stub that only prints a license prompt
+	if ! python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 6) else 1)' 2>/dev/null; then
+		echo "Error: python3 exists but is not usable Python ≥ 3.6." >&2
+		return 1
+	fi
 }
 
 # Print absolute path to tools/toml_min.py
 dots_toml_min_path() {
-  printf '%s\n' "${DIR}/tools/toml_min.py"
+	printf '%s\n' "${DIR}/tools/toml_min.py"
 }
 
 # Load TOML file into Python variable `data` (dict). Prefer tomllib; fall back to toml_min.
@@ -27,18 +32,18 @@ dots_toml_min_path() {
 #   PY
 
 dots_toml_query() {
-  local file="$1"
-  dots_require_python || return 1
-  if [[ ! -f "${file}" ]]; then
-    echo "Error: TOML file not found: ${file}" >&2
-    return 1
-  fi
-  local minp
-  minp="$(dots_toml_min_path)"
-  # Read query from stdin into env to avoid nested stdin conflict
-  local query
-  query="$(cat)"
-  QUERY="${query}" FILE="${file}" MINP="${minp}" python3 <<'PY'
+	local file="$1"
+	dots_require_python || return 1
+	if [[ ! -f ${file} ]]; then
+		echo "Error: TOML file not found: ${file}" >&2
+		return 1
+	fi
+	local minp
+	minp="$(dots_toml_min_path)"
+	# Read query from stdin into env to avoid nested stdin conflict
+	local query
+	query="$(cat)"
+	QUERY="${query}" FILE="${file}" MINP="${minp}" python3 <<'PY'
 import importlib.util, os, sys
 from pathlib import Path
 
