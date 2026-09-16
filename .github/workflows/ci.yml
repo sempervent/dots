@@ -9,7 +9,7 @@ jobs:
   lint-and-profiles:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install shellcheck + shfmt
         run: |
@@ -94,7 +94,7 @@ jobs:
           - "archlinux:latest"
           - "ghcr.io/void-linux/void-glibc:latest"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Profile show + dry-run inside ${{ matrix.image }}
         run: |
           docker run --rm -v "$PWD:/dots:ro" -w /dots "${{ matrix.image }}" sh -c '
@@ -127,7 +127,7 @@ jobs:
   macos-smoke:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: /bin/bash profile show
         run: |
           /bin/bash ./bootstrap.sh --profile work --show
