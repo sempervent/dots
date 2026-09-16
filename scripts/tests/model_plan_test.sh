@@ -31,14 +31,25 @@ export DOTS_MP_MOCK_DRAWTHINGS=1 DOTS_MP_MOCK_FLUIDVOICE=1
 export DOTS_MODEL_TIER=balanced
 unset DOTS_MODEL_PROVIDERS DOTS_MODEL_IDS DOTS_MODEL_ROLES || true
 
+# Prefer rg when present; fall back to grep -F for macOS CI runners.
+_match() {
+	local pat="$1"
+	shift
+	if command -v rg >/dev/null 2>&1; then
+		printf '%s\n' "$@" | rg -Fq -- "${pat}"
+	else
+		printf '%s\n' "$@" | grep -Fq -- "${pat}"
+	fi
+}
+
 echo "=== plan: all mocked providers ==="
 export DOTS_MODEL_PROVIDERS="ollama,llamacpp,drawthings,fluidvoice"
 plan="$(dots_models_build_plan)"
-echo "${plan}" | rg -Fq '|ollama|general|' && ok "plan has ollama general" || bad "missing ollama"
-echo "${plan}" | rg -Fq '|llamacpp|coding|' && ok "plan has llamacpp coding" || bad "missing llamacpp"
-echo "${plan}" | rg -Fq '|drawthings|image|' && ok "plan has drawthings" || bad "missing drawthings"
-echo "${plan}" | rg -Fq '|fluidvoice|speech|' && ok "plan has fluidvoice speech" || bad "missing speech"
-echo "${plan}" | rg -Fq '|cleanup|' && bad "cleanup should be off by default" || ok "cleanup omitted by default"
+_match '|ollama|general|' "${plan}" && ok "plan has ollama general" || bad "missing ollama"
+_match '|llamacpp|coding|' "${plan}" && ok "plan has llamacpp coding" || bad "missing llamacpp"
+_match '|drawthings|image|' "${plan}" && ok "plan has drawthings" || bad "missing drawthings"
+_match '|fluidvoice|speech|' "${plan}" && ok "plan has fluidvoice speech" || bad "missing speech"
+_match '|cleanup|' "${plan}" && bad "cleanup should be off by default" || ok "cleanup omitted by default"
 
 echo "=== role filter ==="
 export DOTS_MODEL_ROLES=general
@@ -50,16 +61,16 @@ unset DOTS_MODEL_ROLES || true
 echo "=== single provider ==="
 export DOTS_MODEL_PROVIDERS=ollama
 plan="$(dots_models_build_plan)"
-echo "${plan}" | rg -q llamacpp && bad "ollama-only leaked llamacpp" || ok "ollama-only"
+_match 'llamacpp' "${plan}" && bad "ollama-only leaked llamacpp" || ok "ollama-only"
 unset DOTS_MODEL_PROVIDERS || true
 
 echo "=== linux omits drawthings/fluidvoice ==="
 export DOTS_FORCE_OS=linux DOTS_FORCE_ARCH=x86_64
 export DOTS_MODEL_PROVIDERS="ollama,llamacpp,drawthings,fluidvoice"
 plan="$(dots_models_build_plan)"
-echo "${plan}" | rg -q drawthings && bad "linux plan has drawthings" || ok "linux omits drawthings"
-echo "${plan}" | rg -q fluidvoice && bad "linux plan has fluidvoice" || ok "linux omits fluidvoice"
-echo "${plan}" | rg -q ollama && ok "linux keeps ollama" || bad "linux lost ollama"
+_match 'drawthings' "${plan}" && bad "linux plan has drawthings" || ok "linux omits drawthings"
+_match 'fluidvoice' "${plan}" && bad "linux plan has fluidvoice" || ok "linux omits fluidvoice"
+_match 'ollama' "${plan}" && ok "linux keeps ollama" || bad "linux lost ollama"
 export DOTS_FORCE_OS=darwin DOTS_FORCE_ARCH=arm64
 
 echo "=== idempotence status ==="
@@ -86,8 +97,8 @@ out="$(
 		DOTS_MP_MOCK_OLLAMA_HAS="" \
 		"${DOTS_DIR}/scripts/pull_models.sh" --dry-run --yes --provider ollama 2>&1
 )" || true
-echo "${out}" | rg -q '\[dry-run\] ollama pull' && ok "dry-run announces ollama pull" || bad "dry-run missing pull"
-echo "${out}" | rg -q 'SUCCESS|SKIPPED|MANUAL' && ok "dry-run result table" || bad "no result table"
+_match '[dry-run] ollama pull' "${out}" && ok "dry-run announces ollama pull" || bad "dry-run missing pull"
+_match 'SUCCESS' "${out}" && ok "dry-run result table" || bad "no result table"
 
 echo "=== disk budget failure ==="
 if DOTS_FORCE_DISK_FREE_GB=22 DOTS_MP_MOCK_OLLAMA=1 DOTS_MP_MOCK_LLAMACPP=1 \
@@ -95,18 +106,21 @@ if DOTS_FORCE_DISK_FREE_GB=22 DOTS_MP_MOCK_OLLAMA=1 DOTS_MP_MOCK_LLAMACPP=1 \
 	"${DOTS_DIR}/scripts/pull_models.sh" --dry-run --yes --provider ollama,llamacpp >/tmp/dots-disk.out 2>&1; then
 	bad "low disk should fail"
 else
-	rg -q 'violate reserve' /tmp/dots-disk.out && ok "low disk errors" || bad "wrong disk error"
+	_match 'violate reserve' "$(cat /tmp/dots-disk.out)" && ok "low disk errors" || bad "wrong disk error"
 fi
 export DOTS_FORCE_DISK_FREE_GB=400
 
 echo "=== provider absent → empty friendly exit ==="
 unset DOTS_MP_MOCK_OLLAMA DOTS_MP_MOCK_LLAMACPP DOTS_MP_MOCK_DRAWTHINGS DOTS_MP_MOCK_FLUIDVOICE || true
-# Hide real binaries by empty PATH except essentials
 out="$(
 	PATH="/usr/bin:/bin" DOTS_FORCE_OS=linux \
 		"${DOTS_DIR}/scripts/pull_models.sh" --list 2>&1 || true
 )"
-echo "${out}" | rg -q 'none|Nothing to pull|No local-model' && ok "absent providers handled" || ok "absent providers (host may still have tools)"
+if _match 'none' "${out}" || _match 'Nothing to pull' "${out}" || _match 'No local-model' "${out}"; then
+	ok "absent providers handled"
+else
+	ok "absent providers (host may still have tools)"
+fi
 
 echo ""
 echo "model_plan_test: ${pass} passed, ${fail} failed"

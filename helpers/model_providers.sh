@@ -132,6 +132,15 @@ dots_mp_llamacpp_cache_list() {
 	"${bin}" --cache-list 2>/dev/null || true
 }
 
+dots_mp_grep_fixed() {
+	local pat="$1"
+	if command -v rg >/dev/null 2>&1; then
+		rg -q --fixed-strings -- "${pat}"
+	else
+		grep -Fq -- "${pat}"
+	fi
+}
+
 dots_mp_llamacpp_has_model() {
 	local repo="$1" quant="${2:-}"
 	local needle="${repo}"
@@ -144,9 +153,9 @@ dots_mp_llamacpp_has_model() {
 	fi
 	local out
 	out="$(dots_mp_llamacpp_cache_list)"
-	printf '%s\n' "${out}" | rg -qi --fixed-strings -- "${repo}" || return 1
+	printf '%s\n' "${out}" | dots_mp_grep_fixed "${repo}" || return 1
 	if [[ -n ${quant} ]]; then
-		printf '%s\n' "${out}" | rg -qi --fixed-strings -- "${quant}" || return 1
+		printf '%s\n' "${out}" | dots_mp_grep_fixed "${quant}" || return 1
 	fi
 	return 0
 }
@@ -203,7 +212,7 @@ dots_mp_drawthings_has_model() {
 		*) return 1 ;;
 		esac
 	fi
-	dots_mp_drawthings_list_downloaded | rg -q --fixed-strings -- "${want}"
+	dots_mp_drawthings_list_downloaded | dots_mp_grep_fixed "${want}"
 }
 
 dots_mp_drawthings_pull() {

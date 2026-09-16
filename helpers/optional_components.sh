@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # helpers/optional_components.sh — optional --with component side effects.
 #
 # Brewfile application for optional fragments, Hermes PATH warnings, Herdr
