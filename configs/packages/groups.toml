@@ -1,0 +1,59 @@
+# configs/packages/groups.toml — logical package groups (platform-neutral ids)
+#
+# Each group lists portable tool ids. Platform maps in apt/pacman/xbps/dnf.toml
+# translate ids → native package names. Unknown ids fail provisioning.
+
+version = 1
+
+[[groups]]
+name = "core"
+description = "Portable essentials"
+tools = [
+  "bash", "zsh", "tmux", "git", "curl", "wget", "jq",
+  "ripgrep", "fd", "fzf", "shellcheck", "neovim",
+  "fnm", "starship", "rsync",
+]
+
+[[groups]]
+name = "modern"
+description = "Shared ergonomic CLI"
+tools = [
+  "eza", "bat", "zoxide", "direnv", "atuin", "lazygit",
+  "htop", "btop", "yq", "uv", "gh", "just", "git-delta",
+  "tree", "leaf",
+]
+
+[[groups]]
+name = "workstation"
+description = "Desktop-user tools (not headless)"
+tools = [
+  "terminal-notifier", "ranger", "chafa", "poppler",
+]
+
+[[groups]]
+name = "infra"
+description = "Containers / k8s / terraform"
+tools = [
+  "docker", "docker-compose", "helm", "k9s", "terraform",
+]
+
+[[groups]]
+name = "media"
+description = "Image / video processing"
+tools = [
+  "ffmpeg", "imagemagick", "exiftool",
+]
+
+[[groups]]
+name = "gui"
+description = "macOS GUI / fonts"
+tools = [
+  "font-jetbrains-mono-nerd-font",
+]
+
+[[groups]]
+name = "server"
+description = "Headless extras"
+tools = [
+  "htop",
+]
