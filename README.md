@@ -316,6 +316,7 @@ Telemetry failures never abort agent work.
 | `herdr` | `brew/Brewfile.herdr` → `herdr` |
 | `hermes` | `hermes-agent` (+ macOS cask `hermes-desktop`) |
 | `ollama` | `ollama` (no models, service not started) |
+| `llamacpp` | `Brewfile.llamacpp` → Homebrew `llama.cpp` (models via `pull_models.sh`) |
 | `archify` | Archify skill only (`npx skills add tt-a1i/archify -g`) |
 | `skills` | Curated Engineering Pack from `configs/skills/manifest.toml` (includes Archify + security-review) |
 | `ai-skills` | Curated AI/agent pack (evals, production ops, litellm, ml-engineering, …) |
@@ -344,7 +345,7 @@ Telemetry failures never abort agent work.
 `--with ai` expands to every supported AI application for the current machine:
 
 ```text
-hermes, ollama, drawthings, opencode, codex, cursor, fluidvoice
+hermes, ollama, llamacpp, drawthings, opencode, codex, cursor, fluidvoice
 ```
 
 Platform-incompatible members are **reported and omitted** from the group (for example FluidVoice on Linux). Explicitly requesting an unsupported component (for example `./setup.sh --with fluidvoice` on Linux) remains an **error**.
@@ -362,6 +363,58 @@ without = ["cursor"]
 `--without ai` removes every member of the AI supergroup (even if those components came from the profile). Individual `--without` entries still win over `--with`.
 
 Prefer `--profile home` or `--profile all` (lab) for broader aggregates; `all` ≠ `ai`.
+
+## Local models
+
+DOTS installs AI **applications** separately from AI **models**.
+
+`bootstrap` / `setup` do **not** pull multi-gigabyte models by default.
+
+```bash
+./scripts/pull_models.sh --list
+./scripts/pull_models.sh --dry-run
+./scripts/pull_models.sh
+```
+
+`pull_models.sh` chooses defaults from `configs/models.toml` according to hardware (tier) and which runtimes are installed. Overrides live in `~/.config/dots/models.toml` (never overwritten by updates).
+
+```bash
+./scripts/pull_models.sh --provider ollama
+./scripts/pull_models.sh --provider drawthings
+./scripts/pull_models.sh --tier balanced
+./bootstrap.sh --profile home --pull-models   # optional convenience; same script
+```
+
+### Example: 24 GB Apple Silicon
+
+```text
+Detected: Apple Silicon, 24 GB → tier balanced
+```
+
+Typical plan when Ollama, llama.cpp, Draw Things, and FluidVoice are present:
+
+```text
+Ollama        qwen2.5:7b                              ~4.7 GB   (general)
+llama.cpp     Qwen2.5-Coder-7B-Instruct Q4_K_M        ~4.7 GB   (coding)
+Draw Things   flux_2_klein_4b_q6p.ckpt                ~6 GB     (image)
+FluidVoice    Parakeet TDT v3                         ~0.5 GB   (speech — MANUAL)
+```
+
+Ollama and llama.cpp intentionally cover **different roles** so auto mode does not duplicate the same weights into two caches.
+
+### FluidVoice models
+
+FluidVoice has **no supported noninteractive model CLI** today. `pull_models.sh` reports `MANUAL` and recommends Parakeet TDT v3 (speech) plus optional Fluid-1 (cleanup). Models are downloaded inside the FluidVoice app. DOTS does **not** write into undocumented cache paths.
+
+### llama.cpp
+
+```bash
+./setup.sh --with llamacpp
+./scripts/pull_models.sh --provider llamacpp
+```
+
+Installs via Homebrew (`brew install llama.cpp`). Models use `llama-cli -hf <repo>[:quant]`.
+
 ## Package management
 
 **Homebrew truth is `brew/Brewfile` only.** There is no `packages.txt`.
