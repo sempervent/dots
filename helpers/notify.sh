@@ -3,61 +3,70 @@
 # Requires: DIR, DRY_RUN, ensure_dir, run_cmd
 
 dots_deploy_notify() {
-  echo "=== Notifications ==="
-  local src="${DIR}/scripts/notify"
-  local dest="${HOME}/.local/bin/notify"
-  local hook_src="${DIR}/scripts/hermes-notify-hook"
-  local hook_dest="${HOME}/.local/bin/hermes-notify-hook"
-  local cfg_src="${DIR}/configs/notify/config.toml"
-  local cfg_dest="${HOME}/.config/dots/notify.toml"
+	echo "=== Notifications ==="
+	local src="${DIR}/scripts/notify"
+	local dest="${HOME}/.local/bin/notify"
+	local hook_src="${DIR}/scripts/hermes-notify-hook"
+	local hook_dest="${HOME}/.local/bin/hermes-notify-hook"
+	local cfg_src="${DIR}/configs/notify/config.toml"
+	local cfg_dest="${HOME}/.config/dots/notify.toml"
 
-  ensure_dir "${HOME}/.local/bin"
-  ensure_dir "${HOME}/.config/dots"
+	ensure_dir "${HOME}/.local/bin"
+	ensure_dir "${HOME}/.config/dots"
 
-  if [[ "${DRY_RUN}" -eq 1 ]]; then
-    echo "[dry-run] link ${src} → ${dest}"
-    echo "[dry-run] link ${hook_src} → ${hook_dest}"
-    echo "[dry-run] deploy notify config → ${cfg_dest} (if missing)"
-    echo "[dry-run] ensure Hermes on_session_start/end hooks when ~/.hermes/config.yaml exists"
-    return 0
-  fi
+	if [[ ${DRY_RUN} -eq 1 ]]; then
+		echo "[dry-run] link ${src} → ${dest}"
+		echo "[dry-run] link ${hook_src} → ${hook_dest}"
+		echo "[dry-run] deploy notify config → ${cfg_dest} (if missing)"
+		if declare -F dots_may_configure_hermes >/dev/null 2>&1 && dots_may_configure_hermes; then
+			echo "[dry-run] ensure Hermes notify hooks (hermes selected this run)"
+		else
+			echo "[dry-run] skip Hermes notify hooks (hermes not selected this run)"
+		fi
+		return 0
+	fi
 
-  if [[ -f "${src}" ]]; then
-    ln -sfn "${src}" "${dest}"
-    chmod +x "${src}"
-    echo "OK: ${dest}"
-  fi
-  if [[ -f "${hook_src}" ]]; then
-    ln -sfn "${hook_src}" "${hook_dest}"
-    chmod +x "${hook_src}"
-    echo "OK: ${hook_dest}"
-  fi
+	if [[ -f ${src} ]]; then
+		ln -sfn "${src}" "${dest}"
+		chmod +x "${src}"
+		echo "OK: ${dest}"
+	fi
+	if [[ -f ${hook_src} ]]; then
+		ln -sfn "${hook_src}" "${hook_dest}"
+		chmod +x "${hook_src}"
+		echo "OK: ${hook_dest}"
+	fi
 
-  if [[ -f "${cfg_src}" ]] && [[ ! -f "${cfg_dest}" ]]; then
-    cp "${cfg_src}" "${cfg_dest}"
-    echo "OK: deployed ${cfg_dest}"
-  elif [[ -f "${cfg_dest}" ]]; then
-    echo "OK: ${cfg_dest} (preserved)"
-  fi
+	if [[ -f ${cfg_src} ]] && [[ ! -f ${cfg_dest} ]]; then
+		cp "${cfg_src}" "${cfg_dest}"
+		echo "OK: deployed ${cfg_dest}"
+	elif [[ -f ${cfg_dest} ]]; then
+		echo "OK: ${cfg_dest} (preserved)"
+	fi
 
-  dots_ensure_hermes_notify_hooks
+	# Presence of ~/.hermes/config.yaml is NOT consent — only mutate when hermes selected.
+	if declare -F dots_may_configure_hermes >/dev/null 2>&1 && dots_may_configure_hermes; then
+		dots_ensure_hermes_notify_hooks
+	elif [[ -f "${HOME}/.hermes/config.yaml" ]]; then
+		echo "Note: ~/.hermes/config.yaml present but hermes not selected this run — leaving hooks untouched"
+	fi
 }
 
 dots_ensure_hermes_notify_hooks() {
-  local cfg="${HOME}/.hermes/config.yaml"
-  local hook="${HOME}/.local/bin/hermes-notify-hook"
-  [[ -f "${cfg}" ]] || {
-    echo "Note: ~/.hermes/config.yaml absent — Hermes notify hooks deferred"
-    return 0
-  }
-  [[ -x "${hook}" ]] || [[ -L "${hook}" ]] || return 0
+	local cfg="${HOME}/.hermes/config.yaml"
+	local hook="${HOME}/.local/bin/hermes-notify-hook"
+	[[ -f ${cfg} ]] || {
+		echo "Note: ~/.hermes/config.yaml absent — Hermes notify hooks deferred"
+		return 0
+	}
+	[[ -x ${hook} ]] || [[ -L ${hook} ]] || return 0
 
-  if [[ "${DRY_RUN}" -eq 1 ]]; then
-    echo "[dry-run] merge Hermes shell hooks for notify"
-    return 0
-  fi
+	if [[ ${DRY_RUN} -eq 1 ]]; then
+		echo "[dry-run] merge Hermes shell hooks for notify"
+		return 0
+	fi
 
-  python3 - "${cfg}" "${hook}" <<'PY'
+	dots_python3 - "${cfg}" "${hook}" <<'PY'
 import sys
 from pathlib import Path
 

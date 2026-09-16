@@ -12,7 +12,9 @@ set -euo pipefail
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
 PASSED=0; FAILED=0; WARNINGS=0
 
-DOTS_DIR="${DOTS_DIR:-${HOME}/dots}"
+# Resolve repo root from this script (do not assume ~/dots).
+_CHECK_SRC="${BASH_SOURCE[0]}"
+DOTS_DIR="${DOTS_DIR:-$(cd "$(dirname "${_CHECK_SRC}")/.." && pwd)}"
 DIR="${DOTS_DIR}"
 SYM_DIR="${DOTS_DIR}/syms"
 CONFIG_DIR="${DOTS_DIR}/configs"
@@ -254,7 +256,8 @@ echo -e "\n${BLUE}Starship / font / editor / notify (default)${NC}"
 if command -v starship >/dev/null 2>&1; then
   ok "starship $(starship --version 2>/dev/null | head -1)"
 else
-  fail "starship missing (default Brewfile)"
+  # starship is optional in configs/packages/groups.toml (SKIP on apt)
+  warn "starship missing (optional; install via brew or platform package when desired)"
 fi
 [[ -f "${HOME}/.config/starship.toml" ]] || [[ -L "${HOME}/.config/starship.toml" ]] && ok "starship.toml deployed" || warn "starship.toml not deployed (run setup.sh)"
 [[ -f "${CONFIG_DIR}/starship/starship.toml" ]] && ok "starship repo config present" || fail "configs/starship/starship.toml missing"
@@ -262,7 +265,7 @@ fi
 if command -v nvim >/dev/null 2>&1; then
   ok "nvim $(nvim --version 2>/dev/null | head -1)"
 else
-  fail "neovim missing (default Brewfile)"
+  fail "neovim missing (required in core package group)"
 fi
 if [[ -f "${HOME}/.config/nvim/init.lua" ]]; then
   ok "Neovim init.lua present"
@@ -271,9 +274,7 @@ if [[ -f "${HOME}/.config/nvim/init.lua" ]]; then
   else
     warn "Neovim lazy.nvim headless load inconclusive (run nvim once)"
   fi
-  if nvim --headless "+Lazy! restore" "+qa" >/tmp/dots-nvim-check.$$ 2>&1; then
-    :
-  fi
+  # Read-only probe only — do not mutate plugin state during health check
   if nvim --headless \
       "+lua assert(package.loaded['lazy'] ~= nil or true)" \
       "+qa" >/dev/null 2>&1; then
@@ -281,7 +282,6 @@ if [[ -f "${HOME}/.config/nvim/init.lua" ]]; then
   else
     warn "Neovim headless startup reported issues"
   fi
-  rm -f /tmp/dots-nvim-check.$$
 else
   warn "Neovim Lua config not deployed (run setup.sh)"
 fi
@@ -628,7 +628,16 @@ if command -v uv >/dev/null 2>&1 && [[ -f "${DT_PROJECT}/pyproject.toml" ]]; the
   if uv run --directory "${DT_PROJECT}" --python-preference system python -c 'from mcp.server.fastmcp import FastMCP' >/dev/null 2>&1; then
     ok "MCP Python deps resolvable via uv"
   else
-    fail "MCP Python deps not resolvable (uv sync --directory tools/drawthings_mcp)"
+    local _dt_sel=0
+    local _c
+    for _c in "${EFFECTIVE_WITH[@]+"${EFFECTIVE_WITH[@]}"}"; do
+      [[ "${_c}" == "drawthings" ]] && _dt_sel=1 && break
+    done
+    if [[ "${_dt_sel}" -eq 1 ]]; then
+      fail "MCP Python deps not resolvable (uv sync --directory tools/drawthings_mcp)"
+    else
+      warn "drawthings MCP Python deps not resolvable (optional until --with drawthings)"
+    fi
   fi
 else
   warn "uv missing — cannot verify MCP Python deps"
@@ -1052,10 +1061,10 @@ else
   warn "agent-stats not linked (run ./setup.sh)"
 fi
 TELE_DATA="${HOME}/.local/share/dots/telemetry"
-if [[ -d "${TELE_DATA}" ]] || mkdir -p "${TELE_DATA}" 2>/dev/null; then
-  ok "telemetry data dir writable (${TELE_DATA})"
+if [[ -d "${TELE_DATA}" ]]; then
+  ok "telemetry data dir present (${TELE_DATA})"
 else
-  warn "telemetry data dir not writable"
+  info "telemetry data dir absent (created on first agent-telemetry use)"
 fi
 if DOTS_DIR="${DOTS_DIR}" "${DOTS_DIR}/scripts/agent-telemetry" doctor >/tmp/dots-tele-doc.$$ 2>&1; then
   ok "agent-telemetry doctor"

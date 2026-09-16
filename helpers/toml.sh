@@ -10,16 +10,31 @@ dots_require_python() {
 		echo "DOTS uses tomllib (3.11+) when available, otherwise tools/toml_min.py (needs Python 3.6+)." >&2
 		return 1
 	fi
-	# Reject macOS Xcode CLT stub that only prints a license prompt
-	if ! python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 6) else 1)' 2>/dev/null; then
+	# Reject macOS Xcode CLT stub that only prints a license prompt.
+	# Isolate HOME: Apple Python writes ~/Library/Caches/com.apple.python even with -B.
+	local _pyhome
+	_pyhome="$(mktemp -d "${TMPDIR:-/tmp}/dots-pyhome.XXXXXX")"
+	if ! HOME="${_pyhome}" PYTHONDONTWRITEBYTECODE=1 python3 -B -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 6) else 1)' 2>/dev/null; then
+		rm -rf "${_pyhome}"
 		echo "Error: python3 exists but is not usable Python ≥ 3.6." >&2
 		return 1
 	fi
+	rm -rf "${_pyhome}"
 }
 
 # Print absolute path to tools/toml_min.py
 dots_toml_min_path() {
 	printf '%s\n' "${DIR}/tools/toml_min.py"
+}
+
+# Run python3 without writing Apple/system bytecode caches into the caller's $HOME.
+# Usage: dots_python3 [args...]   (same as python3)
+dots_python3() {
+	local pyhome rc=0
+	pyhome="$(mktemp -d "${TMPDIR:-/tmp}/dots-pyhome.XXXXXX")"
+	HOME="${pyhome}" PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1 command python3 -B "$@" || rc=$?
+	rm -rf "${pyhome}"
+	return "${rc}"
 }
 
 # Load TOML file into Python variable `data` (dict). Prefer tomllib; fall back to toml_min.
@@ -43,7 +58,15 @@ dots_toml_query() {
 	# Read query from stdin into env to avoid nested stdin conflict
 	local query
 	query="$(cat)"
-	QUERY="${query}" FILE="${file}" MINP="${minp}" python3 <<'PY'
+	# Isolate HOME so Apple/system Python cannot write caches into the real or test HOME.
+	local pyhome
+	pyhome="$(mktemp -d "${TMPDIR:-/tmp}/dots-pyhome.XXXXXX")"
+	local rc=0
+	QUERY="${query}" FILE="${file}" MINP="${minp}" \
+		HOME="${pyhome}" \
+		PYTHONDONTWRITEBYTECODE=1 \
+		PYTHONNOUSERSITE=1 \
+		python3 -B <<'PY' || rc=$?
 import importlib.util, os, sys
 from pathlib import Path
 
@@ -79,4 +102,6 @@ except Exception as exc:
     sys.stderr.write("Error: TOML query failed (%s): %s\n" % (path, exc))
     sys.exit(1)
 PY
+	rm -rf "${pyhome}"
+	return "${rc}"
 }

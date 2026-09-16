@@ -71,7 +71,7 @@ ensure_node_major() {
 # True when the skills CLI global store has this skill (canonical path + lock when present).
 agent_skill_is_installed() {
   local name="$1"
-  python3 - "$name" <<'PY'
+  dots_python3 - "$name" <<'PY'
 import json
 import pathlib
 import sys

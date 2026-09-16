@@ -44,7 +44,7 @@ sync_herdr_config() {
     : >"${tmp}"
   fi
 
-  if ! python3 - "${tmp}" "${src}" "${merged}" <<'PY'
+  if ! dots_python3 - "${tmp}" "${src}" "${merged}" <<'PY'
 import re
 import sys
 from pathlib import Path

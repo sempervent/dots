@@ -55,7 +55,7 @@ deploy_opencode_provider_config() {
     return 1
   fi
   ensure_dir "$(dirname "${dest}")"
-  python3 - "${src}" "${dest}" <<'PY'
+  dots_python3 - "${src}" "${dest}" <<'PY'
 import json
 import re
 import sys

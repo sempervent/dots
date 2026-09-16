@@ -20,13 +20,15 @@ dots_skills_manifest_entries_for_packs() {
   local manifest
   manifest="$(dots_skills_manifest_path)"
   [[ -f "${manifest}" ]] || return 1
-  python3 - "${manifest}" "$@" <<'PY'
+  # Manifest uses dotted tables ([packs.skills]) — requires tomllib (Python 3.11+).
+  if ! dots_python3 -c 'import tomllib' 2>/dev/null; then
+    echo "Error: skill packs require Python 3.11+ tomllib (manifest uses dotted tables)." >&2
+    return 1
+  fi
+  dots_python3 - "${manifest}" "$@" <<'PY'
 import sys
 from pathlib import Path
-try:
-    import tomllib
-except ImportError:
-    sys.exit(1)
+import tomllib
 
 data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 packs = [p.strip() for p in sys.argv[2:] if p.strip()]
@@ -81,7 +83,7 @@ dots_skills_manifest_entries() {
 
 dots_skill_lock_has() {
   local name="$1"
-  python3 - "$name" <<'PY'
+  dots_python3 - "$name" <<'PY'
 import json, pathlib, sys
 name = sys.argv[1]
 lock = pathlib.Path.home() / ".agents" / ".skill-lock.json"
@@ -104,7 +106,7 @@ dots_static_review_skill() {
     echo "Warn: cannot review missing skill dir ${root}" >&2
     return 1
   fi
-  python3 - "${root}" "${name}" <<'PY'
+  dots_python3 - "${root}" "${name}" <<'PY'
 import re, sys
 from pathlib import Path
 
@@ -259,6 +261,16 @@ dots_install_skill_packs() {
   fi
 
   # Print planned unique set (set semantics)
+  if ! dots_python3 -c 'import tomllib' 2>/dev/null; then
+    echo "Error: skill packs require Python 3.11+ (tomllib). $(command python3 -V 2>&1)." >&2
+    echo "Install python3.11+ or omit --with skills / ai-skills for this run." >&2
+    if [[ ${DRY_RUN:-0} -eq 1 ]]; then
+      echo "[dry-run] skill pack resolution skipped (tomllib unavailable)"
+      return 0
+    fi
+    return 1
+  fi
+
   while IFS=$'\t' read -r name source group; do
     [[ -z "${name}" ]] && continue
     plan_names+=("${name}")

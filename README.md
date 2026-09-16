@@ -43,8 +43,18 @@ Preview without installing:
 | `server` | core, modern, server | none | tmux | no |
 | `all` | full workstation | all optional | tmux | yes |
 
-**macOS Homebrew policy:** Homebrew is required. DOTS does **not** auto-install
-it. If missing, bootstrap exits with the install command and asks you to re-run.
+**Prerequisites:** `bash` and `python3` (≥ 3.6). DOTS parses profiles/packages
+with `tomllib` when available, otherwise `tools/toml_min.py`. On macOS, Xcode
+CLT typically provides `/usr/bin/python3` (`xcode-select --install`).
+
+**Skill packs** (`--with skills` / `ai-skills`, and the `home` profile’s default
+skill selection) need **Python 3.11+** (`tomllib`) because
+`configs/skills/manifest.toml` uses dotted table syntax. Without it, omit those
+components or install a newer Python.
+
+**macOS Homebrew policy:** Homebrew is required for package install. DOTS does
+**not** auto-install it. If missing, bootstrap exits with the install command
+and asks you to re-run. `--show` works without Homebrew.
 
 **Linux servers:** native `apt` / `pacman` / `xbps` / `dnf` (no Homebrew required).
 

@@ -91,7 +91,7 @@ merge_cursor_cli_config() {
     return 0
   fi
   ensure_dir "$(dirname "${dest}")"
-  python3 - "${src}" "${dest}" <<'PY'
+  dots_python3 - "${src}" "${dest}" <<'PY'
 import json, sys
 from pathlib import Path
 src, dest = Path(sys.argv[1]), Path(sys.argv[2])
@@ -135,7 +135,7 @@ merge_cursor_mcp_servers() {
   local servers_json="{}"
 
   if has_component drawthings; then
-    servers_json="$(python3 - <<'PY'
+    servers_json="$(dots_python3 - <<'PY'
 import json, os
 from pathlib import Path
 home = Path.home()
@@ -168,7 +168,7 @@ PY
   fi
 
   ensure_dir "$(dirname "${dest}")"
-  DIR="${DIR}" python3 - "${dest}" "${servers_json}" <<'PY'
+  DIR="${DIR}" dots_python3 - "${dest}" "${servers_json}" <<'PY'
 import json, sys
 from pathlib import Path
 dest = Path(sys.argv[1])
