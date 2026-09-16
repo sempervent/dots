@@ -290,38 +290,24 @@ Telemetry failures never abort agent work.
 ./setup.sh --with archify
 ./setup.sh --with skills
 ./setup.sh --with ai-skills
-./setup.sh --with drawthings
-./setup.sh --with opencode
-./setup.sh --with codex
-./setup.sh --with cursor
-./setup.sh --with images
-./setup.sh --with tex
-```
-### Optional components (`--with`)
-
-```bash
-./setup.sh --with herdr
-./setup.sh --with hermes
-./setup.sh --with ollama
-./setup.sh --with archify
-./setup.sh --with skills
-./setup.sh --with ai-skills
 ./setup.sh --with skills,ai-skills
 ./setup.sh --with drawthings
 ./setup.sh --with opencode
 ./setup.sh --with codex
 ./setup.sh --with cursor
+./setup.sh --with fluidvoice
 ./setup.sh --with images
 ./setup.sh --with tex
+./setup.sh --with ai
+./setup.sh --with ai --without cursor
 ./setup.sh --with herdr,cursor
 ./setup.sh --with hermes,drawthings
 ./setup.sh --with cursor,drawthings
 ./setup.sh --with images,drawthings
 ./setup.sh --with images,tex
-./setup.sh --with herdr,hermes,ollama,skills,ai-skills,drawthings,opencode,codex,cursor,images,tex
 ./setup.sh --with=herdr,hermes
 ./setup.sh --dry-run --with cursor
-./setup.sh --dry-run --with ai-skills
+./setup.sh --dry-run --with ai
 ./setup.sh --help
 ```
 
@@ -337,10 +323,45 @@ Telemetry failures never abort agent work.
 | `opencode` | `Brewfile.opencode` → OpenCode CLI + DOTS adapter/MCP |
 | `codex` | `Brewfile.codex` → **Homebrew cask** `codex` (+ Hermes MCP if hermes co-selected) |
 | `cursor` | `Brewfile.cursor` → cask `cursor-cli` (`agent`) + opt-in `~/.cursor` merge |
+| `fluidvoice` | `Brewfile.fluidvoice` → cask `fluidvoice` (macOS 15+; no models/permissions automated) |
 | `images` | `Brewfile.images` → Magick/gs/rsvg/exiftool/pngquant/webp/oxipng |
 | `tex` | `Brewfile.tex` → Homebrew `texlive` (CLI) |
 
-**Do not add `--with ai`.** Prefer `--profile home` or `--profile all` (lab) for aggregates.
+### Supergroups
+
+`--with` accepts declarative **supergroups** from `configs/components.toml`. Groups expand to ordinary component ids before install (no second installation path).
+
+| Supergroup | Meaning |
+|------------|---------|
+| `ai` | All **AI applications** supported on this platform |
+
+```bash
+./setup.sh --with ai
+./setup.sh --with ai --without cursor
+./bootstrap.sh --profile work --with ai   # explicit opt-in on work
+```
+
+`--with ai` expands to every supported AI application for the current machine:
+
+```text
+hermes, ollama, drawthings, opencode, codex, cursor, fluidvoice
+```
+
+Platform-incompatible members are **reported and omitted** from the group (for example FluidVoice on Linux). Explicitly requesting an unsupported component (for example `./setup.sh --with fluidvoice` on Linux) remains an **error**.
+
+`ai` does **not** include skill packs (`skills`, `ai-skills`), Herdr, images, or TeX.
+
+Custom profiles may use the same selectors:
+
+```toml
+[components]
+with = ["ai"]
+without = ["cursor"]
+```
+
+`--without ai` removes every member of the AI supergroup (even if those components came from the profile). Individual `--without` entries still win over `--with`.
+
+Prefer `--profile home` or `--profile all` (lab) for broader aggregates; `all` ≠ `ai`.
 ## Package management
 
 **Homebrew truth is `brew/Brewfile` only.** There is no `packages.txt`.
