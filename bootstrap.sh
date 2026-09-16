@@ -52,7 +52,7 @@ PROFILE_RUNTIME_AUTO_TMUX=""
 EFFECTIVE_WITH=()
 
 usage() {
-	cat <<'EOF'
+	cat <<EOF
 Usage: ./bootstrap.sh [options]
 
 Onboard / refresh a machine using a declarative profile, then invoke setup.sh.
@@ -60,8 +60,8 @@ Onboard / refresh a machine using a declarative profile, then invoke setup.sh.
 Options:
   --profile <name|path>  Builtin: base | home | work | server | all | current
                          Or a custom TOML path (absolute, relative, or ~/…)
-  --with <list>          Add components onto the profile baseline
-  --without <list>       Remove components from the effective set
+  --with <list>          Add components/supergroups onto the profile baseline
+  --without <list>       Remove components/supergroups from the effective set
   --show                 Print resolved components/packages/runtime and exit
   --dry-run              Preview (passed through to setup.sh; no mutations)
   --no-install           Resolve/verify only; do not install missing software
@@ -70,16 +70,24 @@ Options:
   --no-open              Never open apps (default)
   -h, --help             Show this help
 
+Selectors (--with / --without):
+$(dots_print_selector_help | sed 's/^/  /')
+
 Happy paths:
   ./bootstrap.sh --profile home      # personal Mac (auto-provisions brew/python)
   ./bootstrap.sh --profile work      # employer Mac
   ./bootstrap.sh --profile server    # headless Linux
   ./bootstrap.sh --profile base      # minimal core
   ./bootstrap.sh --profile work --no-install   # managed hosts: fail if deps missing
+  ./bootstrap.sh --profile work --with ai      # EXPLICIT opt-in: add AI apps
+  ./bootstrap.sh --profile base --with ai --without cursor
+  ./bootstrap.sh --profile home --with fluidvoice
 
 Policy:
   Profiles are explicit authorization for THAT run.
   Binary presence alone never authorizes configuration.
+  --with ai is explicit consent for every effective AI member on this platform.
+  --without ai removes every AI-supergroup member (even if from the profile).
   Stage 0 auto-provisions Homebrew/Python via official channels when needed.
   --show / --dry-run never mutate.
 

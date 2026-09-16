@@ -967,6 +967,25 @@ else
   fi
 fi
 
+echo -e "\n${BLUE}FluidVoice (optional; macOS)${NC}"
+_fv_selected=0
+for _c in "${EFFECTIVE_WITH[@]+"${EFFECTIVE_WITH[@]}"}"; do
+  [[ "${_c}" == "fluidvoice" ]] && _fv_selected=1 && break
+done
+if [[ "${_fv_selected}" -eq 1 ]]; then
+  if [[ "$(uname -s)" != "Darwin" ]]; then
+    fail "fluidvoice selected but host is not macOS"
+  elif [[ -d "/Applications/FluidVoice.app" ]]; then
+    ok "FluidVoice.app present"
+  elif command -v brew >/dev/null 2>&1 && brew list --cask fluidvoice >/dev/null 2>&1; then
+    ok "fluidvoice cask installed (brew)"
+  else
+    fail "fluidvoice selected but not installed (./setup.sh --with fluidvoice)"
+  fi
+else
+  info "FluidVoice not selected by resolved profile (optional)"
+fi
+
 echo -e "\n${BLUE}Images toolkit (optional)${NC}"
 # Soft checks: warn when missing (base Brewfile already has magick/exiftool for many users)
 for cmd in magick exiftool pngquant rsvg-convert gs; do

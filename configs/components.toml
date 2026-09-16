@@ -1,7 +1,7 @@
 # configs/components.toml — authoritative optional-component registry
 #
 # Single source for setup.sh / bootstrap.sh / configure.sh / profile `all`.
-# Profiles and CLI --with must only reference ids listed here.
+# Profiles and CLI --with must only reference ids listed here (or supergroups).
 
 version = 1
 
@@ -11,6 +11,7 @@ label = "Herdr"
 category = "multiplexer"
 cloud = false
 local_ai = false
+platforms = ["darwin", "linux"]
 description = "Terminal multiplexer (Brewfile.herdr)"
 
 [[components]]
@@ -19,6 +20,7 @@ label = "Hermes"
 category = "ai_client"
 cloud = false
 local_ai = true
+platforms = ["darwin", "linux"]
 description = "Hermes agent CLI (+ macOS hermes-desktop)"
 
 [[components]]
@@ -27,6 +29,7 @@ label = "Ollama"
 category = "ai_runtime"
 cloud = false
 local_ai = true
+platforms = ["darwin", "linux"]
 description = "Local LLM runtime (no models pulled)"
 
 [[components]]
@@ -36,6 +39,7 @@ category = "skills"
 cloud = false
 local_ai = false
 omit_from_all = true
+platforms = ["darwin", "linux"]
 description = "Archify skill only (also included in --with skills)"
 
 [[components]]
@@ -44,6 +48,7 @@ label = "Engineering skills"
 category = "skills"
 cloud = false
 local_ai = false
+platforms = ["darwin", "linux"]
 description = "Curated engineering skill pack (includes Archify)"
 
 [[components]]
@@ -52,6 +57,7 @@ label = "AI skills"
 category = "skills"
 cloud = false
 local_ai = false
+platforms = ["darwin", "linux"]
 description = "Curated AI/agent engineering skill pack"
 
 [[components]]
@@ -60,7 +66,8 @@ label = "Draw Things"
 category = "image_ai"
 cloud = false
 local_ai = true
-description = "Draw Things CLI + MCP bridge + img"
+platforms = ["darwin", "linux"]
+description = "Draw Things CLI + MCP bridge + img (GUI/models are macOS-oriented)"
 
 [[components]]
 id = "opencode"
@@ -68,6 +75,7 @@ label = "OpenCode"
 category = "ai_client"
 cloud = false
 local_ai = true
+platforms = ["darwin", "linux"]
 description = "Local/general coding adapter"
 
 [[components]]
@@ -76,6 +84,7 @@ label = "Codex"
 category = "ai_client"
 cloud = true
 local_ai = false
+platforms = ["darwin"]
 description = "Frontier coding via Homebrew cask Codex"
 
 [[components]]
@@ -84,7 +93,18 @@ label = "Cursor"
 category = "ai_client"
 cloud = true
 local_ai = false
+platforms = ["darwin"]
 description = "Cursor Agent CLI (explicit opt-in)"
+
+[[components]]
+id = "fluidvoice"
+label = "FluidVoice"
+category = "voice_ai"
+cloud = false
+local_ai = true
+platforms = ["darwin"]
+min_darwin = "15"
+description = "Local voice-to-text dictation app with optional AI enhancement"
 
 [[components]]
 id = "images"
@@ -92,6 +112,7 @@ label = "Images toolkit"
 category = "media"
 cloud = false
 local_ai = false
+platforms = ["darwin", "linux"]
 description = "Deterministic image toolkit (Magick, etc.)"
 
 [[components]]
@@ -100,4 +121,21 @@ label = "TeX"
 category = "docs"
 cloud = false
 local_ai = false
+platforms = ["darwin", "linux"]
 description = "Homebrew TeX Live (CLI)"
+
+# Declarative selector aggregates. Expand to member component ids before install.
+# Nested groups are not supported in v1.0.1.
+[[supergroups]]
+id = "ai"
+label = "AI applications"
+description = "All supported AI applications for this platform"
+members = [
+  "hermes",
+  "ollama",
+  "drawthings",
+  "opencode",
+  "codex",
+  "cursor",
+  "fluidvoice",
+]

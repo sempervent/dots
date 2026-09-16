@@ -1,0 +1,5 @@
+# brew/Brewfile.fluidvoice — optional: ./setup.sh --with fluidvoice
+# Official FluidVoice macOS app via Homebrew cask.
+# Requires macOS 15+. Does not download speech models or grant OS permissions.
+
+cask "fluidvoice"
