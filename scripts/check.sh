@@ -1,18 +1,80 @@
 #!/usr/bin/env bash
-# Health check for sempervent/dots — green when optional AI tools are absent.
+# Health check for sempervent/dots — profile-aware ERROR / WARN / INFO.
+#
+# Usage:
+#   ./scripts/check.sh
+#   ./scripts/check.sh --profile server
+#   ./scripts/check.sh --profile home
+#
+# Exit nonzero only when ERROR (fail) count > 0. Warnings never fail the run.
 set -euo pipefail
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
 PASSED=0; FAILED=0; WARNINGS=0
 
 DOTS_DIR="${DOTS_DIR:-${HOME}/dots}"
+DIR="${DOTS_DIR}"
 SYM_DIR="${DOTS_DIR}/syms"
 CONFIG_DIR="${DOTS_DIR}/configs"
+CHECK_PROFILE="${DOTS_PROFILE:-}"
+PROFILE_NAME=""
+PROFILE_PACKAGES=()
+EFFECTIVE_WITH=()
+
+# shellcheck source=../helpers/toml.sh
+source "${DOTS_DIR}/helpers/toml.sh"
+# shellcheck source=../helpers/components.sh
+source "${DOTS_DIR}/helpers/components.sh"
+# shellcheck source=../helpers/profiles.sh
+source "${DOTS_DIR}/helpers/profiles.sh"
 
 ok() { echo -e "${GREEN}✓${NC} $1"; PASSED=$((PASSED + 1)); }
 warn() { echo -e "${YELLOW}⚠${NC} $1"; WARNINGS=$((WARNINGS + 1)); }
 fail() { echo -e "${RED}✗${NC} $1"; FAILED=$((FAILED + 1)); }
 info() { echo -e "${BLUE}ℹ${NC} $1"; }
+
+profile_has_group() {
+  local g="$1" x
+  for x in "${PROFILE_PACKAGES[@]+"${PROFILE_PACKAGES[@]}"}"; do
+    [[ "${x}" == "${g}" ]] && return 0
+  done
+  return 1
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --profile) CHECK_PROFILE="${2:-}"; shift 2 ;;
+    --profile=*) CHECK_PROFILE="${1#*=}"; shift ;;
+    -h|--help)
+      echo "Usage: $0 [--profile base|home|work|server|all|current]"
+      exit 0
+      ;;
+    *) echo "Unknown option: $1" >&2; exit 1 ;;
+  esac
+done
+
+if [[ -z "${CHECK_PROFILE}" && -f "${HOME}/.config/dots/active-profile" ]]; then
+  # shellcheck disable=SC1090
+  source "${HOME}/.config/dots/active-profile"
+  CHECK_PROFILE="${DOTS_PROFILE:-base}"
+fi
+CHECK_PROFILE="${CHECK_PROFILE:-base}"
+
+if PROFILE_FILE="$(dots_resolve_profile_path "${CHECK_PROFILE}" 2>/dev/null)"; then
+  CLI_WITH=(); CLI_WITHOUT=()
+  dots_load_profile_file "${PROFILE_FILE}" >/dev/null
+  dots_compute_effective_with >/dev/null || true
+else
+  PROFILE_NAME="${CHECK_PROFILE}"
+  case "${CHECK_PROFILE}" in
+    server) PROFILE_PACKAGES=(core modern server) ;;
+    work) PROFILE_PACKAGES=(core modern workstation) ;;
+    home|all) PROFILE_PACKAGES=(core modern workstation infra media gui) ;;
+    *) PROFILE_PACKAGES=(core modern) ;;
+  esac
+fi
+
+echo -e "${BLUE}dotfiles health check${NC} (profile=${PROFILE_NAME:-${CHECK_PROFILE}})\n"
 
 check_symlink() {
   local target="$1" source="$2" name="$3"
@@ -32,13 +94,14 @@ check_symlink() {
   fi
 }
 
-echo -e "${BLUE}dotfiles health check${NC}\n"
-
 echo -e "${BLUE}Core layout${NC}"
 [[ -f "${DOTS_DIR}/brew/Brewfile" ]] && ok "Brewfile present" || fail "Brewfile missing"
+[[ -d "${DOTS_DIR}/brew/groups" ]] && ok "brew/groups present" || fail "brew/groups missing"
 [[ ! -e "${DOTS_DIR}/brew/packages.txt" ]] && ok "packages.txt absent" || fail "packages.txt still present (should be removed)"
 [[ -d "${DOTS_DIR}/shell" ]] && ok "shell/ present" || fail "shell/ missing"
 [[ -d "${DOTS_DIR}/zsh" ]] && ok "zsh/ present" || fail "zsh/ missing"
+[[ -f "${DOTS_DIR}/configs/links.toml" ]] && ok "links.toml present" || fail "links.toml missing"
+[[ -f "${DOTS_DIR}/tools/toml_min.py" ]] && ok "toml_min.py present" || fail "toml_min.py missing"
 
 echo -e "\n${BLUE}Symlinks${NC}"
 check_symlink "${HOME}/.bashrc" "${SYM_DIR}/bashrc" "bashrc"
@@ -68,7 +131,11 @@ echo -e "\n${BLUE}Node / fnm (default)${NC}"
 if command -v fnm >/dev/null 2>&1; then
   ok "fnm $(fnm --version 2>/dev/null | head -1)"
 else
-  fail "fnm missing (default Brewfile)"
+  if profile_has_group gui || profile_has_group workstation || [[ "$(uname -s)" == "Darwin" ]]; then
+    fail "fnm missing (required for this profile/platform)"
+  else
+    warn "fnm missing (optional on headless Linux until installed manually)"
+  fi
 fi
 if command -v node >/dev/null 2>&1; then
   ok "node $(node --version 2>/dev/null) @ $(command -v node)"
@@ -81,21 +148,43 @@ if command -v node >/dev/null 2>&1; then
       ;;
     *)
       # brew node is acceptable fallback when fnm env not active in this shell
-      if [[ "$(command -v node)" == "$(brew --prefix 2>/dev/null)/bin/node" ]]; then
-        info_or_ok="ok"
+      if [[ "$(command -v node)" == /opt/homebrew/* ]] || [[ "$(command -v node)" == /usr/local/* ]]; then
         ok "node is Homebrew (fnm may not be active in this non-interactive shell)"
       else
-        warn "node path unexpected: $(command -v node)"
+        warn "node not clearly fnm-managed ($(command -v node))"
       fi
       ;;
   esac
 else
-  fail "node missing (fnm default Node)"
+  if command -v fnm >/dev/null 2>&1; then
+    warn "node missing (run setup to fnm install default)"
+  else
+    info "node missing (fnm not provisioned on this host)"
+  fi
+fi
+
+# NVM must not be auto-activated by DOTS
+if bash -ic 'type nvm 2>/dev/null | head -1' 2>/dev/null | rg -q 'nvm is a function|nvm is aliased'; then
+  # Only fail if our bashrc still sources nvm
+  if rg -q 'nvm\.sh' "${SYM_DIR}/bashrc" 2>/dev/null; then
+    fail "bashrc still sources NVM (DOTS policy is fnm-only)"
+  else
+    warn "nvm function visible in bash (user local config?); DOTS does not source NVM"
+  fi
+else
+  ok "bash does not auto-load NVM via DOTS"
+fi
+if [[ -d "${HOME}/.nvm" ]]; then
+  info "~/.nvm present (left alone; not sourced by DOTS)"
 fi
 if command -v npm >/dev/null 2>&1; then
   ok "npm $(npm --version 2>/dev/null)"
 else
-  fail "npm missing"
+  if command -v fnm >/dev/null 2>&1; then
+    warn "npm missing"
+  else
+    info "npm missing"
+  fi
 fi
 [[ -f "${CONFIG_DIR}/node/default.toml" ]] && ok "node default policy present" || fail "configs/node/default.toml missing"
 
@@ -155,7 +244,15 @@ fi
 if command -v terminal-notifier >/dev/null 2>&1 || [[ -x /opt/homebrew/bin/terminal-notifier ]]; then
   ok "terminal-notifier available"
 else
-  fail "terminal-notifier missing (default Brewfile)"
+  if profile_has_group workstation || profile_has_group gui; then
+    if [[ "$(uname -s)" == "Darwin" ]]; then
+      fail "terminal-notifier missing (workstation/gui profile)"
+    else
+      info "terminal-notifier skipped (not macOS)"
+    fi
+  else
+    info "terminal-notifier not required for profile ${PROFILE_NAME:-${CHECK_PROFILE}}"
+  fi
 fi
 if [[ -L "${HOME}/.local/bin/notify" ]] || [[ -x "${HOME}/.local/bin/notify" ]]; then
   ok "notify helper present (~/.local/bin/notify)"
@@ -226,7 +323,11 @@ if [[ "$(uname -s)" == "Darwin" ]]; then
       info "font cache may need app restart for iTerm/GUI to enumerate JetBrainsMono Nerd Font"
     fi
   else
-    fail "JetBrainsMono Nerd Font absent after setup (cask: font-jetbrains-mono-nerd-font)"
+    if profile_has_group gui; then
+      fail "JetBrainsMono Nerd Font absent (gui package group)"
+    else
+      info "Nerd Font not required for profile ${PROFILE_NAME:-${CHECK_PROFILE}}"
+    fi
   fi
 fi
 
@@ -958,8 +1059,45 @@ fi
 [[ -f "${CONFIG_DIR}/bootstrap/profiles/base.toml" ]] && ok "bootstrap profile base" || fail "base profile missing"
 [[ -f "${CONFIG_DIR}/bootstrap/profiles/home.toml" ]] && ok "bootstrap profile home" || fail "home profile missing"
 [[ -f "${CONFIG_DIR}/bootstrap/profiles/work.toml" ]] && ok "bootstrap profile work" || fail "work profile missing"
+[[ -f "${CONFIG_DIR}/bootstrap/profiles/server.toml" ]] && ok "bootstrap profile server" || fail "server profile missing"
 [[ -f "${CONFIG_DIR}/bootstrap/profiles/all.toml" ]] && ok "bootstrap profile all" || fail "all profile missing"
 [[ -f "${CONFIG_DIR}/components.toml" ]] && ok "components registry present" || fail "configs/components.toml missing"
+
+# Runtime policy
+if [[ -f "${HOME}/.config/dots/runtime.env" ]]; then
+  ok "runtime.env present"
+  # shellcheck disable=SC1090
+  if bash -n "${HOME}/.config/dots/runtime.env" 2>/dev/null; then
+    ok "runtime.env syntax"
+  else
+    fail "runtime.env syntax error"
+  fi
+else
+  warn "runtime.env missing (run bootstrap to generate)"
+fi
+if [[ -f "${HOME}/.config/dots/local.sh" ]]; then
+  ok "local.sh present"
+else
+  info "local.sh not created yet (bootstrap seeds it once)"
+fi
+
+# Multiplexer expectation
+case "${PROFILE_RUNTIME_MULTIPLEXER:-tmux}" in
+  herdr)
+    if command -v herdr >/dev/null 2>&1; then
+      ok "herdr available for runtime.multiplexer=herdr"
+    else
+      warn "runtime wants herdr but herdr not installed (fallback tmux at runtime)"
+    fi
+    ;;
+  tmux)
+    if command -v tmux >/dev/null 2>&1; then
+      ok "tmux available"
+    else
+      fail "tmux missing (required multiplexer)"
+    fi
+    ;;
+esac
 if [[ -f "${DOTS_DIR}/configure.sh" ]] && [[ -x "${DOTS_DIR}/configure.sh" ]]; then
   ok "configure.sh present"
 else
@@ -973,4 +1111,10 @@ fi
 
 echo -e "\n${BLUE}Summary${NC}"
 echo -e "Passed: ${GREEN}${PASSED}${NC}  Warnings: ${YELLOW}${WARNINGS}${NC}  Failed: ${RED}${FAILED}${NC}"
-[[ "${FAILED}" -eq 0 ]]
+if [[ "${FAILED}" -eq 0 ]]; then
+  echo -e "${GREEN}Bootstrap contract satisfied${NC} (profile=${PROFILE_NAME:-${CHECK_PROFILE}}; warnings=${WARNINGS})"
+  exit 0
+else
+  echo -e "${RED}Health check FAILED: ${FAILED} required check(s) failed.${NC}"
+  exit 1
+fi
