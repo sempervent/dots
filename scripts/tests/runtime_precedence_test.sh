@@ -2,18 +2,25 @@
 # scripts/tests/runtime_precedence_test.sh — prove DOTS_* precedence for Bash and Zsh
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-pass=0; fail=0
-ok() { echo "OK: $1"; pass=$((pass+1)); }
-bad() { echo "FAIL: $1" >&2; fail=$((fail+1)); }
+pass=0
+fail=0
+ok() {
+	echo "OK: $1"
+	pass=$((pass + 1))
+}
+bad() {
+	echo "FAIL: $1" >&2
+	fail=$((fail + 1))
+}
 
 run_case() {
-  local shell="$1" label="$2" expect="$3"
-  shift 3
-  local out
-  out="$(
-    env -i HOME="$HOME" USER="${USER:-dots}" TERM=dumb PATH="/usr/bin:/bin:/opt/homebrew/bin:/usr/local/bin" \
-      DOTS_DIR="$ROOT" "$@" \
-      "$shell" -c '
+	local shell="$1" label="$2" expect="$3"
+	shift 3
+	local out
+	out="$(
+		env -i HOME="$HOME" USER="${USER:-dots}" TERM=dumb PATH="/usr/bin:/bin:/opt/homebrew/bin:/usr/local/bin" \
+			DOTS_DIR="$ROOT" "$@" \
+			"$shell" -c '
         export DOTS_DIR="'"$ROOT"'"
         export DOTS_SHELL="'"$shell"'"
         # minimal init path matching runtime → exports
@@ -21,15 +28,19 @@ run_case() {
         . "$DOTS_DIR/shell/exports.sh"
         printf "%s\n" "${DOTS_MULTIPLEXER-}"
       ' 2>/dev/null | tail -1
-  )"
-  if [[ "$out" == "$expect" ]]; then
-    ok "$label ($shell → $out)"
-  else
-    bad "$label ($shell got='$out' want='$expect')"
-  fi
+	)"
+	if [[ $out == "$expect" ]]; then
+		ok "$label ($shell → $out)"
+	else
+		bad "$label ($shell got='$out' want='$expect')"
+	fi
 }
 
 echo "=== runtime precedence ==="
+if ! command -v zsh >/dev/null 2>&1; then
+	echo "FAIL: zsh required for runtime precedence tests (install zsh)" >&2
+	exit 1
+fi
 TMP="$(mktemp -d)"
 export HOME="$TMP"
 mkdir -p "$HOME/.config/dots"
@@ -65,4 +76,4 @@ run_case zsh "server profile tmux" tmux
 
 rm -rf "$TMP"
 echo "Passed: $pass  Failed: $fail"
-[[ "$fail" -eq 0 ]]
+[[ $fail -eq 0 ]]
