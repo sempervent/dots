@@ -11,6 +11,7 @@ echo "=== check.sh contract ==="
 TMP="$(mktemp -d)"
 export HOME="$TMP"
 export DOTS_DIR="$ROOT"
+ORIG_PATH="${PATH}"
 
 mkdir -p "$HOME/.config/dots"
 cat >"$HOME/.config/dots/runtime.env" <<'EOF'
@@ -26,37 +27,31 @@ cat >"$HOME/.config/dots/active-profile" <<EOF
 DOTS_PROFILE='server'
 DOTS_PROFILE_FILE='$ROOT/configs/bootstrap/profiles/server.toml'
 DOTS_PACKAGE_GROUPS='core modern server'
-DOTS_LAST_WITH_INFO=''
+DOTS_LAST_WITH_INFO='herdr'
 EOF
 
-# Hide selected required CLIs while keeping a usable system PATH for the checker itself.
+# Restricted PATH: enough to run check/profile parse, but omit tmux/herdr/nvim/etc.
 mkdir -p "$TMP/bin"
-for tool in tmux nvim rg fd fzf bat zoxide direnv htop jq; do
-	cat >"$TMP/bin/$tool" <<'EOF'
-#!/bin/sh
-echo "hidden-for-test" >&2
-exit 127
-EOF
-	chmod +x "$TMP/bin/$tool"
-done
-# Prefer /bin /usr/bin for real utilities; put hide-dir AFTER so... wait, we need hide to win.
-# Put hide first so command -v finds our stubs — but stubs exit 127; command -v still finds them!
-# check.sh uses command -v which succeeds if stub exists. Remove stubs; use a filtered PATH instead.
-rm -rf "$TMP/bin"
-mkdir -p "$TMP/bin"
-# Copy/symlink only "safe" commands needed to run check.sh, omitting required profile tools.
-keep='bash sh mkdir cat printf echo awk sed grep tr cksum find ls date uname dirname basename pwd true false rm mv cp ln head tail cut sort uniq wc tee xargs python3 env git zsh realpath readlink cksum'
+keep='bash sh mkdir cat printf echo awk sed grep tr find ls date uname dirname basename pwd true false rm mv cp ln head tail cut sort uniq wc tee xargs python3 python3.11 python3.12 python3.13 python3.14 env git zsh realpath readlink mktemp cksum'
 for c in $keep; do
 	p=$(command -v "$c" 2>/dev/null || true)
 	[[ -n $p && -x $p ]] && ln -sfn "$p" "$TMP/bin/$c"
 done
-# Also need common locations for dynamic linker helpers used by python
-export PATH="$TMP/bin:/usr/bin:/bin"
+# Ensure tomllib-capable interpreter is available as python3 for profile load
+if ! "$TMP/bin/python3" -c 'import tomllib' 2>/dev/null; then
+	for cand in python3.14 python3.13 python3.12 python3.11; do
+		if [[ -x $TMP/bin/$cand ]] && "$TMP/bin/$cand" -c 'import tomllib' 2>/dev/null; then
+			ln -sfn "$TMP/bin/$cand" "$TMP/bin/python3"
+			break
+		fi
+	done
+fi
 
 set +e
 PATH="$TMP/bin" /bin/bash "$ROOT/scripts/check.sh" --profile server >"$TMP/check.out" 2>&1
 rc=$?
 set -e
+export PATH="${ORIG_PATH}"
 
 if [[ $rc -ne 0 ]]; then
 	ok "check.sh exits nonzero when required state missing (rc=$rc)"
@@ -68,11 +63,11 @@ if grep -q 'Bootstrap contract satisfied' "$TMP/check.out"; then
 else
 	ok "did not claim contract satisfied"
 fi
-if grep -E 'required tool missing|missing .*bashrc|tmux missing \(required' "$TMP/check.out" >/dev/null; then
+if grep -E 'required tool missing|missing .*bashrc|tmux missing|herdr missing' "$TMP/check.out" >/dev/null; then
 	ok "emits ERROR for required absence"
 else
 	bad "no ERROR line for required absence"
-	rg -n 'Required tools|✗|fail|tmux|Health check' "$TMP/check.out" | head -40 >&2 || true
+	grep -nE 'Required tools|✗|tmux|herdr|Health check' "$TMP/check.out" | head -40 >&2 || true
 fi
 
 rm -rf "$TMP"

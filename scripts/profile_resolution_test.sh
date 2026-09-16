@@ -125,9 +125,10 @@ else
   ok "malformed TOML rejected"
 fi
 
-# SERVER
+# SERVER — Herdr first-class; no AI providers; tmux automatic
 resolve_named server
-if [[ ${#EFFECTIVE_WITH[@]} -eq 0 ]]; then ok "server → []"; else bad "server expected []"; fi
+if [[ "${EFFECTIVE_WITH[*]}" == "herdr" ]]; then ok "server → [herdr]"; else bad "server expected [herdr] got ${EFFECTIVE_WITH[*]:-}"
+fi
 if [[ "${PROFILE_PACKAGES[*]}" == "core modern server" ]]; then ok "server packages"; else bad "server packages=${PROFILE_PACKAGES[*]}"; fi
 if [[ "${PROFILE_RUNTIME_MULTIPLEXER}" == "tmux" ]]; then ok "server multiplexer=tmux"; else bad "server mux=${PROFILE_RUNTIME_MULTIPLEXER}"; fi
 
@@ -147,13 +148,15 @@ else
   ok "unknown package group rejected"
 fi
 
-# bootstrap --show smoke
-if "${DOTS_DIR}/bootstrap.sh" --profile work --show 2>/dev/null | rg -q 'components:'; then
+# bootstrap --show smoke (avoid pipefail+rg -q SIGPIPE flakiness)
+_show_work="$("${DOTS_DIR}/bootstrap.sh" --profile work --show 2>/dev/null || true)"
+if echo "${_show_work}" | rg -q 'components:'; then
   ok "bootstrap --show work"
 else
   bad "bootstrap --show work"
 fi
-if "${DOTS_DIR}/bootstrap.sh" --profile server --show 2>/dev/null | rg -q 'package groups:'; then
+_show_server="$("${DOTS_DIR}/bootstrap.sh" --profile server --show 2>/dev/null || true)"
+if echo "${_show_server}" | rg -q 'package groups:'; then
   ok "bootstrap --show server"
 else
   bad "bootstrap --show server"

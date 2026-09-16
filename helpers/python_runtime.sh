@@ -1,14 +1,10 @@
 # shellcheck shell=bash
-# helpers/python_runtime.sh — managed Python ≥3.11 for components that need tomllib
+# helpers/python_runtime.sh — locate / provision Python ≥3.11 (stdlib tomllib)
 #
-# Bootstrap/profile parsing still uses system python3 ≥3.6 (+ toml_min).
-# Skill manifests use dotted TOML tables → need tomllib (Python ≥3.11).
-#
-# When skills/ai-skills are selected and no ≥3.11 interpreter is available,
-# provision one via the host package manager (Homebrew / apt / pacman / xbps / dnf).
+# DOTS minimum supported Python is 3.11. Preferred provisioned version is 3.12+.
 # Does not replace system Python or change interactive PATH/aliases.
 #
-# Requires: DIR, DRY_RUN (optional), helpers/toml.sh patterns for HOME isolation
+# Requires: DIR, DRY_RUN (optional)
 # Optional: dots_detect_linux_pkg_mgr from helpers/packages.sh
 
 # True if interpreter at $1 can import tomllib (Python ≥3.11).

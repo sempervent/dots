@@ -1,99 +1,115 @@
 # shellcheck shell=bash
-# helpers/toml.sh — parse DOTS TOML without requiring Python 3.11 tomllib
+# helpers/toml.sh — DOTS TOML via stdlib tomllib (Python ≥3.11)
 #
 # Requires: DIR
-# Provides: dots_toml_python, dots_require_python, and a shared PY prelude snippet.
+# Prefer an already-installed Python ≥3.11; otherwise provision (mutating runs only).
+# Never replaces system python/aliases; uses an isolated HOME for invocations.
 
+# shellcheck source=python_runtime.sh
+[[ -n ${DIR:-} && -f ${DIR}/helpers/python_runtime.sh ]] && source "${DIR}/helpers/python_runtime.sh"
+
+# Resolve interpreter into DOTS_PYTHON (≥3.11 with tomllib).
+# soft=1 → report-only when missing (for --show/--dry-run); soft=0 → provision.
 dots_require_python() {
-	if ! command -v python3 >/dev/null 2>&1; then
-		echo "Error: python3 is required to parse DOTS configuration (profiles, components, packages)." >&2
-		echo "DOTS uses tomllib (3.11+) when available, otherwise tools/toml_min.py (needs Python 3.6+)." >&2
+	local soft="${1:-0}"
+	local found
+	if found="$(dots_find_python311 2>/dev/null)"; then
+		DOTS_PYTHON="${found}"
+		export DOTS_PYTHON
+		return 0
+	fi
+
+	# Fallback: plain python3 if it already has tomllib
+	if command -v python3 >/dev/null 2>&1; then
+		local pyhome ver
+		pyhome="$(mktemp -d "${TMPDIR:-/tmp}/dots-pyhome.XXXXXX")"
+		if HOME="${pyhome}" PYTHONDONTWRITEBYTECODE=1 python3 -B -c 'import tomllib' 2>/dev/null; then
+			rm -rf "${pyhome}"
+			DOTS_PYTHON="$(command -v python3)"
+			export DOTS_PYTHON
+			return 0
+		fi
+		ver="$(HOME="${pyhome}" python3 -B -c 'import sys; print("%d.%d.%d"%sys.version_info[:3])' 2>/dev/null || echo unknown)"
+		rm -rf "${pyhome}"
+		echo "Error: Python >=3.11 required (stdlib tomllib)." >&2
+		echo "Found: Python ${ver}" >&2
+	else
+		echo "Error: Python >=3.11 required (stdlib tomllib). No python3 on PATH." >&2
+	fi
+
+	if [[ ${soft} -eq 1 ]] || [[ ${DRY_RUN:-0} -eq 1 ]] || [[ ${SHOW_ONLY:-0} -eq 1 ]]; then
+		if command -v brew >/dev/null 2>&1; then
+			echo "Would provision Python 3.12 via Homebrew (brew install python@3.12)." >&2
+		elif [[ "$(uname -s)" == "Linux" ]]; then
+			echo "Would provision Python >=3.11 via the platform package manager (python3.12 / python3.11)." >&2
+		else
+			echo "Would provision Python >=3.11 after Homebrew is available." >&2
+		fi
 		return 1
 	fi
-	# Reject macOS Xcode CLT stub that only prints a license prompt.
-	# Isolate HOME: Apple Python writes ~/Library/Caches/com.apple.python even with -B.
-	local _pyhome
-	_pyhome="$(mktemp -d "${TMPDIR:-/tmp}/dots-pyhome.XXXXXX")"
-	if ! HOME="${_pyhome}" PYTHONDONTWRITEBYTECODE=1 python3 -B -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 6) else 1)' 2>/dev/null; then
-		rm -rf "${_pyhome}"
-		echo "Error: python3 exists but is not usable Python ≥ 3.6." >&2
+
+	if ! dots_provision_python311 "DOTS bootstrap / tomllib"; then
 		return 1
 	fi
-	rm -rf "${_pyhome}"
+	if found="$(dots_find_python311 2>/dev/null)"; then
+		DOTS_PYTHON="${found}"
+		export DOTS_PYTHON
+		echo "OK: using provisioned Python → ${DOTS_PYTHON}"
+		return 0
+	fi
+	echo "Error: Python >=3.11 provisioned but not discoverable on PATH." >&2
+	return 1
 }
 
-# Print absolute path to tools/toml_min.py
-dots_toml_min_path() {
-	printf '%s\n' "${DIR}/tools/toml_min.py"
-}
-
-# Run python3 without writing Apple/system bytecode caches into the caller's $HOME.
-# Usage: dots_python3 [args...]   (same as python3)
+# Run DOTS_PYTHON (or python3) with HOME isolation.
 dots_python3() {
+	local bin="${DOTS_PYTHON:-}"
+	[[ -z ${bin} ]] && bin="$(command -v python3 2>/dev/null || true)"
+	[[ -n ${bin} ]] || {
+		echo "Error: no Python interpreter (DOTS_PYTHON unset)." >&2
+		return 1
+	}
 	local pyhome rc=0
 	pyhome="$(mktemp -d "${TMPDIR:-/tmp}/dots-pyhome.XXXXXX")"
-	HOME="${pyhome}" PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1 command python3 -B "$@" || rc=$?
+	HOME="${pyhome}" PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1 "${bin}" -B "$@" || rc=$?
 	rm -rf "${pyhome}"
 	return "${rc}"
 }
 
-# Load TOML file into Python variable `data` (dict). Prefer tomllib; fall back to toml_min.
-# Usage inside a python3 - heredoc after calling this as the program body start:
-#   dots_toml_python_load_prelude   # not used directly
-#
-# Preferred API — run a query:
+# Load TOML via tomllib into `data`, then run query from stdin.
 #   dots_toml_query FILE <<'PY'
 #   ... use data ...
 #   PY
-
 dots_toml_query() {
 	local file="$1"
-	dots_require_python || return 1
+	dots_require_python 0 || return 1
 	if [[ ! -f ${file} ]]; then
 		echo "Error: TOML file not found: ${file}" >&2
 		return 1
 	fi
-	local minp
-	minp="$(dots_toml_min_path)"
-	# Read query from stdin into env to avoid nested stdin conflict
 	local query
 	query="$(cat)"
-	# Isolate HOME so Apple/system Python cannot write caches into the real or test HOME.
-	local pyhome
+	local pyhome rc=0
+	local bin="${DOTS_PYTHON}"
 	pyhome="$(mktemp -d "${TMPDIR:-/tmp}/dots-pyhome.XXXXXX")"
-	local rc=0
-	QUERY="${query}" FILE="${file}" MINP="${minp}" \
+	QUERY="${query}" FILE="${file}" \
 		HOME="${pyhome}" \
 		PYTHONDONTWRITEBYTECODE=1 \
 		PYTHONNOUSERSITE=1 \
-		python3 -B <<'PY' || rc=$?
-import importlib.util, os, sys
+		"${bin}" -B <<'PY' || rc=$?
+import os, sys
 from pathlib import Path
+import tomllib
 
 path = Path(os.environ["FILE"])
-min_path = Path(os.environ["MINP"])
 text = path.read_text(encoding="utf-8")
-data = None
-errors = []
 try:
-    import tomllib
     data = tomllib.loads(text)
 except Exception as exc:
-    errors.append("tomllib: %s" % exc)
-    spec = importlib.util.spec_from_file_location("toml_min", str(min_path))
-    mod = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(mod)
-    try:
-        data = mod.loads(text)
-    except Exception as exc2:
-        errors.append("toml_min: %s" % exc2)
-        sys.stderr.write("Error: malformed TOML (%s)\n" % path)
-        for e in errors:
-            sys.stderr.write("  %s\n" % e)
-        sys.exit(1)
+    sys.stderr.write("Error: malformed TOML (%s): %s\n" % (path, exc))
+    sys.exit(1)
 
-ns = {"data": data, "sys": sys, "Path": Path, "path": path}
+ns = {"data": data, "sys": sys, "Path": Path, "path": path, "tomllib": tomllib}
 try:
     exec(compile(os.environ["QUERY"], "<dots_toml_query>", "exec"), ns, ns)
 except SystemExit:

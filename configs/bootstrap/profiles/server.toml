@@ -1,13 +1,17 @@
 # configs/bootstrap/profiles/server.toml
-# Headless Linux (or conservative remote) — no GUI, no AI by default.
+# Headless Linux (or conservative remote) — no GUI, no AI providers by default.
+#
+# Installs both tmux and Herdr. Automatic multiplexer default is tmux;
+# set runtime.multiplexer = "herdr" in a custom profile to auto-start Herdr.
+# Herdr availability does NOT authorize Hermes/Codex/Cursor/Ollama/etc.
 #
 # Use: ./bootstrap.sh --profile server
 # Example: ./bootstrap.sh --profile server --with hermes,ollama
 
 [profile]
 name = "server"
-description = "Headless server — core CLI UX, tmux, no GUI/AI by default"
-with = []
+description = "Headless server — tmux + Herdr available, no GUI/AI providers by default"
+with = ["herdr"]
 packages = ["core", "modern", "server"]
 open_apps = []
 

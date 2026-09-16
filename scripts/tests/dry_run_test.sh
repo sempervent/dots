@@ -42,12 +42,42 @@ else
 fi
 
 before="$(snap "$TMP")"
+/bin/bash "$ROOT/bootstrap.sh" --profile work --dry-run >/tmp/dots-dry-work.out 2>&1 || true
+after="$(snap "$TMP")"
+if [[ "$before" == "$after" ]]; then
+  ok "bootstrap --profile work --dry-run no HOME mutation"
+else
+  bad "bootstrap work dry-run mutated HOME"
+fi
+
+before="$(snap "$TMP")"
 /bin/bash "$ROOT/bootstrap.sh" --profile server --dry-run >/tmp/dots-dry-server.out 2>&1 || true
 after="$(snap "$TMP")"
 if [[ "$before" == "$after" ]]; then
   ok "bootstrap --profile server --dry-run no HOME mutation"
 else
   bad "bootstrap server dry-run mutated HOME"
+fi
+
+# Custom extends profile (file outside HOME so creating it isn't a HOME mutation)
+CUSTOM="/tmp/dots-dry-custom-$$.toml"
+cat >"$CUSTOM" <<'EOF'
+[profile]
+name = "server-custom"
+extends = "server"
+[packages]
+add = ["infra"]
+[runtime]
+multiplexer = "herdr"
+EOF
+before="$(snap "$TMP")"
+/bin/bash "$ROOT/bootstrap.sh" --profile "$CUSTOM" --dry-run >/tmp/dots-dry-custom.out 2>&1 || true
+after="$(snap "$TMP")"
+rm -f "$CUSTOM"
+if [[ "$before" == "$after" ]]; then
+  ok "bootstrap custom profile --dry-run no HOME mutation"
+else
+  bad "bootstrap custom dry-run mutated HOME"
 fi
 
 before="$(snap "$TMP")"
