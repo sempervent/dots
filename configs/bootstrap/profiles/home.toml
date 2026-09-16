@@ -1,23 +1,24 @@
 # configs/bootstrap/profiles/home.toml
 # Builtin home preset. Prefer ~/.config/dots/profiles/*.toml with extends="home"
 # instead of editing this file for machine-specific differences.
+#
+# Uses the `ai` supergroup for AI applications, then adds non-AI home extras.
+# FluidVoice is excluded from home by default (opt in with --with fluidvoice).
+# On Darwin this resolves to the same AI apps as the prior leaf list (minus
+# FluidVoice). Platform-incompatible AI members are omitted from the group.
 
 [profile]
 name = "home"
 description = "Personal workstation — edit before relying on it"
 with = [
-  "hermes",
+  "ai",
   "herdr",
-  "ollama",
   "skills",
   "ai-skills",
-  "drawthings",
-  "opencode",
-  "codex",
-  "cursor",
   "images",
   "tex",
 ]
+without = ["fluidvoice"]
 packages = ["core", "modern", "workstation", "infra", "media", "gui"]
 open_apps = ["iTerm", "Draw Things", "Cursor"]
 

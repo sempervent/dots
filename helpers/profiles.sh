@@ -138,8 +138,9 @@ ALLOWED_COMPONENTS = {"with", "without"}
 KNOWN_GROUPS = {"core", "modern", "workstation", "infra", "media", "gui", "server"}
 KNOWN_MUX = {"tmux", "herdr", "none"}
 
-# Load component ids from registry (configs/components.toml)
+# Load component + supergroup ids from registry (configs/components.toml)
 known_components = set()
+known_selectors = set()
 reg = builtin_dir.parent.parent / "components.toml"
 if reg.is_file():
     try:
@@ -148,6 +149,11 @@ if reg.is_file():
             cid = (c.get("id") or "").strip()
             if cid:
                 known_components.add(cid)
+                known_selectors.add(cid)
+        for g in rdata.get("supergroups") or []:
+            gid = (g.get("id") or "").strip()
+            if gid:
+                known_selectors.add(gid)
     except Exception:
         pass
 
@@ -308,26 +314,26 @@ for path, data in chain:
                 fail("Unknown package group '%s' in %s" % (g, path))
         pkg_explicit = True
 
-    # components
+    # components (ids or supergroup selectors; expansion happens in shell)
     for item in list_str(prof.get("with"), "profile.with", path):
-        if known_components and item not in known_components:
-            fail("Unknown component '%s' in %s" % (item, path))
+        if known_selectors and item not in known_selectors:
+            fail("Unknown component or supergroup '%s' in %s" % (item, path))
         if item not in with_list:
             with_list.append(item)
     for item in list_str(prof.get("without"), "profile.without", path):
-        if known_components and item not in known_components:
-            fail("Unknown component '%s' in %s" % (item, path))
+        if known_selectors and item not in known_selectors:
+            fail("Unknown component or supergroup '%s' in %s" % (item, path))
         without_set.add(item)
 
     comps = data.get("components") or {}
     for item in list_str(comps.get("with"), "components.with", path):
-        if known_components and item not in known_components:
-            fail("Unknown component '%s' in %s" % (item, path))
+        if known_selectors and item not in known_selectors:
+            fail("Unknown component or supergroup '%s' in %s" % (item, path))
         if item not in with_list:
             with_list.append(item)
     for item in list_str(comps.get("without"), "components.without", path):
-        if known_components and item not in known_components:
-            fail("Unknown component '%s' in %s" % (item, path))
+        if known_selectors and item not in known_selectors:
+            fail("Unknown component or supergroup '%s' in %s" % (item, path))
         without_set.add(item)
 
     if "open_apps" in prof:
@@ -416,6 +422,8 @@ dots_load_profile_file() {
 	PROFILE_CHAIN=()
 	PROFILE_WITH=()
 	PROFILE_WITHOUT=()
+	PROFILE_WITH_RAW=()
+	PROFILE_WITHOUT_RAW=()
 	PROFILE_OPEN_APPS=()
 	PROFILE_PACKAGES=()
 	PROFILE_RUNTIME_MULTIPLEXER=""
@@ -424,6 +432,7 @@ dots_load_profile_file() {
 	PROFILE_RUNTIME_AUTO_TMUX=""
 	local include_all=0
 	local pkg_explicit=0
+	local _exp="" _cid="" _raw="" _reason=""
 
 	parse_tmp="$(mktemp "${TMPDIR:-/tmp}/dots-prof.XXXXXX")"
 	dots_profile_parse "${file}" >"${parse_tmp}" 2>"${parse_tmp}.err" || parse_rc=$?
@@ -460,9 +469,18 @@ dots_load_profile_file() {
 	rm -f "${parse_tmp}"
 
 	if [[ ${include_all} -eq 1 ]] || [[ ${PROFILE_NAME} == "all" && ${#PROFILE_WITH[@]} -eq 0 ]]; then
+		# Aggregate `all`: platform-aware like a supergroup (omit unsupported).
 		PROFILE_WITH=()
-		while IFS= read -r line; do
-			[[ -n ${line} ]] && PROFILE_WITH+=("${line}")
+		local _cid _reason
+		echo "Supergroup-equivalent 'all' (registry omit_from_all skipped):" >&2
+		while IFS= read -r _cid; do
+			[[ -z ${_cid} ]] && continue
+			if dots_component_supported_here "${_cid}"; then
+				PROFILE_WITH+=("${_cid}")
+			else
+				_reason="$(dots_component_unsupported_reason "${_cid}")"
+				echo "  skipped for platform: ${_cid} (${_reason})" >&2
+			fi
 		done < <(dots_component_ids_for_all)
 	fi
 
@@ -493,11 +511,35 @@ dots_load_profile_file() {
 		fi
 	fi
 
+	# Expand profile selectors (supergroups → leaves). Keep raw for --show.
+	PROFILE_WITH_RAW=("${PROFILE_WITH[@]+"${PROFILE_WITH[@]}"}")
+	PROFILE_WITHOUT_RAW=("${PROFILE_WITHOUT[@]+"${PROFILE_WITHOUT[@]}"}")
 	if [[ ${#PROFILE_WITH[@]} -gt 0 ]]; then
-		dots_validate_components "${PROFILE_WITH[@]}" || return 1
+		dots_validate_selectors "${PROFILE_WITH[@]}" || return 1
+		local _exp
+		_exp="$(dots_expand_with_selectors "${PROFILE_WITH[@]}")" || return 1
+		PROFILE_WITH=()
+		while IFS= read -r _cid; do
+			[[ -n ${_cid} ]] && PROFILE_WITH+=("${_cid}")
+		done <<<"${_exp}"
 	fi
 	if [[ ${#PROFILE_WITHOUT[@]} -gt 0 ]]; then
-		dots_validate_components "${PROFILE_WITHOUT[@]}" || return 1
+		dots_validate_selectors "${PROFILE_WITHOUT[@]}" || return 1
+		_exp="$(dots_expand_without_selectors "${PROFILE_WITHOUT[@]}")" || return 1
+		PROFILE_WITHOUT=()
+		while IFS= read -r _cid; do
+			[[ -n ${_cid} ]] && PROFILE_WITHOUT+=("${_cid}")
+		done <<<"${_exp}"
+	fi
+
+	# Explicit leaf components in the profile must be supported here.
+	if [[ ${#PROFILE_WITH_RAW[@]} -gt 0 ]]; then
+		local _raw
+		for _raw in "${PROFILE_WITH_RAW[@]}"; do
+			if dots_component_is_known "${_raw}"; then
+				dots_require_explicit_component_supported "${_raw}" || return 1
+			fi
+		done
 	fi
 
 	echo "OK: loaded profile '${PROFILE_NAME:-unknown}' from ${file}"
@@ -527,8 +569,37 @@ dots_array_contains() {
 
 # PROFILE_WITH + CLI_WITH - (PROFILE_WITHOUT ∪ CLI_WITHOUT) → EFFECTIVE_WITH (deduped)
 # CLI --without wins over everything; CLI --with adds after profile resolution.
+# Supergroups are expanded before this merge (profile) / here (CLI).
 dots_compute_effective_with() {
 	EFFECTIVE_WITH=()
+	CLI_WITH_RAW=("${CLI_WITH[@]+"${CLI_WITH[@]}"}")
+	CLI_WITHOUT_RAW=("${CLI_WITHOUT[@]+"${CLI_WITHOUT[@]}"}")
+
+	# Expand CLI selectors → leaf components
+	if [[ ${#CLI_WITH[@]} -gt 0 ]]; then
+		dots_validate_selectors "${CLI_WITH[@]}" || return 1
+		local _exp _cid _raw
+		_exp="$(dots_expand_with_selectors "${CLI_WITH[@]}")" || return 1
+		CLI_WITH=()
+		while IFS= read -r _cid; do
+			[[ -n ${_cid} ]] && CLI_WITH+=("${_cid}")
+		done <<<"${_exp}"
+		# Explicit CLI leaf components must be supported on this platform.
+		for _raw in "${CLI_WITH_RAW[@]}"; do
+			if dots_component_is_known "${_raw}"; then
+				dots_require_explicit_component_supported "${_raw}" || return 1
+			fi
+		done
+	fi
+	if [[ ${#CLI_WITHOUT[@]} -gt 0 ]]; then
+		dots_validate_selectors "${CLI_WITHOUT[@]}" || return 1
+		_exp="$(dots_expand_without_selectors "${CLI_WITHOUT[@]}")" || return 1
+		CLI_WITHOUT=()
+		while IFS= read -r _cid; do
+			[[ -n ${_cid} ]] && CLI_WITHOUT+=("${_cid}")
+		done <<<"${_exp}"
+	fi
+
 	local c
 	local -a without_all=()
 	for c in "${PROFILE_WITHOUT[@]+"${PROFILE_WITHOUT[@]}"}"; do
@@ -557,12 +628,6 @@ dots_compute_effective_with() {
 	fi
 	if [[ ${#EFFECTIVE_WITH[@]} -gt 0 ]]; then
 		dots_validate_components "${EFFECTIVE_WITH[@]}" || return 1
-	fi
-	if [[ ${#CLI_WITH[@]} -gt 0 ]]; then
-		dots_validate_components "${CLI_WITH[@]}" || return 1
-	fi
-	if [[ ${#CLI_WITHOUT[@]} -gt 0 ]]; then
-		dots_validate_components "${CLI_WITHOUT[@]}" || return 1
 	fi
 }
 
@@ -616,6 +681,24 @@ dots_show_profile_resolution() {
 			echo "  ${c}"
 		done
 	fi
+	# Transparent supergroup resolution for --show
+	local -a _req_groups=()
+	for c in "${PROFILE_WITH_RAW[@]+"${PROFILE_WITH_RAW[@]}"}" "${CLI_WITH_RAW[@]+"${CLI_WITH_RAW[@]}"}"; do
+		dots_supergroup_is_known "${c}" && _req_groups+=("${c}")
+	done
+	if [[ ${#_req_groups[@]} -gt 0 ]]; then
+		echo ""
+		echo "requested:"
+		echo "  supergroups: ${_req_groups[*]}"
+		echo "expanded components:"
+		if [[ ${#EFFECTIVE_WITH[@]} -eq 0 ]]; then
+			echo "  (none)"
+		else
+			for c in "${EFFECTIVE_WITH[@]}"; do
+				echo "  ${c}"
+			done
+		fi
+	fi
 	echo ""
 	if [[ ${#EFFECTIVE_WITH[@]} -gt 0 ]]; then
 		dots_print_provider_implications "${EFFECTIVE_WITH[@]}"
@@ -624,6 +707,7 @@ dots_show_profile_resolution() {
 		echo "  local AI: (none)"
 		echo "  cloud AI: (none)"
 		echo "  image AI: (none)"
+		echo "  voice AI: (none)"
 	fi
 }
 

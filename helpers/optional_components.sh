@@ -73,6 +73,10 @@ apply_optional_brewfiles() {
   if has_component cursor; then
     apply_brewfile "${DIR}/brew/Brewfile.cursor"
   fi
+  if has_component fluidvoice; then
+    # macOS 15+ only; platform gate runs before install. No models, no launch.
+    apply_brewfile "${DIR}/brew/Brewfile.fluidvoice"
+  fi
 }
 
 dots_install_requested_agent_skills() {

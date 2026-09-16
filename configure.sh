@@ -210,6 +210,29 @@ PY
 	)
 
 	echo ""
+	echo "Select supergroups to ADD (y/N for each):"
+	while IFS=$'\t' read -r id label; do
+		[[ -z ${id} ]] && continue
+		read -r -p "  [ ] ${label} (${id})? " ans
+		case "${ans}" in
+		y | Y | yes | YES) CLI_WITH+=("${id}") ;;
+		esac
+	done < <(
+		python3 - "$(dots_components_registry_path)" <<'PY'
+import sys
+from pathlib import Path
+import tomllib
+data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+for g in data.get("supergroups") or []:
+    gid = (g.get("id") or "").strip()
+    label = (g.get("label") or gid).strip()
+    desc = (g.get("description") or "").strip()
+    if gid:
+        print("%s\t%s%s" % (gid, label, (" — " + desc) if desc else ""))
+PY
+	)
+
+	echo ""
 	echo "Will write:"
 	echo "  ${OUTPUT}"
 	[[ -n ${EXTENDS} ]] && echo "  extends: ${EXTENDS}"
@@ -348,10 +371,10 @@ if [[ -n ${OUTPUT} ]] || [[ ${#CLI_WITH[@]} -gt 0 ]] || [[ -n ${FROM_PROFILE} ]]
 		CLI_WITH=("${PROFILE_WITH[@]+"${PROFILE_WITH[@]}"}" "${CLI_WITH[@]+"${CLI_WITH[@]}"}")
 	fi
 	if [[ ${#CLI_WITH[@]} -gt 0 ]]; then
-		dots_validate_components "${CLI_WITH[@]}" || exit 1
+		dots_validate_selectors "${CLI_WITH[@]}" || exit 1
 	fi
 	if [[ ${#CLI_WITHOUT[@]} -gt 0 ]]; then
-		dots_validate_components "${CLI_WITHOUT[@]}" || exit 1
+		dots_validate_selectors "${CLI_WITHOUT[@]}" || exit 1
 	fi
 	if [[ ${#PACKAGES_ADD[@]} -gt 0 || ${#PACKAGES_REMOVE[@]} -gt 0 ]]; then
 		# shellcheck source=helpers/packages.sh

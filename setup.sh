@@ -86,34 +86,14 @@ PROFILE_RUNTIME_AUTO_TMUX=""
 DOTS_SETUP_PROFILE=""
 
 usage() {
-	cat <<'EOF'
+	cat <<EOF
 Usage: ./setup.sh [options]
 
 Install / refresh dotfiles (idempotent). Safe to re-run.
 
 Options:
-  --with <list>     Comma-separated optional components. Supported:
-                      herdr      — terminal multiplexer (Brewfile.herdr)
-                      hermes     — Hermes agent CLI (+ macOS hermes-desktop)
-                      ollama     — local LLM runtime (no models pulled)
-                      archify    — agent skill: architecture / workflow /
-                                   sequence / data-flow / lifecycle diagrams
-                                   (requires Node via fnm; Brewfile.archify)
-                      skills     — curated Engineering Pack (manifest
-                                   + security-review + Archify + magnus919 set)
-                      ai-skills  — curated AI/agent harness skill pack
-                                   (evals, litellm, ml-engineering, …)
-                      drawthings — Draw Things image tool bridge (CLI + MCP
-                                   launchers; GUI app must already be installed)
-                      opencode   — local/general coding adapter (+ Hermes MCP
-                                   only if hermes also selected)
-                      codex      — frontier coding via Homebrew cask Codex
-                                   (+ Hermes MCP only if hermes also selected)
-                      cursor     — Cursor Agent CLI (Homebrew cask cursor-cli;
-                                   configures ~/.cursor ONLY when selected)
-                      images     — deterministic image toolkit (Magick, etc.;
-                                   not generative — see drawthings)
-                      tex        — Homebrew TeX Live (CLI LaTeX)
+  --with <list>     Comma-separated components and/or supergroups.
+$(dots_print_selector_help | sed 's/^/                    /')
   --with=<list>     Same as --with <list>
   --dry-run         Preview actions without modifying the machine
   -h, --help        Show this help
@@ -121,12 +101,17 @@ Options:
 Consent vs presence:
   A binary already on PATH does NOT authorize DOTS to configure it.
   AI client config runs only for components listed in --with this run.
+  --with ai expands to every AI application supported on this machine and is
+  explicit consent for those expanded members (same as listing each id).
   Prefer ./bootstrap.sh --profile {base,home,work,all|path.toml} for onboarding.
   Edit profiles with ./configure.sh (writes TOML only).
 
 Examples:
   ./setup.sh
   ./setup.sh --with herdr
+  ./setup.sh --with fluidvoice
+  ./setup.sh --with ai
+  ./setup.sh --with ai --without cursor
   ./setup.sh --with cursor
   ./setup.sh --with ai-skills
   ./setup.sh --with skills,ai-skills
@@ -137,8 +122,9 @@ Examples:
   ./setup.sh --with cursor,drawthings
   ./setup.sh --with skills
   ./setup.sh --with images,tex
-  ./setup.sh --dry-run --with ai-skills
+  ./setup.sh --dry-run --with ai
   ./bootstrap.sh --profile home
+  ./bootstrap.sh --profile work --with ai
   ./configure.sh --help
 
 Default ./setup.sh installs core shell UX (fnm, Starship, Nerd Font, Neovim,
@@ -155,23 +141,28 @@ EOF
 
 parse_with_list() {
 	local raw="$1" item
+	local -a selectors=()
 	IFS=',' read -r -a _parts <<<"${raw}"
-	for item in "${_parts[@]}"; do
+	for item in "${_parts[@]+"${_parts[@]}"}"; do
 		item="$(echo "${item}" | tr -d '[:space:]')"
 		[[ -z ${item} ]] && continue
-		local ok=0 s
-		for s in "${SUPPORTED_WITH[@]}"; do
-			if [[ ${item} == "${s}" ]]; then
-				ok=1
-				break
-			fi
-		done
-		if [[ ${ok} -ne 1 ]]; then
-			echo "Error: unknown --with component '${item}'" >&2
-			echo "Supported: ${SUPPORTED_WITH[*]}" >&2
+		if ! dots_selector_is_known "${item}"; then
+			echo "Error: unknown component or supergroup '${item}'" >&2
+			dots_print_selector_help >&2
 			exit 1
 		fi
-		DOTS_WITH_COMPONENTS+=("${item}")
+		selectors+=("${item}")
+	done
+	[[ ${#selectors[@]} -eq 0 ]] && return 0
+	local _exp _cid _sel
+	_exp="$(dots_expand_with_selectors "${selectors[@]}")" || exit 1
+	while IFS= read -r _cid; do
+		[[ -n ${_cid} ]] && DOTS_WITH_COMPONENTS+=("${_cid}")
+	done <<<"${_exp}"
+	for _sel in "${selectors[@]}"; do
+		if dots_component_is_known "${_sel}"; then
+			dots_require_explicit_component_supported "${_sel}" || exit 1
+		fi
 	done
 }
 
