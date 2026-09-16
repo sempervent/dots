@@ -50,7 +50,7 @@ while [[ $# -gt 0 ]]; do
     --profile) CHECK_PROFILE="${2:-}"; shift 2 ;;
     --profile=*) CHECK_PROFILE="${1#*=}"; shift ;;
     -h|--help)
-      echo "Usage: $0 [--profile base|home|work|server|all|current]"
+      echo "Usage: $0 [--profile base|home|work|server|all|current|/path/to/profile.toml]"
       exit 0
       ;;
     *) echo "Unknown option: $1" >&2; exit 1 ;;
@@ -105,7 +105,8 @@ echo -e "${BLUE}Core layout${NC}"
 [[ -d "${DOTS_DIR}/shell" ]] && ok "shell/ present" || fail "shell/ missing"
 [[ -d "${DOTS_DIR}/zsh" ]] && ok "zsh/ present" || fail "zsh/ missing"
 [[ -f "${DOTS_DIR}/configs/links.toml" ]] && ok "links.toml present" || fail "links.toml missing"
-[[ -f "${DOTS_DIR}/tools/toml_min.py" ]] && ok "toml_min.py present" || fail "toml_min.py missing"
+[[ -f "${DOTS_DIR}/configs/components.toml" ]] && ok "components.toml present" || fail "components.toml missing"
+[[ ! -e "${DOTS_DIR}/tools/toml_min.py" ]] && ok "toml_min.py removed (tomllib-only)" || fail "toml_min.py still present (unsupported)"
 
 echo -e "\n${BLUE}Symlinks${NC}"
 check_symlink "${HOME}/.bashrc" "${SYM_DIR}/bashrc" "bashrc"
@@ -396,7 +397,7 @@ else
   warn "ranger not installed (optional)"
 fi
 
-echo -e "\n${BLUE}tmux (optional)${NC}"
+echo -e "\n${BLUE}tmux${NC}"
 if command -v tmux >/dev/null 2>&1; then
   ok "tmux $(tmux -V)"
   if rg -q 'prefix C-Space' "${SYM_DIR}/tmux.conf"; then
@@ -414,23 +415,30 @@ if command -v tmux >/dev/null 2>&1; then
   else
     warn "Catppuccin tmux plugin not installed yet (TPM install_plugins)"
   fi
-  sock="/tmp/dots-tmux-check-$$"
   if tmux -L "dotscheck$$" -f "${SYM_DIR}/tmux.conf" start-server \; list-commands >/dev/null 2>&1; then
     ok "tmux config loads"
     tmux -L "dotscheck$$" kill-server >/dev/null 2>&1 || true
   else
-    # Alternative: start then kill
     tmux -L "dotscheck$$" -f "${SYM_DIR}/tmux.conf" new-session -d -s check 'true' 2>/dev/null && {
       ok "tmux config loads (temp session)"
       tmux -L "dotscheck$$" kill-server >/dev/null 2>&1 || true
     } || warn "tmux config validation inconclusive (plugins may be pending)"
   fi
-  unset sock
 else
-  warn "tmux not installed"
+  if [[ "${PROFILE_RUNTIME_MULTIPLEXER:-tmux}" == "tmux" ]] || profile_has_group server; then
+    fail "tmux missing (required by resolved profile)"
+  else
+    warn "tmux not installed"
+  fi
 fi
 
-echo -e "\n${BLUE}Herdr (optional)${NC}"
+echo -e "\n${BLUE}Herdr${NC}"
+_herdr_required=0
+for _c in "${EFFECTIVE_WITH[@]+"${EFFECTIVE_WITH[@]}"}"; do
+  [[ "${_c}" == "herdr" ]] && _herdr_required=1 && break
+done
+[[ "${PROFILE_RUNTIME_MULTIPLEXER:-}" == "herdr" ]] && _herdr_required=1
+
 HERDR_REPO="${CONFIG_DIR}/herdr/config.toml"
 HERDR_LIVE="${HOME}/.config/herdr/config.toml"
 
@@ -456,7 +464,7 @@ if [[ -f "${HERDR_REPO}" ]]; then
   expect_herdr_bind "${HERDR_REPO}" 'focus_pane_left = "prefix\+h"' "repo focus h"
   expect_herdr_bind "${HERDR_REPO}" 'focus_pane_down = "prefix\+j"' "repo focus j"
   expect_herdr_bind "${HERDR_REPO}" 'focus_pane_up = "prefix\+k"' "repo focus k"
-    expect_herdr_bind "${HERDR_REPO}" 'focus_pane_right = "prefix\+l"' "repo focus l"
+  expect_herdr_bind "${HERDR_REPO}" 'focus_pane_right = "prefix\+l"' "repo focus l"
   if rg -q 'tab_bar_right' "${HERDR_REPO}"; then
     ok "herdr repo tab_bar_right configured"
   else
@@ -500,8 +508,10 @@ if command -v herdr >/dev/null 2>&1; then
     warn "herdr live config missing (run setup.sh)"
   fi
   herdr integration status 2>/dev/null | head -20 || true
+elif [[ "${_herdr_required}" -eq 1 ]]; then
+  fail "herdr missing (required by resolved profile components/multiplexer)"
 else
-  warn "herdr not installed (use: ./setup.sh --with herdr)"
+  info "herdr not selected by resolved profile (optional)"
 fi
 
 echo -e "\n${BLUE}Agent skills (optional)${NC}"

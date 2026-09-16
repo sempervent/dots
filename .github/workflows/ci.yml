@@ -40,9 +40,6 @@ jobs:
             helpers/toml.sh \
             shell/runtime.sh shell/fnm.sh
 
-      - name: TOML parity (toml_min vs tomllib)
-        run: python3 scripts/tests/toml_parity_test.py
-
       - name: Profile --show (all builtins)
         run: |
           ./bootstrap.sh --profile base --show
@@ -55,6 +52,8 @@ jobs:
         run: |
           bash scripts/profile_resolution_test.sh
           bash scripts/provider_isolation_test.sh
+          bash scripts/tests/custom_profile_test.sh
+          bash scripts/tests/multiplexer_nesting_test.sh
 
       - name: Runtime precedence / dry-run / links / git / transitions
         run: |

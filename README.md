@@ -35,46 +35,122 @@ Preview without installing:
 ./bootstrap.sh --profile home --dry-run
 ```
 
-| Profile | Package groups | Optional AI | Multiplexer | GUI |
-|---------|----------------|-------------|-------------|-----|
+| Profile | Package groups | Optional components | Multiplexer | GUI |
+|---------|----------------|---------------------|-------------|-----|
 | `base` | core, modern | none | tmux | minimal |
-| `home` | core…gui + infra/media | personal stack | herdr (→ tmux fallback) | yes |
-| `work` | core, modern, workstation | **none** unless `--with` | tmux | limited |
-| `server` | core, modern, server | none | tmux | no |
+| `home` | core…gui + infra/media | personal stack (incl. Herdr) | herdr | yes |
+| `work` | core, modern, workstation | **none** unless `--with` / custom | tmux | limited |
+| `server` | core, modern, server | **Herdr** (no AI providers) | tmux | no |
 | `all` | full workstation | all optional | tmux | yes |
 
-**Prerequisites:** `bash` and `python3` (≥ 3.6). DOTS parses profiles/packages
-with `tomllib` when available, otherwise `tools/toml_min.py`. On macOS, Xcode
-CLT typically provides `/usr/bin/python3` (`xcode-select --install`).
-
-Components with stronger Python needs (skill packs use dotted TOML → `tomllib`)
-are provisioned automatically when selected: Homebrew `python@3.12` on macOS, or
-the platform’s `python3.11`/`python3.12` packages on Linux. System Python and
-shell aliases are not replaced.
+**Prerequisites:** `bash` and **Python ≥ 3.11** (stdlib `tomllib`). Preferred
+provisioned interpreter is **Python 3.12+** via Homebrew (`python@3.12`) on macOS,
+or the distribution’s `python3.11`/`python3.12` on Linux. System Python and shell
+aliases are never replaced; DOTS selects an interpreter only for its own TOML
+operations. `--show` / `--dry-run` never install Python — they report what would
+be provisioned.
 
 **macOS Homebrew policy:** Homebrew is required for package install. DOTS does
 **not** auto-install it. If missing, bootstrap exits with the install command
 and asks you to re-run. `--show` works without Homebrew.
 
 **Linux servers:** native `apt` / `pacman` / `xbps` / `dnf` (no Homebrew required).
+`tmux` and `herdr` are both first-class on the server profile; Herdr does **not**
+authorize Hermes, Codex, Cursor, Ollama, or any other provider.
 
 ## Machine-local overrides
 
 ```text
 ~/.config/dots/runtime.env   # generated from profile (non-secret)
 ~/.config/dots/local.sh      # your host overrides (never overwritten)
+~/.config/dots/profiles/     # user-owned custom profiles (extends builtins)
 ```
 
-Precedence:
+### Provisioning vs runtime precedence
+
+**Provisioning / profile configuration** (install-time):
 
 ```text
-process environment
-  > ~/.config/dots/local.sh
-  > ~/.config/dots/runtime.env
-  > repository defaults (shell/exports.sh)
+repository defaults
+  < built-in profile
+  < custom profile / inheritance (extends)
+  < CLI --with / --without / --packages
 ```
 
-Do not store secrets in `local.sh`.
+**Runtime shell configuration** (after bootstrap):
+
+```text
+repository defaults (shell/exports.sh)
+  < ~/.config/dots/runtime.env
+  < ~/.config/dots/local.sh
+  < explicit process environment (DOTS_MULTIPLEXER, …)
+```
+
+`local.sh` does not change package installation after bootstrap — it is runtime/shell
+policy only. Do not store secrets in `local.sh`.
+
+### Custom profiles (extends)
+
+Built-in `home` / `work` / `server` are presets, not prisons. Prefer a user-owned
+overlay instead of editing repository TOML:
+
+```toml
+# ~/.config/dots/profiles/bertha.toml
+
+[profile]
+name = "bertha"
+extends = "server"
+
+[runtime]
+multiplexer = "herdr"
+
+[packages]
+add = ["infra"]
+```
+
+```bash
+./bootstrap.sh --profile ~/.config/dots/profiles/bertha.toml --show
+./bootstrap.sh --profile ~/.config/dots/profiles/bertha.toml
+```
+
+Work customization without weakening default AI safety (still no providers unless listed):
+
+```toml
+# ~/.config/dots/profiles/corp-work.toml
+[profile]
+name = "corp-work"
+extends = "work"
+
+[components]
+with = ["images"]
+
+[packages]
+add = ["infra"]
+```
+
+Home without Cursor, keep Herdr, auto-tmux:
+
+```toml
+# ~/.config/dots/profiles/home-studio.toml
+[profile]
+name = "home-studio"
+extends = "home"
+without = ["cursor"]
+
+[runtime]
+multiplexer = "tmux"
+```
+
+Builtin names (`home`, `work`, …) always resolve to repository presets — never
+silently shadowed by `~/.config/dots/profiles/home.toml`. Pass an explicit path
+for user files. Non-builtin short names may resolve under `~/.config/dots/profiles/`.
+
+Or generate with configure (writes TOML only):
+
+```bash
+./configure.sh --extends server --output ~/.config/dots/profiles/bertha.toml \
+  --name bertha --packages-add infra --multiplexer herdr
+```
 
 ## Git identity
 

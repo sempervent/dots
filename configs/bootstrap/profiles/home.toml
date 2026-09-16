@@ -1,5 +1,6 @@
 # configs/bootstrap/profiles/home.toml
-# EDITABLE home-machine template.
+# Builtin home preset. Prefer ~/.config/dots/profiles/*.toml with extends="home"
+# instead of editing this file for machine-specific differences.
 
 [profile]
 name = "home"

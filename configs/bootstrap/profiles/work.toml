@@ -1,5 +1,8 @@
 # configs/bootstrap/profiles/work.toml
-# Conservative work-machine template.
+# Conservative work-machine preset.
+#
+# Prefer ~/.config/dots/profiles/*.toml with extends="work" for employer-approved
+# extras — do not weaken this default by editing the repository preset.
 #
 # IMPORTANT: Do NOT infer employer AI policy. Start with NO AI clients.
 # Cursor MUST NOT be included without approval.

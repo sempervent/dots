@@ -35,7 +35,10 @@ CLI_WITH=()
 CLI_WITHOUT=()
 PROFILE_NAME=""
 PROFILE_DESC=""
+PROFILE_EXTENDS=""
+PROFILE_CHAIN=()
 PROFILE_WITH=()
+PROFILE_WITHOUT=()
 PROFILE_OPEN_APPS=()
 PROFILE_PACKAGES=()
 PROFILE_RUNTIME_MULTIPLEXER=""
@@ -264,17 +267,19 @@ done
 
 PROFILE_FILE="$(dots_resolve_profile_path "${PROFILE}")"
 
-# Model B: Python 3 is an intentional bootstrap prerequisite (tomllib or toml_min).
-if ! dots_require_python; then
+# Python ≥3.11 (tomllib) is required. Prefer an existing interpreter; provision
+# only on mutating runs. --show/--dry-run report intent without installing.
+_py_soft=0
+[[ ${SHOW_ONLY} -eq 1 || ${DRY_RUN} -eq 1 ]] && _py_soft=1
+if ! dots_require_python "${_py_soft}"; then
 	cat >&2 <<'EOF'
 
 Platform hints:
-  macOS:  xcode-select --install   # ships /usr/bin/python3
-          # or: brew install python  (after Homebrew exists)
-  Debian/Ubuntu:  sudo apt-get install -y python3
+  macOS:  brew install python@3.12   # after Homebrew exists
+  Debian/Ubuntu:  sudo apt-get install -y python3.12   # or python3.11
   Arch:           sudo pacman -S --needed python
   Void:           sudo xbps-install -S python3
-  Fedora:         sudo dnf install -y python3
+  Fedora:         sudo dnf install -y python3.12
 EOF
 	exit 1
 fi

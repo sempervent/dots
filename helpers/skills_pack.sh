@@ -274,7 +274,7 @@ dots_install_skill_packs() {
 	fi
 
 	# Skill manifests need tomllib (Python ≥3.11). Provision when missing; never
-	# raise the bootstrap/profile-parsing floor above Python ≥3.6.
+	# use an EOL interpreter. DOTS minimum is Python ≥3.11 for all TOML.
 	local reason
 	reason="$(
 		IFS=', '

@@ -3,17 +3,30 @@
 #
 # Profiles are data only (TOML). Never execute profile contents.
 # Requires: DIR, helpers/components.sh (dots_component_*), helpers/toml.sh
+#
+# Inheritance:
+#   [profile] extends = "server"   # builtin name or relative/absolute path
+# Merge (child wins for scalars; packages/components are additive with remove/without):
+#   repository defaults < builtin base < extends chain < leaf profile < CLI --with/--without
+#
+# Custom profiles live under ~/.config/dots/profiles/ (explicit path preferred).
+# Builtin names never silently resolve to user-owned files (no name-shadowing).
 
 dots_builtin_profile_dir() {
 	printf '%s\n' "${DIR}/configs/bootstrap/profiles"
 }
 
+dots_user_profile_dir() {
+	printf '%s\n' "${HOME}/.config/dots/profiles"
+}
+
 # Resolve --profile argument to an absolute TOML path.
-# Recognizes: builtin name, absolute/relative path, ~/path, *.toml
+# Recognizes: builtin name, user profile name (non-builtin only), path, ~/path, *.toml
 dots_resolve_profile_path() {
 	local arg="$1"
-	local builtin_dir path
+	local builtin_dir user_dir path
 	builtin_dir="$(dots_builtin_profile_dir)"
+	user_dir="$(dots_user_profile_dir)"
 
 	if [[ -z ${arg} ]]; then
 		echo "Error: empty profile" >&2
@@ -53,47 +66,333 @@ dots_resolve_profile_path() {
 			echo "Error: profile file not found: ${arg} (resolved ${path})" >&2
 			return 1
 		fi
+		if [[ ! -r ${path} ]]; then
+			echo "Error: profile file not readable: ${path}" >&2
+			return 1
+		fi
 		printf '%s\n' "${path}"
 		return 0
 	fi
 
-	# Builtin name
+	# Builtin name (never shadowed by ~/.config/dots/profiles/<name>.toml)
 	path="${builtin_dir}/${arg}.toml"
-	if [[ ! -f ${path} ]]; then
-		echo "Error: unknown profile '${arg}' (missing ${path})" >&2
-		echo "Available builtins:" >&2
-		ls -1 "${builtin_dir}"/*.toml 2>/dev/null | xargs -n1 basename | sed 's/\.toml$//' >&2 || true
-		echo "Or pass a custom TOML path: --profile /path/to/profile.toml" >&2
-		return 1
+	if [[ -f ${path} ]]; then
+		printf '%s\n' "${path}"
+		return 0
 	fi
-	printf '%s\n' "${path}"
+
+	# Non-builtin short name → user profiles dir only (explicit; no silent override of builtins)
+	path="${user_dir}/${arg}.toml"
+	if [[ -f ${path} ]]; then
+		printf '%s\n' "${path}"
+		return 0
+	fi
+
+	echo "Error: unknown profile '${arg}' (missing ${builtin_dir}/${arg}.toml)" >&2
+	echo "Available builtins:" >&2
+	ls -1 "${builtin_dir}"/*.toml 2>/dev/null | xargs -n1 basename | sed 's/\.toml$//' >&2 || true
+	echo "Or pass a custom TOML path: --profile ${user_dir}/name.toml" >&2
+	return 1
 }
 
-# Load profile TOML → print lines: name:, desc:, with:, open:, all:, pkg:, runtime.*
+# Load profile TOML (with extends) → print lines for dots_load_profile_file.
+# Emits: name:, desc:, extends:, chain:, with:, without:, open:, all:, pkg:, runtime.*, error:
 dots_profile_parse() {
 	local file="$1"
-	dots_toml_query "${file}" <<'PY'
-prof = data.get("profile") or data
-name = (prof.get("name") or path.stem).strip()
-desc = (prof.get("description") or "").strip()
+	local builtin_dir
+	builtin_dir="$(dots_builtin_profile_dir)"
+	dots_require_python 0 || return 1
+	if [[ ! -f ${file} ]]; then
+		echo "Error: profile file not found: ${file}" >&2
+		return 1
+	fi
+	if [[ ! -r ${file} ]]; then
+		echo "Error: profile file not readable: ${file}" >&2
+		return 1
+	fi
+
+	local pyhome rc=0
+	local bin="${DOTS_PYTHON}"
+	pyhome="$(mktemp -d "${TMPDIR:-/tmp}/dots-pyhome.XXXXXX")"
+	FILE="${file}" BUILTIN_DIR="${builtin_dir}" USER_DIR="$(dots_user_profile_dir)" \
+	HOME="${pyhome}" \
+	PYTHONDONTWRITEBYTECODE=1 \
+	PYTHONNOUSERSITE=1 \
+		"${bin}" -B <<'PY' || rc=$?
+import os, sys
+from pathlib import Path
+import tomllib
+
+file = Path(os.environ["FILE"]).resolve()
+builtin_dir = Path(os.environ["BUILTIN_DIR"]).resolve()
+user_dir = Path(os.environ.get("USER_DIR", "")).expanduser()
+
+ALLOWED_TOP = {"profile", "runtime", "packages", "components"}
+ALLOWED_PROFILE = {
+    "name", "description", "extends", "with", "without", "packages",
+    "open_apps", "include_all_optional",
+}
+ALLOWED_RUNTIME = {"multiplexer", "greeting", "prompt_stats", "auto_tmux"}
+ALLOWED_PACKAGES = {"add", "remove", "groups"}
+ALLOWED_COMPONENTS = {"with", "without"}
+KNOWN_GROUPS = {"core", "modern", "workstation", "infra", "media", "gui", "server"}
+KNOWN_MUX = {"tmux", "herdr", "none"}
+
+# Load component ids from registry (configs/components.toml)
+known_components = set()
+reg = builtin_dir.parent.parent / "components.toml"
+if reg.is_file():
+    try:
+        rdata = tomllib.loads(reg.read_text(encoding="utf-8"))
+        for c in rdata.get("components") or []:
+            cid = (c.get("id") or "").strip()
+            if cid:
+                known_components.add(cid)
+    except Exception:
+        pass
+
+
+def fail(msg: str) -> None:
+    sys.stderr.write("Error: %s\n" % msg)
+    sys.exit(1)
+
+
+def load_toml(path: Path) -> dict:
+    if not path.is_file():
+        fail("profile file not found: %s" % path)
+    if not os.access(path, os.R_OK):
+        fail("profile file not readable: %s" % path)
+    try:
+        return tomllib.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        fail("malformed TOML (%s): %s" % (path, exc))
+
+
+def validate_keys(data: dict, path: Path) -> None:
+    for k in data:
+        if k not in ALLOWED_TOP:
+            fail("unknown top-level key '%s' in %s (allowed: %s)" % (
+                k, path, ", ".join(sorted(ALLOWED_TOP))))
+    prof = data.get("profile") or {}
+    if not isinstance(prof, dict):
+        fail("[profile] must be a table in %s" % path)
+    for k in prof:
+        if k not in ALLOWED_PROFILE:
+            fail("unknown profile key '%s' in %s" % (k, path))
+    runtime = data.get("runtime") or {}
+    if runtime and not isinstance(runtime, dict):
+        fail("[runtime] must be a table in %s" % path)
+    for k in runtime:
+        if k not in ALLOWED_RUNTIME:
+            fail("unknown runtime key '%s' in %s" % (k, path))
+    packages = data.get("packages") or {}
+    if packages and not isinstance(packages, dict):
+        fail("[packages] must be a table in %s" % path)
+    for k in packages:
+        if k not in ALLOWED_PACKAGES:
+            fail("unknown packages key '%s' in %s" % (k, path))
+    comps = data.get("components") or {}
+    if comps and not isinstance(comps, dict):
+        fail("[components] must be a table in %s" % path)
+    for k in comps:
+        if k not in ALLOWED_COMPONENTS:
+            fail("unknown components key '%s' in %s" % (k, path))
+
+
+def resolve_extends_path(extends: str, from_path: Path) -> Path:
+    extends = extends.strip()
+    if not extends:
+        fail("empty extends in %s" % from_path)
+    if extends.endswith(".toml") or "/" in extends or extends.startswith("~") or extends.startswith("."):
+        p = Path(os.path.expanduser(extends))
+        if not p.is_absolute():
+            p = (from_path.parent / p).resolve()
+        return p
+    # Builtin first (no user shadowing for builtin names)
+    builtin = builtin_dir / ("%s.toml" % extends)
+    if builtin.is_file():
+        return builtin.resolve()
+    user = user_dir / ("%s.toml" % extends)
+    if user.is_file():
+        return user.resolve()
+    fail("unknown base profile '%s' (extends in %s)" % (extends, from_path))
+
+
+def list_str(val, label: str, path: Path):
+    if val is None:
+        return []
+    if not isinstance(val, list):
+        fail("%s must be an array in %s" % (label, path))
+    out = []
+    for item in val:
+        s = str(item).strip()
+        if s:
+            out.append(s)
+    return out
+
+
+def merge_chain(leaf: Path):
+    chain = []
+    seen = set()
+    cur = leaf.resolve()
+    while True:
+        key = str(cur)
+        if key in seen:
+            fail("inheritance loop detected involving %s" % cur)
+        seen.add(key)
+        data = load_toml(cur)
+        validate_keys(data, cur)
+        chain.append((cur, data))
+        prof = data.get("profile") or {}
+        extends = (prof.get("extends") or "").strip() if isinstance(prof.get("extends"), str) else ""
+        if not extends:
+            # also allow bare extends at top if someone used wrong schema — already rejected
+            break
+        cur = resolve_extends_path(extends, cur)
+    chain.reverse()  # base → leaf
+    return chain
+
+
+chain = merge_chain(file)
+
+# Merged state
+name = ""
+desc = ""
+extends_leaf = ""
+include_all = False
+packages = []  # ordered unique
+with_list = []
+without_set = set()
+open_apps = []
+runtime = {}
+pkg_explicit = False  # True once any profile sets packages= list
+
+for path, data in chain:
+    prof = data.get("profile") or {}
+    if prof.get("name"):
+        name = str(prof.get("name")).strip()
+    if prof.get("description") is not None:
+        desc = str(prof.get("description") or "").strip()
+    if path == file.resolve():
+        ext = prof.get("extends")
+        if isinstance(ext, str) and ext.strip():
+            extends_leaf = ext.strip()
+
+    if prof.get("include_all_optional"):
+        include_all = True
+
+    # packages = [...] replaces when present
+    if "packages" in prof and prof.get("packages") is not None:
+        packages = list_str(prof.get("packages"), "profile.packages", path)
+        pkg_explicit = True
+        for g in packages:
+            if g not in KNOWN_GROUPS:
+                fail("Unknown package group '%s' in %s" % (g, path))
+
+    pkg_tbl = data.get("packages") or {}
+    for g in list_str(pkg_tbl.get("add"), "packages.add", path):
+        if g not in KNOWN_GROUPS:
+            fail("Unknown package group '%s' in %s" % (g, path))
+        if g not in packages:
+            packages.append(g)
+        pkg_explicit = True
+    for g in list_str(pkg_tbl.get("remove"), "packages.remove", path):
+        if g not in KNOWN_GROUPS:
+            fail("Unknown package group '%s' in %s" % (g, path))
+        packages = [x for x in packages if x != g]
+        pkg_explicit = True
+    if "groups" in pkg_tbl and pkg_tbl.get("groups") is not None:
+        packages = list_str(pkg_tbl.get("groups"), "packages.groups", path)
+        for g in packages:
+            if g not in KNOWN_GROUPS:
+                fail("Unknown package group '%s' in %s" % (g, path))
+        pkg_explicit = True
+
+    # components
+    for item in list_str(prof.get("with"), "profile.with", path):
+        if known_components and item not in known_components:
+            fail("Unknown component '%s' in %s" % (item, path))
+        if item not in with_list:
+            with_list.append(item)
+    for item in list_str(prof.get("without"), "profile.without", path):
+        if known_components and item not in known_components:
+            fail("Unknown component '%s' in %s" % (item, path))
+        without_set.add(item)
+
+    comps = data.get("components") or {}
+    for item in list_str(comps.get("with"), "components.with", path):
+        if known_components and item not in known_components:
+            fail("Unknown component '%s' in %s" % (item, path))
+        if item not in with_list:
+            with_list.append(item)
+    for item in list_str(comps.get("without"), "components.without", path):
+        if known_components and item not in known_components:
+            fail("Unknown component '%s' in %s" % (item, path))
+        without_set.add(item)
+
+    if "open_apps" in prof:
+        open_apps = list_str(prof.get("open_apps"), "profile.open_apps", path)
+
+    rt = data.get("runtime") or {}
+    for k, v in rt.items():
+        runtime[k] = v
+
+# without wins over with
+final_with = []
+seen_w = set()
+dupes = []
+for item in with_list:
+    if item in without_set:
+        continue
+    if item in seen_w:
+        dupes.append(item)
+        continue
+    seen_w.add(item)
+    final_with.append(item)
+# contradictory: listed in both with and without after merge — without already wins;
+# still error if same profile listed both in leaf without inheritance clarity? Spec says without wins.
+# Duplicate component in with lists: warn via fail for strictness
+if dupes:
+    fail("duplicate component '%s' after profile merge" % dupes[0])
+
+# Contradictory: in without and also only in without is fine; if explicitly both in SAME file check:
+for path, data in chain:
+    prof = data.get("profile") or {}
+    comps = data.get("components") or {}
+    wset = set(list_str(prof.get("with"), "profile.with", path) + list_str(comps.get("with"), "components.with", path))
+    oset = set(list_str(prof.get("without"), "profile.without", path) + list_str(comps.get("without"), "components.without", path))
+    both = wset & oset
+    if both:
+        fail("contradictory with/without for '%s' in %s" % (sorted(both)[0], path))
+
+mux = runtime.get("multiplexer")
+if mux is not None:
+    mux_s = str(mux).strip()
+    if mux_s not in KNOWN_MUX:
+        fail("invalid multiplexer '%s' (allowed: tmux, herdr, none)" % mux_s)
+
+if not name:
+    name = file.stem
+
 print("name:%s" % name)
 print("desc:%s" % desc)
-if prof.get("include_all_optional"):
+if extends_leaf:
+    print("extends:%s" % extends_leaf)
+for path, _ in chain:
+    print("chain:%s" % path)
+if include_all:
     print("all:1")
-for item in prof.get("with") or []:
-    item = str(item).strip()
-    if item:
-        print("with:%s" % item)
-for item in prof.get("open_apps") or []:
-    item = str(item).strip()
-    if item:
-        print("open:%s" % item)
-for item in prof.get("packages") or []:
-    item = str(item).strip()
-    if item:
-        print("pkg:%s" % item)
-runtime = data.get("runtime") or {}
-if runtime.get("multiplexer"):
+for item in final_with:
+    print("with:%s" % item)
+for item in sorted(without_set):
+    print("without:%s" % item)
+for item in open_apps:
+    print("open:%s" % item)
+for item in packages:
+    print("pkg:%s" % item)
+if pkg_explicit:
+    print("pkg_explicit:1")
+if "multiplexer" in runtime and runtime.get("multiplexer") is not None:
     print("runtime.multiplexer:%s" % str(runtime.get("multiplexer")).strip())
 if "greeting" in runtime:
     print("runtime.greeting:%s" % ("1" if runtime.get("greeting") else "0"))
@@ -102,15 +401,21 @@ if "prompt_stats" in runtime:
 if "auto_tmux" in runtime:
     print("runtime.auto_tmux:%s" % ("1" if runtime.get("auto_tmux") else "0"))
 PY
+	rm -rf "${pyhome}"
+	return "${rc}"
 }
 
 # Fill PROFILE_* globals from path. Honors include_all_optional / builtin name "all".
 dots_load_profile_file() {
 	local file="$1"
 	local line
+	local parse_tmp parse_rc=0
 	PROFILE_NAME=""
 	PROFILE_DESC=""
+	PROFILE_EXTENDS=""
+	PROFILE_CHAIN=()
 	PROFILE_WITH=()
+	PROFILE_WITHOUT=()
 	PROFILE_OPEN_APPS=()
 	PROFILE_PACKAGES=()
 	PROFILE_RUNTIME_MULTIPLEXER=""
@@ -118,22 +423,41 @@ dots_load_profile_file() {
 	PROFILE_RUNTIME_PROMPT_STATS=""
 	PROFILE_RUNTIME_AUTO_TMUX=""
 	local include_all=0
+	local pkg_explicit=0
+
+	parse_tmp="$(mktemp "${TMPDIR:-/tmp}/dots-prof.XXXXXX")"
+	dots_profile_parse "${file}" >"${parse_tmp}" 2>"${parse_tmp}.err" || parse_rc=$?
+	if [[ ${parse_rc} -ne 0 ]]; then
+		cat "${parse_tmp}.err" >&2 || true
+		rm -f "${parse_tmp}" "${parse_tmp}.err"
+		return "${parse_rc}"
+	fi
+	# Surface any stderr warnings
+	if [[ -s ${parse_tmp}.err ]]; then
+		cat "${parse_tmp}.err" >&2 || true
+	fi
+	rm -f "${parse_tmp}.err"
 
 	while IFS= read -r line; do
 		[[ -z ${line} ]] && continue
 		case "${line}" in
 		name:*) PROFILE_NAME="${line#name:}" ;;
 		desc:*) PROFILE_DESC="${line#desc:}" ;;
+		extends:*) PROFILE_EXTENDS="${line#extends:}" ;;
+		chain:*) PROFILE_CHAIN+=("${line#chain:}") ;;
 		all:*) include_all=1 ;;
 		with:*) PROFILE_WITH+=("${line#with:}") ;;
+		without:*) PROFILE_WITHOUT+=("${line#without:}") ;;
 		open:*) PROFILE_OPEN_APPS+=("${line#open:}") ;;
 		pkg:*) PROFILE_PACKAGES+=("${line#pkg:}") ;;
+		pkg_explicit:*) pkg_explicit=1 ;;
 		runtime.multiplexer:*) PROFILE_RUNTIME_MULTIPLEXER="${line#runtime.multiplexer:}" ;;
 		runtime.greeting:*) PROFILE_RUNTIME_GREETING="${line#runtime.greeting:}" ;;
 		runtime.prompt_stats:*) PROFILE_RUNTIME_PROMPT_STATS="${line#runtime.prompt_stats:}" ;;
 		runtime.auto_tmux:*) PROFILE_RUNTIME_AUTO_TMUX="${line#runtime.auto_tmux:}" ;;
 		esac
-	done < <(dots_profile_parse "${file}")
+	done <"${parse_tmp}"
+	rm -f "${parse_tmp}"
 
 	if [[ ${include_all} -eq 1 ]] || [[ ${PROFILE_NAME} == "all" && ${#PROFILE_WITH[@]} -eq 0 ]]; then
 		PROFILE_WITH=()
@@ -143,7 +467,7 @@ dots_load_profile_file() {
 	fi
 
 	# Default package groups when profile omits packages=
-	if [[ ${#PROFILE_PACKAGES[@]} -eq 0 ]]; then
+	if [[ ${pkg_explicit} -eq 0 && ${#PROFILE_PACKAGES[@]} -eq 0 ]]; then
 		case "${PROFILE_NAME}" in
 		server) PROFILE_PACKAGES=(core modern server) ;;
 		work) PROFILE_PACKAGES=(core modern workstation) ;;
@@ -160,11 +484,26 @@ dots_load_profile_file() {
 		esac
 	fi
 
+	# Selecting herdr as automatic multiplexer implies herdr component availability
+	if [[ ${PROFILE_RUNTIME_MULTIPLEXER} == "herdr" ]]; then
+		if ! dots_array_contains herdr "${PROFILE_WITH[@]+"${PROFILE_WITH[@]}"}"; then
+			if ! dots_array_contains herdr "${PROFILE_WITHOUT[@]+"${PROFILE_WITHOUT[@]}"}"; then
+				PROFILE_WITH+=("herdr")
+			fi
+		fi
+	fi
+
 	if [[ ${#PROFILE_WITH[@]} -gt 0 ]]; then
 		dots_validate_components "${PROFILE_WITH[@]}" || return 1
 	fi
+	if [[ ${#PROFILE_WITHOUT[@]} -gt 0 ]]; then
+		dots_validate_components "${PROFILE_WITHOUT[@]}" || return 1
+	fi
 
 	echo "OK: loaded profile '${PROFILE_NAME:-unknown}' from ${file}"
+	if [[ -n ${PROFILE_EXTENDS} ]]; then
+		echo "OK: extends=${PROFILE_EXTENDS}"
+	fi
 	if [[ -n ${PROFILE_DESC} ]]; then
 		echo "OK: ${PROFILE_DESC}"
 	fi
@@ -186,20 +525,36 @@ dots_array_contains() {
 	return 1
 }
 
-# PROFILE_WITH + CLI_WITH - CLI_WITHOUT → EFFECTIVE_WITH (deduped)
+# PROFILE_WITH + CLI_WITH - (PROFILE_WITHOUT ∪ CLI_WITHOUT) → EFFECTIVE_WITH (deduped)
+# CLI --without wins over everything; CLI --with adds after profile resolution.
 dots_compute_effective_with() {
 	EFFECTIVE_WITH=()
 	local c
+	local -a without_all=()
+	for c in "${PROFILE_WITHOUT[@]+"${PROFILE_WITHOUT[@]}"}"; do
+		without_all+=("${c}")
+	done
+	for c in "${CLI_WITHOUT[@]+"${CLI_WITHOUT[@]}"}"; do
+		without_all+=("${c}")
+	done
 	for c in "${PROFILE_WITH[@]+"${PROFILE_WITH[@]}"}"; do
-		dots_array_contains "${c}" "${CLI_WITHOUT[@]+"${CLI_WITHOUT[@]}"}" && continue
+		dots_array_contains "${c}" "${without_all[@]+"${without_all[@]}"}" && continue
 		dots_array_contains "${c}" "${EFFECTIVE_WITH[@]+"${EFFECTIVE_WITH[@]}"}" && continue
 		EFFECTIVE_WITH+=("${c}")
 	done
 	for c in "${CLI_WITH[@]+"${CLI_WITH[@]}"}"; do
-		dots_array_contains "${c}" "${CLI_WITHOUT[@]+"${CLI_WITHOUT[@]}"}" && continue
+		dots_array_contains "${c}" "${without_all[@]+"${without_all[@]}"}" && continue
 		dots_array_contains "${c}" "${EFFECTIVE_WITH[@]+"${EFFECTIVE_WITH[@]}"}" && continue
 		EFFECTIVE_WITH+=("${c}")
 	done
+	# Auto-include herdr when multiplexer demands it (unless CLI --without herdr)
+	if [[ ${PROFILE_RUNTIME_MULTIPLEXER} == "herdr" ]]; then
+		if ! dots_array_contains herdr "${without_all[@]+"${without_all[@]}"}"; then
+			if ! dots_array_contains herdr "${EFFECTIVE_WITH[@]+"${EFFECTIVE_WITH[@]}"}"; then
+				EFFECTIVE_WITH+=("herdr")
+			fi
+		fi
+	fi
 	if [[ ${#EFFECTIVE_WITH[@]} -gt 0 ]]; then
 		dots_validate_components "${EFFECTIVE_WITH[@]}" || return 1
 	fi
@@ -214,8 +569,27 @@ dots_compute_effective_with() {
 dots_show_profile_resolution() {
 	local label="${1:-resolved}"
 	echo "profile: ${PROFILE_NAME:-${label}}"
+	if [[ -n ${PROFILE_EXTENDS} ]]; then
+		echo "extends: ${PROFILE_EXTENDS}"
+	fi
 	if [[ -n ${PROFILE_DESC} ]]; then
 		echo "description: ${PROFILE_DESC}"
+	fi
+	if [[ ${#PROFILE_CHAIN[@]} -gt 0 ]]; then
+		echo ""
+		echo "source chain:"
+		local i p
+		for i in "${!PROFILE_CHAIN[@]}"; do
+			p="${PROFILE_CHAIN[$i]}"
+			if [[ ${i} -eq 0 ]]; then
+				echo "  ${p}"
+			else
+				echo "  -> ${p}"
+			fi
+		done
+		if [[ ${#CLI_WITH[@]} -gt 0 || ${#CLI_WITHOUT[@]} -gt 0 ]]; then
+			echo "  -> CLI overrides"
+		fi
 	fi
 	echo ""
 	echo "package groups:"
@@ -229,9 +603,9 @@ dots_show_profile_resolution() {
 	fi
 	echo ""
 	echo "runtime:"
-	echo "  multiplexer: ${PROFILE_RUNTIME_MULTIPLEXER:-tmux}"
-	[[ -n ${PROFILE_RUNTIME_GREETING} ]] && echo "  greeting: ${PROFILE_RUNTIME_GREETING}"
-	[[ -n ${PROFILE_RUNTIME_PROMPT_STATS} ]] && echo "  prompt_stats: ${PROFILE_RUNTIME_PROMPT_STATS}"
+	echo "  multiplexer = ${PROFILE_RUNTIME_MULTIPLEXER:-tmux}"
+	[[ -n ${PROFILE_RUNTIME_GREETING} ]] && echo "  greeting = ${PROFILE_RUNTIME_GREETING}"
+	[[ -n ${PROFILE_RUNTIME_PROMPT_STATS} ]] && echo "  prompt_stats = ${PROFILE_RUNTIME_PROMPT_STATS}"
 	echo ""
 	echo "components:"
 	if [[ ${#EFFECTIVE_WITH[@]} -eq 0 ]]; then
