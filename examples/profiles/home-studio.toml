@@ -1,0 +1,16 @@
+# examples/profiles/home-studio.toml — EXAMPLE ONLY (not applied automatically)
+#
+# Copy to ~/.config/dots/profiles/home-studio.toml and edit, then:
+#   ./bootstrap.sh --profile ~/.config/dots/profiles/home-studio.toml --show
+#   ./bootstrap.sh --profile ~/.config/dots/profiles/home-studio.toml
+
+[profile]
+name = "home-studio"
+description = "Home workstation without Cursor Agent CLI"
+extends = "home"
+without = ["cursor"]
+
+[runtime]
+# Keep Herdr as the automatic multiplexer (home default).
+# Use multiplexer = "tmux" if you prefer tmux auto-attach instead.
+multiplexer = "herdr"
