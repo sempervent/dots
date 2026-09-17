@@ -24,6 +24,14 @@ cat >"${TMP}/bin/node" <<'EOF'
 echo "v20.0.0"
 EOF
 chmod +x "${TMP}/bin/node"
+# Placeholder npx so missing-host Node environments still exercise install paths.
+# Already-installed skills must not require npx (see ensure_node_major placement).
+cat >"${TMP}/bin/npx" <<'EOF'
+#!/usr/bin/env bash
+echo "npx: unexpected invocation before mock replace" >&2
+exit 99
+EOF
+chmod +x "${TMP}/bin/npx"
 export PATH="${TMP}/bin:${PATH}"
 
 dots_python3() { command python3 "$@"; }
@@ -72,6 +80,8 @@ write_suspicious_skill "${HOME}/.agents/skills/skill-security-review"
 DOTS_SKILL_PACK_OK=()
 DOTS_SKILL_PACK_WARN=()
 DOTS_SKILL_PACK_FAIL=()
+# Desired-state: already installed must not require host npx.
+rm -f "${TMP}/bin/npx"
 out="$(install_skill_from_source "skill-security-review" "dkleptsov/skill-security-review" "security" 2>&1)" || {
 	bad "already-installed suspicious should not fail"
 	echo "${out}"
@@ -81,6 +91,13 @@ echo "${out}" | grep -q "WARN: static review findings" && ok "advisory WARN" || 
 echo "${out}" | grep -qiE 'FAIL: static' && bad "printed FAIL for advisory" || ok "no FAIL: for advisory"
 [[ -f ${HOME}/.agents/skills/skill-security-review/SKILL.md ]] && ok "skill retained" || bad "skill deleted"
 echo "${out}" | grep -q 'curl|shell pipe' && ok "names curl|shell finding" || bad "finding label"
+# Restore placeholder npx for later install-path tests
+cat >"${TMP}/bin/npx" <<'EOF'
+#!/usr/bin/env bash
+echo "npx: unexpected invocation before mock replace" >&2
+exit 99
+EOF
+chmod +x "${TMP}/bin/npx"
 
 echo "=== Hermes-only location identical ==="
 rm -rf "${HOME}/.agents" "${HOME}/.hermes"
