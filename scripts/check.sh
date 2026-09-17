@@ -602,6 +602,15 @@ if [[ -f "${DOTS_DIR}/helpers/agent_skills.sh" ]]; then
 
   if agent_skill_is_installed skill-security-review 2>/dev/null; then
     ok "security-review skill present ($(dots_skill_find skill-security-review 2>/dev/null))"
+    if declare -F dots_static_review_skill >/dev/null 2>&1; then
+      # Advisory only — findings are warnings, never check failures
+      dots_static_review_skill skill-security-review >/dev/null 2>&1 || true
+      if [[ ${DOTS_LAST_SKILL_REVIEW:-} == "warn" ]]; then
+        warn "skill-security-review review: ${DOTS_LAST_SKILL_REVIEW_FINDINGS}"
+      elif [[ ${DOTS_LAST_SKILL_REVIEW:-} == "clean" ]]; then
+        ok "skill-security-review static review clean"
+      fi
+    fi
   else
     warn "security-review skill not installed (included in --with skills)"
   fi
