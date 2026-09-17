@@ -547,8 +547,8 @@ if [[ -f "${DOTS_DIR}/helpers/agent_skills.sh" ]]; then
     missing=0
     while IFS=$'\t' read -r sname _ssource; do
       [[ -z "${sname}" ]] && continue
-      if agent_skill_is_installed "${sname}"; then
-        ok "skill present: ${sname}"
+      if found="$(dots_skill_find "${sname}" 2>/dev/null)"; then
+        ok "skill present: ${sname} @ ${found}"
       else
         fail "skill missing: ${sname}"
         missing=1
@@ -572,7 +572,8 @@ if [[ -f "${DOTS_DIR}/helpers/agent_skills.sh" ]]; then
   fi
 
   if agent_skill_is_installed archify; then
-    ok "archify skill present (~/.agents/skills/archify)"
+    _arch="$(dots_skill_find archify 2>/dev/null || echo "~/.agents/skills/archify")"
+    ok "archify skill present (${_arch})"
     if command -v node >/dev/null 2>&1; then
       major="$(node_major_version 2>/dev/null || true)"
       if [[ -n "${major}" ]] && [[ "${major}" -ge 18 ]]; then
@@ -580,8 +581,8 @@ if [[ -f "${DOTS_DIR}/helpers/agent_skills.sh" ]]; then
       else
         warn "Node present but major < 18 (Archify needs >=18)"
       fi
-      if [[ -x "${HOME}/.agents/skills/archify/bin/archify.mjs" ]]; then
-        if node "${HOME}/.agents/skills/archify/bin/archify.mjs" doctor >/dev/null 2>&1; then
+      if [[ -x "${_arch}/bin/archify.mjs" ]]; then
+        if node "${_arch}/bin/archify.mjs" doctor >/dev/null 2>&1; then
           ok "archify doctor"
         else
           warn "archify doctor reported issues"
@@ -600,7 +601,7 @@ if [[ -f "${DOTS_DIR}/helpers/agent_skills.sh" ]]; then
   fi
 
   if agent_skill_is_installed skill-security-review 2>/dev/null; then
-    ok "security-review skill present"
+    ok "security-review skill present ($(dots_skill_find skill-security-review 2>/dev/null))"
   else
     warn "security-review skill not installed (included in --with skills)"
   fi

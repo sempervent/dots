@@ -68,35 +68,40 @@ ensure_node_major() {
   return 0
 }
 
-# True when the skills CLI global store has this skill (canonical path + lock when present).
+# Candidate skill roots (filesystem order). Does not configure providers.
+dots_skill_candidates() {
+  local name="$1"
+  printf '%s\n' \
+    "${HOME}/.agents/skills/${name}" \
+    "${HOME}/.hermes/skills/${name}"
+}
+
+# First candidate containing SKILL.md (follows valid symlinks).
+dots_skill_find() {
+  local name="$1" cand
+  while IFS= read -r cand; do
+    [[ -z ${cand} ]] && continue
+    if [[ -L ${cand} ]]; then
+      # Broken symlink → skip
+      [[ -e ${cand} ]] || continue
+    fi
+    if [[ -f ${cand}/SKILL.md ]]; then
+      printf '%s\n' "${cand}"
+      return 0
+    fi
+  done < <(dots_skill_candidates "${name}")
+  return 1
+}
+
+# True when a valid installed skill exists in any accepted location.
+# Lockfile is provenance only — never required if SKILL.md is present.
 agent_skill_is_installed() {
   local name="$1"
-  dots_python3 - "$name" <<'PY'
-import json
-import pathlib
-import sys
+  dots_skill_find "${name}" >/dev/null 2>&1
+}
 
-name = sys.argv[1]
-home = pathlib.Path.home()
-skill_md = home / ".agents" / "skills" / name / "SKILL.md"
-lock = home / ".agents" / ".skill-lock.json"
-
-if not skill_md.is_file():
-    sys.exit(1)
-
-# Prefer lock confirmation when the skills CLI has written one.
-if lock.is_file():
-    try:
-        data = json.loads(lock.read_text(encoding="utf-8"))
-        skills = data.get("skills") or {}
-        if name in skills:
-            sys.exit(0)
-        # SKILL.md present but lock stale/partial — still accept the install.
-    except Exception:
-        pass
-
-sys.exit(0)
-PY
+dots_skill_is_installed() {
+  agent_skill_is_installed "$@"
 }
 
 install_agent_skill() {
@@ -114,7 +119,7 @@ install_agent_skill() {
   if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
     echo "[dry-run] ensure Node >= ${min_node} and npx"
     if agent_skill_is_installed "${name}"; then
-      echo "[dry-run] would skip install (${name} already present under ~/.agents/skills/${name})"
+      echo "[dry-run] would skip install (${name} already at $(dots_skill_find "${name}"))"
     else
       echo "[dry-run] npx -y skills add ${spec} -g -y"
     fi
@@ -123,13 +128,10 @@ install_agent_skill() {
 
   ensure_node_major "${min_node}" || return 1
 
-  if agent_skill_is_installed "${name}"; then
-    echo "OK: agent skill '${name}' already installed (~/.agents/skills/${name})"
-    if [[ -L "${HOME}/.hermes/skills/${name}" ]] || [[ -d "${HOME}/.hermes/skills/${name}" ]]; then
-      echo "OK: Hermes discovers '${name}' via ~/.hermes/skills/${name}"
-    elif [[ -d "${HOME}/.hermes" ]]; then
-      echo "Note: ~/.hermes exists but no skills/${name} link yet; Hermes may still see it after next skills sync."
-    fi
+  local found=""
+  if found="$(dots_skill_find "${name}")"; then
+    echo "OK: agent skill '${name}' already installed"
+    echo "    path: ${found}"
     return 0
   fi
 
@@ -138,16 +140,14 @@ install_agent_skill() {
     echo "Warn: npx skills add exited non-zero; verifying install..." >&2
   fi
 
-  if ! agent_skill_is_installed "${name}"; then
-    echo "Error: agent skill '${name}' was not installed under ~/.agents/skills/${name}." >&2
+  if ! found="$(dots_skill_find "${name}")"; then
+    echo "Error: agent skill '${name}' not found under ~/.agents/skills or ~/.hermes/skills." >&2
     echo "       Manual install: npx -y skills add ${spec} -g -y" >&2
     return 1
   fi
 
-  echo "OK: installed agent skill '${name}' → ~/.agents/skills/${name}"
-  if [[ -L "${HOME}/.hermes/skills/${name}" ]] || [[ -e "${HOME}/.hermes/skills/${name}" ]]; then
-    echo "OK: Hermes symlink present (~/.hermes/skills/${name})"
-  fi
+  echo "OK: installed agent skill '${name}'"
+  echo "    path: ${found}"
   return 0
 }
 
