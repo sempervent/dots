@@ -40,7 +40,7 @@ underneath for automation.
 Bash and Starship deliberately share the same semantic layout:
 
 ```text
-┌──┤joshuagrant@poster_nutbag├─┤19:55:55├─┤Wed Sep 16├─┤origin/master->master│
+┌──┤username@poster_nutbag├─┤19:55:55├─┤Wed Sep 16├─┤origin/master->master│
 ├───┤jobs (0)├─┤.venv│
 └─┤~/dots│
 ```
