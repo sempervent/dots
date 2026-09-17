@@ -1,32 +1,35 @@
-# DOTS Starship config — Catppuccin Mocha, restrained Powerline-style prompt.
+# DOTS Starship — same three-line box contract as bash/prompt.sh
 # Deployed to ~/.config/starship.toml
+#
+# ┌──┤user@host├─┤HH:MM:SS├─┤Day Mon DD├─┤upstream->branch│
+# ├───┤jobs (N)├─┤venv│
+# └─┤~/path│
 
 "$schema" = 'https://starship.rs/config-schema.json'
 
 format = """
-[](fg:#89b4fa)\
-$os\
+[┌──┤](fg:overlay1)\
 $username\
+[@](fg:overlay1)\
 $hostname\
-[](bg:#cba6f7 fg:#89b4fa)\
+[├─┤](fg:overlay1)\
+$time\
+[├─┤](fg:overlay1)\
+${custom.date}\
+${custom.git_relation}\
+[│](fg:overlay1)$line_break\
+[├───┤](fg:overlay1)\
+$jobs\
+${custom.venv}\
+[│](fg:overlay1)$line_break\
+[└─┤](fg:overlay1)\
 $directory\
-[](fg:#cba6f7 bg:#a6e3a1)\
-$git_branch\
-$git_status\
-[](fg:#a6e3a1 bg:#313244)\
-$nodejs\
-$python\
-$kubernetes\
-[](fg:#313244)\
-$fill\
-$cmd_duration\
-$status\
-$line_break\
-$character\
+[│ ](fg:overlay1)\
 """
 
 add_newline = true
 palette = "catppuccin_mocha"
+command_timeout = 500
 
 [palettes.catppuccin_mocha]
 rosewater = "#f5e0dc"
@@ -56,83 +59,111 @@ base = "#1e1e2e"
 mantle = "#181825"
 crust = "#11111b"
 
-[os]
-disabled = true
-
 [username]
-show_always = false
-style_user = "bg:#89b4fa fg:#1e1e2e"
-style_root = "bg:#f38ba8 fg:#1e1e2e"
+show_always = true
+style_user = "fg:green"
+style_root = "bold fg:red"
 format = "[$user]($style)"
 
 [hostname]
-ssh_only = true
-style = "bg:#89b4fa fg:#1e1e2e"
-format = "[@$hostname]($style)"
+ssh_only = false
+style = "fg:blue"
+format = "[$hostname]($style)"
 disabled = false
+
+[time]
+disabled = false
+time_format = "%H:%M:%S"
+style = "fg:mauve"
+format = "[$time]($style)"
+
+[custom.date]
+command = "date '+%a %b %d' | sed 's/ 0\\([0-9]\\)/ \\1/'"
+when = "true"
+shell = ["bash", "--noprofile", "--norc"]
+style = "fg:teal"
+format = "[$output]($style)"
+
+# Emits "├─┤relation" or empty (omits empty git segment entirely)
+[custom.git_relation]
+command = """
+if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then exit 0; fi
+branch=$(git symbolic-ref -q --short HEAD 2>/dev/null || true)
+if [ -z "$branch" ]; then
+  short=$(git rev-parse --short HEAD 2>/dev/null || true)
+  [ -n "$short" ] && printf '├─┤detached@%s' "$short"
+  exit 0
+fi
+head_ref=$(git symbolic-ref -q HEAD 2>/dev/null || true)
+remote=""
+[ -n "$head_ref" ] && remote=$(git for-each-ref --format='%(upstream:short)' "$head_ref" 2>/dev/null || true)
+if [ -n "$remote" ]; then rel="${remote}->${branch}"; else rel="$branch"; fi
+marks=""
+if ! git diff --quiet --ignore-submodules HEAD 2>/dev/null \
+  || ! git diff --cached --quiet --ignore-submodules 2>/dev/null \
+  || [ -n "$(git ls-files --others --exclude-standard 2>/dev/null | head -1)" ]; then
+  marks="!"
+fi
+ab=$(git rev-list --left-right --count '@{upstream}...HEAD' 2>/dev/null || true)
+if [ -n "$ab" ]; then
+  behind=${ab%%$'\t'*}; ahead=${ab##*$'\t'}
+  [ "${ahead:-0}" -gt 0 ] 2>/dev/null && marks="${marks}↑${ahead}"
+  [ "${behind:-0}" -gt 0 ] 2>/dev/null && marks="${marks}↓${behind}"
+fi
+if [ -n "$marks" ]; then printf '├─┤%s %s' "$rel" "$marks"; else printf '├─┤%s' "$rel"; fi
+"""
+when = "git rev-parse --is-inside-work-tree >/dev/null 2>&1"
+shell = ["bash", "--noprofile", "--norc"]
+style = "fg:yellow"
+format = "[$output]($style)"
+ignore_timeout = true
+
+[jobs]
+disabled = false
+symbol_threshold = 0
+number_threshold = 0
+style = "fg:teal"
+format = "[jobs ($number)]($style)"
+
+[custom.venv]
+command = 'basename "$VIRTUAL_ENV"'
+when = 'test -n "$VIRTUAL_ENV"'
+shell = ["bash", "--noprofile", "--norc"]
+style = "fg:overlay2"
+format = "[├─┤$output]($style)"
 
 [directory]
-style = "bg:#cba6f7 fg:#1e1e2e"
-truncation_length = 3
-truncate_to_repo = true
-format = "[ $path ]($style)"
+style = "fg:yellow"
+truncation_length = 8
+truncate_to_repo = false
+fish_style_pwd_dir_length = 1
+format = "[$path]($style)"
 truncation_symbol = "…/"
 
+# Disabled modules that previously belonged to the Powerline layout
+[os]
+disabled = true
+
 [git_branch]
-symbol = " "
-style = "bg:#a6e3a1 fg:#1e1e2e"
-format = "[$symbol$branch]($style)"
+disabled = true
 
 [git_status]
-style = "bg:#a6e3a1 fg:#1e1e2e"
-format = "[$all_status$ahead_behind ]($style)"
-conflicted = "="
-ahead = "⇡"
-behind = "⇣"
-diverged = "⇕"
-untracked = "?"
-stashed = "≡"
-modified = "!"
-staged = "+"
-renamed = "»"
-deleted = "✘"
-
-[nodejs]
-symbol = "󰎙 "
-style = "bg:#313244 fg:#a6e3a1"
-format = "[ $symbol($version) ]($style)"
-detect_files = ["package.json", ".nvmrc", ".node-version"]
+disabled = true
 
 [python]
-symbol = "󰌠 "
-style = "bg:#313244 fg:#89b4fa"
-format = "[ $symbol($version)( \\($virtualenv\\)) ]($style)"
-detect_files = [".python-version", "Pipfile", "pyproject.toml", "requirements.txt"]
+disabled = true
+
+[nodejs]
+disabled = true
 
 [kubernetes]
-symbol = "󱃾 "
-style = "bg:#313244 fg:#89dceb"
-format = "[ $symbol$context ]($style)"
-disabled = false
-# Only show when kubeconfig context is set and dir looks k8s-related
-detect_files = ["k8s", "helm", "Chart.yaml", "kustomization.yaml"]
-detect_folders = [".kube"]
+disabled = true
 
 [cmd_duration]
-min_time = 2_000
-style = "fg:#f9e2af"
-format = "[ ⏱ $duration ]($style)"
+disabled = true
 
 [status]
-disabled = false
-style = "fg:#f38ba8"
-format = "[ ✘ $status ]($style)"
-success_symbol = ""
-
-[fill]
-symbol = " "
+disabled = true
 
 [character]
-success_symbol = "[❯](bold green)"
-error_symbol = "[❯](bold red)"
-vimcmd_symbol = "[❮](bold green)"
+disabled = true

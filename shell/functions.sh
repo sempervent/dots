@@ -165,12 +165,74 @@ dre() {
 
 # Git helpers {{{1
 parse_git_branch() {
-  git branch 2>/dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/'
+  git rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 0
+  local ref
+  ref="$(git symbolic-ref -q --short HEAD 2>/dev/null)" || true
+  if [ -n "${ref}" ]; then
+    printf '%s\n' "${ref}"
+    return 0
+  fi
+  # Detached HEAD
+  ref="$(git rev-parse --short HEAD 2>/dev/null)" || true
+  [ -n "${ref}" ] && printf 'detached@%s\n' "${ref}"
 }
 
 parse_git_remote() {
-  # shellcheck disable=SC2046
-  git for-each-ref --format='%(upstream:short)' $(git symbolic-ref -q HEAD 2>/dev/null) 2>/dev/null
+  git rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 0
+  local head_ref
+  head_ref="$(git symbolic-ref -q HEAD 2>/dev/null)" || return 0
+  git for-each-ref --format='%(upstream:short)' "${head_ref}" 2>/dev/null
+}
+
+# Primary relation string: upstream->branch | branch | detached@abc1234 | empty
+dots_git_relation() {
+  git rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 0
+  local branch remote
+  branch="$(parse_git_branch)"
+  [ -z "${branch}" ] && return 0
+  case "${branch}" in
+    detached@*) printf '%s\n' "${branch}"; return 0 ;;
+  esac
+  remote="$(parse_git_remote)"
+  if [ -n "${remote}" ]; then
+    printf '%s->%s\n' "${remote}" "${branch}"
+  else
+    printf '%s\n' "${branch}"
+  fi
+}
+
+# Compact secondary marks: ! dirty, ↑N ahead, ↓N behind (relation stays primary)
+dots_git_state_marks() {
+  git rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 0
+  local dirty="" ahead=0 behind=0 marks="" line
+  # Single porcelain call for dirty + ahead/behind
+  while IFS= read -r line; do
+    case "${line}" in
+    '## '*)
+      case "${line}" in
+      *ahead\ [0-9]*)
+        ahead="${line#*ahead }"
+        ahead="${ahead%%,*}"
+        ahead="${ahead%%\]*}"
+        ;;
+      esac
+      case "${line}" in
+      *behind\ [0-9]*)
+        behind="${line#*behind }"
+        behind="${behind%%,*}"
+        behind="${behind%%\]*}"
+        ;;
+      esac
+      ;;
+    *)
+      [ -n "${line}" ] && dirty="!"
+      ;;
+    esac
+  done < <(git status --porcelain=v1 -b 2>/dev/null || true)
+  marks="${dirty}"
+  [ "${ahead:-0}" -gt 0 ] 2>/dev/null && marks="${marks}↑${ahead}"
+  [ "${behind:-0}" -gt 0 ] 2>/dev/null && marks="${marks}↓${behind}"
+  printf '%s\n' "${marks}"
 }
 
 gac() {
