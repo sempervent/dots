@@ -139,7 +139,7 @@ dots_cmd_status() {
 }
 
 dots_cmd_backup() {
-	local name="" 
+	local name=""
 	if [[ ${1:-} == "import-legacy" ]]; then
 		# shellcheck source=helpers/links.sh
 		source "${DIR}/helpers/links.sh" 2>/dev/null || true
