@@ -208,13 +208,13 @@ PY
 
 # Record pack-level outcome helpers (used by dots_install_skill_packs)
 _dots_skill_result_ok() {
-	DOTS_SKILL_PACK_OK+=("$1")
+	DOTS_SKILL_PACK_OK=("${DOTS_SKILL_PACK_OK[@]+"${DOTS_SKILL_PACK_OK[@]}"}" "$1")
 }
 _dots_skill_result_warn() {
-	DOTS_SKILL_PACK_WARN+=("$1|$2")
+	DOTS_SKILL_PACK_WARN=("${DOTS_SKILL_PACK_WARN[@]+"${DOTS_SKILL_PACK_WARN[@]}"}" "$1|$2")
 }
 _dots_skill_result_fail() {
-	DOTS_SKILL_PACK_FAIL+=("$1|$2")
+	DOTS_SKILL_PACK_FAIL=("${DOTS_SKILL_PACK_FAIL[@]+"${DOTS_SKILL_PACK_FAIL[@]}"}" "$1|$2")
 }
 
 install_skill_from_source() {
@@ -253,8 +253,8 @@ install_skill_from_source() {
 		return 0
 	fi
 
-	ensure_node_major "${min_node}" || return 1
-
+	# Desired state first: valid SKILL.md in an accepted location satisfies the
+	# install requirement. Do not require Node/npx merely to report OK.
 	if found="$(dots_skill_find "${name}")"; then
 		need_install=0
 		echo "OK: '${name}' already installed"
@@ -292,16 +292,19 @@ install_skill_from_source() {
 		return 0
 	fi
 
+	ensure_node_major "${min_node}" || return 1
+
 	if [[ ${source} == *"/skill-security-review" ]] || [[ ${source} == "tt-a1i/archify" ]]; then
 		echo "INSTALL: '${name}' from ${source}..."
 		set +e
-		npx -y skills add "${source}" -g -y "${agent_args[@]}" </dev/null
+		# Bash 3.2 + set -u: empty arrays must use ${arr[@]+...} expansion
+		npx -y skills add "${source}" -g -y ${agent_args[@]+"${agent_args[@]}"} </dev/null
 		npx_rc=$?
 		set -e
 	else
 		echo "INSTALL: '${name}' from ${source} (-s ${name})..."
 		set +e
-		npx -y skills add "${source}" -g -y -s "${name}" "${agent_args[@]}" </dev/null
+		npx -y skills add "${source}" -g -y -s "${name}" ${agent_args[@]+"${agent_args[@]}"} </dev/null
 		npx_rc=$?
 		set -e
 	fi

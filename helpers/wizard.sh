@@ -608,12 +608,12 @@ dots_wizard_apply() {
 		return 1
 	fi
 	local pkg_stage="OK"
-	if grep -q "WARN: static review findings" "${log}" 2>/dev/null ||
-		grep -q "advisory" "${log}" 2>/dev/null; then
+	if [[ -n ${log} && -f ${log} ]] &&
+		grep -q "WARN: static review findings" "${log}" 2>/dev/null; then
 		pkg_stage="OK (warnings)"
 	fi
 	dots_ui_stage 3 5 "Packages/components" "${pkg_stage}"
-	dots_ui_stage 3 5 "Profile activation" "OK"
+	dots_ui_stage 4 5 "Profile activation" "OK"
 
 	dots_ui_stage 4 5 "Models" "…"
 	if [[ ${WIZ_MODELS} -ne 0 ]]; then
@@ -633,9 +633,11 @@ dots_wizard_apply() {
 	"${DIR}/scripts/check.sh" --profile "${profile_arg}" 2>&1 | tee -a "${log}" || true
 	dots_ui_stage 5 5 "Verification" "OK"
 
-	if grep -q "WARN: static review findings" "${log}" 2>/dev/null; then
+	if [[ -n ${log} && -f ${log} ]] &&
+		grep -q "WARN: static review findings" "${log}" 2>/dev/null; then
 		local adv
-		adv="$(grep -c "WARN: static review findings" "${log}" 2>/dev/null || echo 0)"
+		adv="$(grep -c "WARN: static review findings" "${log}" 2>/dev/null || true)"
+		[[ -z ${adv} || ${adv} == 0 ]] && adv=1
 		echo ""
 		echo "Setup complete with ${adv} advisory warning(s)."
 		echo "Installed skills remain enabled; review findings above if desired."
