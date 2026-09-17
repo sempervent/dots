@@ -27,6 +27,7 @@ SCRIPTS=(
 	helpers/ui.sh
 	helpers/state.sh
 	helpers/wizard.sh
+	helpers/cask_apps.sh
 	shell/runtime.sh
 	shell/fnm.sh
 	shell/exports.sh
@@ -45,6 +46,10 @@ SCRIPTS=(
 	scripts/tests/model_plan_test.sh
 	scripts/tests/dots_cli_test.sh
 	scripts/tests/dots_wizard_test.sh
+	scripts/tests/dots_wizard_failure_test.sh
+	scripts/tests/cask_app_test.sh
+	scripts/tests/optional_failure_summary_test.sh
+	scripts/tests/activation_transaction_test.sh
 )
 
 missing=0
@@ -67,7 +72,7 @@ shfmt -d -s \
 	helpers/packages.sh helpers/links.sh helpers/git_config.sh \
 	helpers/toml.sh helpers/bootstrap_prereqs.sh \
 	helpers/hardware.sh helpers/models.sh helpers/model_providers.sh \
-	helpers/ui.sh helpers/state.sh helpers/wizard.sh \
+	helpers/ui.sh helpers/state.sh helpers/wizard.sh helpers/cask_apps.sh \
 	shell/runtime.sh shell/fnm.sh \
 	scripts/pull_models.sh \
 	scripts/ci/prepare_runner.sh \

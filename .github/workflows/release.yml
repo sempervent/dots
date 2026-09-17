@@ -16,19 +16,33 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: ${{ github.ref_name == 'v1.2.0' && 'DOTS v1.2.0 - Unified Interactive Setup' || format('DOTS {0}', github.ref_name) }}
+          name: ${{ github.ref_name == 'v1.2.1' && 'DOTS v1.2.1 - Setup Reliability Fixes' || format('DOTS {0}', github.ref_name) }}
           generate_release_notes: false
           body: |
-            ## Highlights
+            ## Existing macOS applications
 
-            - `./dots` is now the primary human interface for machine setup
-            - Single interactive flow from fresh machine through verification
-            - Profiles, components, and models managed in one wizard
-            - Existing scripts remain supported for automation
-            - Configuration remains declarative and reproducible
+            DOTS now recognizes compatible GUI applications that already exist in
+            `/Applications` even when they were not originally installed through
+            Homebrew.
 
-            ## Notes
+            This prevents setup failures such as a pre-existing Hermes.app
+            conflicting with the `hermes-desktop` cask.
 
-            - Pure-Bash UI (no gum/dialog/fzf required)
-            - Model downloads remain opt-in
-            - FluidVoice model setup remains MANUAL
+            DOTS does not overwrite externally installed apps merely to take
+            package-manager ownership.
+
+            ## Transactional profile activation
+
+            A new profile is no longer marked active before setup successfully
+            completes. If setup fails, the prior active profile/runtime policy
+            remains intact.
+
+            ## Better failure reporting
+
+            Optional-component failures now identify the component that failed
+            rather than ending only with a generic aggregate error.
+
+            ## Recovery
+
+            Install operations remain idempotent. Users who encountered the
+            v1.2.0 Hermes Desktop conflict can upgrade and rerun `./dots`.

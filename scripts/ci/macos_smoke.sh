@@ -29,6 +29,10 @@ bash scripts/tests/model_policy_test.sh
 bash scripts/tests/model_plan_test.sh
 bash scripts/tests/dots_cli_test.sh
 bash scripts/tests/dots_wizard_test.sh
+bash scripts/tests/dots_wizard_failure_test.sh
+bash scripts/tests/cask_app_test.sh
+bash scripts/tests/optional_failure_summary_test.sh
+bash scripts/tests/activation_transaction_test.sh
 
 /bin/bash ./dots --version
 /bin/bash ./dots help >/dev/null

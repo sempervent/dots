@@ -351,8 +351,10 @@ if [[ ${NO_INSTALL} -eq 1 ]]; then
 	exit 0
 fi
 
-# Persist runtime policy before setup so shells see it after install
-dots_write_runtime_policy "${PROFILE_FILE}"
+# Activation boundary (v1.2.1):
+#   Write runtime.env / active-profile ONLY after setup.sh succeeds.
+#   A hard setup failure must not replace the last-known-good active profile.
+#   Dry-run only prints the would-write (no HOME mutation).
 
 SETUP_ARGS=(--profile "${PROFILE_NAME}")
 [[ ${DRY_RUN} -eq 1 ]] && SETUP_ARGS+=(--dry-run)
@@ -369,7 +371,22 @@ fi
 
 echo ""
 echo "=== Invoking setup.sh ${SETUP_ARGS[*]:-} ==="
-"${DIR}/setup.sh" "${SETUP_ARGS[@]+"${SETUP_ARGS[@]}"}"
+SETUP_STATUS=0
+SETUP_BIN="${DOTS_SETUP_SH:-${DIR}/setup.sh}"
+if ! "${SETUP_BIN}" "${SETUP_ARGS[@]+"${SETUP_ARGS[@]}"}"; then
+	SETUP_STATUS=1
+fi
+
+if [[ ${SETUP_STATUS} -ne 0 ]]; then
+	echo "" >&2
+	echo "Setup failed before profile activation." >&2
+	echo "Previous active profile remains unchanged (if any)." >&2
+	echo "Re-run ./bootstrap.sh --profile ${PROFILE_NAME} after resolving the error; installation steps are idempotent." >&2
+	exit 1
+fi
+
+# Commit active profile / runtime policy only after successful setup
+dots_write_runtime_policy "${PROFILE_FILE}"
 
 CHECK_STATUS=0
 if [[ ${DRY_RUN} -eq 0 ]]; then

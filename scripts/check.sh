@@ -748,6 +748,22 @@ if command -v hermes >/dev/null 2>&1; then
   else
     ok "no git-install Hermes shim in ~/.local/bin"
   fi
+  # Desktop app (macOS): Homebrew-managed OR externally installed both satisfy.
+  if [[ "$(uname -s)" == "Darwin" ]]; then
+    _hermes_sel=0
+    for _c in "${EFFECTIVE_WITH[@]+"${EFFECTIVE_WITH[@]}"}"; do
+      [[ "${_c}" == "hermes" ]] && _hermes_sel=1 && break
+    done
+    if [[ "${_hermes_sel}" -eq 1 ]]; then
+      if [[ -d "/Applications/Hermes.app" ]]; then
+        ok "Hermes.app present"
+      elif command -v brew >/dev/null 2>&1 && brew list --cask hermes-desktop >/dev/null 2>&1; then
+        ok "hermes-desktop cask installed (brew)"
+      else
+        warn "hermes selected on macOS but Hermes.app not found"
+      fi
+    fi
+  fi
 else
   warn "hermes not installed (use: ./setup.sh --with hermes)"
 fi

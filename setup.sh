@@ -40,6 +40,8 @@ source "${DIR}/helpers/agent_skills.sh"
 source "${DIR}/helpers/skills_pack.sh"
 # shellcheck source=helpers/herdr_config.sh
 source "${DIR}/helpers/herdr_config.sh"
+# shellcheck source=helpers/cask_apps.sh
+source "${DIR}/helpers/cask_apps.sh"
 # shellcheck source=helpers/optional_components.sh
 source "${DIR}/helpers/optional_components.sh"
 # shellcheck source=helpers/drawthings.sh
@@ -413,6 +415,7 @@ echo "=== Optional components ==="
 # Optional AI/component Brewfiles (explicit --with only) + non-brew Herdr
 if command -v brew >/dev/null 2>&1; then
 	brew_failed=0
+	OPTIONAL_COMPONENT_FAILURES=()
 	apply_brewfile() {
 		local file="$1"
 		if [[ ! -f ${file} ]]; then
@@ -426,13 +429,17 @@ if command -v brew >/dev/null 2>&1; then
 			return 0
 		fi
 		if ! brew bundle --file="${file}"; then
-			brew_failed=1
 			echo "Warn: brew bundle failed for ${file}"
+			return 1
 		fi
+		return 0
 	}
 	apply_optional_brewfiles
 	if [[ ${brew_failed} -ne 0 ]]; then
-		echo "Error: optional component Brewfile(s) failed" >&2
+		if declare -F dots_optional_print_failures >/dev/null 2>&1; then
+			dots_optional_print_failures
+		fi
+		echo "Error: one or more optional components failed (see list above)" >&2
 		exit 1
 	fi
 elif has_component herdr; then

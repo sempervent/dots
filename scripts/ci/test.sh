@@ -59,5 +59,11 @@ run scripts/tests/model_plan_test.sh
 echo "=== Unified ./dots CLI + wizard ==="
 run scripts/tests/dots_cli_test.sh
 run scripts/tests/dots_wizard_test.sh
+run scripts/tests/dots_wizard_failure_test.sh
+
+echo "=== Cask presence + transactional activation ==="
+run scripts/tests/cask_app_test.sh
+run scripts/tests/optional_failure_summary_test.sh
+run scripts/tests/activation_transaction_test.sh
 
 echo "OK: all CI tests passed"
