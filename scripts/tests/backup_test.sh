@@ -86,10 +86,14 @@ echo changed >"${HOME}/.zshrc"
 dots_backup_restore "${mid}" --yes >/dev/null
 grep -q 'hi' "${HOME}/.zshrc" && ok "restored content" || bad "restore content"
 # pre-restore snapshot should exist
-if ls -1 "$(dots_backup_root)" 2>/dev/null | grep -q 'pre-restore'; then
+found_pr=0
+for _d in "$(dots_backup_root)"/*pre-restore*; do
+	[[ -d ${_d} ]] && found_pr=1 && break
+done
+if [[ ${found_pr} -eq 1 ]]; then
 	ok "pre-restore safety snap"
 else
-	bad "no pre-restore ($(ls -1 "$(dots_backup_root)" 2>/dev/null | tr '\n' ' '))"
+	bad "no pre-restore"
 fi
 
 echo "=== path traversal rejection ==="
