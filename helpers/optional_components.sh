@@ -7,88 +7,128 @@
 # Requires (from setup.sh): DIR, DRY_RUN, has_component, DOTS_WITH_COMPONENTS
 # Also expects agent-skill helpers from helpers/agent_skills.sh when installing skills.
 # apply_optional_brewfiles expects apply_brewfile() and brew_failed in caller scope.
+#
+# Failure tracking: OPTIONAL_COMPONENT_FAILURES+=( "id|reason" )
 
-apply_optional_brewfiles() {
-  if has_component herdr; then
-    if command -v brew >/dev/null 2>&1; then
-      apply_brewfile "${DIR}/brew/Brewfile.herdr"
-    elif declare -F dots_ensure_herdr >/dev/null 2>&1; then
-      # Linux without brew: official Herdr installer (Stage 0 helper)
-      dots_ensure_herdr || brew_failed=1
-    else
-      echo "Error: herdr selected but no Homebrew and no dots_ensure_herdr" >&2
-      brew_failed=1
-    fi
-  fi
-  if has_component hermes; then
-    apply_brewfile "${DIR}/brew/Brewfile.hermes"
-    if [[ "$(uname -s)" == "Darwin" ]]; then
-      echo "Installing hermes-desktop cask (macOS)..."
-      if [[ "${DRY_RUN}" -eq 1 ]]; then
-        echo "[dry-run] brew install --cask hermes-desktop"
-      else
-        brew install --cask hermes-desktop || {
-          brew_failed=1
-          echo "Warn: hermes-desktop cask install failed"
-        }
-      fi
-    else
-      echo "Note: hermes-desktop cask skipped (macOS only)"
-    fi
-  fi
-  if has_component ollama; then
-    apply_brewfile "${DIR}/brew/Brewfile.ollama"
-  fi
-  if has_component llamacpp; then
-    if command -v brew >/dev/null 2>&1; then
-      apply_brewfile "${DIR}/brew/Brewfile.llamacpp"
-    else
-      echo "Error: llamacpp selected but Homebrew is required for the canonical install." >&2
-      echo "       Install Homebrew, or build llama.cpp from https://github.com/ggml-org/llama.cpp" >&2
-      brew_failed=1
-    fi
-  fi
-  if has_component archify || has_component skills || has_component ai-skills; then
-    apply_brewfile "${DIR}/brew/Brewfile.archify"
-  fi
-  if has_component drawthings; then
-    apply_brewfile "${DIR}/brew/Brewfile.drawthings"
-  fi
-  if has_component opencode; then
-    apply_brewfile "${DIR}/brew/Brewfile.opencode"
-  fi
-  if has_component codex; then
-    # npm @openai/codex under /opt/homebrew blocks the cask binary path — migrate first.
-    if [[ "${DRY_RUN}" -eq 0 ]] && declare -F codex_is_npm_backed >/dev/null 2>&1; then
-      if codex_is_npm_backed; then
-        local _creal
-        _creal="$(codex_real_path "$(codex_resolve_bin)")"
-        if [[ "${_creal}" == /opt/homebrew/lib/node_modules/@openai/codex/* ]]; then
-          codex_migrate_npm_to_cask || true
-        else
-          warn_codex_npm_conflict
-        fi
-      fi
-    elif [[ "${DRY_RUN}" -eq 1 ]]; then
-      echo "[dry-run] migrate npm Codex if blocking Homebrew cask, then Brewfile.codex"
-    fi
-    apply_brewfile "${DIR}/brew/Brewfile.codex"
-  fi
-  if has_component images; then
-    apply_brewfile "${DIR}/brew/Brewfile.images"
-  fi
-  if has_component tex; then
-    apply_brewfile "${DIR}/brew/Brewfile.tex"
-  fi
-  if has_component cursor; then
-    apply_brewfile "${DIR}/brew/Brewfile.cursor"
-  fi
-  if has_component fluidvoice; then
-    # macOS 15+ only; platform gate runs before install. No models, no launch.
-    apply_brewfile "${DIR}/brew/Brewfile.fluidvoice"
-  fi
+OPTIONAL_COMPONENT_FAILURES=()
+
+dots_optional_record_failure() {
+	local id="$1" reason="$2"
+	OPTIONAL_COMPONENT_FAILURES+=("${id}|${reason}")
+	brew_failed=1
 }
 
+dots_optional_print_failures() {
+	local entry id reason
+	if [[ ${#OPTIONAL_COMPONENT_FAILURES[@]} -eq 0 ]]; then
+		return 0
+	fi
+	echo "Optional component failures:" >&2
+	for entry in "${OPTIONAL_COMPONENT_FAILURES[@]}"; do
+		id="${entry%%|*}"
+		reason="${entry#*|}"
+		printf '  %-18s %s\n' "${id}" "${reason}" >&2
+	done
+}
+
+apply_optional_brewfiles() {
+	OPTIONAL_COMPONENT_FAILURES=()
+
+	if has_component herdr; then
+		if command -v brew >/dev/null 2>&1; then
+			apply_brewfile "${DIR}/brew/Brewfile.herdr" || dots_optional_record_failure "herdr" "brew bundle failed"
+		elif declare -F dots_ensure_herdr >/dev/null 2>&1; then
+			# Linux without brew: official Herdr installer (Stage 0 helper)
+			dots_ensure_herdr || dots_optional_record_failure "herdr" "official installer failed"
+		else
+			echo "Error: herdr selected but no Homebrew and no dots_ensure_herdr" >&2
+			dots_optional_record_failure "herdr" "no installer available"
+		fi
+	fi
+	if has_component hermes; then
+		if ! apply_brewfile "${DIR}/brew/Brewfile.hermes"; then
+			dots_optional_record_failure "hermes-agent" "brew bundle failed"
+		fi
+		if [[ "$(uname -s)" == "Darwin" ]]; then
+			# GUI desktop: tolerate pre-existing /Applications/Hermes.app
+			if declare -F dots_ensure_cask_app >/dev/null 2>&1; then
+				if ! dots_ensure_cask_app "hermes-desktop" "/Applications/Hermes.app" "Hermes.app"; then
+					dots_optional_record_failure "hermes-desktop" "cask installation failed"
+				fi
+			else
+				echo "Installing hermes-desktop cask (macOS)..."
+				if [[ ${DRY_RUN:-0} -eq 1 ]]; then
+					echo "[dry-run] brew install --cask hermes-desktop"
+				else
+					brew install --cask hermes-desktop || {
+						dots_optional_record_failure "hermes-desktop" "cask installation failed"
+						echo "Warn: hermes-desktop cask install failed"
+					}
+				fi
+			fi
+		else
+			echo "Note: hermes-desktop cask skipped (macOS only)"
+		fi
+	fi
+	if has_component ollama; then
+		apply_brewfile "${DIR}/brew/Brewfile.ollama" || dots_optional_record_failure "ollama" "brew bundle failed"
+	fi
+	if has_component llamacpp; then
+		if command -v brew >/dev/null 2>&1; then
+			apply_brewfile "${DIR}/brew/Brewfile.llamacpp" || dots_optional_record_failure "llamacpp" "brew bundle failed"
+		else
+			echo "Error: llamacpp selected but Homebrew is required for the canonical install." >&2
+			echo "       Install Homebrew, or build llama.cpp from https://github.com/ggml-org/llama.cpp" >&2
+			dots_optional_record_failure "llamacpp" "Homebrew required"
+		fi
+	fi
+	if has_component archify || has_component skills || has_component ai-skills; then
+		apply_brewfile "${DIR}/brew/Brewfile.archify" || dots_optional_record_failure "archify" "brew bundle failed"
+	fi
+	if has_component drawthings; then
+		apply_brewfile "${DIR}/brew/Brewfile.drawthings" || dots_optional_record_failure "drawthings" "brew bundle failed"
+	fi
+	if has_component opencode; then
+		apply_brewfile "${DIR}/brew/Brewfile.opencode" || dots_optional_record_failure "opencode" "brew bundle failed"
+	fi
+	if has_component codex; then
+		# npm @openai/codex under /opt/homebrew blocks the cask binary path — migrate first.
+		if [[ ${DRY_RUN:-0} -eq 0 ]] && declare -F codex_is_npm_backed >/dev/null 2>&1; then
+			if codex_is_npm_backed; then
+				local _creal
+				_creal="$(codex_real_path "$(codex_resolve_bin)")"
+				if [[ ${_creal} == /opt/homebrew/lib/node_modules/@openai/codex/* ]]; then
+					codex_migrate_npm_to_cask || true
+				else
+					warn_codex_npm_conflict
+				fi
+			fi
+		elif [[ ${DRY_RUN:-0} -eq 1 ]]; then
+			echo "[dry-run] migrate npm Codex if blocking Homebrew cask, then Brewfile.codex"
+		fi
+		apply_brewfile "${DIR}/brew/Brewfile.codex" || dots_optional_record_failure "codex" "brew bundle failed"
+	fi
+	if has_component images; then
+		apply_brewfile "${DIR}/brew/Brewfile.images" || dots_optional_record_failure "images" "brew bundle failed"
+	fi
+	if has_component tex; then
+		apply_brewfile "${DIR}/brew/Brewfile.tex" || dots_optional_record_failure "tex" "brew bundle failed"
+	fi
+	if has_component cursor; then
+		apply_brewfile "${DIR}/brew/Brewfile.cursor" || dots_optional_record_failure "cursor" "brew bundle failed"
+	fi
+	if has_component fluidvoice; then
+		# macOS 15+ only; platform gate runs before install. No models, no launch.
+		# Prefer cask-app helper so a pre-existing FluidVoice.app is not an ERROR.
+		if [[ "$(uname -s)" == "Darwin" ]] && declare -F dots_ensure_cask_app >/dev/null 2>&1; then
+			if ! dots_ensure_cask_app "fluidvoice" "/Applications/FluidVoice.app" "FluidVoice.app"; then
+				dots_optional_record_failure "fluidvoice" "cask installation failed"
+			fi
+		else
+			apply_brewfile "${DIR}/brew/Brewfile.fluidvoice" || dots_optional_record_failure "fluidvoice" "brew bundle failed"
+		fi
+	fi
+}
 dots_install_requested_agent_skills() {
   # Pack selection uses set semantics (union / dedupe inside dots_install_skill_packs).
   local packs=()

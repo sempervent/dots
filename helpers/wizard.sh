@@ -562,10 +562,17 @@ dots_wizard_apply() {
 	fi
 	if ! "${DIR}/bootstrap.sh" "${boot_args[@]}" 2>&1 | tee -a "${log}"; then
 		dots_ui_stage 3 5 "Packages/components" "FAILED"
+		dots_ui_stage 4 5 "Profile activation" "NOT COMMITTED"
+		dots_ui_stage 5 5 "Models" "NOT RUN"
 		dots_ui_err "bootstrap failed — see ${log}"
+		echo ""
+		echo "Setup failed before profile activation."
+		echo "Previous active profile remains unchanged."
+		echo "Re-run ./dots after resolving the error; installation steps are idempotent."
 		return 1
 	fi
 	dots_ui_stage 3 5 "Packages/components" "OK"
+	dots_ui_stage 3 5 "Profile activation" "OK"
 
 	dots_ui_stage 4 5 "Models" "…"
 	if [[ ${WIZ_MODELS} -ne 0 ]]; then
