@@ -16,33 +16,34 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: ${{ github.ref_name == 'v1.2.1' && 'DOTS v1.2.1 - Setup Reliability Fixes' || format('DOTS {0}', github.ref_name) }}
+          name: ${{ github.ref_name == 'v1.3.0' && 'DOTS v1.3.0 - Prompt, Snapshots, and Skills Reliability' || (github.ref_name == 'v1.2.1' && 'DOTS v1.2.1 - Setup Reliability Fixes' || format('DOTS {0}', github.ref_name)) }}
           generate_release_notes: false
           body: |
-            ## Existing macOS applications
+            ## Unified DOTS prompt
 
-            DOTS now recognizes compatible GUI applications that already exist in
-            `/Applications` even when they were not originally installed through
-            Homebrew.
+            Bash and Starship now share the classic three-line DOTS prompt:
 
-            This prevents setup failures such as a pre-existing Hermes.app
-            conflicting with the `hermes-desktop` cask.
+            ```text
+            ┌──┤user@host├─┤time├─┤date├─┤upstream->branch│
+            ├───┤jobs (0)├─┤virtualenv│
+            └─┤working/directory│
+            ```
 
-            DOTS does not overwrite externally installed apps merely to take
-            package-manager ownership.
+            ## Snapshot backup and restore
 
-            ## Transactional profile activation
+            Before replacing existing user dotfiles, DOTS creates coherent
+            recoverable snapshots under `~/.local/state/dots/backups/`.
 
-            A new profile is no longer marked active before setup successfully
-            completes. If setup fails, the prior active profile/runtime policy
-            remains intact.
+            ```bash
+            ./dots backups
+            ./dots restore
+            ```
 
-            ## Better failure reporting
+            Legacy `~/.old_dots` remains readable via `./dots backup import-legacy`.
 
-            Optional-component failures now identify the component that failed
-            rather than ending only with a generic aggregate error.
+            ## Skills reliability
 
-            ## Recovery
-
-            Install operations remain idempotent. Users who encountered the
-            v1.2.0 Hermes Desktop conflict can upgrade and rerun `./dots`.
+            Skills installed directly into supported agent destinations such as
+            `~/.hermes/skills` are correctly verified and security-reviewed.
+            Verification follows the actual install path, not a hard-coded
+            `~/.agents/skills` assumption.

@@ -34,9 +34,13 @@ echo "=== Bootstrap + setup dry-run ==="
 ./setup.sh --dry-run --with hermes,ollama
 ./setup.sh --dry-run --with ai
 ./setup.sh --dry-run --profile base --packages core,modern
-if ./setup.sh --dry-run --with fluidvoice; then
-	echo "expected fluidvoice to fail on Linux" >&2
-	exit 1
+if [[ "$(uname -s)" != "Darwin" ]]; then
+	if ./setup.sh --dry-run --with fluidvoice; then
+		echo "expected fluidvoice to fail on Linux" >&2
+		exit 1
+	fi
+else
+	./setup.sh --dry-run --with fluidvoice
 fi
 
 echo "=== Runtime / dry-run / transitions ==="
@@ -65,5 +69,10 @@ echo "=== Cask presence + transactional activation ==="
 run scripts/tests/cask_app_test.sh
 run scripts/tests/optional_failure_summary_test.sh
 run scripts/tests/activation_transaction_test.sh
+
+echo "=== Prompt / backup / skills location ==="
+run scripts/tests/prompt_contract_test.sh
+run scripts/tests/backup_test.sh
+run scripts/tests/skills_location_test.sh
 
 echo "OK: all CI tests passed"
