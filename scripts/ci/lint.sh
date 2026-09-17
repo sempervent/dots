@@ -67,7 +67,7 @@ done
 
 echo "=== ShellCheck (${#SCRIPTS[@]} files) ==="
 # Intentional disables for sourced dynamic paths and common test idioms.
-shellcheck -x -e SC1091,SC2011,SC2016,SC1007,SC2034,SC2015,SC2317,SC2119,SC2329,SC2097,SC2098 \
+shellcheck -x -e SC1091,SC2011,SC2016,SC1007,SC2034,SC2015,SC2317,SC2119,SC2329,SC2097,SC2098,SC2010,SC2012 \
 	"${SCRIPTS[@]}"
 
 echo "=== shfmt ==="

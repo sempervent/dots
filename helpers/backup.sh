@@ -333,10 +333,10 @@ dots_backup_list() {
 	fi
 	local d base mf name profile ver created count
 	# Newest first
-	for d in $(ls -1d "${root}"/*/ 2>/dev/null | sort -r); do
+	while IFS= read -r d; do
 		[[ -d ${d} ]] || continue
-		base="$(basename "${d%/}")"
-		mf="${d}manifest.toml"
+		base="$(basename "${d}")"
+		mf="${d}/manifest.toml"
 		name="${base}"
 		profile="-"
 		ver="-"
@@ -352,16 +352,16 @@ dots_backup_list() {
 		[[ -z ${profile} ]] && profile="-"
 		printf '%s  name=%-20s  profile=%-8s  files=%-4s  dots=%s\n' \
 			"${base}" "${name}" "${profile}" "${count}" "${ver}"
-	done
+	done < <(find "${root}" -mindepth 1 -maxdepth 1 -type d -print 2>/dev/null | sort -r)
 }
 
 dots_backup_latest_id() {
 	local root d
 	root="$(dots_backup_root)"
 	[[ -d ${root} ]] || return 1
-	d="$(ls -1d "${root}"/*/ 2>/dev/null | sort -r | head -1 || true)"
+	d="$(find "${root}" -mindepth 1 -maxdepth 1 -type d -print 2>/dev/null | sort -r | head -1 || true)"
 	[[ -n ${d} ]] || return 1
-	basename "${d%/}"
+	basename "${d}"
 }
 
 dots_backup_resolve_id() {
@@ -373,9 +373,9 @@ dots_backup_resolve_id() {
 		return 0
 	fi
 	# Prefix match
-	cand="$(ls -1d "${root}/${id}"*/ 2>/dev/null | head -1 || true)"
+	cand="$(find "${root}" -mindepth 1 -maxdepth 1 -type d -name "${id}*" -print 2>/dev/null | head -1 || true)"
 	if [[ -n ${cand} && -d ${cand} ]]; then
-		printf '%s\n' "${cand%/}"
+		printf '%s\n' "${cand}"
 		return 0
 	fi
 	return 1
