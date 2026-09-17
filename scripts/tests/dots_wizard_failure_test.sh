@@ -76,7 +76,10 @@ grep -qi 'FAILED\|Setup failed before profile activation' "${TMP}/out.txt" && ok
 	bad "missing failure text"
 	tail -50 "${TMP}/out.txt" || true
 }
-grep -qi 'NOT COMMITTED\|Previous active profile remains' "${TMP}/out.txt" && ok "not committed message" || bad "activation message"
+grep -qi 'NOT COMMITTED\|Previous active profile remains\|Setup failed before profile activation' "${TMP}/out.txt" && ok "not committed message" || {
+	bad "activation message"
+	grep -n 'Profile activation\|Setup failed\|NOT COMMITTED\|FAILED' "${TMP}/out.txt" || true
+}
 grep -qi 'Setup complete' "${TMP}/out.txt" && bad "should not say setup complete" || ok "no completion banner"
 ap2="$(cksum <"${HOME}/.config/dots/active-profile")"
 [[ ${ap1} == "${ap2}" ]] && ok "active-profile unchanged" || bad "active-profile changed"

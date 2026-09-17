@@ -458,11 +458,14 @@ dots_wizard_apply() {
 	reapply)
 		profile_arg="${WIZ_PASSTHRU_PROFILE}"
 		dots_ui_stage 1 3 "Bootstrap" "…"
+		set +e
 		if [[ ${WIZ_DRY_RUN} -eq 1 ]]; then
 			"${DIR}/bootstrap.sh" --profile "${profile_arg}" --dry-run 2>&1 | tee -a "${log}"
 		else
-			"${DIR}/bootstrap.sh" --profile "${profile_arg}" 2>&1 | tee -a "${log}" || rc=1
+			"${DIR}/bootstrap.sh" --profile "${profile_arg}" 2>&1 | tee -a "${log}"
 		fi
+		rc=${PIPESTATUS[0]}
+		set -e
 		dots_ui_stage 2 3 "Health check" "…"
 		"${DIR}/scripts/check.sh" --profile "${profile_arg}" 2>&1 | tee -a "${log}" || true
 		dots_ui_stage 3 3 "Done" "OK"
@@ -470,17 +473,23 @@ dots_wizard_apply() {
 		return "${rc}"
 		;;
 	models-only)
+		set +e
 		if [[ ${WIZ_DRY_RUN} -eq 1 ]]; then
-			"${DIR}/scripts/pull_models.sh" --dry-run 2>&1 | tee -a "${log}" || rc=1
-			rm -f "${log}"
+			"${DIR}/scripts/pull_models.sh" --dry-run 2>&1 | tee -a "${log}"
 		else
-			"${DIR}/scripts/pull_models.sh" 2>&1 | tee -a "${log}" || rc=1
+			"${DIR}/scripts/pull_models.sh" 2>&1 | tee -a "${log}"
 		fi
+		rc=${PIPESTATUS[0]}
+		set -e
+		[[ ${WIZ_DRY_RUN} -eq 1 ]] && rm -f "${log}"
 		return "${rc}"
 		;;
 	check-only)
 		local p="${DOTS_ACTIVE_PROFILE_FILE:-${DOTS_ACTIVE_PROFILE:-base}}"
-		"${DIR}/scripts/check.sh" --profile "${p}" 2>&1 | tee -a "${log}" || rc=1
+		set +e
+		"${DIR}/scripts/check.sh" --profile "${p}" 2>&1 | tee -a "${log}"
+		rc=${PIPESTATUS[0]}
+		set -e
 		[[ ${WIZ_DRY_RUN} -eq 1 ]] && rm -f "${log}"
 		return "${rc}"
 		;;
@@ -512,13 +521,28 @@ dots_wizard_apply() {
 	fi
 
 	dots_ui_stage 1 5 "Bootstrap prerequisites" "…"
-	# shellcheck source=bootstrap_prereqs.sh
-	source "${DIR}/helpers/bootstrap_prereqs.sh"
-	dots_stage0_ensure 0 2>&1 | tee -a "${log}" || {
-		dots_ui_err "Stage 0 failed — see ${log}"
-		return 1
-	}
-	dots_ui_stage 1 5 "Bootstrap prerequisites" "OK"
+	if [[ ${DOTS_SKIP_STAGE0:-0} -eq 1 ]]; then
+		echo "Note: DOTS_SKIP_STAGE0=1 — skipping Stage 0 in wizard"
+		dots_ui_stage 1 5 "Bootstrap prerequisites" "SKIP"
+	else
+		# shellcheck source=bootstrap_prereqs.sh
+		source "${DIR}/helpers/bootstrap_prereqs.sh"
+		set +e
+		dots_stage0_ensure 0 2>&1 | tee -a "${log}"
+		stage0_rc=${PIPESTATUS[0]}
+		set -e
+		if [[ ${stage0_rc} -ne 0 ]]; then
+			dots_ui_stage 1 5 "Bootstrap prerequisites" "FAILED"
+			dots_ui_stage 2 5 "Profile activation" "NOT COMMITTED"
+			dots_ui_err "Stage 0 failed — see ${log}"
+			echo ""
+			echo "Setup failed before profile activation."
+			echo "Previous active profile remains unchanged."
+			echo "Re-run ./dots after resolving the error; installation steps are idempotent."
+			return 1
+		fi
+		dots_ui_stage 1 5 "Bootstrap prerequisites" "OK"
+	fi
 
 	dots_ui_stage 2 5 "Write configuration" "…"
 	if [[ -n ${WIZ_PROFILE_PATH} ]]; then
@@ -560,7 +584,14 @@ dots_wizard_apply() {
 		[[ -n ${WIZ_WITH} ]] && boot_args+=(--with "${WIZ_WITH}")
 		[[ -n ${WIZ_WITHOUT} ]] && boot_args+=(--without "${WIZ_WITHOUT}")
 	fi
-	if ! "${DIR}/bootstrap.sh" "${boot_args[@]}" 2>&1 | tee -a "${log}"; then
+	# Capture bootstrap status explicitly — `local x=${PIPESTATUS[0]}` is unsafe
+	# because `local` itself resets PIPESTATUS on some Bash builds.
+	local boot_rc=0
+	set +e
+	"${DIR}/bootstrap.sh" "${boot_args[@]}" 2>&1 | tee -a "${log}"
+	boot_rc=${PIPESTATUS[0]}
+	set -e
+	if [[ ${boot_rc} -ne 0 ]]; then
 		dots_ui_stage 3 5 "Packages/components" "FAILED"
 		dots_ui_stage 4 5 "Profile activation" "NOT COMMITTED"
 		dots_ui_stage 5 5 "Models" "NOT RUN"
