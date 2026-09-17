@@ -16,34 +16,31 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: ${{ github.ref_name == 'v1.3.0' && 'DOTS v1.3.0 - Prompt, Snapshots, and Skills Reliability' || (github.ref_name == 'v1.2.1' && 'DOTS v1.2.1 - Setup Reliability Fixes' || format('DOTS {0}', github.ref_name)) }}
+          name: ${{ github.ref_name == 'v1.3.1' && 'DOTS v1.3.1 - Desired-State Reliability' || (github.ref_name == 'v1.3.0' && 'DOTS v1.3.0 - Prompt, Snapshots, and Skills Reliability' || (github.ref_name == 'v1.2.1' && 'DOTS v1.2.1 - Setup Reliability Fixes' || format('DOTS {0}', github.ref_name))) }}
           generate_release_notes: false
           body: |
-            ## Unified DOTS prompt
+            ## Installed means satisfied
 
-            Bash and Starship now share the classic three-line DOTS prompt:
+            DOTS treats an already-valid component or skill as satisfying the
+            requested state and moves on without unnecessary reinstall attempts.
 
-            ```text
-            ┌──┤user@host├─┤time├─┤date├─┤upstream->branch│
-            ├───┤jobs (0)├─┤virtualenv│
-            └─┤working/directory│
-            ```
+            ## Skill security scans are advisory
 
-            ## Snapshot backup and restore
+            Static regex-based skill review findings are warnings by default
+            rather than installation failures.
 
-            Before replacing existing user dotfiles, DOTS creates coherent
-            recoverable snapshots under `~/.local/state/dots/backups/`.
+            This fixes false positives for security-analysis skills that
+            legitimately contain examples such as `curl | sh`.
+
+            Opt into fatal findings with:
 
             ```bash
-            ./dots backups
-            ./dots restore
+            DOTS_SKILLS_STRICT_REVIEW=1
             ```
 
-            Legacy `~/.old_dots` remains readable via `./dots backup import-legacy`.
+            ## Safer skill handling
 
-            ## Skills reliability
+            DOTS no longer deletes successfully installed skills solely because
+            a heuristic scan produces a finding.
 
-            Skills installed directly into supported agent destinations such as
-            `~/.hermes/skills` are correctly verified and security-reviewed.
-            Verification follows the actual install path, not a hard-coded
-            `~/.agents/skills` assumption.
+            Actual missing or failed installations remain fatal.

@@ -607,7 +607,12 @@ dots_wizard_apply() {
 		echo "Re-run ./dots after resolving the error; installation steps are idempotent."
 		return 1
 	fi
-	dots_ui_stage 3 5 "Packages/components" "OK"
+	local pkg_stage="OK"
+	if grep -q "WARN: static review findings" "${log}" 2>/dev/null ||
+		grep -q "advisory" "${log}" 2>/dev/null; then
+		pkg_stage="OK (warnings)"
+	fi
+	dots_ui_stage 3 5 "Packages/components" "${pkg_stage}"
 	dots_ui_stage 3 5 "Profile activation" "OK"
 
 	dots_ui_stage 4 5 "Models" "…"
@@ -627,6 +632,14 @@ dots_wizard_apply() {
 	dots_ui_stage 5 5 "Verification" "…"
 	"${DIR}/scripts/check.sh" --profile "${profile_arg}" 2>&1 | tee -a "${log}" || true
 	dots_ui_stage 5 5 "Verification" "OK"
+
+	if grep -q "WARN: static review findings" "${log}" 2>/dev/null; then
+		local adv
+		adv="$(grep -c "WARN: static review findings" "${log}" 2>/dev/null || echo 0)"
+		echo ""
+		echo "Setup complete with ${adv} advisory warning(s)."
+		echo "Installed skills remain enabled; review findings above if desired."
+	fi
 
 	dots_wizard_followups
 	return "${rc}"

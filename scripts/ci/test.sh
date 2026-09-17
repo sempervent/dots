@@ -74,5 +74,6 @@ echo "=== Prompt / backup / skills location ==="
 run scripts/tests/prompt_contract_test.sh
 run scripts/tests/backup_test.sh
 run scripts/tests/skills_location_test.sh
+run scripts/tests/skills_desired_state_test.sh
 
 echo "OK: all CI tests passed"

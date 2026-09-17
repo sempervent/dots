@@ -113,17 +113,31 @@ PY
 
 # Static review — read files only; never execute skill scripts.
 # Reviews the resolved install location (agents or hermes).
+#
+# Desired-state contract:
+#   findings are WARN by default (exit 0) — do not fail installation
+#   DOTS_SKILLS_STRICT_REVIEW=1 makes findings fatal (exit 1) but never deletes
+#
+# Sets:
+#   DOTS_LAST_SKILL_REVIEW=clean|warn|error|skip
+#   DOTS_LAST_SKILL_REVIEW_FINDINGS=<comma-separated labels>
 dots_static_review_skill() {
 	local name="$1"
 	local root="${2:-}"
+	DOTS_LAST_SKILL_REVIEW="skip"
+	DOTS_LAST_SKILL_REVIEW_FINDINGS=""
 	if [[ -z ${root} ]]; then
 		root="$(dots_skill_find "${name}" 2>/dev/null || true)"
 	fi
 	if [[ -z ${root} || ! -d ${root} ]]; then
-		echo "Warn: cannot review missing skill dir for ${name}" >&2
-		return 1
+		echo "WARN: cannot review missing skill dir for ${name}" >&2
+		DOTS_LAST_SKILL_REVIEW="skip"
+		return 0
 	fi
-	dots_python3 - "${root}" "${name}" <<'PY'
+	local out rc=0
+	set +e
+	out="$(
+		dots_python3 - "${root}" "${name}" <<'PY'
 import re, sys
 from pathlib import Path
 
@@ -152,11 +166,55 @@ for pat, label in patterns:
     if re.search(pat, blob, re.I):
         findings.append(label)
 if findings:
-    print(f"FAIL: static security review for '{name}': {', '.join(findings)}", file=sys.stderr)
-    sys.exit(1)
-print(f"OK: static security review passed for '{name}' ({root})")
+    print("FINDINGS:" + ",".join(findings))
+    sys.exit(2)
+print("CLEAN")
 sys.exit(0)
 PY
+	)"
+	rc=$?
+	set -e
+
+	if [[ ${rc} -eq 2 ]]; then
+		local findings="${out#FINDINGS:}"
+		DOTS_LAST_SKILL_REVIEW_FINDINGS="${findings}"
+		echo "WARN: static review findings for '${name}':"
+		local f
+		IFS=',' read -r -a _find_arr <<<"${findings}"
+		for f in "${_find_arr[@]}"; do
+			[[ -n ${f} ]] && echo "  ${f}"
+		done
+		echo "Skill is installed and remains enabled."
+		echo "Review manually if desired."
+		if [[ ${DOTS_SKILLS_STRICT_REVIEW:-0} == "1" ]]; then
+			echo "ERROR: strict skill review failed for '${name}' (skill retained for inspection)" >&2
+			DOTS_LAST_SKILL_REVIEW="error"
+			return 1
+		fi
+		DOTS_LAST_SKILL_REVIEW="warn"
+		return 0
+	fi
+
+	if [[ ${rc} -ne 0 ]]; then
+		echo "WARN: static review could not complete for '${name}' (rc=${rc})" >&2
+		DOTS_LAST_SKILL_REVIEW="skip"
+		return 0
+	fi
+
+	echo "OK: static security review clean for '${name}' (${root})"
+	DOTS_LAST_SKILL_REVIEW="clean"
+	return 0
+}
+
+# Record pack-level outcome helpers (used by dots_install_skill_packs)
+_dots_skill_result_ok() {
+	DOTS_SKILL_PACK_OK+=("$1")
+}
+_dots_skill_result_warn() {
+	DOTS_SKILL_PACK_WARN+=("$1|$2")
+}
+_dots_skill_result_fail() {
+	DOTS_SKILL_PACK_FAIL+=("$1|$2")
 }
 
 install_skill_from_source() {
@@ -167,6 +225,7 @@ install_skill_from_source() {
 	local expose_hermes=0
 	local agent_args=()
 	local found=""
+	local npx_rc=0
 
 	if declare -F dots_may_configure_hermes >/dev/null 2>&1 && dots_may_configure_hermes; then
 		expose_hermes=1
@@ -189,7 +248,7 @@ install_skill_from_source() {
 			else
 				echo "[dry-run] npx -y skills add ${source} -g -y -s ${name}  (global store only)"
 			fi
-			echo "[dry-run] static security review after install"
+			echo "[dry-run] advisory static security review after install"
 		fi
 		return 0
 	fi
@@ -202,41 +261,59 @@ install_skill_from_source() {
 		echo "    path: ${found}"
 	fi
 
-	local need_hermes_link=0
-	if [[ ${expose_hermes} -eq 1 ]] && [[ ! -e ${hermes_link} ]]; then
-		# Hermes-only install already satisfies discovery
-		if [[ ${need_install} -eq 0 && ${found} == "${hermes_link}"* ]]; then
-			need_hermes_link=0
-		elif [[ ${need_install} -eq 0 ]]; then
-			need_hermes_link=1
-		else
-			need_hermes_link=1
-		fi
-	fi
-
-	if [[ ${need_install} -eq 0 ]] && [[ ${need_hermes_link} -eq 0 ]]; then
+	# Desired state: any accepted location with SKILL.md satisfies installation.
+	# Do not reinstall merely to obtain a Hermes copy when the global store is valid.
+	if [[ ${need_install} -eq 0 ]]; then
 		if [[ ${expose_hermes} -eq 1 ]]; then
-			echo "OK: skill available for Hermes (path: ${found})"
+			if [[ -e ${hermes_link} ]] || [[ -L ${hermes_link} ]] || [[ ${found} == "${HOME}/.hermes/skills/"* ]]; then
+				echo "OK: skill available for Hermes (path: ${found})"
+			else
+				echo "OK: skill available for Hermes via global store (path: ${found})"
+				echo "Note: ~/.hermes/skills/${name} not present; Hermes may discover via skills CLI sync"
+			fi
 		else
 			echo "OK: skill present (Hermes not selected — no ~/.hermes/skills mutation)"
 		fi
+		# Advisory review for security/ai groups
 		if [[ ${group} == "ai" ]] || [[ ${group} == "security" ]]; then
-			dots_static_review_skill "${name}" "${found}" || return 1
+			if ! dots_static_review_skill "${name}" "${found}"; then
+				_dots_skill_result_fail "${name}" "strict review"
+				return 1
+			fi
+			if [[ ${DOTS_LAST_SKILL_REVIEW:-} == "warn" ]]; then
+				_dots_skill_result_ok "${name}"
+				_dots_skill_result_warn "${name}" "${DOTS_LAST_SKILL_REVIEW_FINDINGS}"
+			else
+				_dots_skill_result_ok "${name}"
+			fi
+		else
+			_dots_skill_result_ok "${name}"
 		fi
 		return 0
 	fi
 
 	if [[ ${source} == *"/skill-security-review" ]] || [[ ${source} == "tt-a1i/archify" ]]; then
-		echo "Installing '${name}' from ${source}..."
-		npx -y skills add "${source}" -g -y "${agent_args[@]}" </dev/null || true
+		echo "INSTALL: '${name}' from ${source}..."
+		set +e
+		npx -y skills add "${source}" -g -y "${agent_args[@]}" </dev/null
+		npx_rc=$?
+		set -e
 	else
-		echo "Installing '${name}' from ${source} (-s ${name})..."
-		npx -y skills add "${source}" -g -y -s "${name}" "${agent_args[@]}" </dev/null || true
+		echo "INSTALL: '${name}' from ${source} (-s ${name})..."
+		set +e
+		npx -y skills add "${source}" -g -y -s "${name}" "${agent_args[@]}" </dev/null
+		npx_rc=$?
+		set -e
 	fi
 
 	if ! found="$(dots_skill_find "${name}")"; then
-		echo "Error: skill '${name}' not found under ~/.agents/skills or ~/.hermes/skills" >&2
+		echo "ERROR: skill '${name}' not found under ~/.agents/skills or ~/.hermes/skills" >&2
+		_dots_skill_result_fail "${name}" "missing after install"
 		return 1
+	fi
+
+	if [[ ${npx_rc} -ne 0 ]]; then
+		echo "WARN: installer reported nonzero (rc=${npx_rc}); final desired state is present"
 	fi
 
 	local provider="global store"
@@ -248,17 +325,23 @@ install_skill_from_source() {
 	echo "    provider: ${provider}"
 	echo "    path: ${found}"
 
+	# Advisory static review — never delete on heuristic findings
 	if ! dots_static_review_skill "${name}" "${found}"; then
-		echo "Error: removing '${name}' after failed static security review" >&2
-		rm -rf "${found}"
+		_dots_skill_result_fail "${name}" "strict review"
 		return 1
+	fi
+	if [[ ${DOTS_LAST_SKILL_REVIEW:-} == "warn" ]]; then
+		_dots_skill_result_ok "${name}"
+		_dots_skill_result_warn "${name}" "${DOTS_LAST_SKILL_REVIEW_FINDINGS}"
+	else
+		_dots_skill_result_ok "${name}"
 	fi
 
 	if [[ ${expose_hermes} -eq 1 ]]; then
 		if [[ -e ${hermes_link} ]] || [[ -L ${hermes_link} ]] || [[ ${found} == "${HOME}/.hermes/skills/"* ]]; then
 			echo "OK: Hermes discovers '${name}' via ${found}"
 		else
-			echo "Warn: hermes selected but skills/${name} not visible under ~/.hermes/skills after install" >&2
+			echo "WARN: hermes selected but skills/${name} not visible under ~/.hermes/skills after install" >&2
 		fi
 	else
 		echo "Note: skill verified without Hermes mutation (requires --with hermes for agent target)"
@@ -268,6 +351,7 @@ install_skill_from_source() {
 	else
 		echo "Note: skill installed; lock entry may appear after skills CLI flush"
 	fi
+	return 0
 }
 
 # Install union of selected packs (skills / ai-skills). Dedupes by skill name.
@@ -285,8 +369,17 @@ dots_install_skill_packs() {
 		return 1
 	fi
 
+	DOTS_SKILL_PACK_OK=()
+	DOTS_SKILL_PACK_WARN=()
+	DOTS_SKILL_PACK_FAIL=()
+
 	echo "=== Skill packs: ${packs[*]} ==="
 	echo "Manifest: ${manifest}"
+	if [[ ${DOTS_SKILLS_STRICT_REVIEW:-0} == "1" ]]; then
+		echo "Static skill review: STRICT (findings fail setup; skills retained)"
+	else
+		echo "Static skill review: advisory (DOTS_SKILLS_STRICT_REVIEW=1 for fatal)"
+	fi
 	if declare -F dots_may_configure_hermes >/dev/null 2>&1 && dots_may_configure_hermes; then
 		echo "Hermes skill exposure: enabled (hermes co-selected)"
 	else
@@ -326,10 +419,45 @@ dots_install_skill_packs() {
 		echo "[dry-run] would install union without duplicates"
 	fi
 
+	local pack_rc=0
 	while IFS=$'\t' read -r name source group; do
 		[[ -z ${name} ]] && continue
-		install_skill_from_source "${name}" "${source}" "${group}" || return 1
+		if ! install_skill_from_source "${name}" "${source}" "${group}"; then
+			pack_rc=1
+		fi
 	done < <(dots_skills_manifest_entries_for_packs "${packs[@]}")
+
+	echo ""
+	echo "=== Skill pack summary ==="
+	echo ""
+	local entry skill_name findings
+	for skill_name in "${DOTS_SKILL_PACK_OK[@]+"${DOTS_SKILL_PACK_OK[@]}"}"; do
+		[[ -z ${skill_name} ]] && continue
+		printf '%-28s %-8s %s\n' "${skill_name}" "OK" "installed"
+	done
+	if [[ ${#DOTS_SKILL_PACK_WARN[@]} -gt 0 ]]; then
+		echo ""
+		echo "Advisories:"
+		for entry in "${DOTS_SKILL_PACK_WARN[@]}"; do
+			skill_name="${entry%%|*}"
+			findings="${entry#*|}"
+			printf '%-28s %-8s %s\n' "${skill_name}" "WARN" "${findings}"
+		done
+	fi
+	if [[ ${#DOTS_SKILL_PACK_FAIL[@]} -gt 0 ]]; then
+		echo ""
+		echo "Failures:"
+		for entry in "${DOTS_SKILL_PACK_FAIL[@]}"; do
+			skill_name="${entry%%|*}"
+			findings="${entry#*|}"
+			printf '%-28s %-8s %s\n' "${skill_name}" "ERROR" "${findings}"
+		done
+	fi
+	echo ""
+	echo "Skills:"
+	echo "  ${#DOTS_SKILL_PACK_OK[@]} satisfied"
+	echo "  ${#DOTS_SKILL_PACK_FAIL[@]} failed"
+	echo "  ${#DOTS_SKILL_PACK_WARN[@]} advisory"
 
 	if [[ ${DRY_RUN:-0} -eq 0 ]] && [[ -f "${HOME}/.agents/.skill-lock.json" ]]; then
 		ensure_dir "${HOME}/.config/dots/skills"
@@ -338,6 +466,9 @@ dots_install_skill_packs() {
 	elif [[ ${DRY_RUN:-0} -eq 1 ]]; then
 		echo "[dry-run] copy ~/.agents/.skill-lock.json → ~/.config/dots/skills/skills-lock.json"
 	fi
+
+	# Advisories never fail the pack; only genuine unsatisfied state does.
+	return "${pack_rc}"
 }
 
 # Backward-compatible engineering pack entrypoint

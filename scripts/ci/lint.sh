@@ -54,6 +54,7 @@ SCRIPTS=(
 	scripts/tests/prompt_contract_test.sh
 	scripts/tests/backup_test.sh
 	scripts/tests/skills_location_test.sh
+	scripts/tests/skills_desired_state_test.sh
 )
 
 missing=0

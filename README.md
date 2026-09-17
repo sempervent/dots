@@ -554,7 +554,9 @@ Verification accepts a valid `SKILL.md` under either:
 
 When Hermes is co-selected (`--with hermes,skills`), an install that lands only
 under `~/.hermes/skills` is success — DOTS does not require a duplicate copy
-under `~/.agents/skills`. Static security review runs against the resolved path.
+under `~/.agents/skills`. Static security review runs against the resolved path
+and is **advisory by default** (warnings do not fail setup). Set
+`DOTS_SKILLS_STRICT_REVIEW=1` to make findings fatal without deleting skills.
 
 What `--with archify` does:
 

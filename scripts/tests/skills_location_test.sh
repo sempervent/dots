@@ -109,7 +109,7 @@ else
 	bad "agents path unexpectedly present"
 fi
 grep -q 'provider: Hermes Agent\|path:.*\.hermes/skills' "${TMP}/out1" && ok "reports hermes path" || bad "path report"
-grep -qi 'static security review passed' "${TMP}/out1" && ok "review on hermes path" || bad "review: $(tail -5 "${TMP}/out1")"
+grep -qi 'static security review' "${TMP}/out1" && ok "review on hermes path" || bad "review: $(tail -5 "${TMP}/out1")"
 agent_skill_is_installed skill-security-review && ok "is_installed hermes-only" || bad "is_installed"
 
 echo "=== global only ==="
