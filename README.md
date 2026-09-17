@@ -25,12 +25,44 @@ underneath for automation.
 ```bash
 ./dots                     # interactive setup (same as ./dots setup)
 ./dots status              # read-only dashboard
+./dots backup              # snapshot managed targets
+./dots backups             # list recoverable snapshots
+./dots restore             # restore a snapshot (creates a safety snapshot first)
 ./dots profile             # create / preview / switch profiles
 ./dots models              # local model plan & pull
 ./dots check               # health verification
 ./dots update              # git pull + optional reapply
 ./dots --version
 ```
+
+### Prompt (Bash + Starship)
+
+Bash and Starship deliberately share the same semantic layout:
+
+```text
+┌──┤joshuagrant@poster_nutbag├─┤19:55:55├─┤Wed Sep 16├─┤origin/master->master│
+├───┤jobs (0)├─┤.venv│
+└─┤~/dots│
+```
+
+Set `DOTS_PROMPT=off` to disable the custom Bash PS1. Legacy directory
+stats remain available via `DOTS_PROMPT_STATS=1` but are no longer part of
+the default prompt.
+
+### Recovery (snapshots)
+
+Before DOTS replaces unmanaged targets, it creates one coherent snapshot.
+Recover with:
+
+```bash
+./dots backups
+./dots restore
+# or: ./dots restore <snapshot-id> --dry-run
+```
+
+Snapshots live under `~/.local/state/dots/backups/`. Existing
+`~/.old_dots` content is detected and can be imported with
+`./dots backup import-legacy`.
 
 Preview without mutating the machine:
 
@@ -513,16 +545,26 @@ Manifest: `configs/skills/manifest.toml` (`[packs.skills]`, `[packs.ai-skills]`,
 Provenance: `~/.agents/.skill-lock.json` (content-hash via skills CLI; not git SHA pinning)
 copied to `~/.config/dots/skills/skills-lock.json` after pack install.
 
+Verification accepts a valid `SKILL.md` under either:
+
+```text
+~/.agents/skills/<name>
+~/.hermes/skills/<name>
+```
+
+When Hermes is co-selected (`--with hermes,skills`), an install that lands only
+under `~/.hermes/skills` is success — DOTS does not require a duplicate copy
+under `~/.agents/skills`. Static security review runs against the resolved path.
+
 What `--with archify` does:
 
 1. Verifies Node ≥ 18 via fnm-managed Node and `npx`.
 2. If Archify is not already present, runs:
    `npx -y skills add tt-a1i/archify -g -y`
-3. Skill lives globally at `~/.agents/skills/archify` (shared across agents).
+3. Skill is verified at its actual install location (global store and/or Hermes).
 
-**Hermes** discovers Archify via the symlink the `skills` CLI creates at
-`~/.hermes/skills/archify` → `~/.agents/skills/archify`. No extra Hermes
-config or dots-managed copy is required.
+**Hermes** may receive skills via `-a hermes-agent` when Hermes is selected.
+Presence of `~/.hermes` alone does not grant configuration consent.
 
 **Herdr** does not embed Archify. It orchestrates agents (e.g. Hermes); Hermes
 loads the skill. Boundary: Herdr → Hermes → Archify skill → JSON IR →
