@@ -106,6 +106,8 @@ chmod +x "${MOCK_BREW}"
 export DOTS_BREW_BIN="${MOCK_BREW}"
 export DOTS_MOCK_MANAGED="${TMP}/managed.casks"
 export DOTS_MOCK_LOG="${TMP}/brew.log"
+export DOTS_MOCK_INSTALL_OK=0
+export DOTS_MOCK_ADOPT_OK=0
 : >"${DOTS_MOCK_MANAGED}"
 : >"${DOTS_MOCK_LOG}"
 
@@ -154,19 +156,20 @@ echo "=== D: neither exists, install succeeds ==="
 rm -rf "${DOTS_APPLICATIONS_DIR}/Hermes.app"
 : >"${DOTS_MOCK_MANAGED}"
 : >"${DOTS_MOCK_LOG}"
-DOTS_MOCK_INSTALL_OK=1
+export DOTS_MOCK_INSTALL_OK=1
 if dots_ensure_cask_app hermes-desktop /Applications/Hermes.app "Hermes.app" >/tmp/cask-d.out 2>&1; then
 	[[ ${DOTS_CASK_LAST_STATUS} == installed ]] && ok "D installed" || bad "D status=${DOTS_CASK_LAST_STATUS}"
 	[[ -d ${DOTS_APPLICATIONS_DIR}/Hermes.app ]] && ok "D app created" || bad "D no app"
 else
 	bad "D should succeed"
+	cat /tmp/cask-d.out || true
 fi
 
 echo "=== E: neither exists, install fails ==="
 rm -rf "${DOTS_APPLICATIONS_DIR}/Hermes.app"
 : >"${DOTS_MOCK_MANAGED}"
 : >"${DOTS_MOCK_LOG}"
-DOTS_MOCK_INSTALL_OK=0
+export DOTS_MOCK_INSTALL_OK=0
 if dots_ensure_cask_app hermes-desktop /Applications/Hermes.app "Hermes.app" >/tmp/cask-e.out 2>&1; then
 	bad "E should fail"
 else
