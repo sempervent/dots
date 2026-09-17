@@ -91,8 +91,8 @@ dots_backup_path_is_managed_ok() {
 	fi
 	# Neovim already matches managed init.lua
 	if [[ ${path} == "${HOME}/.config/nvim" && -n ${DIR:-} ]]; then
-		if [[ -f ${path}/init.lua && -f ${DIR}/configs/nvim/init.lua ]] \
-			&& cmp -s "${path}/init.lua" "${DIR}/configs/nvim/init.lua" 2>/dev/null; then
+		if [[ -f ${path}/init.lua && -f ${DIR}/configs/nvim/init.lua ]] &&
+			cmp -s "${path}/init.lua" "${DIR}/configs/nvim/init.lua" 2>/dev/null; then
 			return 0
 		fi
 	fi
@@ -147,8 +147,8 @@ dots_backup_capture_one() {
 		mkdir -p "${dest}"
 		# Copy directory tree without following external symlinks at top level
 		if command -v rsync >/dev/null 2>&1; then
-			rsync -a --copy-unsafe-links "${path}/" "${dest}/" 2>/dev/null \
-				|| cp -a "${path}/." "${dest}/"
+			rsync -a --copy-unsafe-links "${path}/" "${dest}/" 2>/dev/null ||
+				cp -a "${path}/." "${dest}/"
 		else
 			cp -a "${path}/." "${dest}/"
 		fi
