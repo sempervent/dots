@@ -24,6 +24,15 @@ else
 fi
 [[ -n ${fail_line} ]] && ok "setup-failure message present" || bad "missing setup-failure message"
 grep -q 'DOTS_SETUP_SH' "${ROOT}/bootstrap.sh" && ok "DOTS_SETUP_SH override hook" || bad "missing DOTS_SETUP_SH"
+grep -q 'DOTS_SKIP_STAGE0' "${ROOT}/bootstrap.sh" && ok "DOTS_SKIP_STAGE0 hook" || bad "missing SKIP_STAGE0"
+grep -q 'DOTS_CHECK_SH' "${ROOT}/bootstrap.sh" && ok "DOTS_CHECK_SH hook" || bad "missing CHECK_SH"
+
+if ! command -v python3 >/dev/null 2>&1; then
+	echo "SKIP e2e bootstrap gates: python3 required for profile load"
+	echo "Passed: ${pass}  Failed: ${fail}"
+	[[ ${fail} -eq 0 ]]
+	exit 0
+fi
 
 echo "=== existing home preserved when mocked setup fails ==="
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/dots-act.XXXXXX")"
@@ -51,9 +60,16 @@ echo "mock setup failure" >&2
 exit 1
 EOF
 chmod +x "${TMP}/setup-fail.sh"
+cat >"${TMP}/check-ok.sh" <<'EOF'
+#!/usr/bin/env bash
+exit 0
+EOF
+chmod +x "${TMP}/check-ok.sh"
 
 set +e
-DOTS_SETUP_SH="${TMP}/setup-fail.sh" \
+DOTS_SKIP_STAGE0=1 \
+	DOTS_SETUP_SH="${TMP}/setup-fail.sh" \
+	DOTS_CHECK_SH="${TMP}/check-ok.sh" \
 	"${ROOT}/bootstrap.sh" --profile all >/tmp/act-fail.out 2>&1
 rc=$?
 set -e
@@ -74,7 +90,9 @@ echo "=== fresh HOME: failure leaves no active-profile ==="
 TMP2="$(mktemp -d)"
 export HOME="${TMP2}"
 set +e
-DOTS_SETUP_SH="${TMP}/setup-fail.sh" \
+DOTS_SKIP_STAGE0=1 \
+	DOTS_SETUP_SH="${TMP}/setup-fail.sh" \
+	DOTS_CHECK_SH="${TMP}/check-ok.sh" \
 	"${ROOT}/bootstrap.sh" --profile all >/tmp/act-fresh.out 2>&1
 set -e
 if [[ ! -f ${HOME}/.config/dots/active-profile ]]; then
@@ -90,7 +108,7 @@ else
 fi
 rm -rf "${TMP2}"
 
-echo "=== success path commits profile (mocked setup ok) ==="
+echo "=== success path commits profile (mocked setup+check) ==="
 export HOME="${TMP}"
 cat >"${TMP}/setup-ok.sh" <<'EOF'
 #!/usr/bin/env bash
@@ -98,13 +116,10 @@ echo "mock setup ok"
 exit 0
 EOF
 chmod +x "${TMP}/setup-ok.sh"
-# check.sh may fail on sparse HOME — allow bootstrap to write then possibly fail check.
-# For activation commit we only need setup success; check failure is separate.
-# Use --dry-run? dry-run still writes policy via dry-run echo only.
-# Real write needs DRY_RUN=0 and setup ok. check may fail — that's OK for this assert
-# if write happens before check.
 set +e
-DOTS_SETUP_SH="${TMP}/setup-ok.sh" \
+DOTS_SKIP_STAGE0=1 \
+	DOTS_SETUP_SH="${TMP}/setup-ok.sh" \
+	DOTS_CHECK_SH="${TMP}/check-ok.sh" \
 	"${ROOT}/bootstrap.sh" --profile all >/tmp/act-ok.out 2>&1
 set -e
 if [[ -f ${HOME}/.config/dots/active-profile ]]; then

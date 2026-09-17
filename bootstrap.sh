@@ -275,7 +275,10 @@ PROFILE_FILE="$(dots_resolve_profile_path "${PROFILE}")"
 
 # Stage 0 before any Python/TOML requirement.
 # --show/--dry-run: report only. Real runs: install CLT/brew/python as needed.
-if [[ ${SHOW_ONLY} -eq 1 || ${DRY_RUN} -eq 1 ]]; then
+# DOTS_SKIP_STAGE0=1: tests that mock setup/check without provisioning.
+if [[ ${DOTS_SKIP_STAGE0:-0} -eq 1 ]]; then
+	echo "Note: DOTS_SKIP_STAGE0=1 — skipping Stage 0 provisioning"
+elif [[ ${SHOW_ONLY} -eq 1 || ${DRY_RUN} -eq 1 ]]; then
 	dots_stage0_ensure 1 || true
 else
 	dots_stage0_ensure 0 || exit 1
@@ -393,7 +396,8 @@ if [[ ${DRY_RUN} -eq 0 ]]; then
 	echo "=== Verification (profile=${PROFILE_NAME}) ==="
 	# Herdr/official installers often land in ~/.local/bin
 	export PATH="${HOME}/.local/bin:${PATH}"
-	if ! DOTS_DIR="${DIR}" "${DIR}/scripts/check.sh" --profile "${PROFILE_FILE}"; then
+	CHECK_BIN="${DOTS_CHECK_SH:-${DIR}/scripts/check.sh}"
+	if ! DOTS_DIR="${DIR}" "${CHECK_BIN}" --profile "${PROFILE_FILE}"; then
 		CHECK_STATUS=1
 	fi
 fi

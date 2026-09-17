@@ -55,10 +55,18 @@ chmod +x "${TMP}/bin/pull_models.sh"
 # Existing: 5=start over, then 2=work, y=as-is, review Apply=2
 # Wait — existing menu first: 5 start over, then machine 2 work, y as-is, models skip, Apply 2
 export DOTS_SETUP_SH="${TMP}/setup-fail.sh"
+export DOTS_SKIP_STAGE0=1
+export DOTS_CHECK_SH="${TMP}/check-ok.sh"
+cat >"${TMP}/check-ok.sh" <<'EOF'
+#!/usr/bin/env bash
+exit 0
+EOF
+chmod +x "${TMP}/check-ok.sh"
 export DOTS_UI_ANSWERS=$'5\n2\ny\n2\n'
 
 set +e
-HOME="${HOME}" DOTS_SETUP_SH="${DOTS_SETUP_SH}" DOTS_UI_ANSWERS="${DOTS_UI_ANSWERS}" \
+HOME="${HOME}" DOTS_SETUP_SH="${DOTS_SETUP_SH}" DOTS_SKIP_STAGE0=1 DOTS_CHECK_SH="${DOTS_CHECK_SH}" \
+	DOTS_UI_ANSWERS="${DOTS_UI_ANSWERS}" \
 	"${ROOT}/dots" setup >"${TMP}/out.txt" 2>&1
 rc=$?
 set -e
@@ -97,7 +105,8 @@ chmod +x "${TMP}/setup-ok.sh"
 export DOTS_SETUP_SH="${TMP}/setup-ok.sh"
 export DOTS_UI_ANSWERS=$'1\n'
 set +e
-HOME="${HOME}" DOTS_SETUP_SH="${DOTS_SETUP_SH}" DOTS_UI_ANSWERS="${DOTS_UI_ANSWERS}" \
+HOME="${HOME}" DOTS_SETUP_SH="${DOTS_SETUP_SH}" DOTS_SKIP_STAGE0=1 DOTS_CHECK_SH="${TMP}/check-ok.sh" \
+	DOTS_UI_ANSWERS="${DOTS_UI_ANSWERS}" \
 	"${ROOT}/dots" setup >"${TMP}/out2.txt" 2>&1
 rc2=$?
 set -e
