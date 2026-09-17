@@ -112,11 +112,15 @@ PY
 }
 
 # Static review — read files only; never execute skill scripts.
+# Reviews the resolved install location (agents or hermes).
 dots_static_review_skill() {
 	local name="$1"
-	local root="${HOME}/.agents/skills/${name}"
-	if [[ ! -d ${root} ]]; then
-		echo "Warn: cannot review missing skill dir ${root}" >&2
+	local root="${2:-}"
+	if [[ -z ${root} ]]; then
+		root="$(dots_skill_find "${name}" 2>/dev/null || true)"
+	fi
+	if [[ -z ${root} || ! -d ${root} ]]; then
+		echo "Warn: cannot review missing skill dir for ${name}" >&2
 		return 1
 	fi
 	dots_python3 - "${root}" "${name}" <<'PY'
@@ -150,7 +154,7 @@ for pat, label in patterns:
 if findings:
     print(f"FAIL: static security review for '{name}': {', '.join(findings)}", file=sys.stderr)
     sys.exit(1)
-print(f"OK: static security review passed for '{name}'")
+print(f"OK: static security review passed for '{name}' ({root})")
 sys.exit(0)
 PY
 }
@@ -162,6 +166,7 @@ install_skill_from_source() {
 	local need_install=1
 	local expose_hermes=0
 	local agent_args=()
+	local found=""
 
 	if declare -F dots_may_configure_hermes >/dev/null 2>&1 && dots_may_configure_hermes; then
 		expose_hermes=1
@@ -171,8 +176,8 @@ install_skill_from_source() {
 	echo "=== Skill: ${name} (${source}${group:+ [${group}]}) ==="
 
 	if [[ ${DRY_RUN:-0} -eq 1 ]]; then
-		if agent_skill_is_installed "${name}"; then
-			echo "[dry-run] skip content install (${name} already under ~/.agents/skills)"
+		if found="$(dots_skill_find "${name}" 2>/dev/null)"; then
+			echo "[dry-run] skip content install (${name} already at ${found})"
 			if [[ ${expose_hermes} -eq 1 ]] && [[ ! -e ${hermes_link} ]]; then
 				echo "[dry-run] would ensure Hermes discovery: npx skills add … -a hermes-agent"
 			elif [[ ${expose_hermes} -eq 0 ]]; then
@@ -191,25 +196,32 @@ install_skill_from_source() {
 
 	ensure_node_major "${min_node}" || return 1
 
-	if agent_skill_is_installed "${name}"; then
+	if found="$(dots_skill_find "${name}")"; then
 		need_install=0
-		echo "OK: '${name}' already installed under ~/.agents/skills"
+		echo "OK: '${name}' already installed"
+		echo "    path: ${found}"
 	fi
 
 	local need_hermes_link=0
 	if [[ ${expose_hermes} -eq 1 ]] && [[ ! -e ${hermes_link} ]]; then
-		need_hermes_link=1
+		# Hermes-only install already satisfies discovery
+		if [[ ${need_install} -eq 0 && ${found} == "${hermes_link}"* ]]; then
+			need_hermes_link=0
+		elif [[ ${need_install} -eq 0 ]]; then
+			need_hermes_link=1
+		else
+			need_hermes_link=1
+		fi
 	fi
 
 	if [[ ${need_install} -eq 0 ]] && [[ ${need_hermes_link} -eq 0 ]]; then
 		if [[ ${expose_hermes} -eq 1 ]]; then
-			echo "OK: Hermes discovery present (~/.hermes/skills/${name})"
+			echo "OK: skill available for Hermes (path: ${found})"
 		else
-			echo "OK: global skill present (Hermes not selected — no ~/.hermes/skills mutation)"
+			echo "OK: skill present (Hermes not selected — no ~/.hermes/skills mutation)"
 		fi
-		# Still run static review on existing AI-group skills once
 		if [[ ${group} == "ai" ]] || [[ ${group} == "security" ]]; then
-			dots_static_review_skill "${name}" || return 1
+			dots_static_review_skill "${name}" "${found}" || return 1
 		fi
 		return 0
 	fi
@@ -222,26 +234,34 @@ install_skill_from_source() {
 		npx -y skills add "${source}" -g -y -s "${name}" "${agent_args[@]}" </dev/null || true
 	fi
 
-	if ! agent_skill_is_installed "${name}"; then
-		echo "Error: skill '${name}' not found under ~/.agents/skills/${name}" >&2
+	if ! found="$(dots_skill_find "${name}")"; then
+		echo "Error: skill '${name}' not found under ~/.agents/skills or ~/.hermes/skills" >&2
 		return 1
 	fi
-	echo "OK: installed '${name}'"
 
-	if ! dots_static_review_skill "${name}"; then
+	local provider="global store"
+	case "${found}" in
+	*/.hermes/skills/*) provider="Hermes Agent" ;;
+	*/.agents/skills/*) provider="global store" ;;
+	esac
+	echo "OK: '${name}' installed"
+	echo "    provider: ${provider}"
+	echo "    path: ${found}"
+
+	if ! dots_static_review_skill "${name}" "${found}"; then
 		echo "Error: removing '${name}' after failed static security review" >&2
-		rm -rf "${HOME}/.agents/skills/${name}"
+		rm -rf "${found}"
 		return 1
 	fi
 
 	if [[ ${expose_hermes} -eq 1 ]]; then
-		if [[ -e ${hermes_link} ]] || [[ -L ${hermes_link} ]]; then
-			echo "OK: Hermes discovers '${name}' via ~/.hermes/skills/${name}"
+		if [[ -e ${hermes_link} ]] || [[ -L ${hermes_link} ]] || [[ ${found} == "${HOME}/.hermes/skills/"* ]]; then
+			echo "OK: Hermes discovers '${name}' via ${found}"
 		else
-			echo "Warn: hermes selected but skills/${name} link missing after install" >&2
+			echo "Warn: hermes selected but skills/${name} not visible under ~/.hermes/skills after install" >&2
 		fi
 	else
-		echo "Note: skill in ~/.agents/skills only (Hermes link requires --with hermes)"
+		echo "Note: skill verified without Hermes mutation (requires --with hermes for agent target)"
 	fi
 	if dots_skill_lock_has "${name}"; then
 		echo "OK: lock entry present (~/.agents/.skill-lock.json)"
