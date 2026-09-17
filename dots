@@ -25,6 +25,8 @@ trap dots_on_interrupt INT
 source "${DIR}/helpers/ui.sh"
 # shellcheck source=helpers/state.sh
 source "${DIR}/helpers/state.sh"
+# shellcheck source=helpers/backup.sh
+source "${DIR}/helpers/backup.sh"
 # shellcheck source=helpers/wizard.sh
 source "${DIR}/helpers/wizard.sh"
 
@@ -36,6 +38,9 @@ Usage:
   ./dots                     interactive setup
   ./dots setup               setup / reconfigure
   ./dots status              current state (read-only)
+  ./dots backup [--name N]   snapshot managed targets
+  ./dots backups             list snapshots
+  ./dots restore [ID]        restore a snapshot
   ./dots profile             profile management
   ./dots models              local model management
   ./dots check               verify machine
@@ -109,6 +114,11 @@ dots_cmd_status() {
 	fi
 
 	echo ""
+	if declare -F dots_backup_status_lines >/dev/null 2>&1; then
+		dots_backup_status_lines
+	fi
+
+	echo ""
 	echo "Health:"
 	local p="${profile_file:-${profile}}"
 	if [[ ${p} == "(none)" || -z ${p} ]]; then
@@ -126,6 +136,101 @@ dots_cmd_status() {
 	else
 		echo "  check: unavailable"
 	fi
+}
+
+dots_cmd_backup() {
+	local name="" 
+	if [[ ${1:-} == "import-legacy" ]]; then
+		# shellcheck source=helpers/links.sh
+		source "${DIR}/helpers/links.sh" 2>/dev/null || true
+		# shellcheck source=helpers/toml.sh
+		source "${DIR}/helpers/toml.sh" 2>/dev/null || true
+		dots_backup_legacy_import
+		return $?
+	fi
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+		--name)
+			name="${2:-}"
+			shift 2
+			continue
+			;;
+		--name=*)
+			name="${1#*=}"
+			shift
+			continue
+			;;
+		-h | --help)
+			echo "Usage: ./dots backup [--name NAME] | ./dots backup import-legacy"
+			return 0
+			;;
+		*)
+			echo "Unknown: $1" >&2
+			return 1
+			;;
+		esac
+	done
+	# shellcheck source=helpers/links.sh
+	source "${DIR}/helpers/links.sh" 2>/dev/null || true
+	# shellcheck source=helpers/toml.sh
+	source "${DIR}/helpers/toml.sh" 2>/dev/null || true
+	if [[ -z ${name} ]]; then
+		local def
+		def="manual-$(date +%Y%m%d 2>/dev/null || echo now)"
+		if [[ -t 0 ]] && declare -F dots_prompt_text >/dev/null 2>&1; then
+			name="$(dots_prompt_text "Backup name" "${def}")"
+		else
+			name="${def}"
+		fi
+	fi
+	local -a paths=()
+	local p
+	while IFS= read -r p; do
+		[[ -n ${p} && (-e ${p} || -L ${p}) ]] && paths+=("${p}")
+	done < <(dots_backup_inventory_unique)
+	if [[ ${#paths[@]} -eq 0 ]]; then
+		echo "Nothing to back up (no managed targets present)."
+		return 0
+	fi
+	dots_backup_create --name "${name}" --reason "manual" "${paths[@]}"
+}
+
+dots_cmd_backups() {
+	dots_ui_header "DOTS Snapshots"
+	dots_backup_list
+}
+
+dots_cmd_restore() {
+	local id="" dry=0 yes=0
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+		--dry-run) dry=1 ;;
+		--yes | -y) yes=1 ;;
+		-h | --help)
+			echo "Usage: ./dots restore [snapshot-id] [--dry-run] [--yes]"
+			return 0
+			;;
+		-*)
+			echo "Unknown: $1" >&2
+			return 1
+			;;
+		*) id="$1" ;;
+		esac
+		shift
+	done
+	if [[ -z ${id} ]]; then
+		dots_backup_list
+		if [[ -t 0 ]]; then
+			id="$(dots_prompt_text "Snapshot id to restore" "")"
+		else
+			echo "Error: snapshot id required in noninteractive mode" >&2
+			return 1
+		fi
+	fi
+	local args=("${id}")
+	[[ ${dry} -eq 1 ]] && args+=(--dry-run)
+	[[ ${yes} -eq 1 ]] && args+=(--yes)
+	dots_backup_restore "${args[@]}"
 }
 
 dots_cmd_profile() {
@@ -311,6 +416,18 @@ setup)
 status)
 	shift || true
 	dots_cmd_status "$@"
+	;;
+backup)
+	shift || true
+	dots_cmd_backup "$@"
+	;;
+backups)
+	shift || true
+	dots_cmd_backups "$@"
+	;;
+restore)
+	shift || true
+	dots_cmd_restore "$@"
 	;;
 profile)
 	shift || true

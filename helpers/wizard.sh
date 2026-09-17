@@ -428,6 +428,11 @@ dots_wizard_print_plan() {
 	2) echo "  tier=${WIZ_MODEL_TIER}  cleanup=${WIZ_MODEL_CLEANUP}" ;;
 	esac
 	echo ""
+	echo "Backup:"
+	echo "  pre-change snapshot will be created when unmanaged targets would be replaced"
+	echo "  (no-op when all managed targets are already current)"
+	echo "  recover later with: ./dots backups && ./dots restore"
+	echo ""
 	echo "Actions:"
 	echo "  Stage 0 prerequisites if needed"
 	[[ -n ${WIZ_PROFILE_PATH} ]] && echo "  write ${WIZ_PROFILE_PATH}"

@@ -74,6 +74,8 @@ source "${DIR}/helpers/rsync.sh"
 source "${DIR}/helpers/packages.sh"
 # shellcheck source=helpers/links.sh
 source "${DIR}/helpers/links.sh"
+# shellcheck source=helpers/backup.sh
+source "${DIR}/helpers/backup.sh"
 # shellcheck source=helpers/git_config.sh
 source "${DIR}/helpers/git_config.sh"
 # shellcheck source=helpers/profiles.sh
@@ -274,7 +276,6 @@ move_sym() {
 	local name="$1"
 	local dest="$2"
 	local source="${3:-${SYM_DIR}/${name}}"
-	local backup
 
 	if [[ ! -e ${source} ]]; then
 		echo "Skip: missing source ${source}"
@@ -282,8 +283,6 @@ move_sym() {
 	fi
 
 	ensure_dir "$(dirname "${dest}")"
-	ensure_dir "${OLD_DOTS}"
-	backup="${OLD_DOTS}/${name}_$(backup_stamp)"
 
 	if [[ -L ${dest} ]] && [[ "$(readlink "${dest}")" == "${source}" ]]; then
 		echo "OK: ${dest}"
@@ -292,10 +291,10 @@ move_sym() {
 
 	if [[ -e ${dest} ]] || [[ -L ${dest} ]]; then
 		if [[ ${DRY_RUN} -eq 1 ]]; then
-			echo "[dry-run] backup ${dest} → ${backup}"
+			echo "[dry-run] replace ${dest} (pre-change snapshot covers managed targets)"
 		else
-			echo "Backup ${dest} → ${backup}"
-			mv "${dest}" "${backup}"
+			echo "Replace ${dest}"
+			rm -rf "${dest}"
 		fi
 	fi
 
@@ -362,6 +361,10 @@ else
 fi
 
 echo "=== Symlinks ==="
+# One coherent snapshot when unmanaged targets would be replaced
+if declare -F dots_backup_snapshot_collisions >/dev/null 2>&1; then
+	dots_backup_snapshot_collisions "pre-setup" "pre-setup" || true
+fi
 # Declarative authority: configs/links.toml
 dots_deploy_links
 
