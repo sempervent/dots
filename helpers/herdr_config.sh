@@ -5,13 +5,13 @@
 # stale keys. We merge [theme]/[keys] from configs/herdr/config.toml and
 # upsert managed [ui] keys (tab_bar_right*) while preserving everything else.
 #
-# Requires (from setup.sh): DIR, OLD_DOTS, DRY_RUN, ensure_dir, backup_stamp
+# Requires (from setup.sh): DIR, DRY_RUN, ensure_dir
+# Backups via helpers/backup.sh (no new ~/.old_dots entries)
 
 sync_herdr_config() {
   local src="${DIR}/configs/herdr/config.toml"
   local dest="${HOME}/.config/herdr/config.toml"
-  local name="herdr_config.toml"
-  local backup tmp merged
+  local tmp merged
 
   if [[ ! -f "${src}" ]]; then
     echo "Skip: missing ${src}"
@@ -19,7 +19,6 @@ sync_herdr_config() {
   fi
 
   ensure_dir "$(dirname "${dest}")"
-  ensure_dir "${OLD_DOTS}"
 
   if [[ "${DRY_RUN}" -eq 1 ]]; then
     echo "[dry-run] merge Herdr [theme]/[keys] + ui.tab_bar_right* from ${src} → ${dest}"
@@ -35,9 +34,8 @@ sync_herdr_config() {
     else
       : >"${tmp}"
     fi
-    backup="${OLD_DOTS}/${name}_symlink_$(backup_stamp)"
-    echo "Backup symlink ${dest} → ${backup}"
-    mv "${dest}" "${backup}"
+    echo "Replace symlink ${dest}"
+    rm -f "${dest}"
   elif [[ -f "${dest}" ]]; then
     cp "${dest}" "${tmp}"
   else
@@ -121,9 +119,7 @@ PY
   fi
 
   if [[ -f "${dest}" ]]; then
-    backup="${OLD_DOTS}/${name}_$(backup_stamp)"
-    echo "Backup ${dest} → ${backup}"
-    cp "${dest}" "${backup}"
+    echo "Updating ${dest}"
   fi
 
   mv "${merged}" "${dest}"
