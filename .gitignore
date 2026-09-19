@@ -29,3 +29,13 @@ tools/opencode_mcp/.venv/
 tools/codex_mcp/.venv/
 tools/**/__pycache__/
 
+# mactools vendor exports (may contain paths / secrets) — keep README.md tracked
+configs/mactools/**/*.plist
+configs/mactools/**/*.kmmacros
+configs/mactools/**/*.hazelrules
+configs/mactools/keyboard-maestro/**
+!configs/mactools/keyboard-maestro/README.md
+configs/mactools/hazel/**
+!configs/mactools/hazel/README.md
+configs/mactools/vorssaint/settings.plist
+
