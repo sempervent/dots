@@ -35,6 +35,10 @@ source "${DIR}/helpers/packages.sh"
 source "${DIR}/helpers/package_state.sh"
 # shellcheck source=helpers/cask_apps.sh
 source "${DIR}/helpers/cask_apps.sh"
+# shellcheck source=helpers/hardware.sh
+source "${DIR}/helpers/hardware.sh"
+# shellcheck source=helpers/linux_distro.sh
+source "${DIR}/helpers/linux_distro.sh"
 
 dots_usage() {
 	cat <<EOF
@@ -80,6 +84,15 @@ dots_cmd_status() {
 	echo "Profile:"
 	echo "  ${profile}"
 	[[ -n ${profile_file} ]] && echo "  file: ${profile_file}"
+
+	echo ""
+	if declare -F dots_linux_platform_report >/dev/null 2>&1; then
+		dots_linux_platform_report
+	else
+		echo "Platform:"
+		echo "  OS: $(uname -s)"
+		echo "  architecture: $(uname -m)"
+	fi
 
 	if [[ -f "$(dots_runtime_env_file)" ]]; then
 		# shellcheck disable=SC1090

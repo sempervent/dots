@@ -26,19 +26,44 @@ jobs:
         run: ./scripts/ci/test.sh
 
   linux-distros:
-    name: Distro smoke (${{ matrix.image }})
+    name: Distro smoke (${{ matrix.name }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        image:
-          - "ubuntu:24.04"
-          - "archlinux:latest"
-          - "ghcr.io/void-linux/void-glibc:latest"
+        include:
+          - name: Ubuntu 24.04
+            image: ubuntu:24.04
+            family: apt
+          - name: Debian 13
+            image: debian:13-slim
+            family: apt
+          - name: Arch
+            image: archlinux:latest
+            family: pacman
+          - name: Manjaro
+            image: manjarolinux/base:latest
+            family: pacman
+          - name: Fedora
+            image: fedora:latest
+            family: dnf
+          - name: Void
+            image: ghcr.io/void-linux/void-glibc:latest
+            family: xbps
     steps:
       - uses: actions/checkout@v7
-      - name: Distro smoke (${{ matrix.image }})
-        run: ./scripts/ci/distro_smoke.sh "${{ matrix.image }}"
+      - name: Distro smoke (${{ matrix.name }})
+        run: ./scripts/ci/distro_smoke.sh "${{ matrix.image }}" --name "${{ matrix.name }}" --family "${{ matrix.family }}"
+
+  # Raspberry Pi–class architecture path: native ARM64 runner + Debian-family userspace.
+  # Not identical to booting Raspberry Pi OS on Pi hardware; proves apt + aarch64 detection.
+  arm64-smoke:
+    name: ARM64 smoke (Debian 13)
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v7
+      - name: ARM64 Debian-family smoke
+        run: ./scripts/ci/distro_smoke.sh debian:13-slim --name "Debian 13 arm64" --family apt
 
   macos-smoke:
     name: macOS smoke
