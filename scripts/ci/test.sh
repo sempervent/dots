@@ -65,6 +65,7 @@ echo "=== Unified ./dots CLI + wizard ==="
 run scripts/tests/dots_cli_test.sh
 run scripts/tests/dots_wizard_test.sh
 run scripts/tests/dots_wizard_failure_test.sh
+run scripts/tests/wizard_models_progress_test.sh
 
 echo "=== Cask presence + transactional activation ==="
 run scripts/tests/cask_app_test.sh
