@@ -35,6 +35,9 @@ tools/**/__pycache__/
 # MkDocs build output
 site/
 
+# Agent temp / finish-pipeline artifacts (local only)
+.agent_*
+
 # mactools vendor exports (may contain paths / secrets) — keep README.md tracked
 configs/mactools/**/*.plist
 configs/mactools/**/*.kmmacros

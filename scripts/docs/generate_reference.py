@@ -129,6 +129,110 @@ def generate_supergroups(check: bool) -> bool:
     return write_or_check(GEN_DIR / "supergroups.md", body, check=check)
 
 
+def _parse_brewfile_tokens(path: Path) -> tuple[list[str], list[str]]:
+    """Parse brew/cask tokens from a Brewfile without invoking brew."""
+    formulae: list[str] = []
+    casks: list[str] = []
+    if not path.is_file():
+        return formulae, casks
+    brew_re = re.compile(r'^\s*brew\s+"([^"]+)"')
+    cask_re = re.compile(r'^\s*cask\s+"([^"]+)"')
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.split("#", 1)[0].strip()
+        if not line:
+            continue
+        m = brew_re.match(line)
+        if m:
+            formulae.append(m.group(1))
+            continue
+        m = cask_re.match(line)
+        if m:
+            casks.append(m.group(1))
+    return formulae, casks
+
+
+def generate_with_options(check: bool) -> bool:
+    """Detail pages for --with selectors: formulae/casks/skills/supergroups."""
+    src = "configs/components.toml + brew/Brewfile.* + configs/skills/manifest.toml"
+    data = load_toml(ROOT / "configs" / "components.toml")
+    skills_data = load_toml(ROOT / "configs" / "skills" / "manifest.toml")
+    packs = skills_data.get("packs") or {}
+    all_skills = skills_data.get("skills") or []
+
+    parts = [
+        gen_header(src),
+        "\n# `--with` options (generated)\n\n",
+        "Registry-driven reference for optional components and supergroups. "
+        "Do not invent ids beyond `configs/components.toml`. "
+        "Human guide: [Components and `--with`](../../using/components.md).\n\n",
+        "## Supergroups\n\n",
+    ]
+    sg_rows = []
+    for g in data.get("supergroups") or []:
+        sg_rows.append(
+            [
+                f"`{g.get('id', '')}`",
+                g.get("label", ""),
+                ", ".join(f"`{m}`" for m in (g.get("members") or [])),
+                g.get("description", "") or "",
+            ]
+        )
+    parts.append(md_table(["id", "label", "members", "description"], sg_rows))
+    parts.append("\n## Components\n\n")
+
+    for c in data.get("components") or []:
+        cid = (c.get("id") or "").strip()
+        if not cid:
+            continue
+        parts.append(f"### `{cid}`\n\n")
+        parts.append(f"{c.get('description') or c.get('label') or ''}\n\n")
+        parts.append(f"- **label:** {c.get('label') or cid}\n")
+        parts.append(f"- **category:** {c.get('category') or '—'}\n")
+        plats = ", ".join(c.get("platforms") or [])
+        parts.append(f"- **platforms:** {plats or '—'}\n")
+        bf = (c.get("brewfile") or "").strip()
+        parts.append(f"- **brewfile:** `{bf}`\n" if bf else "- **brewfile:** —\n")
+        if c.get("omit_from_all"):
+            parts.append("- **omit_from_all:** yes\n")
+        if bf:
+            formulae, casks = _parse_brewfile_tokens(ROOT / bf)
+            if formulae:
+                parts.append(
+                    "- **formulae:** "
+                    + ", ".join(f"`{x}`" for x in formulae)
+                    + "\n"
+                )
+            if casks:
+                parts.append(
+                    "- **casks:** " + ", ".join(f"`{x}`" for x in casks) + "\n"
+                )
+        # Skills for packs
+        if cid in packs:
+            pdata = packs[cid] or {}
+            groups = set(pdata.get("groups") or [])
+            names = [
+                (s.get("name") or "").strip()
+                for s in all_skills
+                if s.get("enabled", True) and (s.get("group") or "").strip() in groups
+            ]
+            names = [n for n in names if n]
+            if names:
+                parts.append(
+                    "- **skills:** " + ", ".join(f"`{n}`" for n in names) + "\n"
+                )
+            desc = (pdata.get("description") or "").strip()
+            if desc:
+                parts.append(f"- **pack:** {desc}\n")
+        if cid == "archify":
+            parts.append(
+                "- **note:** Archify skill only; shared `brew/Brewfile.archify` "
+                "with `skills` / `ai-skills`\n"
+            )
+        parts.append(f"- **activate:** `./dots setup --with {cid}`\n\n")
+
+    return write_or_check(GEN_DIR / "with-options.md", "".join(parts), check=check)
+
+
 def generate_package_groups(check: bool) -> bool:
     src = "configs/packages/groups.toml"
     data = load_toml(ROOT / src)
@@ -455,7 +559,7 @@ def generate_cli_help(check: bool) -> bool:
 
     # Subcommand help — prefer live --help when stable; else source Usage stubs.
     # (profile/models have interactive menus without portable --help handlers.)
-    for sub in ("packages", "profile", "models", "backup", "restore"):
+    for sub in ("packages", "components", "profile", "models", "backup", "restore"):
         out = _safe_help(["./dots", sub, "--help"])
         if out is None:
             out = _extract_dots_sub_usage(sub)
@@ -523,6 +627,7 @@ def main() -> int:
     results = [
         generate_components(check),
         generate_supergroups(check),
+        generate_with_options(check),
         generate_package_groups(check),
         generate_skills(check),
         generate_links(check),
