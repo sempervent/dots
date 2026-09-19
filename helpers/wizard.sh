@@ -466,6 +466,42 @@ dots_wizard_print_plan() {
 	fi
 }
 
+# Run pull_models with durable MODEL START/RESULT lines in the setup log.
+# Interactive (-t 1): invoke directly so provider CR progress keeps a TTY
+# (never pipe solely for logging). Dry-run may capture plan output. Noninteractive
+# runs without faking a TTY. Does not trap SIGINT. Override binary via
+# DOTS_PULL_MODELS_SH (tests). Remaining args are forwarded to pull_models.
+dots_wizard_run_models() {
+	local log="$1"
+	shift
+	local pm_bin="${DOTS_PULL_MODELS_SH:-${DIR}/scripts/pull_models.sh}"
+	local rc=0
+	local args_desc="$*"
+	local tier="${WIZ_MODEL_TIER:-}"
+
+	printf 'MODEL START tier=%s args=%s\n' "${tier}" "${args_desc}" >>"${log}"
+
+	# Avoid set -e here so we do not leak shell options to callers; capture rc explicitly.
+	if [[ ${WIZ_DRY_RUN:-0} -eq 1 ]]; then
+		# Plan output is line-oriented; capture for the durable log is OK.
+		"${pm_bin}" "$@" 2>&1 | tee -a "${log}" || true
+		rc=${PIPESTATUS[0]}
+	elif [[ -t 1 ]]; then
+		# Preserve stdout TTY for ollama / llama-cli / draw-things-cli progress.
+		"${pm_bin}" "$@" || rc=$?
+	else
+		# Noninteractive / no TTY: run normally; do not fake a TTY or tee for logging.
+		"${pm_bin}" "$@" || rc=$?
+	fi
+
+	if [[ ${rc} -eq 0 ]]; then
+		printf 'MODEL RESULT success rc=%s\n' "${rc}" >>"${log}"
+	else
+		printf 'MODEL RESULT failed rc=%s\n' "${rc}" >>"${log}"
+	fi
+	return "${rc}"
+}
+
 # Apply collected plan. Returns nonzero on hard failure.
 dots_wizard_apply() {
 	local log profile_arg rc=0
@@ -500,11 +536,11 @@ dots_wizard_apply() {
 	models-only)
 		set +e
 		if [[ ${WIZ_DRY_RUN} -eq 1 ]]; then
-			"${DIR}/scripts/pull_models.sh" --dry-run 2>&1 | tee -a "${log}"
+			dots_wizard_run_models "${log}" --dry-run
 		else
-			"${DIR}/scripts/pull_models.sh" 2>&1 | tee -a "${log}"
+			dots_wizard_run_models "${log}"
 		fi
-		rc=${PIPESTATUS[0]}
+		rc=$?
 		set -e
 		[[ ${WIZ_DRY_RUN} -eq 1 ]] && rm -f "${log}"
 		return "${rc}"
@@ -639,7 +675,12 @@ dots_wizard_apply() {
 	if [[ ${WIZ_MODELS} -ne 0 ]]; then
 		local pm=(--yes --tier "${WIZ_MODEL_TIER}")
 		[[ ${WIZ_MODEL_CLEANUP} -eq 1 ]] && pm+=(--include-cleanup)
-		if "${DIR}/scripts/pull_models.sh" "${pm[@]}" 2>&1 | tee -a "${log}"; then
+		local models_rc=0
+		set +e
+		dots_wizard_run_models "${log}" "${pm[@]}"
+		models_rc=$?
+		set -e
+		if [[ ${models_rc} -eq 0 ]]; then
 			dots_ui_stage 4 5 "Models" "OK"
 		else
 			dots_ui_stage 4 5 "Models" "WARN/FAILED"

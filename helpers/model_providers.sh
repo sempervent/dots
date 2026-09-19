@@ -32,6 +32,14 @@ dots_mp_ollama_list() {
 
 dots_mp_ollama_has_model() {
 	local want="$1" line name
+	# When the ollama mock is enabled, inventory is entirely synthetic — empty
+	# DOTS_MP_MOCK_OLLAMA_HAS means "nothing installed", not "ask real ollama".
+	if [[ -n ${DOTS_MP_MOCK_OLLAMA:-} ]]; then
+		case " ${DOTS_MP_MOCK_OLLAMA_HAS:-} " in
+		*" ${want} "*) return 0 ;;
+		*) return 1 ;;
+		esac
+	fi
 	if [[ -n ${DOTS_MP_MOCK_OLLAMA_HAS:-} ]]; then
 		case " ${DOTS_MP_MOCK_OLLAMA_HAS} " in
 		*" ${want} "*) return 0 ;;
@@ -145,6 +153,13 @@ dots_mp_llamacpp_has_model() {
 	local repo="$1" quant="${2:-}"
 	local needle="${repo}"
 	[[ -n ${quant} ]] && needle="${repo}:${quant}"
+	# When the llamacpp mock is enabled, inventory is entirely synthetic.
+	if [[ -n ${DOTS_MP_MOCK_LLAMACPP:-} ]]; then
+		case " ${DOTS_MP_MOCK_LLAMACPP_HAS:-} " in
+		*" ${needle} "* | *" ${repo} "*) return 0 ;;
+		*) return 1 ;;
+		esac
+	fi
 	if [[ -n ${DOTS_MP_MOCK_LLAMACPP_HAS:-} ]]; then
 		case " ${DOTS_MP_MOCK_LLAMACPP_HAS} " in
 		*" ${needle} "* | *" ${repo} "*) return 0 ;;
