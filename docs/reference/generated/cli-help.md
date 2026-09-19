@@ -212,7 +212,7 @@ Examples:
 ## `./scripts/check.sh`
 
 ```text
-Usage: /Users/joshuagrant/dots/scripts/check.sh [--profile base|home|work|server|all|current|/path/to/profile.toml]
+Usage: ./scripts/check.sh [--profile base|home|work|server|all|current|/path/to/profile.toml]
 ```
 
 ## `./scripts/pull_models.sh`

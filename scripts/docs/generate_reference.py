@@ -322,9 +322,11 @@ def _is_unstable_cli_capture(out: str) -> bool:
     if "password" in lower or "secret" in lower or "token=" in lower:
         return True
     # Interactive menus without a real --help handler
-    if "enter a number" in lower:
+    if "enter a number" in lower or "choice [" in lower:
         return True
     if "dots_ui_choice" in lower:
+        return True
+    if "═══" in out or "═" * 5 in out:
         return True
     # Hardware / disk summaries (vary by host and over time → CI drift)
     if "machine:" in lower and ("free disk" in lower or "ram:" in lower):
@@ -334,9 +336,20 @@ def _is_unstable_cli_capture(out: str) -> bool:
     # Absolute host paths from errors / prompts
     if "/var/folders/" in lower or "/tmp/" in lower or "/home/" in lower:
         return True
+    if "/users/" in lower:  # macOS home paths
+        return True
     if "error: unknown profile" in lower:
         return True
     return False
+
+
+def _canonicalize_help(out: str) -> str:
+    """Rewrite absolute repo paths so help text is host-portable."""
+    root = str(ROOT)
+    # Prefer longest match first (root with trailing slash)
+    out = out.replace(root + os.sep, "./")
+    out = out.replace(root, ".")
+    return out
 
 
 def _safe_help(cmd: list[str], timeout: float = 15.0) -> str | None:
@@ -356,7 +369,7 @@ def _safe_help(cmd: list[str], timeout: float = 15.0) -> str | None:
             check=False,
         )
         out = (proc.stdout or "") + (proc.stderr or "")
-        out = out.strip()
+        out = _canonicalize_help(out.strip())
         if not out:
             return None
         if _is_unstable_cli_capture(out):
@@ -416,30 +429,34 @@ def generate_cli_help(check: bool) -> bool:
     src = "dots + bootstrap.sh + setup.sh + configure.sh (safe --help)"
     sections: list[tuple[str, str]] = []
 
-    # Unified CLI
-    help_out = _safe_help([str(ROOT / "dots"), "help"])
+    # Invoke via relative argv so $0 in Usage lines stays portable (cwd=ROOT).
+    help_out = _safe_help(["./dots", "help"])
     if help_out is None:
-        help_out = _safe_help([str(ROOT / "dots"), "--help"])
+        help_out = _safe_help(["./dots", "--help"])
     if help_out is None:
         help_out = _extract_usage_from_source(ROOT / "dots") or "(unavailable)"
     sections.append(("`./dots`", help_out))
 
-    for label, script, args in [
-        ("`./bootstrap.sh`", ROOT / "bootstrap.sh", ["--help"]),
-        ("`./setup.sh`", ROOT / "setup.sh", ["--help"]),
-        ("`./configure.sh`", ROOT / "configure.sh", ["--help"]),
-        ("`./scripts/check.sh`", ROOT / "scripts" / "check.sh", ["--help"]),
-        ("`./scripts/pull_models.sh`", ROOT / "scripts" / "pull_models.sh", ["--help"]),
+    for label, rel, src_path in [
+        ("`./bootstrap.sh`", "./bootstrap.sh", ROOT / "bootstrap.sh"),
+        ("`./setup.sh`", "./setup.sh", ROOT / "setup.sh"),
+        ("`./configure.sh`", "./configure.sh", ROOT / "configure.sh"),
+        ("`./scripts/check.sh`", "./scripts/check.sh", ROOT / "scripts" / "check.sh"),
+        (
+            "`./scripts/pull_models.sh`",
+            "./scripts/pull_models.sh",
+            ROOT / "scripts" / "pull_models.sh",
+        ),
     ]:
-        out = _safe_help([str(script), *args])
+        out = _safe_help([rel, "--help"])
         if out is None:
-            out = _extract_usage_from_source(script) or "(help unavailable; see source)"
+            out = _extract_usage_from_source(src_path) or "(help unavailable; see source)"
         sections.append((label, out))
 
     # Subcommand help — prefer live --help when stable; else source Usage stubs.
     # (profile/models have interactive menus without portable --help handlers.)
     for sub in ("packages", "profile", "models", "backup", "restore"):
-        out = _safe_help([str(ROOT / "dots"), sub, "--help"])
+        out = _safe_help(["./dots", sub, "--help"])
         if out is None:
             out = _extract_dots_sub_usage(sub)
         if out:
