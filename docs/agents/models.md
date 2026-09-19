@@ -52,13 +52,27 @@ when the user asks.
 User override file (optional): `~/.config/dots/models.toml` — see
 `./dots status` Models section.
 
+## Interactive progress (v1.4.0)
+
+Wizard model pulls (models-only and Stage 4) run through `dots_wizard_run_models`
+so interactive downloads keep a TTY. Piping `pull_models.sh` through `tee` solely
+for logging broke CR progress from `ollama pull` / `llama-cli` / `draw-things-cli`
+into permanent `>>>>` scrollback.
+
+- Interactive: pull runs directly; durable setup log records `MODEL START` /
+  `MODEL RESULT` only (not progress spam)
+- `./dots models` still `exec`s `pull_models.sh` (TTY-preserving)
+- Dry-run may capture plan lines; noninteractive does not fake a TTY
+
 ## Do not
 
 - Invent model ids not present in `configs/models.toml`
 - Assume Hermes template catalogs match this registry (they may differ)
 - Pull models in CI or document CI as doing so
+- Pipe interactive progress commands solely for logging
 
 ## Related
 
 - [Agent harness](harness.md)
 - [Generated models](../reference/generated/models.md)
+- [Troubleshooting](../troubleshooting/index.md)

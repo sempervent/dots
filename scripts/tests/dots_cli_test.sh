@@ -33,13 +33,13 @@ ver="$("${ROOT}/dots" --version 2>&1)" || {
 	bad "version failed"
 	ver=""
 }
-echo "${ver}" | grep -Eq 'dots 1\.3\.1' && ok "version 1.3.1" || bad "version got: ${ver}"
-[[ -f ${ROOT}/VERSION ]] && [[ $(tr -d '[:space:]' <"${ROOT}/VERSION") == 1.3.1 ]] && ok "VERSION file" || bad "VERSION file"
+echo "${ver}" | grep -Eq 'dots 1\.4\.0' && ok "version 1.4.0" || bad "version got: ${ver}"
+[[ -f ${ROOT}/VERSION ]] && [[ $(tr -d '[:space:]' <"${ROOT}/VERSION") == 1.4.0 ]] && ok "VERSION file" || bad "VERSION file"
 
 # status on fresh HOME (no active profile)
 st="$("${ROOT}/dots" status 2>&1)" || true
 echo "${st}" | grep -q 'DOTS Status' && ok "status header" || bad "status header"
-echo "${st}" | grep -q '1.3.1' && ok "status shows version" || bad "status version"
+echo "${st}" | grep -q '1.4.0' && ok "status shows version" || bad "status version"
 echo "${st}" | grep -qi 'profile' && ok "status mentions profile" || bad "status profile"
 echo "${st}" | grep -qi 'Backup' && ok "status mentions backups" || bad "status backups"
 echo "${out}" | grep -q './dots packages' && ok "help lists packages" || bad "help packages"

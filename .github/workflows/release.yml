@@ -13,34 +13,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - name: Validate tag matches VERSION
+        run: |
+          set -euo pipefail
+          expected="v$(tr -d '[:space:]' <VERSION)"
+          actual="${GITHUB_REF_NAME}"
+          if [[ "${actual}" != "${expected}" ]]; then
+            echo "Tag ${actual} does not match VERSION (${expected})" >&2
+            exit 1
+          fi
+          echo "Tag ${actual} matches VERSION"
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: ${{ github.ref_name == 'v1.3.1' && 'DOTS v1.3.1 - Desired-State Reliability' || (github.ref_name == 'v1.3.0' && 'DOTS v1.3.0 - Prompt, Snapshots, and Skills Reliability' || (github.ref_name == 'v1.2.1' && 'DOTS v1.2.1 - Setup Reliability Fixes' || format('DOTS {0}', github.ref_name))) }}
-          generate_release_notes: false
-          body: |
-            ## Installed means satisfied
-
-            DOTS treats an already-valid component or skill as satisfying the
-            requested state and moves on without unnecessary reinstall attempts.
-
-            ## Skill security scans are advisory
-
-            Static regex-based skill review findings are warnings by default
-            rather than installation failures.
-
-            This fixes false positives for security-analysis skills that
-            legitimately contain examples such as `curl | sh`.
-
-            Opt into fatal findings with:
-
-            ```bash
-            DOTS_SKILLS_STRICT_REVIEW=1
-            ```
-
-            ## Safer skill handling
-
-            DOTS no longer deletes successfully installed skills solely because
-            a heuristic scan produces a finding.
-
-            Actual missing or failed installations remain fatal.
+          name: DOTS ${{ github.ref_name }}
+          generate_release_notes: true

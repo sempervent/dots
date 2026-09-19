@@ -97,6 +97,15 @@ Runtimes install without weights.
 
 FluidVoice models: app UI only.
 
+## Model pull floods the terminal with `>>>>`
+
+Fixed in **v1.4.0**. Wizard used to pipe `pull_models.sh` through `tee` for the
+setup log, which stole the TTY so CR progress became permanent scrollback.
+
+- Prefer `./dots models` (direct `exec`) or re-run wizard / models-only on v1.4.0+
+- Durable logs should show `MODEL START` / `MODEL RESULT`, not progress bars
+- If you still see floods on an older checkout, update past v1.4.0
+
 ## Agent routed to wrong backend
 
 Read `skills/agent-router/SKILL.md` and `~/.config/dots/agents/router.toml`.
