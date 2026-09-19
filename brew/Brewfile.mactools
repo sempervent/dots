@@ -1,0 +1,55 @@
+# brew/Brewfile.mactools — optional macOS workstation / creative tools layer
+#
+# Install: ./setup.sh --with mactools
+# Darwin only (platform gate in configs/components.toml).
+#
+# Dedup notes:
+#   just, lazygit — already in brew/groups/modern.Brewfile (and Brewfile)
+#   docker CLI     — already in infra / Brewfile (OrbStack is additive; do not remove Docker Desktop)
+#   ranger         — remains in workstation; yazi is additive
+#
+# Commercial casks may require separate license activation after install.
+# BlackHole may require a reboot — DOTS never reboots automatically.
+
+# --- macOS control plane ---
+cask "vorssaint"
+
+# --- launcher / automation / filesystem ---
+cask "raycast"
+cask "keyboard-maestro"
+cask "hazel"
+
+# --- network visibility ---
+cask "little-snitch"
+
+# --- containers / VMs (additive; does not remove Docker Desktop) ---
+cask "orbstack"
+
+# --- knowledge / linking ---
+cask "hookmark"
+cask "devonthink"
+
+# --- terminal / editor (additive; iTerm + Neovim remain primary) ---
+cask "ghostty"
+cask "zed"
+
+# --- audio / MIDI / generative media ---
+cask "loopback"
+cask "audio-hijack"
+cask "blackhole-2ch"
+cask "vcv-rack"
+cask "obs"
+cask "touchdesigner"
+cask "processing"
+cask "sonic-pi"
+cask "supercollider"
+
+# --- terminal / CLI workflow (not already in core/modern) ---
+brew "mise"
+brew "yazi"
+brew "watchexec"
+brew "hyperfine"
+brew "mprocs"
+brew "xh"
+brew "dust"
+brew "duf"

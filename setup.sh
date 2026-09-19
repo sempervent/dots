@@ -76,6 +76,8 @@ source "${DIR}/helpers/packages.sh"
 source "${DIR}/helpers/links.sh"
 # shellcheck source=helpers/backup.sh
 source "${DIR}/helpers/backup.sh"
+# shellcheck source=helpers/mactools.sh
+source "${DIR}/helpers/mactools.sh"
 # shellcheck source=helpers/git_config.sh
 source "${DIR}/helpers/git_config.sh"
 # shellcheck source=helpers/profiles.sh
@@ -114,6 +116,8 @@ Examples:
   ./setup.sh
   ./setup.sh --with herdr
   ./setup.sh --with fluidvoice
+  ./setup.sh --with mactools
+  ./setup.sh --with herdr,hermes,mactools
   ./setup.sh --with ai
   ./setup.sh --with ai --without cursor
   ./setup.sh --with cursor
@@ -290,6 +294,25 @@ move_sym() {
 	fi
 
 	if [[ -e ${dest} ]] || [[ -L ${dest} ]]; then
+		# Safety: never replace an unmanaged target unless pre-link backup ran
+		# (or dry-run). Fresh installs / already-correct links are fine.
+		if [[ ${DRY_RUN} -eq 0 ]] && [[ -z ${DOTS_LAST_BACKUP_ID:-} ]]; then
+			# Allow replace only when dest is already a DOTS symlink (stale retarget)
+			local cur_link=""
+			if [[ -L ${dest} ]]; then
+				cur_link="$(readlink "${dest}" 2>/dev/null || true)"
+			fi
+			case "${cur_link}" in
+			"${DIR}" | "${DIR}"/* | "${SYM_DIR}" | "${SYM_DIR}"/*) ;;
+			*)
+				if [[ -e ${dest} || -L ${dest} ]]; then
+					# Unmanaged collision without backup id — abort rather than destroy
+					echo "Error: refuse to replace ${dest} without a successful pre-change backup" >&2
+					return 1
+				fi
+				;;
+			esac
+		fi
 		if [[ ${DRY_RUN} -eq 1 ]]; then
 			echo "[dry-run] replace ${dest} (pre-change snapshot covers managed targets)"
 		else
@@ -347,7 +370,20 @@ else
 	dots_stage0_ensure 0 || exit 1
 fi
 
-echo "=== Packages (early — needed before plugin clones) ==="
+echo "=== Backup (before any config / symlink mutation) ==="
+# HARD REQUIREMENT: snapshot unmanaged collisions, then abort on failure.
+# Order: backup → packages → configure → link/relink.
+if declare -F dots_backup_snapshot_collisions >/dev/null 2>&1; then
+	if ! dots_backup_snapshot_collisions "pre-setup" "pre-setup"; then
+		echo "Error: backup failed; setup aborted before package/config mutation" >&2
+		exit 1
+	fi
+else
+	echo "Error: backup helper missing; refusing to mutate configuration" >&2
+	exit 1
+fi
+
+echo "=== Packages (after backup — needed before plugin clones) ==="
 if declare -F _dots_leaf_retire_conflicting_brew_leaf >/dev/null 2>&1; then
 	_dots_leaf_retire_conflicting_brew_leaf
 fi
@@ -361,11 +397,7 @@ else
 fi
 
 echo "=== Symlinks ==="
-# One coherent snapshot when unmanaged targets would be replaced
-if declare -F dots_backup_snapshot_collisions >/dev/null 2>&1; then
-	dots_backup_snapshot_collisions "pre-setup" "pre-setup" || true
-fi
-# Declarative authority: configs/links.toml
+# Declarative authority: configs/links.toml (targets already snapshotted above)
 dots_deploy_links
 
 # Herdr: merge, not link
@@ -444,6 +476,10 @@ if command -v brew >/dev/null 2>&1; then
 		fi
 		echo "Error: one or more optional components failed (see list above)" >&2
 		exit 1
+	fi
+	if has_component mactools && declare -F dots_mactools_postinstall_notes >/dev/null 2>&1; then
+		dots_mactools_deploy_configs || true
+		dots_mactools_postinstall_notes
 	fi
 elif has_component herdr; then
 	# Linux native path: official Herdr installer (no Homebrew required)
@@ -623,6 +659,17 @@ if has_component images; then
 fi
 if has_component tex; then
 	echo "TeX: Homebrew texlive. Validate: pdflatex --version; kpsewhich article.cls"
+fi
+if has_component mactools; then
+	cat <<'EOF'
+mactools: Vorssaint + Raycast/KM/Hazel/Little Snitch/OrbStack/Hookmark/DEVONthink/
+  Ghostty/Zed + audio/PFL tools + mise/yazi/CLI utilities (Brewfile.mactools).
+  Portable configs: ~/.config/{ghostty,yazi,mise,lazygit}
+  Manual: licenses, macOS permissions, BlackHole reboot — see docs/MACTOOLS.md
+  Export helpers: ./scripts/mactools/export-configs.sh all
+  OrbStack playbook: docs/ORBSTACK_MIGRATION.md (no auto-migrate)
+  mise analysis: docs/MISE_MIGRATION.md (no cutover)
+EOF
 fi
 if agent_router_should_install 2>/dev/null; then
 	cat <<'EOF'

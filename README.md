@@ -345,6 +345,8 @@ Telemetry failures never abort agent work.
 ./setup.sh --with codex
 ./setup.sh --with cursor
 ./setup.sh --with fluidvoice
+./setup.sh --with mactools
+./setup.sh --with herdr,hermes,mactools
 ./setup.sh --with images
 ./setup.sh --with tex
 ./setup.sh --with ai
@@ -357,6 +359,7 @@ Telemetry failures never abort agent work.
 ./setup.sh --with=herdr,hermes
 ./setup.sh --dry-run --with cursor
 ./setup.sh --dry-run --with ai
+./setup.sh --dry-run --with mactools
 ./setup.sh --help
 ```
 
@@ -376,6 +379,7 @@ Telemetry failures never abort agent work.
 | `fluidvoice` | `Brewfile.fluidvoice` → cask `fluidvoice` (macOS 15+; no models/permissions automated) |
 | `images` | `Brewfile.images` → Magick/gs/rsvg/exiftool/pngquant/webp/oxipng |
 | `tex` | `Brewfile.tex` → Homebrew `texlive` (CLI) |
+| `mactools` | `Brewfile.mactools` → Vorssaint + macOS workstation/audio/CLI (Darwin only; see `docs/MACTOOLS.md`) |
 
 ### Supergroups
 
@@ -497,6 +501,7 @@ Optional packages are declared in:
 - `brew/Brewfile.cursor` (cask `cursor-cli` — preferred over `curl … \| bash`)
 - `brew/Brewfile.images` (deterministic image toolkit)
 - `brew/Brewfile.tex` (`texlive`)
+- `brew/Brewfile.mactools` (Darwin workstation layer — `docs/MACTOOLS.md`)
 
 and applied only when selected via `--with`.
 

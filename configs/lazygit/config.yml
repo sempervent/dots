@@ -1,0 +1,25 @@
+# DOTS lazygit — minimal Catppuccin Mocha-aligned colors
+# lazygit itself may already be installed via the modern package group.
+
+gui:
+  theme:
+    activeBorderColor:
+      - "#cba6f7"
+      - bold
+    inactiveBorderColor:
+      - "#585b70"
+    optionsTextColor:
+      - "#89b4fa"
+    selectedLineBgColor:
+      - "#313244"
+    cherryPickedCommitBgColor:
+      - "#45475a"
+    cherryPickedCommitFgColor:
+      - "#cba6f7"
+    unstagedChangesColor:
+      - "#f38ba8"
+    defaultFgColor:
+      - "#cdd6f4"
+git:
+  paging:
+    colorArg: always

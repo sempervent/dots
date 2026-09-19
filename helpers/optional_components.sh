@@ -128,6 +128,10 @@ apply_optional_brewfiles() {
 			apply_brewfile "${DIR}/brew/Brewfile.fluidvoice" || dots_optional_record_failure "fluidvoice" "brew bundle failed"
 		fi
 	fi
+	if has_component mactools; then
+		# Darwin-only (registry platforms); explicit --with on Linux errors before here.
+		apply_brewfile "${DIR}/brew/Brewfile.mactools" || dots_optional_record_failure "mactools" "brew bundle failed"
+	fi
 }
 dots_install_requested_agent_skills() {
   # Pack selection uses set semantics (union / dedupe inside dots_install_skill_packs).

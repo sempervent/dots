@@ -29,6 +29,7 @@ SCRIPTS=(
 	helpers/wizard.sh
 	helpers/cask_apps.sh
 	helpers/backup.sh
+	helpers/mactools.sh
 	shell/runtime.sh
 	shell/fnm.sh
 	shell/exports.sh
@@ -55,6 +56,11 @@ SCRIPTS=(
 	scripts/tests/backup_test.sh
 	scripts/tests/skills_location_test.sh
 	scripts/tests/skills_desired_state_test.sh
+	scripts/tests/mactools_test.sh
+	scripts/tests/backup_gate_test.sh
+	scripts/mactools/export-configs.sh
+	scripts/mactools/import-configs.sh
+	scripts/mactools/docker-orbstack-audit.sh
 )
 
 missing=0
