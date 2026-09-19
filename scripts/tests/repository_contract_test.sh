@@ -255,6 +255,33 @@ else
 	bad "brew/Brewfile drifted from brew/groups"
 fi
 
+echo "=== docs product contract ==="
+if [[ -f ${ROOT}/mkdocs.yml ]]; then
+	ok "mkdocs.yml exists"
+else
+	bad "mkdocs.yml missing"
+fi
+if [[ -f ${ROOT}/SKILL.md ]]; then
+	ok "SKILL.md exists"
+else
+	bad "SKILL.md missing"
+fi
+if [[ -f ${ROOT}/AGENTS.md ]] && grep -q 'SKILL.md' "${ROOT}/AGENTS.md"; then
+	ok "AGENTS.md points to SKILL.md"
+else
+	bad "AGENTS.md must point to SKILL.md"
+fi
+if [[ -f ${ROOT}/scripts/docs/generate_reference.py ]]; then
+	ok "scripts/docs/generate_reference.py exists"
+else
+	bad "docs generator missing"
+fi
+if [[ -f ${ROOT}/.github/workflows/docs.yml ]]; then
+	ok ".github/workflows/docs.yml exists"
+else
+	bad "docs workflow missing"
+fi
+
 echo "=== stale phrase guards ==="
 stale_hits=0
 while IFS= read -r hit; do
