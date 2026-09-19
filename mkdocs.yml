@@ -1,0 +1,127 @@
+# DOTS documentation site — https://sempervent.github.io/dots/
+site_name: DOTS
+site_description: Desired-state environment manager for home Mac, work Mac, and Linux
+site_url: https://sempervent.github.io/dots/
+repo_url: https://github.com/sempervent/dots
+repo_name: sempervent/dots
+edit_uri: edit/master/docs/
+docs_dir: docs
+site_dir: site
+strict: true
+use_directory_urls: true
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: slate
+      accent: teal
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: slate
+      accent: teal
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.expand
+    - navigation.indexes
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+    - toc.follow
+  font: false
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.keys
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/sempervent/dots
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Overview: getting-started/index.md
+      - Install and first run: getting-started/install.md
+      - Verify and update: getting-started/verify-update.md
+  - Core Concepts:
+      - Architecture: concepts/architecture.md
+      - Profiles: concepts/profiles.md
+      - Packages: concepts/packages.md
+      - Components and supergroups: concepts/components.md
+      - Backup and recovery: concepts/backup.md
+      - Repository layout: concepts/repository-layout.md
+  - Using DOTS:
+      - Recipes: using/recipes.md
+      - Skills: using/skills.md
+      - Tools catalog: using/tools.md
+      - Extending: using/extending.md
+  - Platforms:
+      - Linux: platforms/linux.md
+      - Raspberry Pi: platforms/raspberry-pi.md
+  - macOS Workstation:
+      - mactools: macos/mactools.md
+  - Agents and AI:
+      - Agent harness: agents/harness.md
+      - Models: agents/models.md
+  - Reference:
+      - CLI: reference/cli.md
+      - Generated:
+          - Components: reference/generated/components.md
+          - Supergroups: reference/generated/supergroups.md
+          - Package groups: reference/generated/package-groups.md
+          - Skills: reference/generated/skills.md
+          - Links: reference/generated/links.md
+          - Models: reference/generated/models.md
+          - Profiles: reference/generated/profiles.md
+          - CLI help: reference/generated/cli-help.md
+  - Maintenance:
+      - Contributing: maintainers/contributing.md
+      - Agent operating manual: maintainers/agents.md
+      - Documentation: maintainers/documentation.md
+      - Skill (maintainer): maintainers/skill.md
+  - Troubleshooting: troubleshooting/index.md
+  - Migration Notes:
+      - mise: migration/mise.md
+      - OrbStack: migration/orbstack.md
+  - FAQ: faq.md
+  - GitHub stubs (repo paths):
+      - ARCHITECTURE.md: ARCHITECTURE.md
+      - EXTENDING.md: EXTENDING.md
+      - LINUX.md: LINUX.md
+      - MACTOOLS.md: MACTOOLS.md
+      - SKILLS.md: SKILLS.md
+      - TOOLS.md: TOOLS.md
+      - MISE_MIGRATION.md: MISE_MIGRATION.md
+      - ORBSTACK_MIGRATION.md: ORBSTACK_MIGRATION.md

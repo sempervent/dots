@@ -13,6 +13,9 @@ git switch -c <type>/<description>
 # implement + local validation
 ./scripts/ci/lint.sh
 ./scripts/ci/test.sh
+# if docs / registries / mkdocs.yml / SKILL.md changed:
+./scripts/docs/generate.sh
+./scripts/docs/check.sh
 
 git push -u origin <branch>
 # open PR targeting master
@@ -68,7 +71,8 @@ For this single-maintainer repository:
 Do NOT require one approving review by default
 ```
 
-Suggested required checks (names from `.github/workflows/ci.yml`):
+Suggested required checks (names from `.github/workflows/ci.yml` and
+`.github/workflows/docs.yml`):
 
 ```text
 Ubuntu test
@@ -80,7 +84,14 @@ Distro smoke (Fedora)
 Distro smoke (Void)
 ARM64 smoke (Debian 13)
 macOS smoke
+Docs build
 ```
+
+Require **Docs build** before merging documentation / registry / `mkdocs.yml`
+changes (recommended for all PRs).
+
+Documentation site: https://sempervent.github.io/dots/
+(GitHub Pages via Actions — not `gh-pages` branch / not `mkdocs gh-deploy`).
 
 ## Safety notes
 

@@ -1,5 +1,11 @@
 # Agent instructions (DOTS)
 
+Canonical operating manual: **[`SKILL.md`](SKILL.md)** (`name: dots-maintainer`).
+
+Read that file for sources of truth, safety invariants, docs workflow, and
+validation. This shim keeps only bootstrap rules for tools that look for
+`AGENTS.md`.
+
 ## Git workflow (required)
 
 Do **not** commit or push feature/fix work directly to `master`.
@@ -9,7 +15,7 @@ updated master → feature/fix branch → local validation
   → push branch → pull request → GitHub CI → merge when green
 ```
 
-See `CONTRIBUTING.md` for the full policy.
+See `CONTRIBUTING.md` and `SKILL.md`.
 
 ## Reporting status
 
@@ -20,65 +26,17 @@ See `CONTRIBUTING.md` for the full policy.
 
 Never equate local validation with GitHub CI.
 
-After opening a PR, inspect check runs (`gh pr checks` / Actions UI). If checks
-fail, fix on the **same** branch, push again, and wait — do not push `master`.
-
-## Required reading before architecture edits
-
-Before modifying dependency / component / skill / profile / link / model / distro
-architecture:
-
-```text
-READ:
-  docs/EXTENDING.md
-  docs/ARCHITECTURE.md
-```
-
-Before modifying skills:
-
-```text
-docs/SKILLS.md
-```
-
-Before modifying Linux mappings or distro CI:
-
-```text
-docs/LINUX.md
-```
-
-Tool catalog (conceptual ownership + upstream links):
-
-```text
-docs/TOOLS.md
-```
-
 ## No second source of truth
 
-Do **not** invent a second source of truth.
+Do **not** invent a second source of truth. Prefer declarative registries
+(`configs/components.toml`, `configs/packages/*`, `configs/skills/manifest.toml`,
+`configs/links.toml`, `configs/models.toml`, …) over new hard-coded `case`
+maps. Details: `SKILL.md`.
 
-Prefer extending declarative registries over adding new hard-coded `case`
-statements:
-
-| Extend this | Instead of |
-|-------------|------------|
-| `configs/components.toml` | hard-coded Brewfile maps / manual `SUPPORTED_WITH` lists |
-| `configs/packages/groups.toml` + `brew/groups/*.Brewfile` | editing only top-level `brew/Brewfile` |
-| `configs/skills/manifest.toml` | ad-hoc skill install scripts |
-| `configs/links.toml` | one-off `ln` in setup without backup |
-
-`SUPPORTED_WITH` is loaded from `configs/components.toml` — do not tell future
-editors to hard-code ids in `setup.sh`.
-
-## Identify the owner
-
-If adding a dependency, identify its owner first:
+## Before architecture edits
 
 ```text
-package group
-  OR optional component
-  OR skill (pack vs standalone)
-  OR model / provider
-  OR host-specific profile overlay
+READ: SKILL.md
+      docs/concepts/architecture.md   (or docs/ARCHITECTURE.md stub)
+      docs/using/extending.md
 ```
-
-Then follow the matching recipe in `docs/EXTENDING.md`.

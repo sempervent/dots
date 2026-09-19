@@ -194,15 +194,17 @@ Required check failures make bootstrap **fail**. Warnings do not.
 
 ## Documentation
 
+**Site:** [https://sempervent.github.io/dots/](https://sempervent.github.io/dots/)
+
 | Doc | Purpose |
 |-----|---------|
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Execution graph + sources of truth |
-| [docs/EXTENDING.md](docs/EXTENDING.md) | How to add packages / components / skills / links |
-| [docs/SKILLS.md](docs/SKILLS.md) | Skill packs vs standalone vs install locations |
-| [docs/TOOLS.md](docs/TOOLS.md) | Conceptual tool catalog + upstream links |
-| [docs/LINUX.md](docs/LINUX.md) | Linux distro compatibility matrix |
-| [docs/MACTOOLS.md](docs/MACTOOLS.md) | Optional macOS workstation layer |
-| [docs/MISE_MIGRATION.md](docs/MISE_MIGRATION.md) | mise migration notes |
-| [docs/ORBSTACK_MIGRATION.md](docs/ORBSTACK_MIGRATION.md) | OrbStack migration notes |
+| [docs site](https://sempervent.github.io/dots/) | Full MkDocs product (Getting Started → Reference) |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Stub → architecture deep dive |
+| [docs/EXTENDING.md](docs/EXTENDING.md) | Stub → extending cookbook |
+| [docs/SKILLS.md](docs/SKILLS.md) | Stub → skills |
+| [docs/TOOLS.md](docs/TOOLS.md) | Stub → tools catalog |
+| [docs/LINUX.md](docs/LINUX.md) | Stub → Linux / Pi |
+| [docs/MACTOOLS.md](docs/MACTOOLS.md) | Stub → macOS workstation layer |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Branch / PR / CI workflow |
-| [AGENTS.md](AGENTS.md) | Mandatory reading for agentic contributors |
+| [SKILL.md](SKILL.md) | Canonical maintainer operating manual |
+| [AGENTS.md](AGENTS.md) | Thin shim → `SKILL.md` |
