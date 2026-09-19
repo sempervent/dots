@@ -110,6 +110,8 @@ Then follow the matching recipe in `docs/using/extending.md`.
 - Cursor is never auto-routed (`skills/agent-router/SKILL.md`)
 - Do not invent coding cwd; do not default agents to `$HOME` or this repo
 - Do not pull models in CI
+- Interactive progress commands (e.g. model pulls) must not be piped solely for
+  logging — preserve the TTY; durable logs use START/RESULT markers
 
 ## Entrypoints
 
