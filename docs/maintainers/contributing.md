@@ -1,3 +1,9 @@
+<!--
+GENERATED — DO NOT EDIT.
+Source: CONTRIBUTING.md
+Generator: scripts/docs/generate_reference.py
+-->
+
 # Contributing to DOTS
 
 ## No direct commits to `master`

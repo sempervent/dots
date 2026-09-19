@@ -1,6 +1,12 @@
+<!--
+GENERATED — DO NOT EDIT.
+Source: AGENTS.md
+Generator: scripts/docs/generate_reference.py
+-->
+
 # Agent instructions (DOTS)
 
-Canonical operating manual: **[`SKILL.md`](SKILL.md)** (`name: dots-maintainer`).
+Canonical operating manual: **[`SKILL.md`](skill.md)** (`name: dots-maintainer`).
 
 Read that file for sources of truth, safety invariants, docs workflow, and
 validation. This shim keeps only bootstrap rules for tools that look for
