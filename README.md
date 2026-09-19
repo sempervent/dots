@@ -25,6 +25,9 @@ underneath for automation.
 ```bash
 ./dots                     # interactive setup (same as ./dots setup)
 ./dots status              # read-only dashboard
+./dots packages status     # package ownership / drift (read-only)
+./dots packages outdated   # outdated DOTS-managed packages
+./dots packages upgrade    # upgrade resolved desired set only
 ./dots backup              # snapshot managed targets
 ./dots backups             # list recoverable snapshots
 ./dots restore             # restore a snapshot (creates a safety snapshot first)
@@ -34,6 +37,42 @@ underneath for automation.
 ./dots update              # git pull + optional reapply
 ./dots --version
 ```
+
+### Package ownership
+
+Installed software must never fail setup merely because DOTS did not install it.
+
+| Term | Meaning |
+|------|---------|
+| **managed** | Declared by the *resolved* DOTS package/component set **and** owned by Homebrew |
+| **missing** | Declared by DOTS but absent |
+| **outdated** | Declared, Homebrew-owned, update available |
+| **external** | Declared by DOTS; app exists but Homebrew does not own it |
+| **undeclared** | Top-level Homebrew install (`brew leaves` / casks) not in the resolved desired set |
+
+```text
+installed ≠ managed
+managed = declared by resolved DOTS configuration
+external = DOTS declares it, another installer owns it
+undeclared = installed but not requested by resolved DOTS configuration
+```
+
+Desired state is the **union** of active profile package-group Brewfiles plus
+selected optional components (e.g. `mactools`) — never every Brewfile on disk.
+
+```bash
+./dots packages status              # full audit (advisories only)
+./dots packages upgrade             # upgrade managed outdated only
+./dots packages upgrade --all       # opt-in: also upgrade undeclared Homebrew pkgs
+./dots packages adopt glow --group modern   # prints suggested Brewfile lines (no auto-edit)
+```
+
+DOTS **never** runs `brew bundle cleanup` or uninstalls undeclared software.
+External casks: warn → try `brew install --cask --adopt` → leave untouched on
+failure (never `--force`).
+
+Live package audit: `./dots packages status`. Dry-run setup does not invoke
+mutating Homebrew commands; use the packages commands for inventory.
 
 ### Prompt (Bash + Starship)
 

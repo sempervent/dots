@@ -57,6 +57,7 @@ dots_detect_linux_pkg_mgr() {
 # Resolve PROFILE_PACKAGES or DOTS_PACKAGE_GROUPS into DOTS_RESOLVED_GROUPS array
 dots_resolve_package_groups() {
 	DOTS_RESOLVED_GROUPS=()
+	PROFILE_PACKAGES=("${PROFILE_PACKAGES[@]+"${PROFILE_PACKAGES[@]}"}")
 	local g
 	if [[ ${#PROFILE_PACKAGES[@]} -gt 0 ]]; then
 		for g in "${PROFILE_PACKAGES[@]+"${PROFILE_PACKAGES[@]}"}"; do
@@ -76,6 +77,68 @@ dots_resolve_package_groups() {
 	dots_validate_package_groups "${DOTS_RESOLVED_GROUPS[@]}" || return 1
 }
 
+# Apply one Brewfile with external-cask policy:
+#   formulae via brew bundle --brews (fallback: full bundle)
+#   casks via dots_ensure_cask_app (adopt, never --force / never cleanup)
+# Dry-run lists the file only — never invokes brew (cache-safe).
+dots_apply_brewfile_packages() {
+	local file="$1"
+	local label="${2:-$(basename "${file}")}"
+	if [[ ! -f ${file} ]]; then
+		echo "Warn: missing ${file}"
+		return 0
+	fi
+	echo "brew bundle --file=${file}"
+	if [[ ${DRY_RUN:-0} -eq 1 ]]; then
+		echo "[dry-run] would apply ${label} (file listing only; brew not invoked):"
+		sed -n '1,200p' "${file}"
+		return 0
+	fi
+
+	local brew_bin="${DOTS_BREW_BIN:-brew}"
+	local failed=0
+	# Formulae / taps first (no cask conflict with external .apps)
+	if ! "${brew_bin}" bundle --file="${file}" --brews --taps 2>/dev/null; then
+		# Older brew may lack --brews/--taps; fall back carefully:
+		# full bundle may fail on external casks — still reconcile casks below.
+		if ! "${brew_bin}" bundle --file="${file}"; then
+			echo "Warn: brew bundle reported errors for ${label} (continuing cask reconcile)"
+			failed=1
+		fi
+	fi
+
+	if declare -F dots_ensure_brewfile_casks >/dev/null 2>&1; then
+		if ! dots_ensure_brewfile_casks "${file}"; then
+			echo "Error: one or more casks failed for ${label}" >&2
+			return 1
+		fi
+		# Casks reconciled: clear soft formula-bundle failure if all desired
+		# formulae from the file are present (avoid failing solely on EXTERNAL).
+		failed=0
+		local f
+		while IFS= read -r f || [[ -n ${f} ]]; do
+			[[ -z ${f} ]] && continue
+			if ! "${brew_bin}" list --formula "${f}" >/dev/null 2>&1; then
+				# Short name / tap-qualified
+				if ! "${brew_bin}" list --formula "${f##*/}" >/dev/null 2>&1; then
+					echo "Error: formula '${f}' missing after bundle (${label})" >&2
+					failed=1
+				fi
+			fi
+		done < <(
+			if declare -F dots_brewfile_tokens >/dev/null 2>&1; then
+				dots_brewfile_tokens "${file}" brew
+			else
+				sed -nE 's/^[[:space:]]*brew[[:space:]]+"([^"]+)".*/\1/p' "${file}"
+			fi
+		)
+	elif [[ ${failed} -ne 0 ]]; then
+		echo "Error: brew bundle failed for ${label}" >&2
+		return 1
+	fi
+	return "${failed}"
+}
+
 dots_apply_brew_groups() {
 	local g file
 	local failed=0
@@ -87,15 +150,8 @@ dots_apply_brew_groups() {
 			failed=1
 			continue
 		fi
-		echo "brew bundle --file=${file}"
-		if [[ ${DRY_RUN} -eq 1 ]]; then
-			echo "[dry-run] would apply group ${g} (file listing only; brew not invoked)"
-			# Never call brew during dry-run — it writes caches under $HOME.
-			sed -n '1,200p' "${file}"
-			continue
-		fi
-		if ! brew bundle --file="${file}"; then
-			echo "Error: brew bundle failed for group ${g}" >&2
+		if ! dots_apply_brewfile_packages "${file}" "group ${g}"; then
+			echo "Error: package group ${g} failed" >&2
 			failed=1
 		fi
 	done

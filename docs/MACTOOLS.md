@@ -45,12 +45,20 @@ Stage 0 / preflight
     ↓
 BACKUP unmanaged collisions  (abort on failure)
     ↓
-Package provision + optional Brewfiles (incl. mactools)
+Core / profile package groups
+    ↓
+Optional component packages (incl. mactools Brewfile)
     ↓
 Configure + symlink / relink managed configs
     ↓
+Optional component configuration (portable mactools configs)
+    ↓
 Post-install notes (no force-kill / no reboot)
 ```
+
+External GUI apps declared by mactools are **EXTERNAL** until Homebrew owns
+them: DOTS warns, attempts `brew install --cask --adopt`, never `--force`s or
+deletes the app. See package ownership in the main README.
 
 Snapshots live under `~/.local/state/dots/backups/`. List / restore:
 
