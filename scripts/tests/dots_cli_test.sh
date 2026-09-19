@@ -43,6 +43,8 @@ echo "${st}" | grep -q '1.3.1' && ok "status shows version" || bad "status versi
 echo "${st}" | grep -qi 'profile' && ok "status mentions profile" || bad "status profile"
 echo "${st}" | grep -qi 'Backup' && ok "status mentions backups" || bad "status backups"
 echo "${out}" | grep -q './dots packages' && ok "help lists packages" || bad "help packages"
+echo "${out}" | grep -q './dots components' && ok "help lists components" || bad "help components"
+echo "${out}" | grep -q '\-\-with\|components' && ok "help mentions components/--with" || bad "help with"
 echo "${out}" | grep -q './dots backup' && ok "help lists backup" || bad "help backup"
 echo "${out}" | grep -q './dots restore' && ok "help lists restore" || bad "help restore"
 
@@ -52,6 +54,15 @@ sh="$("${ROOT}/dots" setup --help 2>&1)" || {
 	sh=""
 }
 echo "${sh}" | grep -q -- '--dry-run' && ok "setup --help dry-run" || bad "setup help"
+echo "${sh}" | grep -q -- '--with' && ok "setup --help --with" || bad "setup help with"
+echo "${sh}" | grep -q -- '--without' && ok "setup --help --without" || bad "setup help without"
+
+# components noninteractive list
+comp="$("${ROOT}/dots" components list 2>&1)" || {
+	bad "components list"
+	comp=""
+}
+echo "${comp}" | grep -q mactools && ok "components list mactools" || bad "components list content"
 
 # Noninteractive bootstrap delegation
 if "${ROOT}/dots" setup --profile base --yes --dry-run >"${TMP}/passthru.out" 2>&1; then

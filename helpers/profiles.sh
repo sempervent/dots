@@ -768,12 +768,17 @@ EOF
 
 	cat >"${active}" <<EOF
 # Last bootstrap profile selection (non-secret).
-# DOTS_EFFECTIVE_WITH is informational only — NOT configuration consent.
-# AI consent remains invocation-scoped via setup.sh --with for that run.
+# DOTS_LAST_WITH_INFO / DOTS_ACTIVE_COMPONENTS are INFORMATIONAL only —
+# NOT configuration consent and MUST NOT auto-feed mutating AI setup.
+# AI consent remains invocation-scoped via profile with / setup.sh --with
+# for that run. Binary presence ≠ authorization.
+# DOTS_ACTIVE_COMPONENTS mirrors LAST_WITH_INFO for read-only discovery
+# (./dots packages, ./dots components); mutating setup still needs --with.
 DOTS_PROFILE='${PROFILE_NAME:-unknown}'
 DOTS_PROFILE_FILE='${profile_file}'
 DOTS_PACKAGE_GROUPS='${PROFILE_PACKAGES[*]}'
 DOTS_LAST_WITH_INFO='${EFFECTIVE_WITH[*]:-}'
+DOTS_ACTIVE_COMPONENTS='${EFFECTIVE_WITH[*]:-}'
 EOF
 
 	# Seed local.sh once (never overwrite)

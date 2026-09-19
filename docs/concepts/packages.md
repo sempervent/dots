@@ -10,15 +10,21 @@ Installed software must never fail setup merely because DOTS did not install it.
 | **missing** | Declared by DOTS but absent |
 | **outdated** | Declared, Homebrew-owned, update available |
 | **external** | Declared by DOTS; app exists but Homebrew does not own it |
-| **undeclared** | Top-level Homebrew install not in the resolved desired set |
+| **inactive** | Installed; known DOTS owner(s) exist but **none are selected** |
+| **undeclared** | Top-level Homebrew install with **no** DOTS group/component owner |
 
 ```text
+known ≠ selected ≠ installed
+
 installed ≠ managed
-managed = declared by resolved DOTS configuration
+managed = declared by resolved DOTS configuration (active groups + selected components)
+inactive = known in a Brewfile owner, but that owner is not active
+undeclared = no owner in brew/groups/*.Brewfile or component brewfile=
 ```
 
 Desired state is the **union** of active profile package-group Brewfiles plus
-selected optional components — never every Brewfile on disk.
+selected optional components — never every Brewfile on disk, and never the
+aggregate `brew/Brewfile` as ownership authority.
 
 ## Where ownership lives
 
@@ -55,11 +61,15 @@ Unavailable on a distro: map value `""` (skip) — do not invent fake names.
 
 ```bash
 ./dots packages status              # full audit (advisories only)
+./dots packages explain dust        # owners + activate hint
 ./dots packages outdated            # outdated managed packages
 ./dots packages upgrade             # upgrade managed outdated only
-./dots packages upgrade --all       # opt-in: also upgrade undeclared Homebrew pkgs
-./dots packages adopt glow --group modern   # prints suggested Brewfile lines (no auto-edit)
+./dots packages upgrade --all       # opt-in: broader Homebrew upgrades
+./dots packages adopt glow --group modern   # suggest Brewfile lines (no auto-edit)
+# If a package already has a component owner, adopt points to --with instead.
 ```
+
+See [Components and `--with`](../using/components.md).
 
 ## External casks
 
@@ -78,4 +88,5 @@ DOTS **never** runs `brew bundle cleanup` or uninstalls undeclared software.
 ## Implementation
 
 Logic: `helpers/package_state.sh`, `helpers/packages.sh`, `helpers/cask_apps.sh`.
-Tests: `scripts/tests/package_state_test.sh`, `scripts/tests/cask_app_test.sh`.
+Tests: `scripts/tests/package_state_test.sh`, `scripts/tests/cask_app_test.sh`,
+`scripts/tests/component_discovery_test.sh`.

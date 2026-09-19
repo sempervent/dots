@@ -131,9 +131,9 @@ dots_wizard_pick_components() {
 
 	if [[ ${builtin} == home ]]; then
 		dots_ui_section "Home profile defaults"
-		echo "  Home currently includes a personal AI/workstation stack"
-		echo "  (Herdr, Hermes, Ollama, llama.cpp, Draw Things, OpenCode,"
-		echo "   Codex, Cursor, skills, AI skills, images, TeX; FluidVoice off)."
+		echo "  Home includes a personal AI/workstation stack via the profile"
+		echo "  registry (ai supergroup + herdr, skills, images, tex; FluidVoice off)."
+		echo "  See: ./dots components list"
 		ans="$(dots_prompt_yesno "Keep home defaults" y)"
 		if [[ ${ans} == y ]]; then
 			WIZ_WITH=""
@@ -148,14 +148,26 @@ dots_wizard_pick_components() {
 	fi
 
 	dots_ui_section "Optional components"
-	echo "  Select additions (blank = none). Supergroup 'ai' expands per platform."
+	echo "  Select additions (blank = none). Descriptions from configs/components.toml."
 	echo ""
 
 	local want_ai=0 want_herdr=0 want_skills=0 want_aiskills=0
 	local want_images=0 want_tex=0
 	local excl=""
+	local _desc
 
-	ans="$(dots_prompt_yesno "Add AI applications supergroup (--with ai)" n)"
+	_desc="$(
+		WANT=ai dots_toml_query "$(dots_components_registry_path)" <<'PY' 2>/dev/null || echo "AI applications"
+import os
+want = os.environ.get("WANT", "").strip()
+for g in data.get("supergroups") or []:
+    if (g.get("id") or "").strip() == want:
+        print((g.get("description") or g.get("label") or want).strip())
+        raise SystemExit(0)
+print("AI applications")
+PY
+	)"
+	ans="$(dots_prompt_yesno "Add AI applications (--with ai) — ${_desc}" n)"
 	[[ ${ans} == y ]] && want_ai=1
 
 	if [[ ${want_ai} -eq 1 ]]; then
@@ -165,29 +177,37 @@ dots_wizard_pick_components() {
 				echo "  - ${id}: skipped (platform)"
 				continue
 			fi
-			ans="$(dots_prompt_yesno "  Exclude ${id}" n)"
+			_desc="$(dots_component_description "${id}" 2>/dev/null || echo "${id}")"
+			ans="$(dots_prompt_yesno "  Exclude ${id} (${_desc})" n)"
 			[[ ${ans} == y ]] && excl="${excl}${excl:+,}${id}"
 		done
 	fi
 
 	if [[ ${builtin} != server ]]; then
-		ans="$(dots_prompt_yesno "Add Herdr" n)"
+		_desc="$(dots_component_description herdr 2>/dev/null || echo "Herdr")"
+		ans="$(dots_prompt_yesno "Add Herdr — ${_desc}" n)"
 		[[ ${ans} == y ]] && want_herdr=1
 	fi
-	ans="$(dots_prompt_yesno "Add Engineering skills pack" n)"
+	_desc="$(dots_component_description skills 2>/dev/null || echo "Engineering skills")"
+	ans="$(dots_prompt_yesno "Add Engineering skills — ${_desc}" n)"
 	[[ ${ans} == y ]] && want_skills=1
-	ans="$(dots_prompt_yesno "Add AI skills pack" n)"
+	_desc="$(dots_component_description ai-skills 2>/dev/null || echo "AI skills")"
+	ans="$(dots_prompt_yesno "Add AI skills — ${_desc}" n)"
 	[[ ${ans} == y ]] && want_aiskills=1
-	ans="$(dots_prompt_yesno "Add Images toolkit" n)"
+	_desc="$(dots_component_description images 2>/dev/null || echo "Images")"
+	ans="$(dots_prompt_yesno "Add Images toolkit — ${_desc}" n)"
 	[[ ${ans} == y ]] && want_images=1
-	ans="$(dots_prompt_yesno "Add TeX" n)"
+	_desc="$(dots_component_description tex 2>/dev/null || echo "TeX")"
+	ans="$(dots_prompt_yesno "Add TeX — ${_desc}" n)"
 	[[ ${ans} == y ]] && want_tex=1
 
 	# Also offer leaf AI runtimes if ai not selected (server path)
 	if [[ ${want_ai} -eq 0 ]]; then
-		ans="$(dots_prompt_yesno "Add Ollama" n)"
+		_desc="$(dots_component_description ollama 2>/dev/null || echo "Ollama")"
+		ans="$(dots_prompt_yesno "Add Ollama — ${_desc}" n)"
 		[[ ${ans} == y ]] && WIZ_WITH="${WIZ_WITH}${WIZ_WITH:+,}ollama"
-		ans="$(dots_prompt_yesno "Add llama.cpp" n)"
+		_desc="$(dots_component_description llamacpp 2>/dev/null || echo "llama.cpp")"
+		ans="$(dots_prompt_yesno "Add llama.cpp — ${_desc}" n)"
 		[[ ${ans} == y ]] && WIZ_WITH="${WIZ_WITH}${WIZ_WITH:+,}llamacpp"
 	fi
 
@@ -666,6 +686,7 @@ dots_cmd_setup() {
 	WIZ_YES=0
 	WIZ_PASSTHRU_PROFILE=""
 	WIZ_PASSTHRU_WITH=""
+	WIZ_PASSTHRU_WITHOUT=""
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
 		--dry-run) WIZ_DRY_RUN=1 ;;
@@ -680,8 +701,19 @@ dots_cmd_setup() {
 			shift
 			;;
 		--with=*) WIZ_PASSTHRU_WITH="${1#*=}" ;;
+		--without)
+			WIZ_PASSTHRU_WITHOUT="${2:-}"
+			shift
+			;;
+		--without=*) WIZ_PASSTHRU_WITHOUT="${1#*=}" ;;
 		-h | --help)
-			echo "Usage: ./dots setup [--dry-run] [--yes] [--profile NAME] [--with LIST]"
+			cat <<EOF
+Usage: ./dots setup [--dry-run] [--yes] [--profile NAME] [--with LIST] [--without LIST]
+
+  --with / --without   optional component selectors
+  Discover: ./dots components list
+  Docs: https://sempervent.github.io/dots/using/components/
+EOF
 			return 0
 			;;
 		*)
@@ -697,6 +729,7 @@ dots_cmd_setup() {
 		local args=(--profile "${WIZ_PASSTHRU_PROFILE}")
 		[[ ${WIZ_DRY_RUN} -eq 1 ]] && args+=(--dry-run)
 		[[ -n ${WIZ_PASSTHRU_WITH} ]] && args+=(--with "${WIZ_PASSTHRU_WITH}")
+		[[ -n ${WIZ_PASSTHRU_WITHOUT} ]] && args+=(--without "${WIZ_PASSTHRU_WITHOUT}")
 		exec "${DIR}/bootstrap.sh" "${args[@]}"
 	fi
 

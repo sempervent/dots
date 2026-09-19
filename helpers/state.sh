@@ -41,9 +41,17 @@ dots_user_models_file() {
 }
 
 # Load DOTS_PROFILE / DOTS_PROFILE_FILE from active-profile if present.
+#
+# Active components for READ-ONLY discovery (packages status, ./dots components):
+#   Prefer DOTS_ACTIVE_COMPONENTS when present; else map from DOTS_LAST_WITH_INFO
+#   so older active-profile files work without re-bootstrap.
+#   Both are INFORMATIONAL only — not AI / mutating-setup consent.
+#   Mutating setup still requires profile `with` / `./setup.sh --with` this run.
 dots_state_load_active() {
 	DOTS_ACTIVE_PROFILE=""
 	DOTS_ACTIVE_PROFILE_FILE=""
+	DOTS_ACTIVE_COMPONENTS=""
+	DOTS_ACTIVE_PACKAGE_GROUPS=""
 	local f
 	f="$(dots_active_profile_file)"
 	[[ -f ${f} ]] || return 1
@@ -51,6 +59,15 @@ dots_state_load_active() {
 	source "${f}"
 	DOTS_ACTIVE_PROFILE="${DOTS_PROFILE:-}"
 	DOTS_ACTIVE_PROFILE_FILE="${DOTS_PROFILE_FILE:-}"
+	DOTS_ACTIVE_PACKAGE_GROUPS="${DOTS_PACKAGE_GROUPS:-}"
+	# BC: LAST_WITH_INFO-only files → expose as ACTIVE_COMPONENTS for readers.
+	if [[ -z ${DOTS_ACTIVE_COMPONENTS:-} && -n ${DOTS_LAST_WITH_INFO:-} ]]; then
+		DOTS_ACTIVE_COMPONENTS="${DOTS_LAST_WITH_INFO}"
+	fi
+	# Prefer explicit ACTIVE_COMPONENTS if both exist; keep LAST_WITH_INFO as written.
+	if [[ -z ${DOTS_LAST_WITH_INFO:-} && -n ${DOTS_ACTIVE_COMPONENTS:-} ]]; then
+		DOTS_LAST_WITH_INFO="${DOTS_ACTIVE_COMPONENTS}"
+	fi
 	return 0
 }
 

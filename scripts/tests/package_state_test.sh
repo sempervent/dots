@@ -62,26 +62,32 @@ printf '%s\n' "${DOTS_DESIRED_CASKS[@]}" | grep -qx raycast && ok "mactools rayc
 printf '%s\n' "${DOTS_DESIRED_FORMULAE[@]}" | grep -qx mise && ok "mactools mise desired" || bad "mise missing"
 DOTS_WITH_COMPONENTS=()
 
-echo "=== classify: managed / missing / outdated / undeclared / transitive ignored ==="
+echo "=== classify: managed / missing / outdated / undeclared / inactive / transitive ignored ==="
 # Populate desired arrays directly — do NOT redefine dots_desired_packages_resolve
 # (avoids ShellCheck SC2218: function defined later).
 DOTS_DESIRED_FORMULAE=(jq ripgrep missing-tool)
 DOTS_DESIRED_CASKS=(iterm2 raycast)
 export DOTS_PKG_MOCK_EXTERNAL_APPS=$'raycast'
+# glow is undeclared (no owner); add dust as leaf that has mactools owner → INACTIVE
+export DOTS_PKG_MOCK_LEAVES=$'jq\nglow\nripgrep\ndust'
+export DOTS_PKG_MOCK_FORMULAE=$'jq\nglow\nripgrep\noniguruma\npcre2\ndust'
 
+dots_pkg_ownership_reset
 dots_pkg_classify_resolved 0
 dots_pkg_status_print >"${TMP}/status.out"
 grep -q 'managed:' "${TMP}/status.out" && ok "status prints managed" || bad "no managed line"
+grep -q 'inactive:' "${TMP}/status.out" && ok "status prints inactive" || bad "no inactive line"
 # jq + ripgrep + iterm2 = 3 managed; raycast external; missing-tool missing
 [[ ${DOTS_PKG_COUNT_MANAGED} -eq 3 ]] && ok "managed=3 (jq ripgrep iterm2)" || bad "managed=${DOTS_PKG_COUNT_MANAGED}"
 [[ ${DOTS_PKG_COUNT_MISSING} -eq 1 ]] && ok "missing=1" || bad "missing=${DOTS_PKG_COUNT_MISSING}"
 [[ ${DOTS_PKG_COUNT_OUTDATED} -eq 1 ]] && ok "outdated=1 (jq)" || bad "outdated=${DOTS_PKG_COUNT_OUTDATED}"
 [[ ${DOTS_PKG_COUNT_EXTERNAL} -eq 1 ]] && ok "external=1 (raycast)" || bad "external=${DOTS_PKG_COUNT_EXTERNAL}"
 printf '%s\n' "${DOTS_PKG_UNDECLARED_FORMULAE[@]}" | grep -qx glow && ok "undeclared glow leaf" || bad "glow not undeclared"
+printf '%s\n' "${DOTS_PKG_INACTIVE_FORMULAE[@]+"${DOTS_PKG_INACTIVE_FORMULAE[@]}"}" | grep -qx dust && ok "inactive dust" || bad "dust not inactive"
 printf '%s\n' "${DOTS_PKG_UNDECLARED_FORMULAE[@]}" | grep -qx oniguruma && bad "transitive oniguruma undeclared" || ok "transitive dep ignored"
 printf '%s\n' "${DOTS_PKG_UNDECLARED_CASKS[@]}" | grep -qx some-extra-cask && ok "undeclared cask" || bad "cask not undeclared"
 dots_pkg_classify_resolved 1
-ok "classify returns 0 with undeclared/external"
+ok "classify returns 0 with undeclared/external/inactive"
 
 echo "=== no brew bundle cleanup / uninstall undeclared in helpers ==="
 for f in \

@@ -31,6 +31,8 @@ source "${DIR}/helpers/backup.sh"
 source "${DIR}/helpers/wizard.sh"
 # shellcheck source=helpers/packages.sh
 source "${DIR}/helpers/packages.sh"
+# shellcheck source=helpers/components.sh
+source "${DIR}/helpers/components.sh"
 # shellcheck source=helpers/package_state.sh
 source "${DIR}/helpers/package_state.sh"
 # shellcheck source=helpers/cask_apps.sh
@@ -48,8 +50,12 @@ Usage:
   ./dots                     interactive setup
   ./dots setup               setup / reconfigure
   ./dots status              current state (read-only)
+  ./dots components          optional components / --with selectors
+  ./dots components list     registry + host compatibility
+  ./dots components active   last-selected components (informational)
   ./dots packages            package ownership / drift
   ./dots packages status     full package audit
+  ./dots packages explain N  explain one package's ownership state
   ./dots packages outdated   outdated managed packages
   ./dots packages upgrade    upgrade DOTS-managed packages
   ./dots packages adopt …    suggest Brewfile declaration (no auto-edit)
@@ -62,6 +68,10 @@ Usage:
   ./dots update              update DOTS repo + reapply
   ./dots help                this help
   ./dots --version
+
+Optional components use profile with= or ./setup.sh --with <ids>
+(see ./dots components list). Docs:
+  https://sempervent.github.io/dots/using/components/
 
 Automation / expert scripts (still supported):
   ./bootstrap.sh   ./setup.sh   ./configure.sh
@@ -116,6 +126,7 @@ dots_cmd_status() {
 			if dots_pkg_status_report 1 1 2>/dev/null; then
 				local drift_bits=()
 				[[ ${DOTS_PKG_COUNT_EXTERNAL:-0} -gt 0 ]] && drift_bits+=("${DOTS_PKG_COUNT_EXTERNAL} external")
+				[[ ${DOTS_PKG_COUNT_INACTIVE:-0} -gt 0 ]] && drift_bits+=("${DOTS_PKG_COUNT_INACTIVE} inactive")
 				[[ ${DOTS_PKG_COUNT_UNDECLARED:-0} -gt 0 ]] && drift_bits+=("${DOTS_PKG_COUNT_UNDECLARED} undeclared")
 				[[ ${DOTS_PKG_COUNT_MISSING:-0} -gt 0 ]] && drift_bits+=("${DOTS_PKG_COUNT_MISSING} missing")
 				echo "  managed: ${DOTS_PKG_COUNT_MANAGED:-0}"
@@ -128,6 +139,15 @@ dots_cmd_status() {
 			fi
 			echo "  detail: ./dots packages status"
 		fi
+		echo ""
+		echo "Components:"
+		if [[ -n ${DOTS_ACTIVE_COMPONENTS:-} ]]; then
+			echo "  active: ${DOTS_ACTIVE_COMPONENTS}"
+		else
+			echo "  active: (none recorded)"
+		fi
+		echo "  detail: ./dots components active"
+		echo "  (informational — mutating setup needs profile/--with)"
 		echo ""
 		echo "Runtime:"
 		echo "  multiplexer: ${mux}"
@@ -485,6 +505,7 @@ dots_cmd_packages() {
 		echo "  2) outdated   managed packages with updates"
 		echo "  3) upgrade    upgrade DOTS-managed packages"
 		echo "  4) adopt      suggest Brewfile declaration"
+		echo "  5) explain    explain one package"
 		echo "  q) quit"
 		echo ""
 		local choice
@@ -494,6 +515,10 @@ dots_cmd_packages() {
 		2 | outdated | o) sub=outdated ;;
 		3 | upgrade | u) sub=upgrade ;;
 		4 | adopt | a) sub=adopt ;;
+		5 | explain | e)
+			sub=explain
+			set -- "$(dots_prompt_text "Package name" "")"
+			;;
 		q | quit | Q) return 0 ;;
 		*) sub=status ;;
 		esac
@@ -517,8 +542,8 @@ dots_cmd_packages() {
 			done
 		fi
 		echo ""
-		echo "Note: unmanaged/outdated packages outside the desired set are ignored"
-		echo "      unless you run: ./dots packages upgrade --all"
+		echo "Note: default upgrade = active managed only."
+		echo "      ./dots packages upgrade --all is broader (opt-in)."
 		;;
 	upgrade)
 		local warn_all=0 a
@@ -527,10 +552,19 @@ dots_cmd_packages() {
 		done
 		if [[ ${warn_all} -eq 1 ]]; then
 			echo "These packages are not DOTS-managed and will be updated by Homebrew anyway."
-			echo "(--all includes undeclared Homebrew packages)"
+			echo "(--all includes undeclared/inactive Homebrew packages outside the desired set)"
 			echo ""
 		fi
 		dots_pkg_upgrade "$@"
+		;;
+	explain)
+		local name="${1:-}"
+		if [[ -z ${name} || ${name} == -h || ${name} == --help ]]; then
+			echo "Usage: ./dots packages explain NAME"
+			echo "Shows kind, installed, brew-owned, outdated, state, owners, activate hint."
+			return 0
+		fi
+		dots_pkg_explain "${name}"
 		;;
 	adopt)
 		# Recommendation only — never edits Brewfiles during normal setup.
@@ -561,6 +595,7 @@ dots_cmd_packages() {
 				;;
 			-h | --help)
 				echo "Usage: ./dots packages adopt <name> [--group modern|--component mactools] [--cask]"
+				echo "If NAME already has a component owner, adopt points to --with instead."
 				return 0
 				;;
 			-*)
@@ -592,19 +627,25 @@ dots_cmd_packages() {
 Usage:
   ./dots packages              interactive menu (TTY) or status
   ./dots packages status       full ownership report (read-only)
+  ./dots packages explain NAME explain one package (owners + activate hint)
   ./dots packages outdated     outdated managed packages
   ./dots packages upgrade      upgrade packages in the resolved desired set
   ./dots packages upgrade --all
-                               also upgrade undeclared Homebrew packages (opt-in)
+                               also upgrade Homebrew packages outside desired set
   ./dots packages adopt NAME [--group G|--component C] [--cask]
                                print suggested Brewfile declaration (no auto-edit)
+                               (packages with component owners → use --with instead)
 
 Ownership vocabulary:
   managed     declared by resolved DOTS config + package-manager owned
   missing     declared but absent
   outdated    declared, managed, update available
   external    declared; app exists outside Homebrew ownership
-  undeclared  installed (leaves/casks) but not in resolved desired set
+  inactive    installed; known DOTS owner(s) but none selected
+  undeclared  installed; no DOTS group/component owner
+
+known ≠ selected ≠ installed. Upgrade default = active managed only.
+Docs: https://sempervent.github.io/dots/using/components/
 
 DOTS never runs brew bundle cleanup or uninstalls undeclared software.
 EOF
@@ -612,6 +653,72 @@ EOF
 	*)
 		echo "Unknown packages subcommand: ${sub}" >&2
 		echo "Try: ./dots packages help" >&2
+		return 1
+		;;
+	esac
+}
+
+dots_cmd_components() {
+	local sub="${1:-}"
+	shift || true
+
+	if [[ -z ${sub} ]] && [[ -t 0 ]] && [[ -t 1 ]]; then
+		dots_ui_header "DOTS Components"
+		echo ""
+		echo "  1) list      registry + host compatibility"
+		echo "  2) active    last-selected (informational)"
+		echo "  3) show      detail for one id"
+		echo "  q) quit"
+		echo ""
+		local choice
+		choice="$(dots_prompt_text "Choice" "1")"
+		case "${choice}" in
+		1 | list | l) sub=list ;;
+		2 | active | a) sub=active ;;
+		3 | show | s)
+			sub=show
+			set -- "$(dots_prompt_text "Component id" "")"
+			;;
+		q | quit | Q) return 0 ;;
+		*) sub=list ;;
+		esac
+	elif [[ -z ${sub} ]]; then
+		sub=list
+	fi
+
+	case "${sub}" in
+	list | ls)
+		dots_components_list
+		;;
+	active)
+		dots_components_active
+		;;
+	show)
+		local id="${1:-}"
+		if [[ -z ${id} || ${id} == -h || ${id} == --help ]]; then
+			echo "Usage: ./dots components show ID"
+			return 0
+		fi
+		dots_components_show "${id}"
+		;;
+	-h | --help | help)
+		cat <<EOF
+Usage:
+  ./dots components              interactive menu (TTY) or list
+  ./dots components list         components + supergroups (host compat)
+  ./dots components active       profile / groups / components (informational)
+  ./dots components show ID      detail (Brewfile tokens, skills, members)
+
+Optional components are selected via profile with= or:
+  ./dots setup --with <ids>   ./setup.sh --with <ids>
+
+Active inventory is INFORMATIONAL only — not AI consent.
+Docs: https://sempervent.github.io/dots/using/components/
+EOF
+		;;
+	*)
+		echo "Unknown components subcommand: ${sub}" >&2
+		echo "Try: ./dots components help" >&2
 		return 1
 		;;
 	esac
@@ -635,6 +742,10 @@ setup)
 status)
 	shift || true
 	dots_cmd_status "$@"
+	;;
+components | component)
+	shift || true
+	dots_cmd_components "$@"
 	;;
 packages | package)
 	shift || true
