@@ -16,44 +16,19 @@ if ! command -v apt-get >/dev/null 2>&1; then
 fi
 
 sudo apt-get update -qq
-# Tools: shellcheck (lint), ripgrep (tests), zsh (runtime_precedence), curl + CAs (shfmt fetch)
+# Runtime helpers only — ShellCheck/shfmt come from pinned releases (not apt).
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
-	shellcheck ripgrep zsh ca-certificates curl >/dev/null
+	ripgrep zsh ca-certificates curl xz-utils >/dev/null
 
-# shfmt from official GitHub release with checksum verification
-SHFMT_VER="3.12.0"
-SHFMT_ARCH="linux_amd64"
-case "$(uname -m)" in
-aarch64 | arm64) SHFMT_ARCH="linux_arm64" ;;
-x86_64 | amd64) SHFMT_ARCH="linux_amd64" ;;
-*)
-	echo "Error: unsupported arch for shfmt: $(uname -m)" >&2
-	exit 1
-	;;
-esac
+# shellcheck source=ensure_lint_tools.sh
+source "${ROOT}/scripts/ci/ensure_lint_tools.sh"
+dots_ensure_lint_tools
 
-SHFMT_NAME="shfmt_v${SHFMT_VER}_${SHFMT_ARCH}"
-SHFMT_URL="https://github.com/mvdan/sh/releases/download/v${SHFMT_VER}/${SHFMT_NAME}"
-SUMS_URL="https://github.com/mvdan/sh/releases/download/v${SHFMT_VER}/sha256sums.txt"
-
-TMP="$(mktemp -d)"
-trap 'rm -rf "${TMP}"' EXIT
-curl -fsSL "${SUMS_URL}" -o "${TMP}/sha256sums.txt"
-curl -fsSL "${SHFMT_URL}" -o "${TMP}/${SHFMT_NAME}"
-EXPECTED="$(awk -v f="${SHFMT_NAME}" '$2 == f {print $1; exit}' "${TMP}/sha256sums.txt")"
-if [[ -z ${EXPECTED} ]]; then
-	echo "Error: checksum not found for ${SHFMT_NAME}" >&2
-	exit 1
+# Prefer pinned tools for the remainder of the job
+if [[ -n ${GITHUB_PATH:-} ]]; then
+	echo "${BIN_DIR}" >>"${GITHUB_PATH}"
 fi
-ACTUAL="$(sha256sum "${TMP}/${SHFMT_NAME}" | awk '{print $1}')"
-if [[ ${ACTUAL} != "${EXPECTED}" ]]; then
-	echo "Error: shfmt checksum mismatch" >&2
-	echo "  expected: ${EXPECTED}" >&2
-	echo "  actual:   ${ACTUAL}" >&2
-	exit 1
-fi
-chmod +x "${TMP}/${SHFMT_NAME}"
-sudo mv "${TMP}/${SHFMT_NAME}" /usr/local/bin/shfmt
+export PATH="${BIN_DIR}:${PATH}"
 
 command -v shellcheck
 command -v shfmt

@@ -23,20 +23,16 @@ export DRY_RUN=0
 mkdir -p "${HOME}" "${TMP}/Applications"
 export DOTS_APPLICATIONS_DIR="${TMP}/Applications"
 
-# Minimal desired set via resolved groups + fake brewfile snippets in TMP? Use real groups
-# but override installed inventory via mocks.
+# Use real group Brewfiles for resolve tests; mock installed inventory.
 export DOTS_PACKAGE_GROUPS="core"
 DOTS_RESOLVED_GROUPS=(core)
 DOTS_WITH_COMPONENTS=()
 export DOTS_PKG_MOCK_LEAVES=$'jq\nglow\nripgrep'
-# Include transitive-looking dep in full list but NOT in leaves → must not be undeclared
+# Transitive-looking dep in full list but NOT in leaves → must not be undeclared
 export DOTS_PKG_MOCK_FORMULAE=$'jq\nglow\nripgrep\noniguruma\npcre2'
 export DOTS_PKG_MOCK_CASKS=$'iterm2\nsome-extra-cask'
 export DOTS_PKG_MOCK_OUTDATED_FORMULAE=$'jq'
 export DOTS_PKG_MOCK_OUTDATED_CASKS=''
-# External: declare a cask in desired via component? Use mock external for a desired cask.
-# Desired from core Brewfile — pick names we control by also injecting via WITH
-# Instead set desired manually after sourcing by calling resolve then appending.
 
 # shellcheck disable=SC1091
 source "${ROOT}/helpers/cask_apps.sh"
@@ -53,7 +49,6 @@ if printf '%s\n' "${DOTS_DESIRED_CASKS[@]+"${DOTS_DESIRED_CASKS[@]}"}" | grep -q
 else
 	ok "inactive optional Brewfile ignored"
 fi
-# core should include something from brew/groups/core.Brewfile
 if [[ ${#DOTS_DESIRED_FORMULAE[@]} -gt 0 ]]; then
 	ok "core formulae resolved (${#DOTS_DESIRED_FORMULAE[@]})"
 else
@@ -68,27 +63,25 @@ printf '%s\n' "${DOTS_DESIRED_FORMULAE[@]}" | grep -qx mise && ok "mactools mise
 DOTS_WITH_COMPONENTS=()
 
 echo "=== classify: managed / missing / outdated / undeclared / transitive ignored ==="
-# Force a tiny desired set for classification clarity
+# Populate desired arrays directly — do NOT redefine dots_desired_packages_resolve
+# (avoids ShellCheck SC2218: function defined later).
 DOTS_DESIRED_FORMULAE=(jq ripgrep missing-tool)
 DOTS_DESIRED_CASKS=(iterm2 raycast)
 export DOTS_PKG_MOCK_EXTERNAL_APPS=$'raycast'
-# Override resolve to no-op for this block
-dots_desired_packages_resolve() { :; }
 
-dots_pkg_status_report 0 >"${TMP}/status.out"
+dots_pkg_classify_resolved 0
+dots_pkg_status_print >"${TMP}/status.out"
 grep -q 'managed:' "${TMP}/status.out" && ok "status prints managed" || bad "no managed line"
 # jq + ripgrep + iterm2 = 3 managed; raycast external; missing-tool missing
 [[ ${DOTS_PKG_COUNT_MANAGED} -eq 3 ]] && ok "managed=3 (jq ripgrep iterm2)" || bad "managed=${DOTS_PKG_COUNT_MANAGED}"
 [[ ${DOTS_PKG_COUNT_MISSING} -eq 1 ]] && ok "missing=1" || bad "missing=${DOTS_PKG_COUNT_MISSING}"
 [[ ${DOTS_PKG_COUNT_OUTDATED} -eq 1 ]] && ok "outdated=1 (jq)" || bad "outdated=${DOTS_PKG_COUNT_OUTDATED}"
 [[ ${DOTS_PKG_COUNT_EXTERNAL} -eq 1 ]] && ok "external=1 (raycast)" || bad "external=${DOTS_PKG_COUNT_EXTERNAL}"
-# undeclared leaves: glow (jq+ripgrep desired); undeclared cask: some-extra-cask
 printf '%s\n' "${DOTS_PKG_UNDECLARED_FORMULAE[@]}" | grep -qx glow && ok "undeclared glow leaf" || bad "glow not undeclared"
 printf '%s\n' "${DOTS_PKG_UNDECLARED_FORMULAE[@]}" | grep -qx oniguruma && bad "transitive oniguruma undeclared" || ok "transitive dep ignored"
 printf '%s\n' "${DOTS_PKG_UNDECLARED_CASKS[@]}" | grep -qx some-extra-cask && ok "undeclared cask" || bad "cask not undeclared"
-# Report must not fail / exit nonzero solely for undeclared
-dots_pkg_status_report 1
-ok "status returns 0 with undeclared/external"
+dots_pkg_classify_resolved 1
+ok "classify returns 0 with undeclared/external"
 
 echo "=== no brew bundle cleanup / uninstall undeclared in helpers ==="
 for f in \
@@ -98,7 +91,6 @@ for f in \
 	helpers/optional_components.sh \
 	setup.sh \
 	dots; do
-	# Executable cleanup only — prose/docs that forbid cleanup are allowed
 	if grep -nE 'brew[[:space:]]+bundle[[:space:]]+cleanup' "${ROOT}/${f}" 2>/dev/null |
 		grep -viE 'never|note:|advisories|forbid|does not|must not|#' >/dev/null; then
 		bad "cleanup invocation in ${f}"
@@ -110,7 +102,6 @@ for f in \
 done
 ok "no cleanup/uninstall invocations in package helpers"
 
-# Runtime guard: package_state must not call cleanup even if brew mock offers it
 MOCK="${TMP}/mock-brew"
 cat >"${MOCK}" <<'EOF'
 #!/usr/bin/env bash
@@ -126,19 +117,16 @@ chmod +x "${MOCK}"
 export DOTS_BREW_BIN="${MOCK}"
 export DOTS_MOCK_BREW_LOG="${TMP}/brew.log"
 : >"${DOTS_MOCK_BREW_LOG}"
-# Re-source without mocks for upgrade path
 unset DOTS_PKG_MOCK_LEAVES DOTS_PKG_MOCK_FORMULAE DOTS_PKG_MOCK_CASKS
 unset DOTS_PKG_MOCK_OUTDATED_FORMULAE DOTS_PKG_MOCK_OUTDATED_CASKS DOTS_PKG_MOCK_EXTERNAL_APPS
-# Restore real resolve
-# shellcheck disable=SC1091
-source "${ROOT}/helpers/package_state.sh"
 DOTS_RESOLVED_GROUPS=(core)
 DOTS_WITH_COMPONENTS=()
+DOTS_DESIRED_FORMULAE=(jq)
+DOTS_DESIRED_CASKS=()
 dots_pkg_forbid_cleanup
-# Call upgrade with empty outdated (mock brew returns empty via exit 0 with no output)
 export DOTS_PKG_MOCK_OUTDATED_FORMULAE=""
 export DOTS_PKG_MOCK_OUTDATED_CASKS=""
-dots_desired_packages_resolve() { DOTS_DESIRED_FORMULAE=(jq); DOTS_DESIRED_CASKS=(); }
+# Upgrade with empty outdated mocks — must never call cleanup
 dots_pkg_upgrade >/dev/null 2>&1 || true
 if grep -q CLEANUP_CALLED "${DOTS_MOCK_BREW_LOG}"; then
 	bad "upgrade path called brew bundle cleanup"
@@ -148,7 +136,6 @@ fi
 
 echo "=== external cask adopt success / failure (via cask_apps) ==="
 export DOTS_PKG_MOCK_LEAVES=""
-# Use cask helper mock
 cat >"${MOCK}" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -165,10 +152,18 @@ install)
 	cask=""
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
-		--cask) shift; cask="${1:-}" ;;
+		--cask)
+			shift
+			cask="${1:-}"
+			;;
 		--adopt) adopt=1 ;;
-		--force) echo "force refused" >&2; exit 99 ;;
-		*) [[ -z ${cask} && $1 != --* ]] && cask="$1" ;;
+		--force)
+			echo "force refused" >&2
+			exit 99
+			;;
+		*)
+			[[ -z ${cask} && $1 != --* ]] && cask="$1"
+			;;
 		esac
 		shift || true
 	done
@@ -229,7 +224,6 @@ echo "=== dry-run setup does not invoke brew mutate (listing only) ==="
 if echo "${setup_out}" | grep -qE '\[dry-run\].*brew not invoked|file listing only'; then
 	ok "dry-run announces no brew invoke"
 else
-	# still ok if groups listed without brew
 	ok "dry-run completed (brew invoke check soft)"
 fi
 
