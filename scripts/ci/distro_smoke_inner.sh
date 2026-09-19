@@ -35,10 +35,6 @@ if [[ -n ${DOTS_SMOKE_FAMILY:-} && ${DOTS_SMOKE_FAMILY} != "${mgr}" ]]; then
 	exit 1
 fi
 
-if [[ ${mgr} == pacman ]]; then
-	pacman -Sy --noconfirm >/dev/null
-fi
-
 PROFILE_PACKAGES=(core modern server)
 dots_resolve_package_groups
 echo "  resolved groups: ${DOTS_RESOLVED_GROUPS[*]}"
@@ -80,7 +76,7 @@ pkg_exists() {
 		apt-cache show "${pkg}" >/dev/null 2>&1
 		;;
 	pacman)
-		pacman -Si "${pkg}" >/dev/null 2>&1
+		pacman -Si "${pkg}" >/dev/null 2>&1 || pacman -Qi "${pkg}" >/dev/null 2>&1
 		;;
 	dnf)
 		dnf info -q "${pkg}" >/dev/null 2>&1
