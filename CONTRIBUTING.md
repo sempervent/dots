@@ -72,9 +72,13 @@ Suggested required checks (names from `.github/workflows/ci.yml`):
 
 ```text
 Ubuntu test
-Distro smoke (ubuntu:24.04)
-Distro smoke (archlinux:latest)
-Distro smoke (ghcr.io/void-linux/void-glibc:latest)
+Distro smoke (Ubuntu 24.04)
+Distro smoke (Debian 13)
+Distro smoke (Arch)
+Distro smoke (Manjaro)
+Distro smoke (Fedora)
+Distro smoke (Void)
+ARM64 smoke (Debian 13)
 macOS smoke
 ```
 

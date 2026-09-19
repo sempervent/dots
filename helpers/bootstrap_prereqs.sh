@@ -457,9 +457,16 @@ dots_ensure_herdr() {
 
 # --- Stage 0 orchestration ---------------------------------------------------
 
+# shellcheck source=linux_distro.sh
+[[ -n ${DIR:-} && -f ${DIR}/helpers/linux_distro.sh ]] && source "${DIR}/helpers/linux_distro.sh" 2>/dev/null || true
+
 dots_stage0_report() {
 	echo "=== Bootstrap prerequisites (Stage 0) ==="
-	echo "OS: $(uname -s)  arch: $(uname -m)"
+	if [[ "$(uname -s)" == "Linux" ]] && declare -F dots_linux_platform_report >/dev/null 2>&1; then
+		dots_linux_platform_report
+	else
+		echo "OS: $(uname -s)  arch: $(uname -m)"
+	fi
 
 	if [[ "$(uname -s)" == "Darwin" ]]; then
 		if dots_apple_clt_present; then
