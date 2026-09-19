@@ -181,6 +181,8 @@ Managed hosts that prohibit package installs:
 ```
 
 **Linux servers:** native `apt` / `pacman` / `xbps` / `dnf` (Homebrew not required).
+See [`docs/LINUX.md`](docs/LINUX.md) for the distro compatibility matrix (Ubuntu,
+Debian, Raspberry Pi OS, Arch, Manjaro, Fedora, Void) and ARM64 coverage.
 `tmux` and `herdr` are both first-class on the server profile; Herdr does **not**
 authorize Hermes, Codex, Cursor, Ollama, or any other provider.
 
