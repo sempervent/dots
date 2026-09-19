@@ -70,6 +70,27 @@ for g in data.get("supergroups") or []:
 PY
 }
 
+# Map optional component id → Brewfile path (relative to DIR) via components.toml.
+# Authority: optional `brewfile` field on [[components]]. No hard-coded case map.
+dots_component_brewfile() {
+	local id="$1"
+	[[ -n ${id} ]] || return 1
+	WANT="${id}" dots_toml_query "$(dots_components_registry_path)" <<'PY'
+import os
+
+want = os.environ.get("WANT", "").strip()
+for c in data.get("components") or []:
+    if (c.get("id") or "").strip() != want:
+        continue
+    bf = (c.get("brewfile") or "").strip()
+    if bf:
+        print(bf)
+        raise SystemExit(0)
+    raise SystemExit(1)
+raise SystemExit(1)
+PY
+}
+
 dots_component_is_known() {
 	local want="$1" id
 	while IFS= read -r id; do

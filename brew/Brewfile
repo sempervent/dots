@@ -1,11 +1,13 @@
-# Authoritative Homebrew entrypoint for dots.
-# Prefer profile package groups via bootstrap; this file aggregates all
-# workstation groups for bare `./setup.sh` (backward compatible).
+# Convenience / backward-compatible workstation aggregate.
 #
-# Groups live in brew/groups/*.Brewfile and are selected by profile:
-#   core | modern | workstation | infra | media | gui | server
+# Canonical Homebrew ownership:
+#   brew/groups/*.Brewfile          — profile package groups
+#   brew/Brewfile.<component>       — optional --with components
 #
-# Optional AI / agent components: brew/Brewfile.<component> via --with
+# Prefer profile groups via bootstrap. This file aggregates core+modern+
+# workstation+media+gui+infra for bare `./setup.sh` (legacy path).
+# Do not add new package ownership here — edit the group/component Brewfile.
+# scripts/tests/repository_contract_test.sh checks aggregate ↔ group drift.
 
 # Core + modern (universal CLI)
 brew "bash"
@@ -34,6 +36,7 @@ brew "fastfetch"
 brew "bat"
 brew "jq"
 brew "yq"
+brew "lazygit"
 brew "htop"
 brew "btop"
 brew "tree"

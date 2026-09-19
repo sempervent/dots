@@ -23,6 +23,7 @@ run scripts/profile_resolution_test.sh
 run scripts/provider_isolation_test.sh
 run scripts/tests/custom_profile_test.sh
 run scripts/tests/component_supergroups_test.sh
+run scripts/tests/repository_contract_test.sh
 run scripts/tests/multiplexer_nesting_test.sh
 run scripts/tests/stage0_prereqs_test.sh
 run scripts/tests/provider_mapping_test.sh

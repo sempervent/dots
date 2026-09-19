@@ -22,27 +22,39 @@
 [[ -n ${DIR:-} && -f ${DIR}/helpers/packages.sh ]] && source "${DIR}/helpers/packages.sh" 2>/dev/null || true
 # shellcheck source=cask_apps.sh
 [[ -n ${DIR:-} && -f ${DIR}/helpers/cask_apps.sh ]] && source "${DIR}/helpers/cask_apps.sh" 2>/dev/null || true
-
-# Map optional component id → Brewfile path (relative to DIR). Empty = none.
-dots_component_brewfile() {
-	local id="$1"
-	case "${id}" in
-	herdr) printf 'brew/Brewfile.herdr\n' ;;
-	hermes) printf 'brew/Brewfile.hermes\n' ;;
-	ollama) printf 'brew/Brewfile.ollama\n' ;;
-	llamacpp) printf 'brew/Brewfile.llamacpp\n' ;;
-	archify | skills | ai-skills) printf 'brew/Brewfile.archify\n' ;;
-	drawthings) printf 'brew/Brewfile.drawthings\n' ;;
-	opencode) printf 'brew/Brewfile.opencode\n' ;;
-	codex) printf 'brew/Brewfile.codex\n' ;;
-	cursor) printf 'brew/Brewfile.cursor\n' ;;
-	fluidvoice) printf 'brew/Brewfile.fluidvoice\n' ;;
-	images) printf 'brew/Brewfile.images\n' ;;
-	tex) printf 'brew/Brewfile.tex\n' ;;
-	mactools) printf 'brew/Brewfile.mactools\n' ;;
-	*) return 1 ;;
-	esac
-}
+# Brewfile lookup lives in helpers/components.sh (components.toml brewfile=).
+# Ensure it exists when package_state is sourced without components.sh (unit tests).
+if ! declare -F dots_component_brewfile >/dev/null 2>&1; then
+	if [[ -n ${DIR:-} && -f ${DIR}/helpers/components.sh ]]; then
+		# shellcheck source=components.sh
+		# shellcheck disable=SC1091
+		source "${DIR}/helpers/components.sh" 2>/dev/null || true
+	fi
+fi
+# Fallback identical to components.sh if still missing (isolated test envs).
+if ! declare -F dots_component_brewfile >/dev/null 2>&1; then
+	dots_component_brewfile() {
+		local id="$1" registry="${DIR}/configs/components.toml"
+		[[ -n ${id} && -f ${registry} ]] || return 1
+		if ! declare -F dots_toml_query >/dev/null 2>&1; then
+			# shellcheck disable=SC1091
+			source "${DIR}/helpers/toml.sh" || return 1
+		fi
+		WANT="${id}" dots_toml_query "${registry}" <<'PY'
+import os
+want = os.environ.get("WANT", "").strip()
+for c in data.get("components") or []:
+    if (c.get("id") or "").strip() != want:
+        continue
+    bf = (c.get("brewfile") or "").strip()
+    if bf:
+        print(bf)
+        raise SystemExit(0)
+    raise SystemExit(1)
+raise SystemExit(1)
+PY
+	}
+fi
 
 # Parse brew/cask tokens from a Brewfile. Args: file  type=brew|cask|all
 dots_brewfile_tokens() {

@@ -43,10 +43,11 @@ brew_failed=0
 dots_optional_record_failure "opencode" "brew bundle failed"
 dots_optional_record_failure "hermes-desktop" "cask installation failed"
 
-out="$(dots_optional_print_failures 2>&1)"
-echo "${out}" | grep -q 'Optional component failures:' && ok "summary header" || bad "header"
-echo "${out}" | grep -q 'opencode' && ok "lists opencode" || bad "opencode"
-echo "${out}" | grep -q 'hermes-desktop' && ok "lists hermes-desktop" || bad "hermes-desktop"
+# Use summary_* names: helpers/components.sh (pulled in for brewfile lookup) uses local -a out.
+summary_out="$(dots_optional_print_failures 2>&1)"
+echo "${summary_out}" | grep -q 'Optional component failures:' && ok "summary header" || bad "header"
+echo "${summary_out}" | grep -q 'opencode' && ok "lists opencode" || bad "opencode"
+echo "${summary_out}" | grep -q 'hermes-desktop' && ok "lists hermes-desktop" || bad "hermes-desktop"
 [[ ${brew_failed} -eq 1 ]] && ok "brew_failed set" || bad "brew_failed"
 
 # Integration: apply_optional with stubs
@@ -56,13 +57,13 @@ DOTS_WITH_COMPONENTS=(opencode ollama)
 # Re-source not needed; has_component/apply_brewfile already stubbed in this shell
 # But apply_optional_brewfiles was already defined — call it
 apply_optional_brewfiles
-out2="$(dots_optional_print_failures 2>&1)"
-echo "${out2}" | grep -q 'opencode' && ok "apply path records opencode" || {
+summary_out2="$(dots_optional_print_failures 2>&1)"
+echo "${summary_out2}" | grep -q 'opencode' && ok "apply path records opencode" || {
 	bad "apply path opencode"
-	echo "${out2}"
+	echo "${summary_out2}"
 	printf '%s\n' "${OPTIONAL_COMPONENT_FAILURES[@]+"${OPTIONAL_COMPONENT_FAILURES[@]}"}"
 }
-echo "${out2}" | grep -q 'ollama' && bad "ollama should not be listed" || ok "ollama not failed"
+echo "${summary_out2}" | grep -q 'ollama' && bad "ollama should not be listed" || ok "ollama not failed"
 [[ ${brew_failed} -eq 1 ]] && ok "aggregate brew_failed" || bad "aggregate"
 
 # Ensure setup.sh no longer uses only generic message
