@@ -75,7 +75,8 @@ install_prereqs() {
         printf "\n[options]\nDisableSandbox\n" >> /etc/pacman.conf
       fi
     fi
-    pacman -Sy --noconfirm python bash ca-certificates curl >/dev/null
+    # Do not install curl here: on Manjaro it can upgrade libcurl and break pacman -Si/-Qi.
+    pacman -Sy --noconfirm python bash ca-certificates >/dev/null
   elif command -v dnf >/dev/null 2>&1; then
     dnf -y install python3 bash ca-certificates curl >/dev/null
   elif command -v xbps-install >/dev/null 2>&1; then
