@@ -35,6 +35,10 @@ if [[ -n ${DOTS_SMOKE_FAMILY:-} && ${DOTS_SMOKE_FAMILY} != "${mgr}" ]]; then
 	exit 1
 fi
 
+if [[ ${mgr} == pacman ]]; then
+	pacman -Sy --noconfirm >/dev/null
+fi
+
 PROFILE_PACKAGES=(core modern server)
 dots_resolve_package_groups
 echo "  resolved groups: ${DOTS_RESOLVED_GROUPS[*]}"

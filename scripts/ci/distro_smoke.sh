@@ -68,7 +68,13 @@ install_prereqs() {
     DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
       python3 bash ca-certificates curl >/dev/null
   elif command -v pacman >/dev/null 2>&1; then
-    grep -q "^DisableSandbox" /etc/pacman.conf 2>/dev/null || echo DisableSandbox >> /etc/pacman.conf
+    if ! grep -q "^DisableSandbox" /etc/pacman.conf 2>/dev/null; then
+      if grep -q "^\[options\]" /etc/pacman.conf 2>/dev/null; then
+        sed -i "/^\[options\]/a DisableSandbox" /etc/pacman.conf
+      else
+        printf "\n[options]\nDisableSandbox\n" >> /etc/pacman.conf
+      fi
+    fi
     pacman -Sy --noconfirm python bash ca-certificates curl >/dev/null
   elif command -v dnf >/dev/null 2>&1; then
     dnf -y install python3 bash ca-certificates curl >/dev/null
