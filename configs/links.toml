@@ -95,6 +95,24 @@ source = "ranger/colorschemes/catppuccin.py"
 target = "~/.config/ranger/colorschemes/catppuccin.py"
 profiles = ["base", "home", "work", "all"]
 
+# --- mactools portable text configs (additive; safe when apps absent) ---
+[[links]]
+source = "configs/ghostty/config"
+target = "~/.config/ghostty/config"
+platforms = ["darwin"]
+
+[[links]]
+source = "configs/yazi/yazi.toml"
+target = "~/.config/yazi/yazi.toml"
+
+[[links]]
+source = "configs/mise/config.toml"
+target = "~/.config/mise/config.toml"
+
+[[links]]
+source = "configs/lazygit/config.yml"
+target = "~/.config/lazygit/config.yml"
+
 # --- classification of other syms/ entries (not auto-linked) ---
 # active: listed above
 # template: gitconfig.template, docker_config.json.template

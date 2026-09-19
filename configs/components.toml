@@ -133,6 +133,16 @@ local_ai = false
 platforms = ["darwin", "linux"]
 description = "Homebrew TeX Live (CLI)"
 
+[[components]]
+id = "mactools"
+label = "macOS tools"
+category = "workstation"
+cloud = false
+local_ai = false
+omit_from_all = true
+platforms = ["darwin"]
+description = "Optional macOS workstation layer (Vorssaint + automation/audio/CLI; Brewfile.mactools)"
+
 # Declarative selector aggregates. Expand to member component ids before install.
 # Nested groups are not supported in v1.0.1.
 [[supergroups]]

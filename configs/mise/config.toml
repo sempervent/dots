@@ -1,0 +1,7 @@
+# DOTS mise — installed by --with mactools; NOT activated in shell by default.
+# Existing fnm / other runtime managers remain authoritative until you
+# deliberately migrate (see docs/MACTOOLS.md).
+
+[settings]
+# Keep mise quiet until explicitly enabled in your shell profile.
+experimental = false

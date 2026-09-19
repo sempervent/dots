@@ -272,7 +272,8 @@ dots_backup_create() {
 }
 
 # Snapshot unmanaged collisions among inventory (paths that exist and are not
-# already the correct DOTS symlink). Returns 0 even if no snapshot needed.
+# already the correct DOTS symlink). Returns 0 when none needed or snapshot OK;
+# returns 1 when a required snapshot cannot be created (setup must abort).
 dots_backup_snapshot_collisions() {
 	local name="${1:-pre-change}"
 	local reason="${2:-pre-change}"
@@ -303,18 +304,32 @@ dots_backup_snapshot_collisions() {
 	fi
 
 	# Distinguish first-time vs reconfigure naming
-	if [[ ! -f ${HOME}/.config/dots/active-profile ]] && [[ ${name} == "pre-change" ]]; then
+	if [[ ! -f ${HOME}/.config/dots/active-profile ]] && [[ ${name} == "pre-change" || ${name} == "pre-setup" ]]; then
 		name="pre-dots"
 		reason="pre-dots"
 	fi
 
-	local id
-	id="$(dots_backup_create --name "${name}" --reason "${reason}" "${collide[@]}" | tail -1)" || true
-	if [[ -n ${id} && -d "$(dots_backup_root)/${id}" ]]; then
-		echo "Backup created: ${id}"
-		DOTS_LAST_BACKUP_ID="${id}"
-		export DOTS_LAST_BACKUP_ID
+	if [[ ${DRY_RUN:-0} -eq 1 ]]; then
+		echo "[dry-run] would snapshot ${#collide[@]} unmanaged collision(s) before config mutation"
+		return 0
 	fi
+
+	# HARD GATE: unmanaged targets must be snapshotted before any link/config mutate.
+	local id create_rc=0 out
+	set +e
+	out="$(dots_backup_create --name "${name}" --reason "${reason}" "${collide[@]}" 2>&1)"
+	create_rc=$?
+	set -e
+	printf '%s\n' "${out}" >&2
+	id="$(printf '%s\n' "${out}" | tail -1)"
+	# Create prints the snapshot id on the last stdout line; reject empty/missing trees.
+	if [[ ${create_rc} -ne 0 ]] || [[ -z ${id} ]] || [[ ! -d "$(dots_backup_root)/${id}" ]]; then
+		echo "Error: pre-change backup failed; refusing to mutate configuration or symlinks" >&2
+		return 1
+	fi
+	echo "Backup created: ${id}"
+	DOTS_LAST_BACKUP_ID="${id}"
+	export DOTS_LAST_BACKUP_ID
 	return 0
 }
 

@@ -1,0 +1,19 @@
+# Yazi — additive (Ranger remains supported). Keep config minimal.
+
+[manager]
+show_hidden = false
+sort_by = "natural"
+sort_dir_first = true
+linemode = "size"
+
+[preview]
+tab_size = 2
+max_width = 1000
+max_height = 1200
+
+[opener]
+edit = [{ run = 'nvim "$@"', block = true, for = "unix" }]
+open = [
+  { run = 'open "$@"', desc = "Open", for = "macos" },
+  { run = 'xdg-open "$@"', desc = "Open", for = "linux" },
+]

@@ -1,0 +1,15 @@
+# DOTS Ghostty — additive terminal (iTerm remains primary)
+# Theme: Catppuccin Mocha (built-in Ghostty theme name)
+#
+# Optional Herdr session:
+#   ghostty -e herdr
+# or set command = herdr in a dedicated profile if you prefer.
+
+theme = Catppuccin Mocha
+font-family = JetBrainsMono Nerd Font
+font-size = 13
+cursor-style = bar
+window-padding-x = 8
+window-padding-y = 6
+confirm-close-surface = false
+shell-integration-features = no-cursor,sudo,title

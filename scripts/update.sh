@@ -19,7 +19,7 @@ bash "${DOTS_DIR}/setup.sh"
 if command -v brew >/dev/null 2>&1; then
   echo -e "${BLUE}Optional: brew upgrade for Brewfile packages${NC}"
   echo "  brew bundle --file=${DOTS_DIR}/brew/Brewfile"
-  echo "  (optional: brew bundle --file=brew/Brewfile.herdr|.hermes|.ollama|.archify|.drawthings|.opencode|.codex|.cursor|.fluidvoice|.images|.tex after --with)"
+  echo "  (optional: brew bundle --file=brew/Brewfile.herdr|.hermes|.ollama|.archify|.drawthings|.opencode|.codex|.cursor|.fluidvoice|.images|.tex|.mactools after --with)"
 fi
 
 if [[ -f "${DOTS_DIR}/scripts/check.sh" ]]; then
