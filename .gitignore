@@ -29,6 +29,9 @@ tools/opencode_mcp/.venv/
 tools/codex_mcp/.venv/
 tools/**/__pycache__/
 
+# Pinned lint toolchain cache (scripts/ci/ensure_lint_tools.sh)
+.tools/
+
 # mactools vendor exports (may contain paths / secrets) — keep README.md tracked
 configs/mactools/**/*.plist
 configs/mactools/**/*.kmmacros

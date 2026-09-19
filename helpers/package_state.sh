@@ -219,12 +219,11 @@ dots_pkg_outdated_casks() {
 	dots_pkg_brew outdated --cask --quiet 2>/dev/null || true
 }
 
-# Classify and print report. Sets count globals.
-# Arg1: quiet=1 suppress detail sections
-# Arg2: fast=1 skip outdated queries (for ./dots status)
-dots_pkg_status_report() {
-	local quiet="${1:-0}"
-	local fast="${2:-0}"
+# Classify installed inventory against already-populated
+# DOTS_DESIRED_FORMULAE[] / DOTS_DESIRED_CASKS[]. Sets count globals.
+# Arg1: fast=1 skip outdated queries (for ./dots status)
+dots_pkg_classify_resolved() {
+	local fast="${1:-0}"
 	DOTS_PKG_COUNT_MANAGED=0
 	DOTS_PKG_COUNT_MISSING=0
 	DOTS_PKG_COUNT_OUTDATED=0
@@ -235,18 +234,9 @@ dots_pkg_status_report() {
 	DOTS_PKG_UNDECLARED_CASKS=()
 	DOTS_PKG_MISSING_LINES=()
 	DOTS_PKG_OUTDATED_LINES=()
-	DOTS_RESOLVED_GROUPS=("${DOTS_RESOLVED_GROUPS[@]+"${DOTS_RESOLVED_GROUPS[@]}"}")
-	DOTS_WITH_COMPONENTS=("${DOTS_WITH_COMPONENTS[@]+"${DOTS_WITH_COMPONENTS[@]}"}")
-
-	if ! command -v "${DOTS_BREW_BIN:-brew}" >/dev/null 2>&1 && [[ -z ${DOTS_PKG_MOCK_LEAVES+x} ]]; then
-		[[ ${quiet} -eq 0 ]] && echo "Packages: Homebrew unavailable"
-		return 0
-	fi
-
-	dots_desired_packages_resolve
 
 	local -a leaves=() formulae=() casks=() out_f=() out_c=()
-	local line
+	local line f app
 
 	while IFS= read -r line; do
 		[[ -n ${line} ]] && leaves+=("${line}")
@@ -266,7 +256,6 @@ dots_pkg_status_report() {
 		done < <(dots_pkg_outdated_casks)
 	fi
 
-	local f short app
 	for f in "${DOTS_DESIRED_FORMULAE[@]+"${DOTS_DESIRED_FORMULAE[@]}"}"; do
 		if dots_pkg_in_list "${f}" "${formulae[@]+"${formulae[@]}"}"; then
 			DOTS_PKG_COUNT_MANAGED=$((DOTS_PKG_COUNT_MANAGED + 1))
@@ -305,7 +294,6 @@ dots_pkg_status_report() {
 		fi
 	done
 
-	# Undeclared: leaves not in desired; casks not in desired
 	for f in "${leaves[@]+"${leaves[@]}"}"; do
 		if ! dots_pkg_in_list "${f}" "${DOTS_DESIRED_FORMULAE[@]+"${DOTS_DESIRED_FORMULAE[@]}"}"; then
 			DOTS_PKG_COUNT_UNDECLARED=$((DOTS_PKG_COUNT_UNDECLARED + 1))
@@ -318,15 +306,23 @@ dots_pkg_status_report() {
 			DOTS_PKG_UNDECLARED_CASKS+=("${f}")
 		fi
 	done
+}
 
-	[[ ${quiet} -eq 1 ]] && return 0
-
+# Initialize print arrays if classify never ran (set -u safety)
+dots_pkg_status_print() {
+	DOTS_PKG_EXTERNAL_LINES=("${DOTS_PKG_EXTERNAL_LINES[@]+"${DOTS_PKG_EXTERNAL_LINES[@]}"}")
+	DOTS_PKG_UNDECLARED_FORMULAE=("${DOTS_PKG_UNDECLARED_FORMULAE[@]+"${DOTS_PKG_UNDECLARED_FORMULAE[@]}"}")
+	DOTS_PKG_UNDECLARED_CASKS=("${DOTS_PKG_UNDECLARED_CASKS[@]+"${DOTS_PKG_UNDECLARED_CASKS[@]}"}")
+	DOTS_PKG_MISSING_LINES=("${DOTS_PKG_MISSING_LINES[@]+"${DOTS_PKG_MISSING_LINES[@]}"}")
+	DOTS_PKG_OUTDATED_LINES=("${DOTS_PKG_OUTDATED_LINES[@]+"${DOTS_PKG_OUTDATED_LINES[@]}"}")
 	echo "Packages:"
-	echo "  managed:      ${DOTS_PKG_COUNT_MANAGED}"
-	echo "  missing:      ${DOTS_PKG_COUNT_MISSING}"
-	echo "  outdated:     ${DOTS_PKG_COUNT_OUTDATED}"
-	echo "  external:     ${DOTS_PKG_COUNT_EXTERNAL}"
-	echo "  undeclared:   ${DOTS_PKG_COUNT_UNDECLARED}"
+	echo "  managed:      ${DOTS_PKG_COUNT_MANAGED:-0}"
+	echo "  missing:      ${DOTS_PKG_COUNT_MISSING:-0}"
+	echo "  outdated:     ${DOTS_PKG_COUNT_OUTDATED:-0}"
+	echo "  external:     ${DOTS_PKG_COUNT_EXTERNAL:-0}"
+	echo "  undeclared:   ${DOTS_PKG_COUNT_UNDECLARED:-0}"
+	DOTS_RESOLVED_GROUPS=("${DOTS_RESOLVED_GROUPS[@]+"${DOTS_RESOLVED_GROUPS[@]}"}")
+	DOTS_WITH_COMPONENTS=("${DOTS_WITH_COMPONENTS[@]+"${DOTS_WITH_COMPONENTS[@]}"}")
 	if [[ ${#DOTS_RESOLVED_GROUPS[@]} -gt 0 ]]; then
 		echo "  groups:       ${DOTS_RESOLVED_GROUPS[*]}"
 	fi
@@ -334,10 +330,10 @@ dots_pkg_status_report() {
 		echo "  components:   ${DOTS_WITH_COMPONENTS[*]}"
 	fi
 
+	local e
 	if [[ ${#DOTS_PKG_EXTERNAL_LINES[@]} -gt 0 ]]; then
 		echo ""
 		echo "External:"
-		local e
 		for e in "${DOTS_PKG_EXTERNAL_LINES[@]}"; do
 			printf '  %s\n' "${e}"
 		done
@@ -373,6 +369,26 @@ dots_pkg_status_report() {
 	echo ""
 	echo "Note: undeclared/external are advisories. DOTS never runs brew bundle cleanup"
 	echo "      or uninstalls undeclared software automatically."
+}
+
+# Resolve desired set, classify inventory, optionally print.
+# Arg1: quiet=1 suppress detail sections
+# Arg2: fast=1 skip outdated queries (for ./dots status)
+dots_pkg_status_report() {
+	local quiet="${1:-0}"
+	local fast="${2:-0}"
+	DOTS_RESOLVED_GROUPS=("${DOTS_RESOLVED_GROUPS[@]+"${DOTS_RESOLVED_GROUPS[@]}"}")
+	DOTS_WITH_COMPONENTS=("${DOTS_WITH_COMPONENTS[@]+"${DOTS_WITH_COMPONENTS[@]}"}")
+
+	if ! command -v "${DOTS_BREW_BIN:-brew}" >/dev/null 2>&1 && [[ -z ${DOTS_PKG_MOCK_LEAVES+x} ]]; then
+		[[ ${quiet} -eq 0 ]] && echo "Packages: Homebrew unavailable"
+		return 0
+	fi
+
+	dots_desired_packages_resolve
+	dots_pkg_classify_resolved "${fast}"
+	[[ ${quiet} -eq 1 ]] && return 0
+	dots_pkg_status_print
 }
 
 # Suggest Brewfile declaration for an undeclared package (no file edits).

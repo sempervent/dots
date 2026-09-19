@@ -5,6 +5,12 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "${ROOT}"
 
+# shellcheck source=ensure_lint_tools.sh
+source "${ROOT}/scripts/ci/ensure_lint_tools.sh"
+# Install/verify pinned ShellCheck + shfmt (SHA-256 checked). Fails clearly
+# if the pinned versions cannot be obtained — never silently uses a mismatch.
+dots_ensure_lint_tools
+
 # Curated lint set: entrypoints, helpers, CI harness, model subsystem, key tests.
 # Deliberately excludes shell/ (zsh) and noisy legacy scripts.
 SCRIPTS=(
@@ -37,6 +43,7 @@ SCRIPTS=(
 	scripts/pull_models.sh
 	scripts/profile_resolution_test.sh
 	scripts/ci/prepare_runner.sh
+	scripts/ci/ensure_lint_tools.sh
 	scripts/ci/lint.sh
 	scripts/ci/test.sh
 	scripts/ci/distro_smoke.sh
@@ -76,6 +83,7 @@ done
 
 echo "=== ShellCheck (${#SCRIPTS[@]} files) ==="
 # Intentional disables for sourced dynamic paths and common test idioms.
+# SC2218 is NOT ignored — fix call-before-definition structurally.
 shellcheck -x -e SC1091,SC2011,SC2016,SC1007,SC2034,SC2015,SC2317,SC2119,SC2329,SC2097,SC2098,SC2010,SC2012 \
 	"${SCRIPTS[@]}"
 
@@ -90,6 +98,7 @@ shfmt -d -s \
 	shell/runtime.sh shell/fnm.sh \
 	scripts/pull_models.sh \
 	scripts/ci/prepare_runner.sh \
+	scripts/ci/ensure_lint_tools.sh \
 	scripts/ci/lint.sh \
 	scripts/ci/test.sh \
 	scripts/ci/distro_smoke.sh \
