@@ -103,8 +103,13 @@ Options:
   --with <list>     Comma-separated components and/or supergroups.
 $(dots_print_selector_help | sed 's/^/                    /')
   --with=<list>     Same as --with <list>
+  --without <list>  Exclude selectors after expansion (profile without / CLI)
+  --without=<list>  Same as --without <list>
   --dry-run         Preview actions without modifying the machine
   -h, --help        Show this help
+
+Discover selectors: ./dots components list
+Docs: https://sempervent.github.io/dots/using/components/
 
 Consent vs presence:
   A binary already on PATH does NOT authorize DOTS to configure it.

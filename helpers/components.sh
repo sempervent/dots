@@ -364,9 +364,9 @@ dots_print_selector_help() {
 	dots_toml_query "$(dots_components_registry_path)" <<'PY'
 for c in data.get("components") or []:
     cid = (c.get("id") or "").strip()
-    lab = (c.get("label") or cid).strip()
+    desc = (c.get("description") or c.get("label") or cid).strip()
     if cid:
-        print("  %-12s %s" % (cid, lab))
+        print("  %-12s %s" % (cid, desc))
 PY
 	echo "Supergroups:"
 	dots_toml_query "$(dots_components_registry_path)" <<'PY'
@@ -380,6 +380,7 @@ for g in groups:
     if gid:
         print("  %-12s %s%s" % (gid, lab, (" — " + desc) if desc else ""))
 PY
+	echo "List: ./dots components list"
 }
 
 # Validate CSV / list of component names (not groups); print unknowns to stderr.
@@ -487,3 +488,205 @@ dots_print_supergroup_resolution() {
 	echo "requested:"
 	printf '  %s\n' "${groups[@]}"
 }
+
+# --- Read-only component discovery (./dots components) ---------------------
+
+# Print id + short description for one component (registry-driven).
+dots_component_description() {
+	local want="$1"
+	WANT="${want}" dots_toml_query "$(dots_components_registry_path)" <<'PY'
+import os
+want = os.environ.get("WANT", "").strip()
+for c in data.get("components") or []:
+    if (c.get("id") or "").strip() != want:
+        continue
+    print((c.get("description") or c.get("label") or want).strip())
+    raise SystemExit(0)
+raise SystemExit(1)
+PY
+}
+
+dots_component_label() {
+	local want="$1"
+	WANT="${want}" dots_toml_query "$(dots_components_registry_path)" <<'PY'
+import os
+want = os.environ.get("WANT", "").strip()
+for c in data.get("components") or []:
+    if (c.get("id") or "").strip() != want:
+        continue
+    print((c.get("label") or want).strip())
+    raise SystemExit(0)
+raise SystemExit(1)
+PY
+}
+
+# List components + supergroups with host compatibility (read-only).
+dots_components_list() {
+	echo "Components (configs/components.toml):"
+	local id desc ok reason
+	while IFS= read -r id; do
+		[[ -z ${id} ]] && continue
+		desc="$(dots_component_description "${id}" 2>/dev/null || true)"
+		if dots_component_supported_here "${id}"; then
+			printf '  %-14s %s\n' "${id}" "${desc}"
+		else
+			reason="$(dots_component_unsupported_reason "${id}" 2>/dev/null || echo "unsupported here")"
+			printf '  %-14s %s  [%s]\n' "${id}" "${desc}" "${reason}"
+		fi
+	done < <(dots_component_ids)
+	echo ""
+	echo "Supergroups:"
+	dots_toml_query "$(dots_components_registry_path)" <<'PY'
+for g in data.get("supergroups") or []:
+    gid = (g.get("id") or "").strip()
+    if not gid:
+        continue
+    lab = (g.get("label") or gid).strip()
+    desc = (g.get("description") or "").strip()
+    members = ", ".join(str(m).strip() for m in (g.get("members") or []))
+    print("  %-14s %s" % (gid, lab))
+    if desc:
+        print("                 %s" % desc)
+    print("                 members: %s" % members)
+PY
+	echo ""
+	echo "Select with: ./dots setup --with <id>[,id…]   or profile with = […]"
+	echo "Docs: https://sempervent.github.io/dots/using/components/"
+}
+
+# Show active profile / groups / components from machine state (informational).
+dots_components_active() {
+	local profile="(none)" pkg_groups="(none)" comps="(none)"
+	if declare -F dots_state_load_active >/dev/null 2>&1 && dots_state_load_active 2>/dev/null; then
+		profile="${DOTS_ACTIVE_PROFILE:-unknown}"
+		pkg_groups="${DOTS_ACTIVE_PACKAGE_GROUPS:-${DOTS_PACKAGE_GROUPS:-(none)}}"
+		comps="${DOTS_ACTIVE_COMPONENTS:-${DOTS_LAST_WITH_INFO:-(none)}}"
+		[[ -z ${comps} ]] && comps="(none)"
+		[[ -z ${pkg_groups} ]] && pkg_groups="(none)"
+	fi
+	echo "Active selection (read-only / informational):"
+	echo "  profile:     ${profile}"
+	echo "  groups:      ${pkg_groups}"
+	echo "  components:  ${comps}"
+	echo ""
+	echo "Consent disclaimer:"
+	echo "  DOTS_LAST_WITH_INFO / DOTS_ACTIVE_COMPONENTS record the last"
+	echo "  bootstrap selection for discovery only. They do NOT authorize"
+	echo "  mutating AI setup. Binary presence ≠ consent."
+	echo "  Mutating setup still needs profile with / ./setup.sh --with"
+	echo "  for that run. Exclusions: profile without = […] / --without."
+	echo ""
+	echo "Detail: ./dots components show <id>"
+	echo "Docs: https://sempervent.github.io/dots/using/components/"
+}
+
+# Show one component or supergroup (Brewfile tokens without invoking brew).
+dots_components_show() {
+	local id="$1"
+	[[ -n ${id} ]] || {
+		echo "Usage: ./dots components show ID" >&2
+		return 1
+	}
+	if dots_supergroup_is_known "${id}"; then
+		echo "Supergroup: ${id}"
+		WANT="${id}" dots_toml_query "$(dots_components_registry_path)" <<'PY'
+import os
+want = os.environ.get("WANT", "").strip()
+for g in data.get("supergroups") or []:
+    if (g.get("id") or "").strip() != want:
+        continue
+    print("  label:       %s" % ((g.get("label") or want).strip()))
+    print("  description: %s" % ((g.get("description") or "").strip() or "(none)"))
+    members = [str(m).strip() for m in (g.get("members") or [])]
+    print("  members:")
+    for m in members:
+        print("    - %s" % m)
+    raise SystemExit(0)
+raise SystemExit(1)
+PY
+		echo "  activate:    ./dots setup --with ${id}"
+		return 0
+	fi
+	if ! dots_component_is_known "${id}"; then
+		echo "Error: unknown component or supergroup '${id}'" >&2
+		dots_print_selector_help >&2
+		return 1
+	fi
+	echo "Component: ${id}"
+	WANT="${id}" dots_toml_query "$(dots_components_registry_path)" <<'PY'
+import os
+want = os.environ.get("WANT", "").strip()
+for c in data.get("components") or []:
+    if (c.get("id") or "").strip() != want:
+        continue
+    print("  label:       %s" % ((c.get("label") or want).strip()))
+    print("  category:    %s" % ((c.get("category") or "").strip() or "(none)"))
+    print("  description: %s" % ((c.get("description") or "").strip() or "(none)"))
+    plats = c.get("platforms") or ["darwin", "linux"]
+    print("  platforms:   %s" % ", ".join(str(p) for p in plats))
+    bf = (c.get("brewfile") or "").strip()
+    print("  brewfile:    %s" % (bf or "(none)"))
+    if c.get("omit_from_all"):
+        print("  omit_from_all: yes")
+    raise SystemExit(0)
+raise SystemExit(1)
+PY
+	if dots_component_supported_here "${id}"; then
+		echo "  host:        supported"
+	else
+		echo "  host:        $(dots_component_unsupported_reason "${id}" 2>/dev/null || echo unsupported)"
+	fi
+	local rel
+	if rel="$(dots_component_brewfile "${id}" 2>/dev/null)"; then
+		if [[ -f ${DIR}/${rel} ]]; then
+			echo "  formulae/casks (from ${rel}, brew not invoked):"
+			local kind token
+			if ! declare -F dots_brewfile_tokens >/dev/null 2>&1; then
+				# shellcheck source=package_state.sh
+				[[ -f ${DIR}/helpers/package_state.sh ]] && source "${DIR}/helpers/package_state.sh" 2>/dev/null || true
+			fi
+			if declare -F dots_brewfile_tokens >/dev/null 2>&1; then
+				while IFS=$'\t' read -r kind token; do
+					[[ -z ${token} ]] && continue
+					printf '    %s %s\n' "${kind}" "${token}"
+				done < <(dots_brewfile_tokens "${DIR}/${rel}" all)
+			else
+				echo "    (Brewfile parse helper unavailable)"
+			fi
+		fi
+	fi
+	# Skills from manifest for skill packs
+	case "${id}" in
+	skills | ai-skills | archify)
+		echo "  skills (configs/skills/manifest.toml):"
+		PACK="${id}" dots_toml_query "${DIR}/configs/skills/manifest.toml" <<'PY'
+import os
+pack = os.environ.get("PACK", "").strip()
+packs = data.get("packs") or {}
+if pack == "archify":
+    print("    (Archify skill only — also included when --with skills)")
+    print("    Shared Brewfile.archify with skills / ai-skills")
+    raise SystemExit(0)
+pdata = packs.get(pack) or {}
+groups = set(pdata.get("groups") or [])
+desc = (pdata.get("description") or "").strip()
+if desc:
+    print("    pack: %s" % desc)
+printed = False
+for s in data.get("skills") or []:
+    if not s.get("enabled", True):
+        continue
+    g = (s.get("group") or "").strip()
+    if g not in groups:
+        continue
+    print("    - %s (%s)" % ((s.get("name") or ""), g))
+    printed = True
+if not printed:
+    print("    (no enabled skills for this pack)")
+PY
+		echo "  note: Brewfile.archify is shared by archify/skills/ai-skills"
+		;;
+	esac
+	echo "  activate:    ./dots setup --with ${id}"
+}
+

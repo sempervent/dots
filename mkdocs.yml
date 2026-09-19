@@ -84,6 +84,7 @@ nav:
       - Repository layout: concepts/repository-layout.md
   - Using DOTS:
       - Recipes: using/recipes.md
+      - Components and --with: using/components.md
       - Skills: using/skills.md
       - Tools catalog: using/tools.md
       - Extending: using/extending.md
@@ -99,6 +100,7 @@ nav:
       - CLI: reference/cli.md
       - Generated:
           - Components: reference/generated/components.md
+          - --with options: reference/generated/with-options.md
           - Supergroups: reference/generated/supergroups.md
           - Package groups: reference/generated/package-groups.md
           - Skills: reference/generated/skills.md

@@ -110,6 +110,9 @@ Then follow the matching recipe in `docs/using/extending.md`.
 - Backup unmanaged collisions before replace; backup failure aborts
 - External casks: warn → `brew install --cask --adopt` → leave on failure; never `--force`
 - AI consent: profile / `--with` only — presence ≠ authorization
+- **known ≠ selected ≠ installed** — optional Brewfile packages can be INACTIVE
+  (known owner, not selected) vs UNDECLARED (no owner). Read
+  `docs/using/components.md` when changing `--with` / ownership / package states.
 - Cursor is never auto-routed (`skills/agent-router/SKILL.md`)
 - Do not invent coding cwd; do not default agents to `$HOME` or this repo
 - Do not pull models in CI

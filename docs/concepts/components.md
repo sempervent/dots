@@ -3,6 +3,9 @@
 Optional components are selected via profile `with` / `without` or
 `./setup.sh --with <ids>`.
 
+**Human guide:** [Components and `--with`](../using/components.md)
+(known ≠ selected ≠ installed; INACTIVE vs UNDECLARED; consent).
+
 Authority: `configs/components.toml`
 ([generated components](../reference/generated/components.md),
 [generated supergroups](../reference/generated/supergroups.md)).

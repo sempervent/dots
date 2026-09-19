@@ -17,8 +17,12 @@ Usage:
   ./dots                     interactive setup
   ./dots setup               setup / reconfigure
   ./dots status              current state (read-only)
+  ./dots components          optional components / --with selectors
+  ./dots components list     registry + host compatibility
+  ./dots components active   last-selected components (informational)
   ./dots packages            package ownership / drift
   ./dots packages status     full package audit
+  ./dots packages explain N  explain one package's ownership state
   ./dots packages outdated   outdated managed packages
   ./dots packages upgrade    upgrade DOTS-managed packages
   ./dots packages adopt …    suggest Brewfile declaration (no auto-edit)
@@ -31,6 +35,10 @@ Usage:
   ./dots update              update DOTS repo + reapply
   ./dots help                this help
   ./dots --version
+
+Optional components use profile with= or ./setup.sh --with <ids>
+(see ./dots components list). Docs:
+  https://sempervent.github.io/dots/using/components/
 
 Automation / expert scripts (still supported):
   ./bootstrap.sh   ./setup.sh   ./configure.sh
@@ -61,23 +69,24 @@ Options:
 
 Selectors (--with / --without):
   Components:
-    herdr        Herdr
-    hermes       Hermes
-    ollama       Ollama
-    llamacpp     llama.cpp
-    archify      Archify
-    skills       Engineering skills
-    ai-skills    AI skills
-    drawthings   Draw Things
-    opencode     OpenCode
-    codex        Codex
-    cursor       Cursor
-    fluidvoice   FluidVoice
-    images       Images toolkit
-    tex          TeX
-    mactools     macOS tools
+    herdr        Terminal multiplexer (Brewfile.herdr)
+    hermes       Hermes agent CLI (+ macOS hermes-desktop)
+    ollama       Local LLM runtime (no models pulled)
+    llamacpp     llama.cpp runtime (Homebrew; models via pull_models.sh)
+    archify      Archify skill only (also included in --with skills)
+    skills       Curated engineering skill pack (includes Archify)
+    ai-skills    Curated AI/agent engineering skill pack
+    drawthings   Draw Things CLI + MCP bridge + img (GUI/models are macOS-oriented)
+    opencode     Local/general coding adapter
+    codex        Frontier coding via Homebrew cask Codex
+    cursor       Cursor Agent CLI (explicit opt-in)
+    fluidvoice   Local voice-to-text dictation app with optional AI enhancement
+    images       Deterministic image toolkit (Magick, etc.)
+    tex          Homebrew TeX Live (CLI)
+    mactools     Optional macOS workstation layer (Vorssaint + automation/audio/CLI; Brewfile.mactools)
   Supergroups:
     ai           AI applications — All supported AI applications for this platform
+  List: ./dots components list
 
 Happy paths:
   ./bootstrap.sh --profile home      # personal Mac (auto-provisions brew/python)
@@ -112,26 +121,32 @@ Install / refresh dotfiles (idempotent). Safe to re-run.
 Options:
   --with <list>     Comma-separated components and/or supergroups.
                     Components:
-                      herdr        Herdr
-                      hermes       Hermes
-                      ollama       Ollama
-                      llamacpp     llama.cpp
-                      archify      Archify
-                      skills       Engineering skills
-                      ai-skills    AI skills
-                      drawthings   Draw Things
-                      opencode     OpenCode
-                      codex        Codex
-                      cursor       Cursor
-                      fluidvoice   FluidVoice
-                      images       Images toolkit
-                      tex          TeX
-                      mactools     macOS tools
+                      herdr        Terminal multiplexer (Brewfile.herdr)
+                      hermes       Hermes agent CLI (+ macOS hermes-desktop)
+                      ollama       Local LLM runtime (no models pulled)
+                      llamacpp     llama.cpp runtime (Homebrew; models via pull_models.sh)
+                      archify      Archify skill only (also included in --with skills)
+                      skills       Curated engineering skill pack (includes Archify)
+                      ai-skills    Curated AI/agent engineering skill pack
+                      drawthings   Draw Things CLI + MCP bridge + img (GUI/models are macOS-oriented)
+                      opencode     Local/general coding adapter
+                      codex        Frontier coding via Homebrew cask Codex
+                      cursor       Cursor Agent CLI (explicit opt-in)
+                      fluidvoice   Local voice-to-text dictation app with optional AI enhancement
+                      images       Deterministic image toolkit (Magick, etc.)
+                      tex          Homebrew TeX Live (CLI)
+                      mactools     Optional macOS workstation layer (Vorssaint + automation/audio/CLI; Brewfile.mactools)
                     Supergroups:
                       ai           AI applications — All supported AI applications for this platform
+                    List: ./dots components list
   --with=<list>     Same as --with <list>
+  --without <list>  Exclude selectors after expansion (profile without / CLI)
+  --without=<list>  Same as --without <list>
   --dry-run         Preview actions without modifying the machine
   -h, --help        Show this help
+
+Discover selectors: ./dots components list
+Docs: https://sempervent.github.io/dots/using/components/
 
 Consent vs presence:
   A binary already on PATH does NOT authorize DOTS to configure it.
@@ -249,21 +264,43 @@ User overrides: ~/.config/dots/models.toml
 Usage:
   ./dots packages              interactive menu (TTY) or status
   ./dots packages status       full ownership report (read-only)
+  ./dots packages explain NAME explain one package (owners + activate hint)
   ./dots packages outdated     outdated managed packages
   ./dots packages upgrade      upgrade packages in the resolved desired set
   ./dots packages upgrade --all
-                               also upgrade undeclared Homebrew packages (opt-in)
+                               also upgrade Homebrew packages outside desired set
   ./dots packages adopt NAME [--group G|--component C] [--cask]
                                print suggested Brewfile declaration (no auto-edit)
+                               (packages with component owners → use --with instead)
 
 Ownership vocabulary:
   managed     declared by resolved DOTS config + package-manager owned
   missing     declared but absent
   outdated    declared, managed, update available
   external    declared; app exists outside Homebrew ownership
-  undeclared  installed (leaves/casks) but not in resolved desired set
+  inactive    installed; known DOTS owner(s) but none selected
+  undeclared  installed; no DOTS group/component owner
+
+known ≠ selected ≠ installed. Upgrade default = active managed only.
+Docs: https://sempervent.github.io/dots/using/components/
 
 DOTS never runs brew bundle cleanup or uninstalls undeclared software.
+```
+
+## `./dots components`
+
+```text
+Usage:
+  ./dots components              interactive menu (TTY) or list
+  ./dots components list         components + supergroups (host compat)
+  ./dots components active       profile / groups / components (informational)
+  ./dots components show ID      detail (Brewfile tokens, skills, members)
+
+Optional components are selected via profile with= or:
+  ./dots setup --with <ids>   ./setup.sh --with <ids>
+
+Active inventory is INFORMATIONAL only — not AI consent.
+Docs: https://sempervent.github.io/dots/using/components/
 ```
 
 ## `./dots profile`

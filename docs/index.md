@@ -17,6 +17,7 @@ Live docs: [https://sempervent.github.io/dots/](https://sempervent.github.io/dot
 |------------|---------|
 | Install and run the first time | [Getting Started](getting-started/index.md) |
 | Understand profiles / packages / components | [Core Concepts](concepts/architecture.md) |
+| Select optional `--with` components | [Components and `--with`](using/components.md) |
 | Pick a machine role (home / work / server / Pi) | [Profiles](concepts/profiles.md) |
 | Use Linux or Raspberry Pi | [Linux](platforms/linux.md) · [Raspberry Pi](platforms/raspberry-pi.md) |
 | macOS workstation apps (Vorssaint, Raycast, …) | [mactools](macos/mactools.md) |

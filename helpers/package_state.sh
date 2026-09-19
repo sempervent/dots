@@ -7,10 +7,18 @@
 #   MISSING    declared but absent
 #   OUTDATED   declared, managed, update available
 #   EXTERNAL   declared (usually cask); artifact present but brew does not own it
-#   UNDECLARED brew leaves / casks installed but not in desired set
+#   INACTIVE   installed; known DOTS owner(s) exist but none are active
+#   UNDECLARED brew leaves / casks installed; no DOTS group/component owner
+#
+# known ≠ selected ≠ installed:
+#   known     = appears in brew/groups/*.Brewfile or a component brewfile=
+#   selected  = active package group or active --with / LAST_WITH_INFO component
+#   installed = present on the machine
 #
 # Desired set = union of active package-group Brewfiles + selected optional
-# component Brewfiles. Inactive optional Brewfiles are ignored.
+# component Brewfiles. Inactive optional Brewfiles are ignored for MANAGED.
+# Ownership catalog (for INACTIVE vs UNDECLARED) scans those same sources —
+# never the aggregate brew/Brewfile.
 #
 # Never runs: brew bundle cleanup / uninstall of undeclared software.
 #
@@ -90,6 +98,181 @@ dots_brewfile_tokens() {
 			;;
 		esac
 	done <"${file}"
+}
+
+# --- Ownership catalog (group:<name> / component:<id>) ---------------------
+# Index lines: shortname<TAB>owner  (owner = group:X or component:Y)
+# Built from brew/groups/*.Brewfile + components.toml brewfile= only.
+
+dots_pkg_ownership_reset() {
+	DOTS_PKG_OWNERSHIP_INDEX=""
+	DOTS_PKG_OWNERSHIP_BUILT=0
+}
+
+# Append ownership rows from one Brewfile. Args: file  owner_tag
+_dots_pkg_ownership_ingest_file() {
+	local file="$1" owner="$2"
+	local kind token short
+	[[ -f ${file} ]] || return 0
+	while IFS=$'\t' read -r kind token; do
+		[[ -z ${token} ]] && continue
+		short="$(dots_pkg_short "${token}")"
+		DOTS_PKG_OWNERSHIP_INDEX="${DOTS_PKG_OWNERSHIP_INDEX}${short}"$'\t'"${owner}"$'\n'
+	done < <(dots_brewfile_tokens "${file}" all)
+}
+
+# Build global ownership catalog (idempotent per process unless reset).
+dots_pkg_build_ownership_catalog() {
+	if [[ ${DOTS_PKG_OWNERSHIP_BUILT:-0} -eq 1 ]]; then
+		return 0
+	fi
+	DOTS_PKG_OWNERSHIP_INDEX=""
+	local f base id rel
+	# Package groups
+	if [[ -d ${DIR}/brew/groups ]]; then
+		for f in "${DIR}/brew/groups/"*.Brewfile; do
+			[[ -f ${f} ]] || continue
+			base="$(basename "${f}" .Brewfile)"
+			_dots_pkg_ownership_ingest_file "${f}" "group:${base}"
+		done
+	fi
+	# Optional components with brewfile= in registry (not aggregate Brewfile)
+	if declare -F dots_component_ids >/dev/null 2>&1; then
+		while IFS= read -r id; do
+			[[ -z ${id} ]] && continue
+			rel=""
+			if rel="$(dots_component_brewfile "${id}" 2>/dev/null)"; then
+				[[ -n ${rel} && -f ${DIR}/${rel} ]] || continue
+				_dots_pkg_ownership_ingest_file "${DIR}/${rel}" "component:${id}"
+			fi
+		done < <(dots_component_ids)
+	elif [[ -f ${DIR}/configs/components.toml ]]; then
+		# Fallback without components.sh: parse brewfile= via toml helper
+		if ! declare -F dots_toml_query >/dev/null 2>&1 && [[ -f ${DIR}/helpers/toml.sh ]]; then
+			# shellcheck disable=SC1091
+			source "${DIR}/helpers/toml.sh" 2>/dev/null || true
+		fi
+		if declare -F dots_toml_query >/dev/null 2>&1; then
+			while IFS=$'\t' read -r id rel; do
+				[[ -z ${id} || -z ${rel} ]] && continue
+				[[ -f ${DIR}/${rel} ]] || continue
+				_dots_pkg_ownership_ingest_file "${DIR}/${rel}" "component:${id}"
+			done < <(
+				dots_toml_query "${DIR}/configs/components.toml" <<'PY'
+for c in data.get("components") or []:
+    cid = (c.get("id") or "").strip()
+    bf = (c.get("brewfile") or "").strip()
+    if cid and bf:
+        print("%s\t%s" % (cid, bf))
+PY
+			)
+		fi
+	fi
+	DOTS_PKG_OWNERSHIP_BUILT=1
+}
+
+# Print known owners for a package (group:X / component:Y), unique, sorted.
+dots_pkg_known_owners() {
+	local want="$1" short line name owner
+	short="$(dots_pkg_short "${want}")"
+	dots_pkg_build_ownership_catalog
+	local -a out=()
+	local seen=$'\n' o
+	while IFS=$'\t' read -r name owner; do
+		[[ -z ${name} || -z ${owner} ]] && continue
+		[[ ${name} == "${short}" || ${name} == "${want}" ]] || continue
+		case "${seen}" in
+		*$'\n'"${owner}"$'\n'*) continue ;;
+		esac
+		seen="${seen}${owner}"$'\n'
+		out+=("${owner}")
+	done <<<"${DOTS_PKG_OWNERSHIP_INDEX}"
+	if [[ ${#out[@]} -eq 0 ]]; then
+		return 1
+	fi
+	printf '%s\n' "${out[@]}" | LC_ALL=C sort -u
+	return 0
+}
+
+# True if package has at least one known DOTS owner.
+dots_pkg_has_known_owner() {
+	dots_pkg_known_owners "$1" >/dev/null 2>&1
+}
+
+# Print active owners (intersection of known owners with resolved groups /
+# selected components). Any active owner ⇒ package is in desired set / MANAGED.
+dots_pkg_active_owners() {
+	local want="$1" owner kind id
+	local -a known=()
+	local line
+	while IFS= read -r line; do
+		[[ -n ${line} ]] && known+=("${line}")
+	done < <(dots_pkg_known_owners "${want}" 2>/dev/null || true)
+	[[ ${#known[@]} -eq 0 ]] && return 1
+
+	DOTS_RESOLVED_GROUPS=("${DOTS_RESOLVED_GROUPS[@]+"${DOTS_RESOLVED_GROUPS[@]}"}")
+	DOTS_WITH_COMPONENTS=("${DOTS_WITH_COMPONENTS[@]+"${DOTS_WITH_COMPONENTS[@]}"}")
+
+	local -a active=()
+	local g c match
+	for owner in "${known[@]}"; do
+		kind="${owner%%:*}"
+		id="${owner#*:}"
+		match=0
+		case "${kind}" in
+		group)
+			for g in "${DOTS_RESOLVED_GROUPS[@]+"${DOTS_RESOLVED_GROUPS[@]}"}"; do
+				[[ ${g} == "${id}" ]] && match=1 && break
+			done
+			;;
+		component)
+			for c in "${DOTS_WITH_COMPONENTS[@]+"${DOTS_WITH_COMPONENTS[@]}"}"; do
+				[[ ${c} == "${id}" ]] && match=1 && break
+			done
+			;;
+		esac
+		[[ ${match} -eq 1 ]] && active+=("${owner}")
+	done
+	if [[ ${#active[@]} -eq 0 ]]; then
+		return 1
+	fi
+	printf '%s\n' "${active[@]}"
+	return 0
+}
+
+# Suggest how to activate a package that has known component/group owners.
+dots_pkg_activate_hint() {
+	local want="$1"
+	local -a comps=() groups=()
+	local line kind id
+	while IFS= read -r line; do
+		[[ -z ${line} ]] && continue
+		kind="${line%%:*}"
+		id="${line#*:}"
+		case "${kind}" in
+		component) comps+=("${id}") ;;
+		group) groups+=("${id}") ;;
+		esac
+	done < <(dots_pkg_known_owners "${want}" 2>/dev/null || true)
+	if [[ ${#comps[@]} -gt 0 ]]; then
+		local uniq="" c
+		for c in "${comps[@]}"; do
+			case " ${uniq} " in
+			*" ${c} "*) ;;
+			*) uniq="${uniq}${uniq:+ }${c}" ;;
+			esac
+		done
+		echo "./dots setup --with ${uniq// /,}"
+		echo "(or add with = […] to your profile; see https://sempervent.github.io/dots/using/components/)"
+		return 0
+	fi
+	if [[ ${#groups[@]} -gt 0 ]]; then
+		echo "Enable package group(s) in your profile: ${groups[*]}"
+		echo "(configs/packages/groups.toml + profile packages = […])"
+		return 0
+	fi
+	echo "./dots packages adopt ${want}   # no DOTS owner; suggest Brewfile declaration"
+	return 0
 }
 
 # Populate DOTS_DESIRED_FORMULAE[] and DOTS_DESIRED_CASKS[] (unique).
@@ -240,12 +423,17 @@ dots_pkg_classify_resolved() {
 	DOTS_PKG_COUNT_MISSING=0
 	DOTS_PKG_COUNT_OUTDATED=0
 	DOTS_PKG_COUNT_EXTERNAL=0
+	DOTS_PKG_COUNT_INACTIVE=0
 	DOTS_PKG_COUNT_UNDECLARED=0
 	DOTS_PKG_EXTERNAL_LINES=()
+	DOTS_PKG_INACTIVE_FORMULAE=()
+	DOTS_PKG_INACTIVE_CASKS=()
 	DOTS_PKG_UNDECLARED_FORMULAE=()
 	DOTS_PKG_UNDECLARED_CASKS=()
 	DOTS_PKG_MISSING_LINES=()
 	DOTS_PKG_OUTDATED_LINES=()
+
+	dots_pkg_build_ownership_catalog
 
 	local -a leaves=() formulae=() casks=() out_f=() out_c=()
 	local line f app
@@ -306,16 +494,27 @@ dots_pkg_classify_resolved() {
 		fi
 	done
 
+	# Leaves/casks not in desired set: INACTIVE (known owner) vs UNDECLARED
 	for f in "${leaves[@]+"${leaves[@]}"}"; do
 		if ! dots_pkg_in_list "${f}" "${DOTS_DESIRED_FORMULAE[@]+"${DOTS_DESIRED_FORMULAE[@]}"}"; then
-			DOTS_PKG_COUNT_UNDECLARED=$((DOTS_PKG_COUNT_UNDECLARED + 1))
-			DOTS_PKG_UNDECLARED_FORMULAE+=("${f}")
+			if dots_pkg_has_known_owner "${f}"; then
+				DOTS_PKG_COUNT_INACTIVE=$((DOTS_PKG_COUNT_INACTIVE + 1))
+				DOTS_PKG_INACTIVE_FORMULAE+=("${f}")
+			else
+				DOTS_PKG_COUNT_UNDECLARED=$((DOTS_PKG_COUNT_UNDECLARED + 1))
+				DOTS_PKG_UNDECLARED_FORMULAE+=("${f}")
+			fi
 		fi
 	done
 	for f in "${casks[@]+"${casks[@]}"}"; do
 		if ! dots_pkg_in_list "${f}" "${DOTS_DESIRED_CASKS[@]+"${DOTS_DESIRED_CASKS[@]}"}"; then
-			DOTS_PKG_COUNT_UNDECLARED=$((DOTS_PKG_COUNT_UNDECLARED + 1))
-			DOTS_PKG_UNDECLARED_CASKS+=("${f}")
+			if dots_pkg_has_known_owner "${f}"; then
+				DOTS_PKG_COUNT_INACTIVE=$((DOTS_PKG_COUNT_INACTIVE + 1))
+				DOTS_PKG_INACTIVE_CASKS+=("${f}")
+			else
+				DOTS_PKG_COUNT_UNDECLARED=$((DOTS_PKG_COUNT_UNDECLARED + 1))
+				DOTS_PKG_UNDECLARED_CASKS+=("${f}")
+			fi
 		fi
 	done
 }
@@ -323,26 +522,38 @@ dots_pkg_classify_resolved() {
 # Initialize print arrays if classify never ran (set -u safety)
 dots_pkg_status_print() {
 	DOTS_PKG_EXTERNAL_LINES=("${DOTS_PKG_EXTERNAL_LINES[@]+"${DOTS_PKG_EXTERNAL_LINES[@]}"}")
+	DOTS_PKG_INACTIVE_FORMULAE=("${DOTS_PKG_INACTIVE_FORMULAE[@]+"${DOTS_PKG_INACTIVE_FORMULAE[@]}"}")
+	DOTS_PKG_INACTIVE_CASKS=("${DOTS_PKG_INACTIVE_CASKS[@]+"${DOTS_PKG_INACTIVE_CASKS[@]}"}")
 	DOTS_PKG_UNDECLARED_FORMULAE=("${DOTS_PKG_UNDECLARED_FORMULAE[@]+"${DOTS_PKG_UNDECLARED_FORMULAE[@]}"}")
 	DOTS_PKG_UNDECLARED_CASKS=("${DOTS_PKG_UNDECLARED_CASKS[@]+"${DOTS_PKG_UNDECLARED_CASKS[@]}"}")
 	DOTS_PKG_MISSING_LINES=("${DOTS_PKG_MISSING_LINES[@]+"${DOTS_PKG_MISSING_LINES[@]}"}")
 	DOTS_PKG_OUTDATED_LINES=("${DOTS_PKG_OUTDATED_LINES[@]+"${DOTS_PKG_OUTDATED_LINES[@]}"}")
+
 	echo "Packages:"
 	echo "  managed:      ${DOTS_PKG_COUNT_MANAGED:-0}"
 	echo "  missing:      ${DOTS_PKG_COUNT_MISSING:-0}"
 	echo "  outdated:     ${DOTS_PKG_COUNT_OUTDATED:-0}"
 	echo "  external:     ${DOTS_PKG_COUNT_EXTERNAL:-0}"
+	echo "  inactive:     ${DOTS_PKG_COUNT_INACTIVE:-0}"
 	echo "  undeclared:   ${DOTS_PKG_COUNT_UNDECLARED:-0}"
+
 	DOTS_RESOLVED_GROUPS=("${DOTS_RESOLVED_GROUPS[@]+"${DOTS_RESOLVED_GROUPS[@]}"}")
 	DOTS_WITH_COMPONENTS=("${DOTS_WITH_COMPONENTS[@]+"${DOTS_WITH_COMPONENTS[@]}"}")
+	local profile_hint="${DOTS_ACTIVE_PROFILE:-${DOTS_PROFILE:-}}"
+	if [[ -n ${profile_hint} ]]; then
+		echo "  profile:      ${profile_hint}"
+	fi
 	if [[ ${#DOTS_RESOLVED_GROUPS[@]} -gt 0 ]]; then
 		echo "  groups:       ${DOTS_RESOLVED_GROUPS[*]}"
 	fi
 	if [[ ${#DOTS_WITH_COMPONENTS[@]} -gt 0 ]]; then
 		echo "  components:   ${DOTS_WITH_COMPONENTS[*]}"
+	else
+		echo "  components:   (none active — last-with is informational;"
+		echo "                 mutating setup needs profile/--with)"
 	fi
 
-	local e
+	local e owners
 	if [[ ${#DOTS_PKG_EXTERNAL_LINES[@]} -gt 0 ]]; then
 		echo ""
 		echo "External:"
@@ -350,19 +561,35 @@ dots_pkg_status_print() {
 			printf '  %s\n' "${e}"
 		done
 	fi
+	if [[ ${#DOTS_PKG_INACTIVE_FORMULAE[@]} -gt 0 || ${#DOTS_PKG_INACTIVE_CASKS[@]} -gt 0 ]]; then
+		echo ""
+		echo "Inactive (known DOTS owner, not selected):"
+		for e in "${DOTS_PKG_INACTIVE_FORMULAE[@]+"${DOTS_PKG_INACTIVE_FORMULAE[@]}"}"; do
+			owners="$(dots_pkg_known_owners "${e}" 2>/dev/null | tr '\n' ',' | sed 's/,$//')"
+			printf '  %s  [%s]\n' "${e}" "${owners:-?}"
+		done
+		for e in "${DOTS_PKG_INACTIVE_CASKS[@]+"${DOTS_PKG_INACTIVE_CASKS[@]}"}"; do
+			owners="$(dots_pkg_known_owners "${e}" 2>/dev/null | tr '\n' ',' | sed 's/,$//')"
+			printf '  %s  [%s] (cask)\n' "${e}" "${owners:-?}"
+		done
+		echo "  hint: activate via ./dots setup --with <component> (not adopt)"
+		echo "        detail: ./dots packages explain <name>"
+	fi
 	if [[ ${#DOTS_PKG_UNDECLARED_FORMULAE[@]} -gt 0 ]]; then
 		echo ""
-		echo "Undeclared Homebrew formulae (leaves):"
+		echo "Undeclared Homebrew formulae (leaves; no DOTS owner):"
 		for e in "${DOTS_PKG_UNDECLARED_FORMULAE[@]}"; do
 			printf '  %s\n' "${e}"
 		done
+		echo "  hint: ./dots packages adopt <name>  # suggest Brewfile line"
 	fi
 	if [[ ${#DOTS_PKG_UNDECLARED_CASKS[@]} -gt 0 ]]; then
 		echo ""
-		echo "Undeclared casks:"
+		echo "Undeclared casks (no DOTS owner):"
 		for e in "${DOTS_PKG_UNDECLARED_CASKS[@]}"; do
 			printf '  %s\n' "${e}"
 		done
+		echo "  hint: ./dots packages adopt <name> --cask"
 	fi
 	if [[ ${#DOTS_PKG_MISSING_LINES[@]} -gt 0 ]]; then
 		echo ""
@@ -377,10 +604,131 @@ dots_pkg_status_print() {
 		for e in "${DOTS_PKG_OUTDATED_LINES[@]}"; do
 			printf '  %s\n' "${e}"
 		done
+		echo "  hint: ./dots packages upgrade   # active managed only"
+		echo "        ./dots packages upgrade --all   # broader (opt-in)"
 	fi
 	echo ""
-	echo "Note: undeclared/external are advisories. DOTS never runs brew bundle cleanup"
-	echo "      or uninstalls undeclared software automatically."
+	echo "Note: inactive/undeclared/external are advisories."
+	echo "      DOTS never runs brew bundle cleanup or uninstalls software automatically."
+	echo "      known ≠ selected ≠ installed — see ./dots components active"
+	echo "      Docs: https://sempervent.github.io/dots/using/components/"
+}
+
+# Explain one package name (formula or cask). Read-only.
+dots_pkg_explain() {
+	local name="$1"
+	[[ -n ${name} ]] || {
+		echo "Usage: ./dots packages explain NAME" >&2
+		return 1
+	}
+	dots_desired_packages_resolve
+	dots_pkg_build_ownership_catalog
+
+	local -a formulae=() casks=() leaves=() out_f=() out_c=()
+	local line kind=unknown installed=no brew_owned=no outdated=no state=UNKNOWN
+	local in_desired=0
+
+	while IFS= read -r line; do
+		[[ -n ${line} ]] && leaves+=("${line}")
+	done < <(dots_pkg_installed_leaves)
+	while IFS= read -r line; do
+		[[ -n ${line} ]] && formulae+=("${line}")
+	done < <(dots_pkg_installed_formulae)
+	while IFS= read -r line; do
+		[[ -n ${line} ]] && casks+=("${line}")
+	done < <(dots_pkg_installed_casks)
+	while IFS= read -r line; do
+		[[ -n ${line} ]] && out_f+=("${line}")
+	done < <(dots_pkg_outdated_formulae)
+	while IFS= read -r line; do
+		[[ -n ${line} ]] && out_c+=("${line}")
+	done < <(dots_pkg_outdated_casks)
+
+	if dots_pkg_in_list "${name}" "${DOTS_DESIRED_CASKS[@]+"${DOTS_DESIRED_CASKS[@]}"}" ||
+		dots_pkg_in_list "${name}" "${casks[@]+"${casks[@]}"}"; then
+		kind=cask
+		if dots_pkg_in_list "${name}" "${DOTS_DESIRED_CASKS[@]+"${DOTS_DESIRED_CASKS[@]}"}"; then
+			in_desired=1
+		fi
+		if dots_pkg_in_list "${name}" "${casks[@]+"${casks[@]}"}"; then
+			installed=yes
+			brew_owned=yes
+			dots_pkg_in_list "${name}" "${out_c[@]+"${out_c[@]}"}" && outdated=yes
+		else
+			local app=""
+			if declare -F dots_cask_discover_app >/dev/null 2>&1; then
+				app="$(dots_cask_discover_app "${name}" 2>/dev/null || true)"
+			fi
+			if [[ -n ${app} ]] && { [[ -d ${app} ]] || [[ -e ${app} ]]; }; then
+				installed=yes
+				brew_owned=no
+			elif [[ -n ${DOTS_PKG_MOCK_EXTERNAL_APPS:-} ]] && printf '%s\n' "${DOTS_PKG_MOCK_EXTERNAL_APPS}" | grep -qx "${name}"; then
+				installed=yes
+				brew_owned=no
+			fi
+		fi
+	elif dots_pkg_in_list "${name}" "${DOTS_DESIRED_FORMULAE[@]+"${DOTS_DESIRED_FORMULAE[@]}"}" ||
+		dots_pkg_in_list "${name}" "${formulae[@]+"${formulae[@]}"}" ||
+		dots_pkg_in_list "${name}" "${leaves[@]+"${leaves[@]}"}" ||
+		dots_pkg_has_known_owner "${name}"; then
+		kind=formula
+		if dots_pkg_in_list "${name}" "${DOTS_DESIRED_FORMULAE[@]+"${DOTS_DESIRED_FORMULAE[@]}"}"; then
+			in_desired=1
+		fi
+		if dots_pkg_in_list "${name}" "${formulae[@]+"${formulae[@]}"}"; then
+			installed=yes
+			brew_owned=yes
+			dots_pkg_in_list "${name}" "${out_f[@]+"${out_f[@]}"}" && outdated=yes
+		fi
+	fi
+
+	if [[ ${in_desired} -eq 1 ]]; then
+		if [[ ${installed} == yes && ${brew_owned} == yes ]]; then
+			if [[ ${outdated} == yes ]]; then
+				state=OUTDATED
+			else
+				state=MANAGED
+			fi
+		elif [[ ${installed} == yes && ${brew_owned} == no ]]; then
+			state=EXTERNAL
+		else
+			state=MISSING
+		fi
+	elif [[ ${installed} == yes ]]; then
+		if dots_pkg_has_known_owner "${name}"; then
+			state=INACTIVE
+		else
+			state=UNDECLARED
+		fi
+	elif dots_pkg_has_known_owner "${name}"; then
+		# Known owner(s) but not installed — INACTIVE requires installed.
+		state="known (not installed)"
+	else
+		state=UNDECLARED
+	fi
+
+	echo "Package: ${name}"
+	echo "  kind:          ${kind}"
+	echo "  installed:     ${installed}"
+	echo "  brew-owned:    ${brew_owned}"
+	echo "  outdated:      ${outdated}"
+	echo "  state:         ${state}"
+	echo -n "  active owners: "
+	if dots_pkg_active_owners "${name}" >/dev/null 2>&1; then
+		dots_pkg_active_owners "${name}" | tr '\n' ' '
+		echo ""
+	else
+		echo "(none)"
+	fi
+	echo -n "  known owners:  "
+	if dots_pkg_known_owners "${name}" >/dev/null 2>&1; then
+		dots_pkg_known_owners "${name}" | tr '\n' ' '
+		echo ""
+	else
+		echo "(none — not in group/component Brewfiles)"
+	fi
+	echo "  activate:"
+	dots_pkg_activate_hint "${name}" | sed 's/^/    /'
 }
 
 # Resolve desired set, classify inventory, optionally print.
@@ -404,8 +752,17 @@ dots_pkg_status_report() {
 }
 
 # Suggest Brewfile declaration for an undeclared package (no file edits).
+# If the package already has component/group owners, point to --with instead.
 dots_pkg_suggest_declare() {
 	local kind="$1" name="$2" dest="${3:-}"
+	if dots_pkg_has_known_owner "${name}"; then
+		echo "Package '${name}' already has DOTS ownership — do not adopt."
+		echo "Known owners:"
+		dots_pkg_known_owners "${name}" | sed 's/^/  /'
+		echo "Activate instead:"
+		dots_pkg_activate_hint "${name}" | sed 's/^/  /'
+		return 0
+	fi
 	echo "Suggested declaration:"
 	if [[ ${kind} == cask ]]; then
 		echo "  cask \"${name}\""
