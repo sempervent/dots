@@ -29,6 +29,12 @@ source "${DIR}/helpers/state.sh"
 source "${DIR}/helpers/backup.sh"
 # shellcheck source=helpers/wizard.sh
 source "${DIR}/helpers/wizard.sh"
+# shellcheck source=helpers/packages.sh
+source "${DIR}/helpers/packages.sh"
+# shellcheck source=helpers/package_state.sh
+source "${DIR}/helpers/package_state.sh"
+# shellcheck source=helpers/cask_apps.sh
+source "${DIR}/helpers/cask_apps.sh"
 
 dots_usage() {
 	cat <<EOF
@@ -38,6 +44,11 @@ Usage:
   ./dots                     interactive setup
   ./dots setup               setup / reconfigure
   ./dots status              current state (read-only)
+  ./dots packages            package ownership / drift
+  ./dots packages status     full package audit
+  ./dots packages outdated   outdated managed packages
+  ./dots packages upgrade    upgrade DOTS-managed packages
+  ./dots packages adopt …    suggest Brewfile declaration (no auto-edit)
   ./dots backup [--name N]   snapshot managed targets
   ./dots backups             list snapshots
   ./dots restore [ID]        restore a snapshot
@@ -76,10 +87,45 @@ dots_cmd_status() {
 		mux="${DOTS_MULTIPLEXER:-tmux}"
 		echo ""
 		echo "Packages:"
-		echo "  ${DOTS_PACKAGE_GROUPS:-(see profile)}"
+		echo "  groups: ${DOTS_PACKAGE_GROUPS:-(see profile)}"
+		# Concise drift (fast mode skips brew outdated). Never abort status.
+		if ! command -v "${DOTS_BREW_BIN:-brew}" >/dev/null 2>&1; then
+			echo "  Homebrew unavailable"
+		elif declare -F dots_pkg_status_report >/dev/null 2>&1; then
+			DOTS_WITH_COMPONENTS=()
+			if [[ -n ${DOTS_ACTIVE_COMPONENTS:-} ]]; then
+				# shellcheck disable=SC2206
+				DOTS_WITH_COMPONENTS=(${DOTS_ACTIVE_COMPONENTS})
+			fi
+			declare -F dots_resolve_package_groups >/dev/null 2>&1 &&
+				dots_resolve_package_groups 2>/dev/null || true
+			# quiet=1 fast=1 — skip outdated queries to keep status snappy
+			if dots_pkg_status_report 1 1 2>/dev/null; then
+				local drift_bits=()
+				[[ ${DOTS_PKG_COUNT_EXTERNAL:-0} -gt 0 ]] && drift_bits+=("${DOTS_PKG_COUNT_EXTERNAL} external")
+				[[ ${DOTS_PKG_COUNT_UNDECLARED:-0} -gt 0 ]] && drift_bits+=("${DOTS_PKG_COUNT_UNDECLARED} undeclared")
+				[[ ${DOTS_PKG_COUNT_MISSING:-0} -gt 0 ]] && drift_bits+=("${DOTS_PKG_COUNT_MISSING} missing")
+				echo "  managed: ${DOTS_PKG_COUNT_MANAGED:-0}"
+				if [[ ${#drift_bits[@]} -gt 0 ]]; then
+					local IFS=', '
+					echo "  drift: ${drift_bits[*]}"
+				else
+					echo "  drift: none"
+				fi
+			fi
+			echo "  detail: ./dots packages status"
+		fi
 		echo ""
 		echo "Runtime:"
 		echo "  multiplexer: ${mux}"
+	else
+		echo ""
+		echo "Packages:"
+		if ! command -v "${DOTS_BREW_BIN:-brew}" >/dev/null 2>&1; then
+			echo "  Homebrew unavailable"
+		else
+			echo "  detail: ./dots packages status"
+		fi
 	fi
 
 	echo ""
@@ -398,6 +444,166 @@ dots_cmd_update() {
 	echo "Update flow complete."
 }
 
+dots_cmd_packages() {
+	local sub="${1:-}"
+	shift || true
+
+	# Resolve groups from active runtime when available
+	DOTS_WITH_COMPONENTS=()
+	if dots_state_load_active 2>/dev/null; then
+		if [[ -f "$(dots_runtime_env_file)" ]]; then
+			# shellcheck disable=SC1090
+			source "$(dots_runtime_env_file)" 2>/dev/null || true
+		fi
+		if [[ -n ${DOTS_ACTIVE_COMPONENTS:-} ]]; then
+			# shellcheck disable=SC2206
+			DOTS_WITH_COMPONENTS=(${DOTS_ACTIVE_COMPONENTS})
+		fi
+	fi
+	if declare -F dots_resolve_package_groups >/dev/null 2>&1; then
+		dots_resolve_package_groups 2>/dev/null || true
+	fi
+
+	# Interactive menu when bare `packages` on a TTY
+	if [[ -z ${sub} ]] && [[ -t 0 ]] && [[ -t 1 ]]; then
+		dots_ui_header "DOTS Packages"
+		echo ""
+		echo "  1) status     ownership / drift (read-only)"
+		echo "  2) outdated   managed packages with updates"
+		echo "  3) upgrade    upgrade DOTS-managed packages"
+		echo "  4) adopt      suggest Brewfile declaration"
+		echo "  q) quit"
+		echo ""
+		local choice
+		choice="$(dots_prompt_text "Choice" "1")"
+		case "${choice}" in
+		1 | status | s) sub=status ;;
+		2 | outdated | o) sub=outdated ;;
+		3 | upgrade | u) sub=upgrade ;;
+		4 | adopt | a) sub=adopt ;;
+		q | quit | Q) return 0 ;;
+		*) sub=status ;;
+		esac
+	elif [[ -z ${sub} ]]; then
+		sub=status
+	fi
+
+	case "${sub}" in
+	status | st)
+		dots_pkg_status_report
+		;;
+	outdated)
+		dots_pkg_status_report 1
+		echo "Outdated (managed):"
+		if [[ ${#DOTS_PKG_OUTDATED_LINES[@]} -eq 0 ]]; then
+			echo "  (none)"
+		else
+			local e
+			for e in "${DOTS_PKG_OUTDATED_LINES[@]}"; do
+				printf '  %s\n' "${e}"
+			done
+		fi
+		echo ""
+		echo "Note: unmanaged/outdated packages outside the desired set are ignored"
+		echo "      unless you run: ./dots packages upgrade --all"
+		;;
+	upgrade)
+		local warn_all=0 a
+		for a in "$@"; do
+			[[ ${a} == --all ]] && warn_all=1
+		done
+		if [[ ${warn_all} -eq 1 ]]; then
+			echo "These packages are not DOTS-managed and will be updated by Homebrew anyway."
+			echo "(--all includes undeclared Homebrew packages)"
+			echo ""
+		fi
+		dots_pkg_upgrade "$@"
+		;;
+	adopt)
+		# Recommendation only — never edits Brewfiles during normal setup.
+		local kind="brew" name="" dest=""
+		while [[ $# -gt 0 ]]; do
+			case "$1" in
+			--cask)
+				kind=cask
+				shift
+				name="${1:-}"
+				shift || true
+				;;
+			--formula | --brew)
+				kind=brew
+				shift
+				name="${1:-}"
+				shift || true
+				;;
+			--group)
+				shift
+				dest="brew/groups/${1:-modern}.Brewfile"
+				shift || true
+				;;
+			--component)
+				shift
+				dest="brew/Brewfile.${1:-}"
+				shift || true
+				;;
+			-h | --help)
+				echo "Usage: ./dots packages adopt <name> [--group modern|--component mactools] [--cask]"
+				return 0
+				;;
+			-*)
+				echo "Unknown adopt option: $1" >&2
+				return 1
+				;;
+			*)
+				[[ -z ${name} ]] && name="$1"
+				shift || true
+				;;
+			esac
+		done
+		if [[ -z ${name} ]]; then
+			echo "Usage: ./dots packages adopt <name> [--group modern|--component mactools] [--cask]" >&2
+			echo "Suggests a Brewfile declaration; does not edit repository files." >&2
+			return 1
+		fi
+		if [[ -z ${dest} ]]; then
+			if [[ ${kind} == cask ]]; then
+				dest="brew/Brewfile.<component>   # or brew/groups/gui.Brewfile"
+			else
+				dest="brew/groups/modern.Brewfile"
+			fi
+		fi
+		dots_pkg_suggest_declare "${kind}" "${name}" "${dest}"
+		;;
+	-h | --help | help)
+		cat <<EOF
+Usage:
+  ./dots packages              interactive menu (TTY) or status
+  ./dots packages status       full ownership report (read-only)
+  ./dots packages outdated     outdated managed packages
+  ./dots packages upgrade      upgrade packages in the resolved desired set
+  ./dots packages upgrade --all
+                               also upgrade undeclared Homebrew packages (opt-in)
+  ./dots packages adopt NAME [--group G|--component C] [--cask]
+                               print suggested Brewfile declaration (no auto-edit)
+
+Ownership vocabulary:
+  managed     declared by resolved DOTS config + package-manager owned
+  missing     declared but absent
+  outdated    declared, managed, update available
+  external    declared; app exists outside Homebrew ownership
+  undeclared  installed (leaves/casks) but not in resolved desired set
+
+DOTS never runs brew bundle cleanup or uninstalls undeclared software.
+EOF
+		;;
+	*)
+		echo "Unknown packages subcommand: ${sub}" >&2
+		echo "Try: ./dots packages help" >&2
+		return 1
+		;;
+	esac
+}
+
 # --- dispatch ---
 cmd="${1:-setup}"
 case "${cmd}" in
@@ -416,6 +622,10 @@ setup)
 status)
 	shift || true
 	dots_cmd_status "$@"
+	;;
+packages | package)
+	shift || true
+	dots_cmd_packages "$@"
 	;;
 backup)
 	shift || true

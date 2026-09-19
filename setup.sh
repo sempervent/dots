@@ -72,6 +72,8 @@ source "${DIR}/helpers/leaf.sh"
 source "${DIR}/helpers/rsync.sh"
 # shellcheck source=helpers/packages.sh
 source "${DIR}/helpers/packages.sh"
+# shellcheck source=helpers/package_state.sh
+source "${DIR}/helpers/package_state.sh"
 # shellcheck source=helpers/links.sh
 source "${DIR}/helpers/links.sh"
 # shellcheck source=helpers/backup.sh
@@ -372,7 +374,7 @@ fi
 
 echo "=== Backup (before any config / symlink mutation) ==="
 # HARD REQUIREMENT: snapshot unmanaged collisions, then abort on failure.
-# Order: backup → packages → configure → link/relink.
+# Order: backup → core packages → optional packages → configure → link/relink.
 if declare -F dots_backup_snapshot_collisions >/dev/null 2>&1; then
 	if ! dots_backup_snapshot_collisions "pre-setup" "pre-setup"; then
 		echo "Error: backup failed; setup aborted before package/config mutation" >&2
@@ -383,7 +385,7 @@ else
 	exit 1
 fi
 
-echo "=== Packages (after backup — needed before plugin clones) ==="
+echo "=== Packages (core / profile groups — after backup, before config) ==="
 if declare -F _dots_leaf_retire_conflicting_brew_leaf >/dev/null 2>&1; then
 	_dots_leaf_retire_conflicting_brew_leaf
 fi
@@ -396,7 +398,57 @@ else
 	fi
 fi
 
-echo "=== Symlinks ==="
+echo "=== Optional component packages (before configuration / links) ==="
+# Optional AI/component Brewfiles (explicit --with only) + non-brew Herdr.
+# Must run before symlink/config mutation so package failure aborts cleanly.
+if [[ ${NO_INSTALL:-0} -eq 1 ]]; then
+	echo "Skipping optional packages (--no-install)"
+elif command -v brew >/dev/null 2>&1 || [[ -n ${DOTS_BREW_BIN:-} ]]; then
+	brew_failed=0
+	OPTIONAL_COMPONENT_FAILURES=()
+	apply_brewfile() {
+		local file="$1"
+		if declare -F dots_apply_brewfile_packages >/dev/null 2>&1; then
+			dots_apply_brewfile_packages "${file}" "$(basename "${file}")"
+			return $?
+		fi
+		if [[ ! -f ${file} ]]; then
+			echo "Warn: missing ${file}"
+			return 0
+		fi
+		echo "brew bundle --file=${file}"
+		if [[ ${DRY_RUN} -eq 1 ]]; then
+			echo "[dry-run] would apply (file listing only; brew not invoked):"
+			sed -n '1,200p' "${file}"
+			return 0
+		fi
+		if ! brew bundle --file="${file}"; then
+			echo "Warn: brew bundle failed for ${file}"
+			return 1
+		fi
+		return 0
+	}
+	apply_optional_brewfiles
+	if [[ ${brew_failed} -ne 0 ]]; then
+		if declare -F dots_optional_print_failures >/dev/null 2>&1; then
+			dots_optional_print_failures
+		fi
+		echo "Error: one or more optional components failed (see list above)" >&2
+		exit 1
+	fi
+elif has_component herdr; then
+	# Linux native path: official Herdr installer (no Homebrew required)
+	if [[ ${NO_INSTALL:-0} -eq 1 ]]; then
+		if ! command -v herdr >/dev/null 2>&1; then
+			echo "Error: herdr missing (--no-install)" >&2
+			exit 1
+		fi
+	else
+		dots_ensure_herdr || exit 1
+	fi
+fi
+
+echo "=== Symlinks / configuration ==="
 # Declarative authority: configs/links.toml (targets already snapshotted above)
 dots_deploy_links
 
@@ -446,51 +498,9 @@ elif [[ ${DRY_RUN} -eq 1 ]]; then
 	echo "[dry-run] TPM install_plugins"
 fi
 
-echo "=== Optional components ==="
-# Optional AI/component Brewfiles (explicit --with only) + non-brew Herdr
-if command -v brew >/dev/null 2>&1; then
-	brew_failed=0
-	OPTIONAL_COMPONENT_FAILURES=()
-	apply_brewfile() {
-		local file="$1"
-		if [[ ! -f ${file} ]]; then
-			echo "Warn: missing ${file}"
-			return 0
-		fi
-		echo "brew bundle --file=${file}"
-		if [[ ${DRY_RUN} -eq 1 ]]; then
-			echo "[dry-run] would apply (file listing only; brew not invoked):"
-			sed -n '1,200p' "${file}"
-			return 0
-		fi
-		if ! brew bundle --file="${file}"; then
-			echo "Warn: brew bundle failed for ${file}"
-			return 1
-		fi
-		return 0
-	}
-	apply_optional_brewfiles
-	if [[ ${brew_failed} -ne 0 ]]; then
-		if declare -F dots_optional_print_failures >/dev/null 2>&1; then
-			dots_optional_print_failures
-		fi
-		echo "Error: one or more optional components failed (see list above)" >&2
-		exit 1
-	fi
-	if has_component mactools && declare -F dots_mactools_postinstall_notes >/dev/null 2>&1; then
-		dots_mactools_deploy_configs || true
-		dots_mactools_postinstall_notes
-	fi
-elif has_component herdr; then
-	# Linux native path: official Herdr installer (no Homebrew required)
-	if [[ ${NO_INSTALL:-0} -eq 1 ]]; then
-		if ! command -v herdr >/dev/null 2>&1; then
-			echo "Error: herdr missing (--no-install)" >&2
-			exit 1
-		fi
-	else
-		dots_ensure_herdr || exit 1
-	fi
+echo "=== Optional component configuration ==="
+if declare -F dots_optional_configure >/dev/null 2>&1; then
+	dots_optional_configure
 fi
 
 # fnm default Node (after Brewfile so fnm exists)

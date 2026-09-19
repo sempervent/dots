@@ -6,7 +6,9 @@
 #
 # Requires (from setup.sh): DIR, DRY_RUN, has_component, DOTS_WITH_COMPONENTS
 # Also expects agent-skill helpers from helpers/agent_skills.sh when installing skills.
-# apply_optional_brewfiles expects apply_brewfile() and brew_failed in caller scope.
+# apply_optional_brewfiles = package acquisition (before config/links).
+# dots_optional_configure = post-link config (e.g. mactools deploy).
+# Prefer dots_apply_brewfile_packages; else caller-defined apply_brewfile.
 #
 # Failure tracking: OPTIONAL_COMPONENT_FAILURES+=( "id|reason" )
 
@@ -31,12 +33,29 @@ dots_optional_print_failures() {
 	done
 }
 
+# Internal: apply one optional Brewfile via package helper or legacy apply_brewfile.
+_dots_optional_apply_file() {
+	local file="$1" id="$2"
+	if declare -F dots_apply_brewfile_packages >/dev/null 2>&1; then
+		dots_apply_brewfile_packages "${file}" "${id}" || return 1
+		return 0
+	fi
+	if declare -F apply_brewfile >/dev/null 2>&1; then
+		apply_brewfile "${file}" || return 1
+		return 0
+	fi
+	echo "Error: no brewfile apply helper available for ${file}" >&2
+	return 1
+}
+
+# Package acquisition for selected optional components (before config/links).
 apply_optional_brewfiles() {
 	OPTIONAL_COMPONENT_FAILURES=()
 
 	if has_component herdr; then
-		if command -v brew >/dev/null 2>&1; then
-			apply_brewfile "${DIR}/brew/Brewfile.herdr" || dots_optional_record_failure "herdr" "brew bundle failed"
+		if command -v brew >/dev/null 2>&1 || [[ -n ${DOTS_BREW_BIN:-} ]]; then
+			_dots_optional_apply_file "${DIR}/brew/Brewfile.herdr" "herdr" ||
+				dots_optional_record_failure "herdr" "brew bundle failed"
 		elif declare -F dots_ensure_herdr >/dev/null 2>&1; then
 			# Linux without brew: official Herdr installer (Stage 0 helper)
 			dots_ensure_herdr || dots_optional_record_failure "herdr" "official installer failed"
@@ -46,7 +65,7 @@ apply_optional_brewfiles() {
 		fi
 	fi
 	if has_component hermes; then
-		if ! apply_brewfile "${DIR}/brew/Brewfile.hermes"; then
+		if ! _dots_optional_apply_file "${DIR}/brew/Brewfile.hermes" "hermes"; then
 			dots_optional_record_failure "hermes-agent" "brew bundle failed"
 		fi
 		if [[ "$(uname -s)" == "Darwin" ]]; then
@@ -71,11 +90,13 @@ apply_optional_brewfiles() {
 		fi
 	fi
 	if has_component ollama; then
-		apply_brewfile "${DIR}/brew/Brewfile.ollama" || dots_optional_record_failure "ollama" "brew bundle failed"
+		_dots_optional_apply_file "${DIR}/brew/Brewfile.ollama" "ollama" ||
+			dots_optional_record_failure "ollama" "brew bundle failed"
 	fi
 	if has_component llamacpp; then
-		if command -v brew >/dev/null 2>&1; then
-			apply_brewfile "${DIR}/brew/Brewfile.llamacpp" || dots_optional_record_failure "llamacpp" "brew bundle failed"
+		if command -v brew >/dev/null 2>&1 || [[ -n ${DOTS_BREW_BIN:-} ]]; then
+			_dots_optional_apply_file "${DIR}/brew/Brewfile.llamacpp" "llamacpp" ||
+				dots_optional_record_failure "llamacpp" "brew bundle failed"
 		else
 			echo "Error: llamacpp selected but Homebrew is required for the canonical install." >&2
 			echo "       Install Homebrew, or build llama.cpp from https://github.com/ggml-org/llama.cpp" >&2
@@ -83,13 +104,16 @@ apply_optional_brewfiles() {
 		fi
 	fi
 	if has_component archify || has_component skills || has_component ai-skills; then
-		apply_brewfile "${DIR}/brew/Brewfile.archify" || dots_optional_record_failure "archify" "brew bundle failed"
+		_dots_optional_apply_file "${DIR}/brew/Brewfile.archify" "archify" ||
+			dots_optional_record_failure "archify" "brew bundle failed"
 	fi
 	if has_component drawthings; then
-		apply_brewfile "${DIR}/brew/Brewfile.drawthings" || dots_optional_record_failure "drawthings" "brew bundle failed"
+		_dots_optional_apply_file "${DIR}/brew/Brewfile.drawthings" "drawthings" ||
+			dots_optional_record_failure "drawthings" "brew bundle failed"
 	fi
 	if has_component opencode; then
-		apply_brewfile "${DIR}/brew/Brewfile.opencode" || dots_optional_record_failure "opencode" "brew bundle failed"
+		_dots_optional_apply_file "${DIR}/brew/Brewfile.opencode" "opencode" ||
+			dots_optional_record_failure "opencode" "brew bundle failed"
 	fi
 	if has_component codex; then
 		# npm @openai/codex under /opt/homebrew blocks the cask binary path — migrate first.
@@ -106,16 +130,20 @@ apply_optional_brewfiles() {
 		elif [[ ${DRY_RUN:-0} -eq 1 ]]; then
 			echo "[dry-run] migrate npm Codex if blocking Homebrew cask, then Brewfile.codex"
 		fi
-		apply_brewfile "${DIR}/brew/Brewfile.codex" || dots_optional_record_failure "codex" "brew bundle failed"
+		_dots_optional_apply_file "${DIR}/brew/Brewfile.codex" "codex" ||
+			dots_optional_record_failure "codex" "brew bundle failed"
 	fi
 	if has_component images; then
-		apply_brewfile "${DIR}/brew/Brewfile.images" || dots_optional_record_failure "images" "brew bundle failed"
+		_dots_optional_apply_file "${DIR}/brew/Brewfile.images" "images" ||
+			dots_optional_record_failure "images" "brew bundle failed"
 	fi
 	if has_component tex; then
-		apply_brewfile "${DIR}/brew/Brewfile.tex" || dots_optional_record_failure "tex" "brew bundle failed"
+		_dots_optional_apply_file "${DIR}/brew/Brewfile.tex" "tex" ||
+			dots_optional_record_failure "tex" "brew bundle failed"
 	fi
 	if has_component cursor; then
-		apply_brewfile "${DIR}/brew/Brewfile.cursor" || dots_optional_record_failure "cursor" "brew bundle failed"
+		_dots_optional_apply_file "${DIR}/brew/Brewfile.cursor" "cursor" ||
+			dots_optional_record_failure "cursor" "brew bundle failed"
 	fi
 	if has_component fluidvoice; then
 		# macOS 15+ only; platform gate runs before install. No models, no launch.
@@ -125,12 +153,24 @@ apply_optional_brewfiles() {
 				dots_optional_record_failure "fluidvoice" "cask installation failed"
 			fi
 		else
-			apply_brewfile "${DIR}/brew/Brewfile.fluidvoice" || dots_optional_record_failure "fluidvoice" "brew bundle failed"
+			_dots_optional_apply_file "${DIR}/brew/Brewfile.fluidvoice" "fluidvoice" ||
+				dots_optional_record_failure "fluidvoice" "brew bundle failed"
 		fi
 	fi
 	if has_component mactools; then
 		# Darwin-only (registry platforms); explicit --with on Linux errors before here.
-		apply_brewfile "${DIR}/brew/Brewfile.mactools" || dots_optional_record_failure "mactools" "brew bundle failed"
+		_dots_optional_apply_file "${DIR}/brew/Brewfile.mactools" "mactools" ||
+			dots_optional_record_failure "mactools" "brew bundle failed"
+	fi
+}
+
+# Configuration / post-package side effects that must run AFTER backup + links.
+dots_optional_configure() {
+	if has_component mactools && declare -F dots_mactools_deploy_configs >/dev/null 2>&1; then
+		dots_mactools_deploy_configs || true
+		if declare -F dots_mactools_postinstall_notes >/dev/null 2>&1; then
+			dots_mactools_postinstall_notes
+		fi
 	fi
 }
 dots_install_requested_agent_skills() {

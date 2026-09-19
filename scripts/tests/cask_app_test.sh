@@ -136,21 +136,39 @@ else
 	bad "B should succeed when brew-managed"
 fi
 
-echo "=== C: app exists, cask not managed (Hermes regression) ==="
+echo "=== C: app exists, cask not managed — adopt fails → EXTERNAL ==="
 mkdir -p "${DOTS_APPLICATIONS_DIR}/Hermes.app"
 echo "sentinel" >"${DOTS_APPLICATIONS_DIR}/Hermes.app/Contents"
 : >"${DOTS_MOCK_MANAGED}"
 : >"${DOTS_MOCK_LOG}"
 DOTS_MOCK_INSTALL_OK=0
+DOTS_MOCK_ADOPT_OK=0
 if dots_ensure_cask_app hermes-desktop /Applications/Hermes.app "Hermes.app" >/tmp/cask-c.out 2>&1; then
 	[[ ${DOTS_CASK_LAST_STATUS} == external ]] && ok "C external success" || bad "C status=${DOTS_CASK_LAST_STATUS}"
-	grep -q 'install' "${DOTS_MOCK_LOG}" && bad "C must not brew install" || ok "C no brew install"
+	grep -q 'adopt=1' "${DOTS_MOCK_LOG}" && ok "C tried adopt" || bad "C must try adopt"
+	grep -q 'adopt=0' "${DOTS_MOCK_LOG}" && bad "C must not plain-install" || ok "C no plain install"
 	[[ -f ${DOTS_APPLICATIONS_DIR}/Hermes.app/Contents ]] && ok "C app untouched" || bad "C app mutated"
-	grep -q 'leaving it untouched' /tmp/cask-c.out && ok "C message" || bad "C message"
+	grep -qiE 'EXTERNAL|untouched|leaving it untouched' /tmp/cask-c.out && ok "C message" || bad "C message"
 else
 	bad "C Hermes external should succeed"
 	cat /tmp/cask-c.out
 fi
+
+echo "=== C2: app exists, adopt succeeds → MANAGED ==="
+mkdir -p "${DOTS_APPLICATIONS_DIR}/Hermes.app"
+echo "sentinel" >"${DOTS_APPLICATIONS_DIR}/Hermes.app/Contents"
+: >"${DOTS_MOCK_MANAGED}"
+: >"${DOTS_MOCK_LOG}"
+DOTS_MOCK_ADOPT_OK=1
+if dots_ensure_cask_app hermes-desktop /Applications/Hermes.app "Hermes.app" >/tmp/cask-c2.out 2>&1; then
+	[[ ${DOTS_CASK_LAST_STATUS} == managed ]] && ok "C2 managed after adopt" || bad "C2 status=${DOTS_CASK_LAST_STATUS}"
+	grep -qx hermes-desktop "${DOTS_MOCK_MANAGED}" && ok "C2 recorded managed" || bad "C2 not in managed list"
+	[[ -f ${DOTS_APPLICATIONS_DIR}/Hermes.app/Contents ]] && ok "C2 app preserved" || bad "C2 app mutated"
+else
+	bad "C2 adopt should succeed"
+	cat /tmp/cask-c2.out
+fi
+DOTS_MOCK_ADOPT_OK=0
 
 echo "=== D: neither exists, install succeeds ==="
 rm -rf "${DOTS_APPLICATIONS_DIR}/Hermes.app"
@@ -240,7 +258,7 @@ else
 	cat /tmp/cask-f.out
 fi
 
-echo "=== FluidVoice equivalent (external app) ==="
+echo "=== FluidVoice equivalent (external app, adopt fails) ==="
 # Restore standard mock
 cat >"${MOCK_BREW}" <<'EOF'
 #!/usr/bin/env bash
@@ -254,6 +272,19 @@ list)
 	;;
 install)
 	echo "install $*" >>"${DOTS_MOCK_LOG}"
+	# refuse --force
+	for a in "$@"; do
+		[[ ${a} == --force ]] && {
+			echo "refused --force" >&2
+			exit 99
+		}
+	done
+	# adopt path
+	for a in "$@"; do
+		if [[ ${a} == --adopt ]]; then
+			exit 1
+		fi
+	done
 	exit 1
 	;;
 esac
@@ -265,7 +296,7 @@ mkdir -p "${DOTS_APPLICATIONS_DIR}/FluidVoice.app"
 : >"${DOTS_MOCK_LOG}"
 if dots_ensure_cask_app fluidvoice /Applications/FluidVoice.app "FluidVoice.app" >/tmp/cask-fv.out 2>&1; then
 	[[ ${DOTS_CASK_LAST_STATUS} == external ]] && ok "FluidVoice external OK" || bad "FV status"
-	grep -q 'install' "${DOTS_MOCK_LOG}" && bad "FV must not install" || ok "FV no install"
+	grep -q '\-\-force' "${DOTS_MOCK_LOG}" && bad "FV used --force" || ok "FV no --force"
 else
 	bad "FluidVoice external should succeed"
 fi

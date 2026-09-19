@@ -42,6 +42,7 @@ echo "${st}" | grep -q 'DOTS Status' && ok "status header" || bad "status header
 echo "${st}" | grep -q '1.3.1' && ok "status shows version" || bad "status version"
 echo "${st}" | grep -qi 'profile' && ok "status mentions profile" || bad "status profile"
 echo "${st}" | grep -qi 'Backup' && ok "status mentions backups" || bad "status backups"
+echo "${out}" | grep -q './dots packages' && ok "help lists packages" || bad "help packages"
 echo "${out}" | grep -q './dots backup' && ok "help lists backup" || bad "help backup"
 echo "${out}" | grep -q './dots restore' && ok "help lists restore" || bad "help restore"
 
