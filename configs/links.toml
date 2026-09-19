@@ -114,8 +114,9 @@ source = "configs/lazygit/config.yml"
 target = "~/.config/lazygit/config.yml"
 
 # --- classification of other syms/ entries (not auto-linked) ---
+# See docs/ARCHITECTURE.md (dormant / unclassified syms). Do not delete casually.
 # active: listed above
 # template: gitconfig.template, docker_config.json.template
 # legacy/deprecated: init.vim (Neovim uses configs/nvim), screenrc, xonshrc
-# unknown/optional: curlrc, dircolors, exrc, gemrc, gitattributes, irbrc,
+# dormant/optional: curlrc, dircolors, exrc, gemrc, gitattributes, irbrc,
 #   pythonrc.py, Renviron, Rprofile, terraformrc, wgetrc, config.fish

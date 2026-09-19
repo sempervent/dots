@@ -2,6 +2,9 @@
 #
 # Single source for setup.sh / bootstrap.sh / configure.sh / profile `all`.
 # Profiles and CLI --with must only reference ids listed here (or supergroups).
+#
+# Optional brewfile = path relative to repo root (Homebrew fragment for --with).
+# See docs/EXTENDING.md and docs/ARCHITECTURE.md.
 
 version = 1
 
@@ -12,6 +15,7 @@ category = "multiplexer"
 cloud = false
 local_ai = false
 platforms = ["darwin", "linux"]
+brewfile = "brew/Brewfile.herdr"
 description = "Terminal multiplexer (Brewfile.herdr)"
 
 [[components]]
@@ -21,6 +25,7 @@ category = "ai_client"
 cloud = false
 local_ai = true
 platforms = ["darwin", "linux"]
+brewfile = "brew/Brewfile.hermes"
 description = "Hermes agent CLI (+ macOS hermes-desktop)"
 
 [[components]]
@@ -30,6 +35,7 @@ category = "ai_runtime"
 cloud = false
 local_ai = true
 platforms = ["darwin", "linux"]
+brewfile = "brew/Brewfile.ollama"
 description = "Local LLM runtime (no models pulled)"
 
 [[components]]
@@ -39,6 +45,7 @@ category = "ai_runtime"
 cloud = false
 local_ai = true
 platforms = ["darwin", "linux"]
+brewfile = "brew/Brewfile.llamacpp"
 description = "llama.cpp runtime (Homebrew; models via pull_models.sh)"
 
 [[components]]
@@ -49,6 +56,7 @@ cloud = false
 local_ai = false
 omit_from_all = true
 platforms = ["darwin", "linux"]
+brewfile = "brew/Brewfile.archify"
 description = "Archify skill only (also included in --with skills)"
 
 [[components]]
@@ -58,6 +66,7 @@ category = "skills"
 cloud = false
 local_ai = false
 platforms = ["darwin", "linux"]
+brewfile = "brew/Brewfile.archify"
 description = "Curated engineering skill pack (includes Archify)"
 
 [[components]]
@@ -67,6 +76,7 @@ category = "skills"
 cloud = false
 local_ai = false
 platforms = ["darwin", "linux"]
+brewfile = "brew/Brewfile.archify"
 description = "Curated AI/agent engineering skill pack"
 
 [[components]]
@@ -76,6 +86,7 @@ category = "image_ai"
 cloud = false
 local_ai = true
 platforms = ["darwin", "linux"]
+brewfile = "brew/Brewfile.drawthings"
 description = "Draw Things CLI + MCP bridge + img (GUI/models are macOS-oriented)"
 
 [[components]]
@@ -85,6 +96,7 @@ category = "ai_client"
 cloud = false
 local_ai = true
 platforms = ["darwin", "linux"]
+brewfile = "brew/Brewfile.opencode"
 description = "Local/general coding adapter"
 
 [[components]]
@@ -94,6 +106,7 @@ category = "ai_client"
 cloud = true
 local_ai = false
 platforms = ["darwin"]
+brewfile = "brew/Brewfile.codex"
 description = "Frontier coding via Homebrew cask Codex"
 
 [[components]]
@@ -103,6 +116,7 @@ category = "ai_client"
 cloud = true
 local_ai = false
 platforms = ["darwin"]
+brewfile = "brew/Brewfile.cursor"
 description = "Cursor Agent CLI (explicit opt-in)"
 
 [[components]]
@@ -113,6 +127,7 @@ cloud = false
 local_ai = true
 platforms = ["darwin"]
 min_darwin = "15"
+brewfile = "brew/Brewfile.fluidvoice"
 description = "Local voice-to-text dictation app with optional AI enhancement"
 
 [[components]]
@@ -122,6 +137,7 @@ category = "media"
 cloud = false
 local_ai = false
 platforms = ["darwin", "linux"]
+brewfile = "brew/Brewfile.images"
 description = "Deterministic image toolkit (Magick, etc.)"
 
 [[components]]
@@ -131,6 +147,7 @@ category = "docs"
 cloud = false
 local_ai = false
 platforms = ["darwin", "linux"]
+brewfile = "brew/Brewfile.tex"
 description = "Homebrew TeX Live (CLI)"
 
 [[components]]
@@ -141,6 +158,7 @@ cloud = false
 local_ai = false
 omit_from_all = true
 platforms = ["darwin"]
+brewfile = "brew/Brewfile.mactools"
 description = "Optional macOS workstation layer (Vorssaint + automation/audio/CLI; Brewfile.mactools)"
 
 # Declarative selector aggregates. Expand to member component ids before install.

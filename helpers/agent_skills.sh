@@ -7,10 +7,10 @@
 # Hermes discovers them via the symlink the skills CLI creates under
 # ~/.hermes/skills/<name> (no dots-side copy/symlink required).
 #
-# To add another skill later:
-#   1. Add the component name to SUPPORTED_WITH in setup.sh
-#   2. Map it in agent_skill_package() below
-#   3. Add brew/Brewfile.<name> only if the skill needs Homebrew deps
+# To add skills later, see docs/SKILLS.md.
+#   Pack membership: configs/skills/manifest.toml
+#   Standalone selectable skill: configs/components.toml (+ agent_skill_package below)
+#   Homebrew deps: optional brewfile = "brew/Brewfile.<id>" on the component
 
 # Return the skills.sh package spec (owner/repo) for a component name.
 agent_skill_package() {
