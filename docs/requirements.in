@@ -1,0 +1,5 @@
+# Pin inputs for the docs site. Compile with:
+#   uv pip compile docs/requirements.in -o docs/requirements.txt --generate-hashes
+# Or: pip-compile docs/requirements.in -o docs/requirements.txt --generate-hashes
+mkdocs==1.6.1
+mkdocs-material==9.7.7
