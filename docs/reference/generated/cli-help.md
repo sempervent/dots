@@ -269,84 +269,19 @@ DOTS never runs brew bundle cleanup or uninstalls undeclared software.
 ## `./dots profile`
 
 ```text
-════════════════════════════════════════
- Profiles
-════════════════════════════════════════
+Usage:
+  ./dots profile             profile management
 
-Profiles:
-  1) Show active
-  2) Create (configure.sh)
-  3) Preview resolved (--show)
-  4) Switch / reapply (bootstrap)
-  5) Back
-Error: unknown profile 'n' (missing /Users/joshuagrant/dots/configs/bootstrap/profiles/n.toml)
-Available builtins:
-all
-base
-home
-server
-work
-Or pass a custom TOML path: --profile /var/folders/p9/3qj56rnn6ns8gjh15jkzsg8h0000gn/T/tmp.FZertC1rSb/.config/dots/profiles/name.toml
+(Interactive entrypoint; see `./dots help` and expert scripts such as `./scripts/pull_models.sh` / `./bootstrap.sh`.)
 ```
 
 ## `./dots models`
 
 ```text
-════════════════════════════════════════
- Models
-════════════════════════════════════════
-Machine:
-  Apple M2
-  OS: darwin  arch: arm64
-  RAM: 24 GB
-  free disk: 135 GB
-=== DOTS local models ===
-Machine:
-  Apple M2
-  OS: darwin  arch: arm64
-  RAM: 24 GB
-  free disk: 135 GB
-  selected tier: balanced
+Usage:
+  ./dots models              local model management
 
-Installed providers:
-  ollama
-  llamacpp
-  drawthings
-  fluidvoice
-
-Plan:
-  ollama       qwen2.5:7b                           ~4.7 GB  [general]
-
-Expected catalog footprint: ~4.7 GB
-Estimated additional download: ~4.7 GB
-Free disk: 135 GB (reserve 20 GB)
-
-
-Models:
-  1) Show model plan (--list)
-  2) Pull recommended missing models
-  3) Choose provider
-  4) Choose tier + pull
-  5) Update to registry targets (--update)
-  6) Edit model policy file
-  7) Back
-
-Provider:
-  1) ollama
-  2) llamacpp
-  3) drawthings
-  4) fluidvoice
-  5) all
-Enter a number 1-5
-Enter a number 1-5
-Enter a number 1-5
-Enter a number 1-5
-Enter a number 1-5
-Enter a number 1-5
-Enter a number 1-5
-Enter a number 1-5
-Enter a number 1-5
-Enter a number 1-5
+(Interactive entrypoint; see `./dots help` and expert scripts such as `./scripts/pull_models.sh` / `./bootstrap.sh`.)
 ```
 
 ## `./dots backup`

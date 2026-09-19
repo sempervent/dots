@@ -316,8 +316,31 @@ def generate_profiles(check: bool) -> bool:
     return write_or_check(GEN_DIR / "profiles.md", "".join(parts), check=check)
 
 
+def _is_unstable_cli_capture(out: str) -> bool:
+    """True if capture embeds host state or interactive-menu noise (not portable help)."""
+    lower = out.lower()
+    if "password" in lower or "secret" in lower or "token=" in lower:
+        return True
+    # Interactive menus without a real --help handler
+    if "enter a number" in lower:
+        return True
+    if "dots_ui_choice" in lower:
+        return True
+    # Hardware / disk summaries (vary by host and over time → CI drift)
+    if "machine:" in lower and ("free disk" in lower or "ram:" in lower):
+        return True
+    if re.search(r"free disk:\s*\d+", lower):
+        return True
+    # Absolute host paths from errors / prompts
+    if "/var/folders/" in lower or "/tmp/" in lower or "/home/" in lower:
+        return True
+    if "error: unknown profile" in lower:
+        return True
+    return False
+
+
 def _safe_help(cmd: list[str], timeout: float = 15.0) -> str | None:
-    """Run a help command; return stdout+stderr or None on failure."""
+    """Run a help command; return stdout+stderr or None on failure/unstable capture."""
     try:
         env = os.environ.copy()
         # Avoid mutating / prompting
@@ -336,13 +359,39 @@ def _safe_help(cmd: list[str], timeout: float = 15.0) -> str | None:
         out = out.strip()
         if not out:
             return None
-        # Refuse if it looks like it did real work beyond help
-        lower = out.lower()
-        if "password" in lower or "secret" in lower or "token=" in lower:
+        if _is_unstable_cli_capture(out):
             return None
         return out
     except (OSError, subprocess.TimeoutExpired):
         return None
+
+
+def _extract_dots_sub_usage(sub: str) -> str | None:
+    """Stable Usage for ./dots <sub> from source (when live --help is interactive)."""
+    text = (ROOT / "dots").read_text(encoding="utf-8")
+    # Explicit echo "Usage: ./dots <sub> ..."
+    m = re.search(
+        rf'echo\s+"Usage:\s+(\./dots\s+{re.escape(sub)}[^"]*)"',
+        text,
+    )
+    if m:
+        return "Usage: " + m.group(1)
+    # Multi-line Usage: heredoc-style blocks inside packages/etc.
+    m = re.search(
+        rf"(Usage:\n(?:  \./dots\s+{re.escape(sub)}.*\n)+)",
+        text,
+    )
+    if m:
+        return m.group(1).rstrip()
+    # One-liner from dots_usage()
+    m = re.search(rf"^  \./dots\s+{re.escape(sub)}\s+.*$", text, re.MULTILINE)
+    if m:
+        return (
+            f"Usage:\n{m.group(0)}\n\n"
+            "(Interactive entrypoint; see `./dots help` and expert scripts "
+            "such as `./scripts/pull_models.sh` / `./bootstrap.sh`.)"
+        )
+    return None
 
 
 def _extract_usage_from_source(path: Path, marker: str = "Usage:") -> str | None:
@@ -387,9 +436,12 @@ def generate_cli_help(check: bool) -> bool:
             out = _extract_usage_from_source(script) or "(help unavailable; see source)"
         sections.append((label, out))
 
-    # Subcommand help from dots source patterns (packages, profile, models)
+    # Subcommand help — prefer live --help when stable; else source Usage stubs.
+    # (profile/models have interactive menus without portable --help handlers.)
     for sub in ("packages", "profile", "models", "backup", "restore"):
         out = _safe_help([str(ROOT / "dots"), sub, "--help"])
+        if out is None:
+            out = _extract_dots_sub_usage(sub)
         if out:
             sections.append((f"`./dots {sub}`", out))
 
