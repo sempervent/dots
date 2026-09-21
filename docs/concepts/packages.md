@@ -52,10 +52,24 @@ From `configs/packages/groups.toml` ([generated](../reference/generated/package-
 | `media` | Image / video processing |
 | `gui` | macOS GUI / fonts |
 | `server` | Headless extras |
+| `dev` | Local CI / lint / Rust ergonomics (install-only) |
+| `security` | Secrets scanning / SBOM / signing CLIs (install-only; no auth) |
+| `network` | Network / remote / k8s context CLIs (install-only; no Tailscale up) |
+| `data` | Tabular / analytical CLIs |
+| `geo` | Geospatial CLI tooling |
 
 **required** → ERROR if missing after install for that profile contract.
 **optional** → WARN if missing; may be empty/SKIP on some managers.
 Unavailable on a distro: map value `""` (skip) — do not invent fake names.
+
+New workstation tool groups are **mostly optional** membership. They do **not**
+change global Git (`difftastic` / `mergiraf` are install-only — opt in per-repo).
+`mitmproxy` is intentionally **not** in `network` (defer as opt-in later).
+DOTS never runs `tailscale up` / login.
+
+Aggregate `brew/Brewfile` still covers only the legacy bare-`setup.sh` set
+(`core`…`infra`). New groups are owned solely by `brew/groups/<name>.Brewfile`
+and selected via profile `packages =`.
 
 ## CLI
 

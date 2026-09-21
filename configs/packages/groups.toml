@@ -69,3 +69,46 @@ required = [
   "htop",
 ]
 optional = []
+
+[[groups]]
+name = "dev"
+description = "Local CI / lint / Rust ergonomics (install-only; no shell aliases)"
+required = []
+optional = [
+  "act", "difftastic", "mergiraf", "actionlint", "cargo-nextest", "bacon",
+  "pre-commit", "hadolint", "taplo", "mkcert", "kondo",
+]
+
+[[groups]]
+name = "security"
+description = "Secrets scanning / SBOM / signing CLIs (install-only; no auth)"
+required = []
+optional = [
+  "gitleaks", "trivy", "sops", "age", "syft", "grype", "cosign",
+  "osv-scanner", "semgrep",
+]
+
+[[groups]]
+name = "network"
+description = "Network / remote / k8s context CLIs (install-only; no Tailscale up)"
+required = []
+optional = [
+  "tailscale", "mosh", "rclone", "bandwhich", "gping", "doggo",
+  "stern", "kubectx", "grpcurl", "websocat",
+]
+
+[[groups]]
+name = "data"
+description = "Tabular / analytical CLIs"
+required = []
+optional = [
+  "duckdb", "qsv", "visidata", "miller", "jless",
+]
+
+[[groups]]
+name = "geo"
+description = "Geospatial CLI tooling"
+required = []
+optional = [
+  "gdal", "tippecanoe", "pmtiles",
+]

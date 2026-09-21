@@ -19,7 +19,10 @@ with = [
   "tex",
 ]
 without = ["fluidvoice"]
-packages = ["core", "modern", "workstation", "infra", "media", "gui"]
+packages = [
+  "core", "modern", "workstation", "infra", "media", "gui",
+  "dev", "network", "data", "geo", "security",
+]
 open_apps = ["iTerm", "Draw Things", "Cursor"]
 
 [runtime]

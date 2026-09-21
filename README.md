@@ -126,10 +126,10 @@ My machine differs slightly      →  ~/.config/dots/profiles/<name>.toml
 | Profile | Package groups | Optional components | Multiplexer | GUI |
 |---------|----------------|---------------------|-------------|-----|
 | `base` | core, modern | none | tmux | minimal |
-| `home` | core…gui + infra/media | personal stack (incl. Herdr) | herdr | yes |
-| `work` | core, modern, workstation | **none** unless `--with` / custom | tmux | limited |
+| `home` | core…gui + infra/media + dev/network/data/geo/security | personal stack (incl. Herdr) | herdr | yes |
+| `work` | core, modern, workstation, dev, data, security | **none** unless `--with` / custom | tmux | limited |
 | `server` | core, modern, server | **Herdr** (no AI providers) | tmux | no |
-| `all` | full workstation | all optional | tmux | yes |
+| `all` | full workstation (incl. new tool groups) | all optional | tmux | yes |
 
 Custom profiles: [`examples/profiles/`](examples/profiles/). Authority for
 optional component ids: `configs/components.toml`. Package groups:

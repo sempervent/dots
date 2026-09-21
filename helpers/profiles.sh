@@ -135,7 +135,10 @@ ALLOWED_PROFILE = {
 ALLOWED_RUNTIME = {"multiplexer", "greeting", "prompt_stats", "auto_tmux"}
 ALLOWED_PACKAGES = {"add", "remove", "groups"}
 ALLOWED_COMPONENTS = {"with", "without"}
-KNOWN_GROUPS = {"core", "modern", "workstation", "infra", "media", "gui", "server"}
+KNOWN_GROUPS = {
+    "core", "modern", "workstation", "infra", "media", "gui", "server",
+    "dev", "security", "network", "data", "geo",
+}
 KNOWN_MUX = {"tmux", "herdr", "none"}
 
 # Load component + supergroup ids from registry (configs/components.toml)
@@ -488,8 +491,11 @@ dots_load_profile_file() {
 	if [[ ${pkg_explicit} -eq 0 && ${#PROFILE_PACKAGES[@]} -eq 0 ]]; then
 		case "${PROFILE_NAME}" in
 		server) PROFILE_PACKAGES=(core modern server) ;;
-		work) PROFILE_PACKAGES=(core modern workstation) ;;
-		home | all) PROFILE_PACKAGES=(core modern workstation infra media gui) ;;
+		work) PROFILE_PACKAGES=(core modern workstation dev data security) ;;
+		home) PROFILE_PACKAGES=(core modern workstation infra media gui \
+			dev network data geo security) ;;
+		all) PROFILE_PACKAGES=(core modern workstation infra media gui \
+			dev security network data geo) ;;
 		base | *) PROFILE_PACKAGES=(core modern) ;;
 		esac
 	fi

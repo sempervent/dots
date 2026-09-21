@@ -64,3 +64,43 @@ Headless extras
 
 **Optional:** (none)
 
+## `dev`
+
+Local CI / lint / Rust ergonomics (install-only; no shell aliases)
+
+**Required:** (none)
+
+**Optional:** `act`, `difftastic`, `mergiraf`, `actionlint`, `cargo-nextest`, `bacon`, `pre-commit`, `hadolint`, `taplo`, `mkcert`, `kondo`
+
+## `security`
+
+Secrets scanning / SBOM / signing CLIs (install-only; no auth)
+
+**Required:** (none)
+
+**Optional:** `gitleaks`, `trivy`, `sops`, `age`, `syft`, `grype`, `cosign`, `osv-scanner`, `semgrep`
+
+## `network`
+
+Network / remote / k8s context CLIs (install-only; no Tailscale up)
+
+**Required:** (none)
+
+**Optional:** `tailscale`, `mosh`, `rclone`, `bandwhich`, `gping`, `doggo`, `stern`, `kubectx`, `grpcurl`, `websocat`
+
+## `data`
+
+Tabular / analytical CLIs
+
+**Required:** (none)
+
+**Optional:** `duckdb`, `qsv`, `visidata`, `miller`, `jless`
+
+## `geo`
+
+Geospatial CLI tooling
+
+**Required:** (none)
+
+**Optional:** `gdal`, `tippecanoe`, `pmtiles`
+

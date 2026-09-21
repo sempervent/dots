@@ -51,6 +51,49 @@ are documentation only; CI does **not** fetch them.
 | uv | Python packaging / tooling | modern group | darwin, linux | https://github.com/astral-sh/uv |
 | jq | JSON CLI | core group | darwin, linux | https://jqlang.github.io/jq/ |
 | tmux | Terminal multiplexer (baseline) | core group / profiles | darwin, linux | https://github.com/tmux/tmux |
+| act | Run GitHub Actions locally | `dev` group | darwin, linux | https://github.com/nektos/act |
+| difftastic | Syntax-aware diff (`difft`) | `dev` group (opt-in Git config) | darwin, linux | https://difftastic.wilfred.me.uk |
+| mergiraf | Syntax-aware merge driver | `dev` group (opt-in Git config) | darwin, linux | https://mergiraf.org |
+| gitleaks | Secrets scanning | `security` group | darwin, linux | https://github.com/gitleaks/gitleaks |
+| trivy | Vulnerability / misconfig scanner | `security` group | darwin, linux | https://trivy.dev |
+| age / sops | File encryption / secrets editor | `security` group | darwin, linux | https://age-encryption.org |
+| cosign | Sigstore signing / verify | `security` group | darwin, linux | https://github.com/sigstore/cosign |
+| tailscale | Mesh VPN CLI (install-only; no `up`) | `network` group | darwin, linux | https://tailscale.com |
+| mosh | Roaming remote shell | `network` group | darwin, linux | https://mosh.org |
+| rclone | Cloud storage sync | `network` group | darwin, linux | https://rclone.org |
+| doggo | Human-friendly DNS client | `network` group | darwin, linux | https://github.com/mr-karan/doggo |
+| duckdb | In-process analytical SQL | `data` group | darwin, linux | https://duckdb.org |
+| miller | Name-indexed CSV/TSV/JSON CLI | `data` group | darwin, linux | https://miller.readthedocs.io |
+| visidata | Terminal spreadsheet multitool | `data` group | darwin, linux | https://www.visidata.org |
+| gdal | Geospatial data library / CLIs | `geo` group | darwin, linux | https://gdal.org |
+| tippecanoe | Vector tile builder | `geo` group | darwin, linux | https://github.com/felt/tippecanoe |
+| pmtiles | PMTiles archive CLI | `geo` group | darwin, linux | https://github.com/protomaps/go-pmtiles |
+| QGIS | Desktop GIS | `--with mactools` | darwin | https://qgis.org |
+| GrandPerspective | Disk usage treemap | `--with mactools` | darwin | https://grandperspectiv.sourceforge.net |
+| MIDI Monitor | MIDI signal inspector | `--with mactools` | darwin | https://www.snoize.com/MIDIMonitor/ |
+
+### Opt-in notes (not configured by DOTS)
+
+```bash
+# difftastic as Git external diff (per-repo)
+git config diff.external difft
+
+# mergiraf as a merge driver (per-repo; see mergiraf docs for full driver line)
+git config merge.mergiraf.name mergiraf
+
+# example CLIs after install
+act -l
+gitleaks detect --source .
+trivy fs .
+age-keygen -o key.txt
+duckdb -c "SELECT 42"
+mlr --csv head -n 5 data.csv
+doggo example.com
+gdalinfo --version
+pmtiles show map.pmtiles
+```
+
+`mitmproxy` is known but **not** in default `network` membership (opt-in later).
 
 Ownership paths: [Architecture](../concepts/architecture.md). How to extend:
 [Extending](extending.md). macOS layer detail: [mactools](../macos/mactools.md).
