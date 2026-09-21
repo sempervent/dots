@@ -81,6 +81,7 @@ run scripts/tests/mactools_test.sh
 run scripts/tests/backup_gate_test.sh
 run scripts/tests/package_state_test.sh
 run scripts/tests/component_discovery_test.sh
+run scripts/tests/workstation_groups_test.sh
 run scripts/tests/linux_distro_test.sh
 
 echo "OK: all CI tests passed"

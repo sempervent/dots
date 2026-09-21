@@ -41,7 +41,7 @@ health verification (scripts/check.sh)
 
 ```text
 profiles          machine-role presets (home / work / server / …)
-package groups    portable tool sets (core, modern, …)
+package groups    portable tool sets (core, modern, dev, security, …)
 optional components   --with ids (herdr, hermes, mactools, …)
 supergroups       expand to component ids (e.g. ai)
 managed links     repo files → home paths

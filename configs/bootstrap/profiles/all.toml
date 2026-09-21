@@ -6,7 +6,10 @@ name = "all"
 description = "ALL optional DOTS components (lab convenience — may include cloud AI)"
 include_all_optional = true
 with = []
-packages = ["core", "modern", "workstation", "infra", "media", "gui"]
+packages = [
+  "core", "modern", "workstation", "infra", "media", "gui",
+  "dev", "security", "network", "data", "geo",
+]
 open_apps = ["iTerm"]
 
 [runtime]

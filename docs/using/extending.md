@@ -49,7 +49,8 @@ tests + docs/using/tools.md if conceptually significant
 Unavailable on a distro: set the map value to `""` (skip). Do not invent fake
 package names. Do **not** add ownership only to top-level `brew/Brewfile`.
 
-Focused: `scripts/tests/package_state_test.sh`, `scripts/tests/repository_contract_test.sh`.
+Focused: `scripts/tests/package_state_test.sh`, `scripts/tests/repository_contract_test.sh`,
+`scripts/tests/workstation_groups_test.sh`.
 
 ---
 

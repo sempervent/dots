@@ -72,8 +72,11 @@ else
   PROFILE_NAME="${CHECK_PROFILE}"
   case "${CHECK_PROFILE}" in
     server) PROFILE_PACKAGES=(core modern server) ;;
-    work) PROFILE_PACKAGES=(core modern workstation) ;;
-    home|all) PROFILE_PACKAGES=(core modern workstation infra media gui) ;;
+    work) PROFILE_PACKAGES=(core modern workstation dev data security) ;;
+    home) PROFILE_PACKAGES=(core modern workstation infra media gui \
+      dev network data geo security) ;;
+    all) PROFILE_PACKAGES=(core modern workstation infra media gui \
+      dev security network data geo) ;;
     *) PROFILE_PACKAGES=(core modern) ;;
   esac
 fi

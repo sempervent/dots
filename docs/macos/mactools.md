@@ -36,6 +36,7 @@ Declared in `brew/Brewfile.mactools` (verified Homebrew names; no duplicates of
 | Terminal / editor | `ghostty`, `zed` (iTerm + Neovim stay primary) |
 | Audio / PFL | `loopback`, `audio-hijack`, `blackhole-2ch`, `vcv-rack`, `obs`, `touchdesigner`, `processing`, `sonic-pi`, `supercollider` |
 | CLI | `mise`, `yazi`, `watchexec`, `hyperfine`, `mprocs`, `xh`, `dust`, `duf` |
+| Disk / GIS / MIDI | `qgis`, `grandperspective`, `midi-monitor` (install-only) |
 
 Omitted on purpose (already owned elsewhere): `just`, `lazygit`, Docker CLI formulae, Ranger.
 

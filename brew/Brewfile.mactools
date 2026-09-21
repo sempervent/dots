@@ -53,3 +53,8 @@ brew "mprocs"
 brew "xh"
 brew "dust"
 brew "duf"
+
+# --- disk / GIS / MIDI (install-only; no config / permissions / kills) ---
+cask "qgis"
+cask "grandperspective"
+cask "midi-monitor"

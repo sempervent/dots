@@ -86,13 +86,13 @@ else
 	ok "cursor not consented from herdr/ollama inventory"
 fi
 
-echo "=== mocked brew: git MANAGED, herdr MANAGED, dust INACTIVE, act UNDECLARED ==="
+echo "=== mocked brew: git MANAGED, herdr MANAGED, dust INACTIVE, glow UNDECLARED ==="
 dots_pkg_ownership_reset
 export DOTS_PACKAGE_GROUPS="core"
 DOTS_RESOLVED_GROUPS=(core)
 DOTS_WITH_COMPONENTS=(herdr)
-export DOTS_PKG_MOCK_LEAVES=$'git\nherdr\ndust\nact'
-export DOTS_PKG_MOCK_FORMULAE=$'git\nherdr\ndust\nact'
+export DOTS_PKG_MOCK_LEAVES=$'git\nherdr\ndust\nglow'
+export DOTS_PKG_MOCK_FORMULAE=$'git\nherdr\ndust\nglow'
 export DOTS_PKG_MOCK_CASKS=''
 export DOTS_PKG_MOCK_OUTDATED_FORMULAE=''
 export DOTS_PKG_MOCK_OUTDATED_CASKS=''
@@ -102,15 +102,16 @@ dots_pkg_classify_resolved 1
 dots_pkg_status_print >"${TMP}/status.out"
 
 # git from core → MANAGED; herdr from component → MANAGED
-# dust from mactools (not selected) → INACTIVE; act → UNDECLARED
+# dust from mactools (not selected) → INACTIVE; glow → UNDECLARED
+# (act is owned by group:dev once that Brewfile exists — use glow for undeclared)
 printf '%s\n' "${DOTS_DESIRED_FORMULAE[@]}" | grep -qx git && ok "git in desired" || bad "git not desired"
 printf '%s\n' "${DOTS_DESIRED_FORMULAE[@]}" | grep -qx herdr && ok "herdr in desired" || bad "herdr not desired"
 printf '%s\n' "${DOTS_DESIRED_FORMULAE[@]}" | grep -qx dust && bad "dust should not be desired" || ok "dust not in desired"
 [[ ${DOTS_PKG_COUNT_MANAGED} -ge 2 ]] && ok "managed>=2 (git+herdr)" || bad "managed=${DOTS_PKG_COUNT_MANAGED}"
 printf '%s\n' "${DOTS_PKG_INACTIVE_FORMULAE[@]+"${DOTS_PKG_INACTIVE_FORMULAE[@]}"}" | grep -qx dust && ok "dust INACTIVE" || bad "dust not inactive"
-printf '%s\n' "${DOTS_PKG_UNDECLARED_FORMULAE[@]+"${DOTS_PKG_UNDECLARED_FORMULAE[@]}"}" | grep -qx act && ok "act UNDECLARED" || bad "act not undeclared"
+printf '%s\n' "${DOTS_PKG_UNDECLARED_FORMULAE[@]+"${DOTS_PKG_UNDECLARED_FORMULAE[@]}"}" | grep -qx glow && ok "glow UNDECLARED" || bad "glow not undeclared"
 printf '%s\n' "${DOTS_PKG_UNDECLARED_FORMULAE[@]+"${DOTS_PKG_UNDECLARED_FORMULAE[@]}"}" | grep -qx dust && bad "dust wrongly undeclared" || ok "dust not undeclared"
-printf '%s\n' "${DOTS_PKG_INACTIVE_FORMULAE[@]+"${DOTS_PKG_INACTIVE_FORMULAE[@]}"}" | grep -qx act && bad "act wrongly inactive" || ok "act not inactive"
+printf '%s\n' "${DOTS_PKG_INACTIVE_FORMULAE[@]+"${DOTS_PKG_INACTIVE_FORMULAE[@]}"}" | grep -qx glow && bad "glow wrongly inactive" || ok "glow not inactive"
 
 grep -q 'inactive:' "${TMP}/status.out" && ok "status prints inactive" || bad "no inactive line"
 grep -qi 'Inactive' "${TMP}/status.out" && ok "status has Inactive section" || bad "no Inactive section"
@@ -132,8 +133,19 @@ echo "${exp}" | grep -q 'state:.*INACTIVE\|state:.*MANAGED' && ok "explain has s
 echo "${exp}" | grep -q 'component:mactools' && ok "explain known owner mactools" || bad "explain owners: ${exp}"
 echo "${exp}" | grep -q '\-\-with' && ok "explain activate hint" || bad "no activate hint"
 
+exp_glow="$(dots_pkg_explain glow 2>&1)" || true
+echo "${exp_glow}" | grep -q 'UNDECLARED' && ok "explain glow UNDECLARED" || bad "glow explain: ${exp_glow}"
+
+# act is known via group:dev but INACTIVE when core-only is selected
+DOTS_WITH_COMPONENTS=(herdr)
+dots_pkg_ownership_reset
+export DOTS_PKG_MOCK_LEAVES=$'git\nherdr\nact'
+export DOTS_PKG_MOCK_FORMULAE=$'git\nherdr\nact'
+dots_desired_packages_resolve
+dots_pkg_classify_resolved 1
+printf '%s\n' "${DOTS_PKG_INACTIVE_FORMULAE[@]+"${DOTS_PKG_INACTIVE_FORMULAE[@]}"}" | grep -qx act && ok "act INACTIVE when dev unselected" || bad "act not inactive"
 exp_act="$(dots_pkg_explain act 2>&1)" || true
-echo "${exp_act}" | grep -q 'UNDECLARED' && ok "explain act UNDECLARED" || bad "act explain: ${exp_act}"
+echo "${exp_act}" | grep -q 'INACTIVE\|group:dev' && ok "explain act known owner" || bad "act explain: ${exp_act}"
 
 adopt_out="$(dots_pkg_suggest_declare brew dust 2>&1)" || true
 echo "${adopt_out}" | grep -qi 'do not adopt\|already has DOTS ownership\|--with' && ok "adopt redirects for owned pkg" || bad "adopt: ${adopt_out}"

@@ -11,10 +11,10 @@ Authority: `configs/bootstrap/profiles/*.toml`
 | Profile | Package groups | Optional components | Multiplexer | GUI |
 |---------|----------------|---------------------|-------------|-----|
 | `base` | `core`, `modern` | none | tmux | minimal |
-| `home` | `core`…`gui` + `infra`/`media` | `ai` + herdr, skills, ai-skills, images, tex; FluidVoice excluded by default | herdr | yes |
-| `work` | `core`, `modern`, `workstation` | **none** unless `--with` / custom | tmux | limited |
+| `home` | `core`…`gui` + `infra`/`media` + `dev`/`network`/`data`/`geo`/`security` | `ai` + herdr, skills, ai-skills, images, tex; FluidVoice excluded by default | herdr | yes |
+| `work` | `core`, `modern`, `workstation`, `dev`, `data`, `security` | **none** unless `--with` / custom | tmux | limited |
 | `server` | `core`, `modern`, `server` | **Herdr** only (no AI providers) | tmux | no |
-| `all` | full workstation groups | all optional (`include_all_optional`; respects `omit_from_all`) | tmux | yes |
+| `all` | full workstation groups incl. `dev`/`security`/`network`/`data`/`geo` | all optional (`include_all_optional`; respects `omit_from_all`) | tmux | yes |
 
 ### `base`
 
@@ -30,7 +30,9 @@ members are omitted automatically.
 ### `work`
 
 Conservative allowlist. **Do not** infer employer AI policy. Start with no AI
-clients. Cursor must not be included without approval.
+clients. Cursor must not be included without approval. Package groups add
+`dev` / `data` / `security` (install-only CLIs); `network` and `geo` stay off
+unless a custom profile or `--packages` opts in.
 
 ### `server`
 
