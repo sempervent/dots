@@ -177,11 +177,59 @@ if [[ "${PROFILE_RUNTIME_MULTIPLEXER}" == "tmux" ]]; then ok "server multiplexer
 # HOME packages + runtime
 resolve_named home
 if dots_array_contains gui "${PROFILE_PACKAGES[@]+"${PROFILE_PACKAGES[@]}"}"; then ok "home has gui group"; else bad "home missing gui"; fi
+for g in dev network data geo security; do
+  if dots_array_contains "${g}" "${PROFILE_PACKAGES[@]+"${PROFILE_PACKAGES[@]}"}"; then
+    ok "home has ${g} group"
+  else
+    bad "home missing ${g}"
+  fi
+done
 if [[ "${PROFILE_RUNTIME_MULTIPLEXER}" == "herdr" ]]; then ok "home multiplexer=herdr"; else bad "home mux=${PROFILE_RUNTIME_MULTIPLEXER}"; fi
 
-# WORK has no AI
+# WORK has no AI; has lean workstation tool groups (no geo/network)
 resolve_named work
 if [[ ${#EFFECTIVE_WITH[@]} -eq 0 ]]; then ok "work AI empty"; else bad "work leaked AI"; fi
+for g in dev data security; do
+  if dots_array_contains "${g}" "${PROFILE_PACKAGES[@]+"${PROFILE_PACKAGES[@]}"}"; then
+    ok "work has ${g} group"
+  else
+    bad "work missing ${g}"
+  fi
+done
+if dots_array_contains geo "${PROFILE_PACKAGES[@]+"${PROFILE_PACKAGES[@]}"}"; then
+  bad "work should omit geo"
+else
+  ok "work omits geo"
+fi
+if dots_array_contains network "${PROFILE_PACKAGES[@]+"${PROFILE_PACKAGES[@]}"}"; then
+  bad "work should omit network"
+else
+  ok "work omits network"
+fi
+
+# BASE stays lean (no new workstation tool groups)
+resolve_named base
+if dots_array_contains dev "${PROFILE_PACKAGES[@]+"${PROFILE_PACKAGES[@]}"}"; then
+  bad "base should omit dev"
+else
+  ok "base omits new tool groups"
+fi
+
+# ALL includes new groups; SERVER stays lean
+resolve_named all
+for g in dev security network data geo; do
+  if dots_array_contains "${g}" "${PROFILE_PACKAGES[@]+"${PROFILE_PACKAGES[@]}"}"; then
+    ok "all has ${g} group"
+  else
+    bad "all missing ${g}"
+  fi
+done
+resolve_named server
+if dots_array_contains security "${PROFILE_PACKAGES[@]+"${PROFILE_PACKAGES[@]}"}"; then
+  bad "server should omit security"
+else
+  ok "server omits workstation tool groups"
+fi
 
 # Unknown package group
 if dots_validate_package_groups "not-a-group" 2>/dev/null; then

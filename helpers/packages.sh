@@ -16,7 +16,8 @@ if [[ -n ${DIR:-} ]]; then
 fi
 
 dots_known_package_groups() {
-	printf '%s\n' core modern workstation infra media gui server
+	printf '%s\n' core modern workstation infra media gui server \
+		dev security network data geo
 }
 
 dots_validate_package_groups() {
@@ -24,7 +25,8 @@ dots_validate_package_groups() {
 	for g in "$@"; do
 		[[ -z ${g} ]] && continue
 		case "${g}" in
-		core | modern | workstation | infra | media | gui | server) ;;
+		core | modern | workstation | infra | media | gui | server | \
+			dev | security | network | data | geo) ;;
 		*)
 			echo "Error: unknown package group '${g}'" >&2
 			unknown=1
