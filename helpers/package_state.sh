@@ -268,7 +268,8 @@ dots_pkg_activate_hint() {
 	fi
 	if [[ ${#groups[@]} -gt 0 ]]; then
 		echo "Enable package group(s) in your profile: ${groups[*]}"
-		echo "(configs/packages/groups.toml + profile packages = […])"
+		echo "  profile packages = [..., \"${groups[0]}\", ...]   # not --with"
+		echo "(authority: configs/packages/groups.toml; see ./dots packages group ${groups[0]})"
 		return 0
 	fi
 	echo "./dots packages adopt ${want}   # no DOTS owner; suggest Brewfile declaration"
@@ -572,7 +573,7 @@ dots_pkg_status_print() {
 			owners="$(dots_pkg_known_owners "${e}" 2>/dev/null | tr '\n' ',' | sed 's/,$//')"
 			printf '  %s  [%s] (cask)\n' "${e}" "${owners:-?}"
 		done
-		echo "  hint: activate via ./dots setup --with <component> (not adopt)"
+		echo "  hint: group owner → profile packages=; component → ./dots setup --with"
 		echo "        detail: ./dots packages explain <name>"
 	fi
 	if [[ ${#DOTS_PKG_UNDECLARED_FORMULAE[@]} -gt 0 ]]; then

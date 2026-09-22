@@ -17,6 +17,10 @@ bad() {
 
 # shellcheck source=../../helpers/toml.sh
 source "${ROOT}/helpers/toml.sh"
+dots_require_python 0 || {
+	echo "SKIP: need Python >=3.11 for groups.toml parse"
+	exit 0
+}
 # shellcheck source=../../helpers/packages.sh
 source "${ROOT}/helpers/packages.sh"
 # shellcheck source=../../helpers/package_state.sh
@@ -31,10 +35,13 @@ for g in dev security network data geo; do
 	fi
 	[[ -f ${ROOT}/brew/groups/${g}.Brewfile ]] && ok "Brewfile ${g}" || bad "missing brew/groups/${g}.Brewfile"
 done
+# Registry path must be the SoT file (unless overridden)
+reg="$(dots_groups_registry_path)"
+[[ ${reg} == */configs/packages/groups.toml ]] && ok "registry path default" || bad "registry path=${reg}"
 
 echo "=== groups.toml membership uniqueness across portable ids ==="
 uniq_rc=0
-python3 - <<'PY' || uniq_rc=$?
+"${DOTS_PYTHON}" - <<'PY' || uniq_rc=$?
 import os, tomllib, sys
 from pathlib import Path
 
@@ -78,7 +85,7 @@ done
 
 echo "=== Linux maps declare every portable id (value may be empty) ==="
 map_rc=0
-python3 - <<'PY' || map_rc=$?
+"${DOTS_PYTHON}" - <<'PY' || map_rc=$?
 import os, tomllib, sys
 from pathlib import Path
 

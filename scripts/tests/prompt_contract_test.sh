@@ -96,16 +96,18 @@ grep -q '┌──┤' "${ST}" && ok "starship box line1" || bad "box"
 # Powerline wedges must not drive format
 grep -E 'format = .*|' "${ST}" && bad "powerline still in format" || ok "no powerline format"
 
-if command -v python3 >/dev/null 2>&1; then
-	python3 - <<PY
-import tomllib, pathlib, sys
+# shellcheck source=../../helpers/toml.sh
+source "${ROOT}/helpers/toml.sh"
+if dots_require_python 0; then
+	"$DOTS_PYTHON" - <<PY
+import tomllib, pathlib
 p = pathlib.Path("${ST}")
 tomllib.loads(p.read_text())
 print("toml_ok")
 PY
 	ok "starship.toml parses"
 else
-	bad "python3 missing for toml parse"
+	bad "Python >=3.11 missing for toml parse"
 fi
 
 if command -v starship >/dev/null 2>&1; then
