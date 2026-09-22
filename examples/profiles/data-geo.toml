@@ -1,0 +1,15 @@
+# examples/profiles/data-geo.toml — EXAMPLE ONLY (not applied automatically)
+#
+# Analytical + geospatial CLIs on a desktop baseline. No AI, no network group.
+# Copy to ~/.config/dots/profiles/data-geo.toml, then:
+#   ./bootstrap.sh --profile ~/.config/dots/profiles/data-geo.toml --show
+#   ./dots packages plan --profile ~/.config/dots/profiles/data-geo.toml
+
+[profile]
+name = "data-geo"
+description = "Tabular + geospatial CLI workstation (no AI)"
+extends = "base"
+packages = ["core", "modern", "workstation", "data", "geo"]
+
+[runtime]
+multiplexer = "tmux"

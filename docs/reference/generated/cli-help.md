@@ -21,6 +21,9 @@ Usage:
   ./dots components list     registry + host compatibility
   ./dots components active   last-selected components (informational)
   ./dots packages            package ownership / drift
+  ./dots packages groups     capability groups (read-only)
+  ./dots packages group ID   inspect one package group
+  ./dots packages plan […]   resolved package plan (read-only)
   ./dots packages status     full package audit
   ./dots packages explain N  explain one package's ownership state
   ./dots packages outdated   outdated managed packages
@@ -263,6 +266,10 @@ User overrides: ~/.config/dots/models.toml
 ```text
 Usage:
   ./dots packages              interactive menu (TTY) or status
+  ./dots packages groups       list capability groups (+ active marker)
+  ./dots packages group ID     inspect one group (brewfile, membership, states)
+  ./dots packages plan [--profile NAME|PATH]
+                               resolved package plan (read-only; no mutation)
   ./dots packages status       full ownership report (read-only)
   ./dots packages explain NAME explain one package (owners + activate hint)
   ./dots packages outdated     outdated managed packages
@@ -273,6 +280,9 @@ Usage:
                                print suggested Brewfile declaration (no auto-edit)
                                (packages with component owners → use --with instead)
 
+groups = capability ownership (configs/packages/groups.toml)
+plan   = resolved package actions for a profile, without mutation
+
 Ownership vocabulary:
   managed     declared by resolved DOTS config + package-manager owned
   missing     declared but absent
@@ -281,8 +291,12 @@ Ownership vocabulary:
   inactive    installed; known DOTS owner(s) but none selected
   undeclared  installed; no DOTS group/component owner
 
+Activate hints:
+  group owner      → profile packages = […]  (not --with)
+  component owner  → profile with= / ./dots setup --with
+
 known ≠ selected ≠ installed. Upgrade default = active managed only.
-Docs: https://sempervent.github.io/dots/using/components/
+Docs: https://sempervent.github.io/dots/using/package-groups/
 
 DOTS never runs brew bundle cleanup or uninstalls undeclared software.
 ```

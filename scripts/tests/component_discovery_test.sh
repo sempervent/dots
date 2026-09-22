@@ -193,12 +193,15 @@ echo "${pkg_help}" | grep -qi inactive && ok "packages help inactive" || bad "pk
 echo "${pkg_help}" | grep -q explain && ok "packages help explain" || bad "pkg help explain"
 
 echo "=== docs generate --check (with-options) ==="
-if python3 "${ROOT}/scripts/docs/generate_reference.py" >/dev/null 2>&1; then
+# shellcheck source=../../helpers/python_runtime.sh
+source "${ROOT}/helpers/python_runtime.sh"
+DOC_PY="$(dots_find_python311)" || DOC_PY=""
+if [[ -n ${DOC_PY} ]] && "${DOC_PY}" "${ROOT}/scripts/docs/generate_reference.py" >/dev/null 2>&1; then
 	ok "docs generate wrote outputs"
 else
 	bad "docs generate failed"
 fi
-if python3 "${ROOT}/scripts/docs/generate_reference.py" --check >/dev/null 2>&1; then
+if [[ -n ${DOC_PY} ]] && "${DOC_PY}" "${ROOT}/scripts/docs/generate_reference.py" --check >/dev/null 2>&1; then
 	ok "docs generate --check clean"
 else
 	bad "docs generate --check drift"

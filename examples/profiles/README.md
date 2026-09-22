@@ -17,6 +17,9 @@ These files are **templates**, not active configuration.
 | `home-studio.toml` | `home` | Personal workstation without Cursor |
 | `work-custom.toml` | `work` | Employer machine + infra/images, still AI-free |
 | `bertha.toml` | `server` | Headless Linux + infra; tmux auto-mux |
+| `developer.toml` | `base` | `dev` + `security` CLIs, no AI |
+| `data-geo.toml` | `base` | `data` + `geo` on a desktop baseline |
+| `work-network.toml` | `work` | Work allowlist + `network` (still no AI) |
 
 Builtin short names (`home`, `work`, `server`, …) always resolve to repository
 presets — they are never shadowed by files in `~/.config/dots/profiles/`.

@@ -1,0 +1,15 @@
+# examples/profiles/developer.toml — EXAMPLE ONLY (not applied automatically)
+#
+# Lean developer capability set: local CI / lint / security CLIs, no AI.
+# Copy to ~/.config/dots/profiles/developer.toml, then:
+#   ./bootstrap.sh --profile ~/.config/dots/profiles/developer.toml --show
+#   ./dots packages plan --profile ~/.config/dots/profiles/developer.toml
+
+[profile]
+name = "developer"
+description = "Dev + security CLIs on a lean base (no AI)"
+extends = "base"
+packages = ["core", "modern", "dev", "security"]
+
+[runtime]
+multiplexer = "tmux"

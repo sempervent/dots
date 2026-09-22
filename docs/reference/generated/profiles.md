@@ -62,5 +62,8 @@ Not applied automatically. Copy from `examples/profiles/`:
 | file | name | extends | description |
 | --- | --- | --- | --- |
 | bertha.toml | bertha | server | Headless server with infra package group |
+| data-geo.toml | data-geo | base | Tabular + geospatial CLI workstation (no AI) |
+| developer.toml | developer | base | Dev + security CLIs on a lean base (no AI) |
 | home-studio.toml | home-studio | home | Home workstation without Cursor Agent CLI |
 | work-custom.toml | corp-work | work | Work machine with infra tools + images toolkit (no AI) |
+| work-network.toml | work-network | work | Work allowlist + network CLIs (still no AI) |

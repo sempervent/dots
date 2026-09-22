@@ -70,15 +70,27 @@ if PROFILE_FILE="$(dots_resolve_profile_path "${CHECK_PROFILE}" 2>/dev/null)"; t
   dots_compute_effective_with >/dev/null || true
 else
   PROFILE_NAME="${CHECK_PROFILE}"
-  case "${CHECK_PROFILE}" in
-    server) PROFILE_PACKAGES=(core modern server) ;;
-    work) PROFILE_PACKAGES=(core modern workstation dev data security) ;;
-    home) PROFILE_PACKAGES=(core modern workstation infra media gui \
-      dev network data geo security) ;;
-    all) PROFILE_PACKAGES=(core modern workstation infra media gui \
-      dev security network data geo) ;;
-    *) PROFILE_PACKAGES=(core modern) ;;
-  esac
+  # Prefer builtin profile TOML packages= over hard-coded role membership.
+  _check_fb="${DOTS_DIR}/configs/bootstrap/profiles/${CHECK_PROFILE}.toml"
+  [[ -f "${_check_fb}" ]] || _check_fb="${DOTS_DIR}/configs/bootstrap/profiles/base.toml"
+  PROFILE_PACKAGES=()
+  if [[ -f "${_check_fb}" ]] && declare -F dots_toml_query >/dev/null 2>&1; then
+    while IFS= read -r _g; do
+      [[ -n "${_g}" ]] && PROFILE_PACKAGES+=("${_g}")
+    done < <(
+      dots_toml_query "${_check_fb}" <<'PY'
+prof = data.get("profile") or {}
+for g in prof.get("packages") or []:
+    g = str(g).strip()
+    if g:
+        print(g)
+PY
+    )
+  fi
+  if [[ ${#PROFILE_PACKAGES[@]} -eq 0 ]]; then
+    # Minimal fallback when profile TOML cannot be read (no Python / missing file).
+    PROFILE_PACKAGES=(core modern)
+  fi
 fi
 
 echo -e "${BLUE}dotfiles health check${NC} (profile=${PROFILE_NAME:-${CHECK_PROFILE}})\n"

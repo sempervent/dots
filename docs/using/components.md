@@ -59,6 +59,7 @@ in the desired set and are skipped unless `--all`.
 
 ## See also
 
+- [Package groups](package-groups.md)
 - [Packages ownership model](../concepts/packages.md)
 - [Components registry (concept)](../concepts/components.md)
 - [Extending](extending.md)

@@ -43,6 +43,14 @@ echo "${st}" | grep -q '1.4.0' && ok "status shows version" || bad "status versi
 echo "${st}" | grep -qi 'profile' && ok "status mentions profile" || bad "status profile"
 echo "${st}" | grep -qi 'Backup' && ok "status mentions backups" || bad "status backups"
 echo "${out}" | grep -q './dots packages' && ok "help lists packages" || bad "help packages"
+echo "${out}" | grep -q 'packages groups\|package groups' && ok "help mentions package groups" || true
+ph="$("${ROOT}/dots" packages help 2>&1)" || {
+	bad "packages help failed"
+	ph=""
+}
+echo "${ph}" | grep -q 'packages groups' && ok "packages help lists groups" || bad "packages help groups"
+echo "${ph}" | grep -q 'packages plan' && ok "packages help lists plan" || bad "packages help plan"
+echo "${ph}" | grep -q 'packages group' && ok "packages help lists group" || bad "packages help group"
 echo "${out}" | grep -q './dots components' && ok "help lists components" || bad "help components"
 echo "${out}" | grep -q '\-\-with\|components' && ok "help mentions components/--with" || bad "help with"
 echo "${out}" | grep -q './dots backup' && ok "help lists backup" || bad "help backup"

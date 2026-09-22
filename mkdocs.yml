@@ -84,6 +84,7 @@ nav:
       - Repository layout: concepts/repository-layout.md
   - Using DOTS:
       - Recipes: using/recipes.md
+      - Package groups: using/package-groups.md
       - Components and --with: using/components.md
       - Skills: using/skills.md
       - Tools catalog: using/tools.md

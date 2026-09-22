@@ -1,0 +1,17 @@
+# examples/profiles/work-network.toml — EXAMPLE ONLY (not applied automatically)
+#
+# Extends the conservative work preset and opts into the network capability
+# group (Tailscale/rclone/etc install-only — DOTS never runs tailscale up).
+# Preserves work's no-AI default.
+#
+# Copy to ~/.config/dots/profiles/work-network.toml, then:
+#   ./bootstrap.sh --profile ~/.config/dots/profiles/work-network.toml --show
+#   ./dots packages plan --profile ~/.config/dots/profiles/work-network.toml
+
+[profile]
+name = "work-network"
+description = "Work allowlist + network CLIs (still no AI)"
+extends = "work"
+
+[packages]
+add = ["network"]
