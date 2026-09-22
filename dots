@@ -54,6 +54,9 @@ Usage:
   ./dots components list     registry + host compatibility
   ./dots components active   last-selected components (informational)
   ./dots packages            package ownership / drift
+  ./dots packages groups     capability groups (read-only)
+  ./dots packages group ID   inspect one package group
+  ./dots packages plan […]   resolved package plan (read-only)
   ./dots packages status     full package audit
   ./dots packages explain N  explain one package's ownership state
   ./dots packages outdated   outdated managed packages
@@ -137,8 +140,10 @@ dots_cmd_status() {
 					echo "  drift: none"
 				fi
 			fi
-			echo "  detail: ./dots packages status"
 		fi
+		echo "  detail: ./dots packages status"
+		echo "  plan:   ./dots packages plan"
+		echo "  groups: ./dots packages groups"
 		echo ""
 		echo "Components:"
 		if [[ -n ${DOTS_ACTIVE_COMPONENTS:-} ]]; then
@@ -502,23 +507,27 @@ dots_cmd_packages() {
 		dots_ui_header "DOTS Packages"
 		echo ""
 		echo "  1) status     ownership / drift (read-only)"
-		echo "  2) outdated   managed packages with updates"
-		echo "  3) upgrade    upgrade DOTS-managed packages"
-		echo "  4) adopt      suggest Brewfile declaration"
-		echo "  5) explain    explain one package"
+		echo "  2) groups     capability groups"
+		echo "  3) plan       resolved package plan"
+		echo "  4) explain    explain one package"
+		echo "  5) outdated   managed packages with updates"
+		echo "  6) upgrade    upgrade DOTS-managed packages"
+		echo "  7) adopt      suggest Brewfile declaration"
 		echo "  q) quit"
 		echo ""
 		local choice
 		choice="$(dots_prompt_text "Choice" "1")"
 		case "${choice}" in
 		1 | status | s) sub=status ;;
-		2 | outdated | o) sub=outdated ;;
-		3 | upgrade | u) sub=upgrade ;;
-		4 | adopt | a) sub=adopt ;;
-		5 | explain | e)
+		2 | groups | g) sub=groups ;;
+		3 | plan | p) sub=plan ;;
+		4 | explain | e)
 			sub=explain
 			set -- "$(dots_prompt_text "Package name" "")"
 			;;
+		5 | outdated | o) sub=outdated ;;
+		6 | upgrade | u) sub=upgrade ;;
+		7 | adopt | a) sub=adopt ;;
 		q | quit | Q) return 0 ;;
 		*) sub=status ;;
 		esac
@@ -529,6 +538,15 @@ dots_cmd_packages() {
 	case "${sub}" in
 	status | st)
 		dots_pkg_status_report
+		;;
+	groups)
+		dots_packages_groups_list
+		;;
+	group)
+		dots_packages_group_show "${1:-}"
+		;;
+	plan)
+		dots_packages_plan "$@"
 		;;
 	outdated)
 		dots_pkg_status_report 1
@@ -626,6 +644,10 @@ dots_cmd_packages() {
 		cat <<EOF
 Usage:
   ./dots packages              interactive menu (TTY) or status
+  ./dots packages groups       list capability groups (+ active marker)
+  ./dots packages group ID     inspect one group (brewfile, membership, states)
+  ./dots packages plan [--profile NAME|PATH]
+                               resolved package plan (read-only; no mutation)
   ./dots packages status       full ownership report (read-only)
   ./dots packages explain NAME explain one package (owners + activate hint)
   ./dots packages outdated     outdated managed packages
@@ -636,6 +658,9 @@ Usage:
                                print suggested Brewfile declaration (no auto-edit)
                                (packages with component owners → use --with instead)
 
+groups = capability ownership (configs/packages/groups.toml)
+plan   = resolved package actions for a profile, without mutation
+
 Ownership vocabulary:
   managed     declared by resolved DOTS config + package-manager owned
   missing     declared but absent
@@ -644,8 +669,12 @@ Ownership vocabulary:
   inactive    installed; known DOTS owner(s) but none selected
   undeclared  installed; no DOTS group/component owner
 
+Activate hints:
+  group owner      → profile packages = […]  (not --with)
+  component owner  → profile with= / ./dots setup --with
+
 known ≠ selected ≠ installed. Upgrade default = active managed only.
-Docs: https://sempervent.github.io/dots/using/components/
+Docs: https://sempervent.github.io/dots/using/package-groups/
 
 DOTS never runs brew bundle cleanup or uninstalls undeclared software.
 EOF

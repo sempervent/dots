@@ -304,6 +304,80 @@ else
 	bad "stale architectural phrases present (${stale_hits})"
 fi
 
+echo "=== package-group allowlist SoT (no hard-coded validation universes) ==="
+# Smart guard: validation allowlists in helpers/packages.sh, helpers/profiles.sh,
+# and scripts/check.sh must not re-hardcode the group universe. Legitimate
+# profile packages= selections, bare-setup convenience lists, docs, and examples
+# are out of scope.
+allow_rc=0
+python3 - <<'PY' || allow_rc=$?
+import re
+import sys
+from pathlib import Path
+
+root = Path(".")
+# We run with ROOT in env
+import os
+root = Path(os.environ["ROOT"])
+
+errors = []
+
+# 1) packages.sh: dots_known_package_groups must be registry-driven
+pkgs = (root / "helpers/packages.sh").read_text(encoding="utf-8")
+if "dots_groups_registry_path" not in pkgs:
+    errors.append("helpers/packages.sh missing dots_groups_registry_path")
+# Old validation case pattern (group|group|...)
+if re.search(
+    r"case\s+\"\$\{?g\}?\"\s+in[\s\S]{0,80}core\s*\|\s*modern\s*\|\s*workstation",
+    pkgs,
+):
+    errors.append("helpers/packages.sh still has hard-coded case validation allowlist")
+# Known-groups printf dump of the full universe (allow bare-setup selection lists)
+fn = re.search(
+    r"dots_known_package_groups\(\)\s*\{([\s\S]*?)\n\}",
+    pkgs,
+)
+if not fn:
+    errors.append("helpers/packages.sh missing dots_known_package_groups")
+else:
+    body = fn.group(1)
+    if "dots_toml_query" not in body and "dots_groups_registry_path" not in body:
+        errors.append("dots_known_package_groups is not registry-driven")
+    if re.search(r"printf\s+'%s\\n'\s+core\s+modern\s+workstation", body):
+        errors.append("dots_known_package_groups hard-codes group printf allowlist")
+
+# 2) profiles.sh: KNOWN_GROUPS must load from groups.toml, not a string set literal
+prof = (root / "helpers/profiles.sh").read_text(encoding="utf-8")
+if re.search(
+    r'KNOWN_GROUPS\s*=\s*\{\s*"core"\s*,\s*"modern"',
+    prof,
+):
+    errors.append("helpers/profiles.sh has hard-coded KNOWN_GROUPS string set")
+if "groups.toml" not in prof and "packages" not in prof:
+    errors.append("helpers/profiles.sh does not reference groups registry")
+if "DOTS_GROUPS_REGISTRY" not in prof and "groups.toml" not in prof:
+    errors.append("helpers/profiles.sh missing groups.toml / DOTS_GROUPS_REGISTRY load")
+
+# 3) check.sh: no role→membership case duplicating profile TOMLs
+check = (root / "scripts/check.sh").read_text(encoding="utf-8")
+if re.search(
+    r"case\s+\"\$\{?CHECK_PROFILE\}?\"\s+in[\s\S]{0,200}home\)\s*PROFILE_PACKAGES=",
+    check,
+):
+    errors.append("scripts/check.sh still hard-codes profile→packages case allowlist")
+
+if errors:
+    for e in errors:
+        print(e, file=sys.stderr)
+    sys.exit(2)
+print("ALLOWOK")
+PY
+if [[ ${allow_rc} -eq 0 ]]; then
+	ok "no authoritative hard-coded package-group allowlists"
+else
+	bad "package-group allowlist SoT violated"
+fi
+
 echo "=== internal doc links resolve ==="
 link_fail=0
 check_md_links() {

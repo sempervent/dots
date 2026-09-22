@@ -115,6 +115,7 @@ dots_profile_parse() {
 	local bin="${DOTS_PYTHON}"
 	pyhome="$(mktemp -d "${TMPDIR:-/tmp}/dots-pyhome.XXXXXX")"
 	FILE="${file}" BUILTIN_DIR="${builtin_dir}" USER_DIR="$(dots_user_profile_dir)" \
+	DOTS_GROUPS_REGISTRY="${DOTS_GROUPS_REGISTRY:-}" \
 	HOME="${pyhome}" \
 	PYTHONDONTWRITEBYTECODE=1 \
 	PYTHONNOUSERSITE=1 \
@@ -135,11 +136,24 @@ ALLOWED_PROFILE = {
 ALLOWED_RUNTIME = {"multiplexer", "greeting", "prompt_stats", "auto_tmux"}
 ALLOWED_PACKAGES = {"add", "remove", "groups"}
 ALLOWED_COMPONENTS = {"with", "without"}
-KNOWN_GROUPS = {
-    "core", "modern", "workstation", "infra", "media", "gui", "server",
-    "dev", "security", "network", "data", "geo",
-}
 KNOWN_MUX = {"tmux", "herdr", "none"}
+
+# Load package group ids from registry (configs/packages/groups.toml).
+# Override: DOTS_GROUPS_REGISTRY (tests).
+KNOWN_GROUPS = set()
+_groups_env = os.environ.get("DOTS_GROUPS_REGISTRY", "").strip()
+groups_reg = Path(_groups_env) if _groups_env else (builtin_dir.parent.parent / "packages" / "groups.toml")
+if groups_reg.is_file():
+    try:
+        gdata = tomllib.loads(groups_reg.read_text(encoding="utf-8"))
+        for g in gdata.get("groups") or []:
+            gid = str(g.get("name") or "").strip()
+            if gid:
+                KNOWN_GROUPS.add(gid)
+    except Exception:
+        pass
+if not KNOWN_GROUPS:
+    fail("package group registry unreadable: %s" % groups_reg)
 
 # Load component + supergroup ids from registry (configs/components.toml)
 known_components = set()
@@ -488,16 +502,29 @@ dots_load_profile_file() {
 	fi
 
 	# Default package groups when profile omits packages=
+	# Prefer packages= from the named builtin profile TOML (authoritative SoT).
+	# Minimal core+modern hard-code only if that TOML cannot be read.
 	if [[ ${pkg_explicit} -eq 0 && ${#PROFILE_PACKAGES[@]} -eq 0 ]]; then
-		case "${PROFILE_NAME}" in
-		server) PROFILE_PACKAGES=(core modern server) ;;
-		work) PROFILE_PACKAGES=(core modern workstation dev data security) ;;
-		home) PROFILE_PACKAGES=(core modern workstation infra media gui \
-			dev network data geo security) ;;
-		all) PROFILE_PACKAGES=(core modern workstation infra media gui \
-			dev security network data geo) ;;
-		base | *) PROFILE_PACKAGES=(core modern) ;;
-		esac
+		local _fb="${DIR}/configs/bootstrap/profiles/${PROFILE_NAME}.toml"
+		[[ -f ${_fb} ]] || _fb="${DIR}/configs/bootstrap/profiles/base.toml"
+		if [[ -f ${_fb} ]] && declare -F dots_toml_query >/dev/null 2>&1; then
+			while IFS= read -r _g; do
+				[[ -n ${_g} ]] && PROFILE_PACKAGES+=("${_g}")
+			done < <(
+				dots_toml_query "${_fb}" <<'PY'
+prof = data.get("profile") or {}
+for g in prof.get("packages") or []:
+    g = str(g).strip()
+    if g:
+        print(g)
+PY
+			)
+		fi
+		if [[ ${#PROFILE_PACKAGES[@]} -eq 0 ]]; then
+			# Stage-0 / unreadable TOML fallback — lean baseline only.
+			# Do not duplicate home/work/server/all membership here.
+			PROFILE_PACKAGES=(core modern)
+		fi
 	fi
 
 	# Default runtime multiplexer by profile role when omitted
@@ -578,6 +605,8 @@ dots_array_contains() {
 # Supergroups are expanded before this merge (profile) / here (CLI).
 dots_compute_effective_with() {
 	EFFECTIVE_WITH=()
+	CLI_WITH=("${CLI_WITH[@]+"${CLI_WITH[@]}"}")
+	CLI_WITHOUT=("${CLI_WITHOUT[@]+"${CLI_WITHOUT[@]}"}")
 	CLI_WITH_RAW=("${CLI_WITH[@]+"${CLI_WITH[@]}"}")
 	CLI_WITHOUT_RAW=("${CLI_WITHOUT[@]+"${CLI_WITHOUT[@]}"}")
 

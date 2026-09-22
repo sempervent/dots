@@ -15,29 +15,170 @@ if [[ -n ${DIR:-} ]]; then
 	source "${DIR}/helpers/toml.sh" 2>/dev/null || true
 fi
 
+# ---------------------------------------------------------------------------
+# Package-group registry (authority: configs/packages/groups.toml)
+# Override for tests: DOTS_GROUPS_REGISTRY=/path/to/temp.toml
+# ---------------------------------------------------------------------------
+
+dots_groups_registry_path() {
+	if [[ -n ${DOTS_GROUPS_REGISTRY:-} && -f ${DOTS_GROUPS_REGISTRY} ]]; then
+		printf '%s\n' "${DOTS_GROUPS_REGISTRY}"
+		return 0
+	fi
+	printf '%s\n' "${DIR}/configs/packages/groups.toml"
+}
+
+# Print all group ids (one per line), registry order.
 dots_known_package_groups() {
-	printf '%s\n' core modern workstation infra media gui server \
-		dev security network data geo
+	dots_toml_query "$(dots_groups_registry_path)" <<'PY'
+for g in data.get("groups") or []:
+    name = str(g.get("name") or "").strip()
+    if name:
+        print(name)
+PY
+}
+
+dots_group_is_known() {
+	local want="$1" id
+	[[ -n ${want} ]] || return 1
+	while IFS= read -r id; do
+		[[ ${id} == "${want}" ]] && return 0
+	done < <(dots_known_package_groups)
+	return 1
 }
 
 dots_validate_package_groups() {
 	local g unknown=0
 	for g in "$@"; do
 		[[ -z ${g} ]] && continue
-		case "${g}" in
-		core | modern | workstation | infra | media | gui | server | \
-			dev | security | network | data | geo) ;;
-		*)
+		if ! dots_group_is_known "${g}"; then
 			echo "Error: unknown package group '${g}'" >&2
 			unknown=1
-			;;
-		esac
+		fi
 	done
 	if [[ ${unknown} -ne 0 ]]; then
 		echo "Supported groups: $(dots_known_package_groups | tr '\n' ' ')" >&2
+		echo "Authority: $(dots_groups_registry_path)" >&2
 		return 1
 	fi
 	return 0
+}
+
+# Description for one group id (empty if unknown / missing field).
+dots_group_description() {
+	local want="$1"
+	[[ -n ${want} ]] || return 1
+	WANT="${want}" dots_toml_query "$(dots_groups_registry_path)" <<'PY'
+import os
+want = os.environ.get("WANT", "").strip()
+for g in data.get("groups") or []:
+    if str(g.get("name") or "").strip() != want:
+        continue
+    print(str(g.get("description") or "").strip())
+    raise SystemExit(0)
+raise SystemExit(1)
+PY
+}
+
+# Expand one group → portable tool ids. Arg2: required|optional|all
+dots_group_package_ids() {
+	local want="$1" which="${2:-all}"
+	[[ -n ${want} ]] || return 1
+	WANT="${want}" WHICH="${which}" dots_toml_query "$(dots_groups_registry_path)" <<'PY'
+import os
+want = os.environ.get("WANT", "").strip()
+which = os.environ.get("WHICH", "all")
+for g in data.get("groups") or []:
+    if str(g.get("name") or "").strip() != want:
+        continue
+    items = []
+    if which in ("required", "all"):
+        items.extend(g.get("required") or [])
+    if which in ("optional", "all"):
+        items.extend(g.get("optional") or [])
+    if which in ("required", "all"):
+        items.extend(g.get("tools") or [])
+    seen = set()
+    for t in items:
+        t = str(t).strip()
+        if t and t not in seen:
+            seen.add(t)
+            print(t)
+    raise SystemExit(0)
+raise SystemExit(1)
+PY
+}
+
+# Canonical Brewfile path for a group (relative to DIR): brew/groups/<id>.Brewfile
+dots_group_brewfile() {
+	local id="$1"
+	[[ -n ${id} ]] || return 1
+	dots_group_is_known "${id}" || return 1
+	printf 'brew/groups/%s.Brewfile\n' "${id}"
+}
+
+# Count required/optional ids for a group (tab-separated: req\topt).
+dots_group_counts() {
+	local want="$1"
+	[[ -n ${want} ]] || return 1
+	WANT="${want}" dots_toml_query "$(dots_groups_registry_path)" <<'PY'
+import os
+want = os.environ.get("WANT", "").strip()
+for g in data.get("groups") or []:
+    if str(g.get("name") or "").strip() != want:
+        continue
+    req = list(g.get("required") or []) + list(g.get("tools") or [])
+    opt = list(g.get("optional") or [])
+    print("%d\t%d" % (len(req), len(opt)))
+    raise SystemExit(0)
+raise SystemExit(1)
+PY
+}
+
+# Map portable tool id → native name for current/forced Linux mgr (or brew on Darwin).
+# Prints: mapped_name | SKIP | MISSING | brew:<id>
+dots_group_tool_platform_name() {
+	local tool="$1"
+	local mgr="" mapfile=""
+	[[ -n ${tool} ]] || return 1
+	if [[ -n ${DOTS_FORCE_PKG_MGR:-} ]]; then
+		mgr="${DOTS_FORCE_PKG_MGR}"
+	elif command -v brew >/dev/null 2>&1 || [[ "$(uname -s)" == "Darwin" ]]; then
+		printf 'brew:%s\n' "${tool}"
+		return 0
+	else
+		mgr="$(dots_detect_linux_pkg_mgr)"
+	fi
+	case "${mgr}" in
+	apt) mapfile="${DIR}/configs/packages/apt.toml" ;;
+	pacman) mapfile="${DIR}/configs/packages/pacman.toml" ;;
+	xbps) mapfile="${DIR}/configs/packages/xbps.toml" ;;
+	dnf) mapfile="${DIR}/configs/packages/dnf.toml" ;;
+	brew | homebrew)
+		printf 'brew:%s\n' "${tool}"
+		return 0
+		;;
+	*)
+		printf 'MISSING\n'
+		return 0
+		;;
+	esac
+	[[ -f ${mapfile} ]] || {
+		printf 'MISSING\n'
+		return 0
+	}
+	TOOL="${tool}" dots_toml_query "${mapfile}" <<'PY'
+import os
+t = os.environ.get("TOOL", "")
+pkgs = data.get("packages") or {}
+val = pkgs.get(t)
+if val is None:
+    print("MISSING")
+elif str(val).strip() == "":
+    print("SKIP")
+else:
+    print(str(val).strip())
+PY
 }
 
 dots_detect_linux_pkg_mgr() {
@@ -69,7 +210,9 @@ dots_resolve_package_groups() {
 		# shellcheck disable=SC2206
 		DOTS_RESOLVED_GROUPS=(${DOTS_PACKAGE_GROUPS})
 	else
-		# Bare setup.sh default: workstation-complete (backward compatible)
+		# Bare setup.sh (no profile): deliberate convenience selection — not a
+		# validation allowlist. Profile membership lives in profile TOMLs.
+		# When TOML/Python is unavailable, same list is the Stage-0 fallback.
 		if [[ "$(uname -s)" == "Linux" ]] && ! command -v brew >/dev/null 2>&1; then
 			DOTS_RESOLVED_GROUPS=(core modern server)
 		else
@@ -169,7 +312,7 @@ dots_tools_for_groups() {
 		echo "${DOTS_RESOLVED_GROUPS[*]}"
 	)"
 	# NOTE: do not use env name GROUPS — bash treats GROUPS as a special readonly array.
-	WHICH="${which}" DOTS_PKG_GROUPS="${groups_csv}" dots_toml_query "${DIR}/configs/packages/groups.toml" <<'PY'
+	WHICH="${which}" DOTS_PKG_GROUPS="${groups_csv}" dots_toml_query "$(dots_groups_registry_path)" <<'PY'
 import os
 wanted = {g.strip() for g in os.environ.get("DOTS_PKG_GROUPS", "").replace(",", " ").split() if g.strip()}
 which = os.environ.get("WHICH", "all")
@@ -421,4 +564,357 @@ dots_provision_packages() {
 
 	# Linux without brew → native package manager
 	dots_linux_install_packages || return 1
+}
+
+# ---------------------------------------------------------------------------
+# Read-only CLI: groups / group / plan (no install, no auth, no outdated queries)
+# ---------------------------------------------------------------------------
+
+# True if group id is in the active/resolved set.
+dots_group_is_active() {
+	local want="$1" g
+	DOTS_RESOLVED_GROUPS=("${DOTS_RESOLVED_GROUPS[@]+"${DOTS_RESOLVED_GROUPS[@]}"}")
+	for g in "${DOTS_RESOLVED_GROUPS[@]+"${DOTS_RESOLVED_GROUPS[@]}"}"; do
+		[[ ${g} == "${want}" ]] && return 0
+	done
+	return 1
+}
+
+# List all package groups with active marker (read-only; no brew required).
+dots_packages_groups_list() {
+	local g desc counts req opt active mark
+	printf 'PACKAGE GROUPS  (authority: %s)\n' "$(dots_groups_registry_path)"
+	printf '\n'
+	printf '%-14s %-8s %8s %8s  %s\n' "GROUP" "ACTIVE" "REQUIRED" "OPTIONAL" "ROLE"
+	while IFS= read -r g; do
+		[[ -z ${g} ]] && continue
+		desc="$(dots_group_description "${g}" 2>/dev/null || true)"
+		counts="$(dots_group_counts "${g}" 2>/dev/null || echo $'0\t0')"
+		req="${counts%%$'\t'*}"
+		opt="${counts#*$'\t'}"
+		if dots_group_is_active "${g}"; then
+			active=yes
+			mark="*"
+		else
+			active=no
+			mark=" "
+		fi
+		printf '%s %-12s %-8s %8s %8s  %s\n' "${mark}" "${g}" "${active}" "${req}" "${opt}" "${desc}"
+	done < <(dots_known_package_groups)
+	printf '\n'
+	printf 'Active = selected by current profile / DOTS_PACKAGE_GROUPS / resolved set.\n'
+	printf 'Detail: ./dots packages group ID\n'
+	printf 'Plan:   ./dots packages plan [--profile NAME|PATH]\n'
+}
+
+# Detail one group: brewfile, membership, platform map, install states (fast).
+dots_packages_group_show() {
+	local id="$1"
+	if [[ -z ${id} ]]; then
+		echo "Usage: ./dots packages group ID" >&2
+		return 1
+	fi
+	if ! dots_group_is_known "${id}"; then
+		echo "Error: unknown package group '${id}'" >&2
+		echo "Supported groups: $(dots_known_package_groups | tr '\n' ' ')" >&2
+		return 1
+	fi
+
+	local desc bf rel selected
+	desc="$(dots_group_description "${id}" 2>/dev/null || true)"
+	rel="$(dots_group_brewfile "${id}")"
+	bf="${DIR}/${rel}"
+	if dots_group_is_active "${id}"; then
+		selected=yes
+	else
+		selected=no
+	fi
+
+	echo "Group: ${id}"
+	echo "Description: ${desc:-"(none)"}"
+	echo "Selected: ${selected}"
+	echo "Owner: ${rel}"
+	if [[ -f ${bf} ]]; then
+		echo "Brewfile: present"
+	else
+		echo "Brewfile: MISSING (${bf})"
+	fi
+	echo ""
+
+	# Ensure ownership/classify context without outdated queries
+	if declare -F dots_pkg_ownership_reset >/dev/null 2>&1; then
+		dots_pkg_ownership_reset
+	fi
+	if declare -F dots_desired_packages_resolve >/dev/null 2>&1; then
+		dots_desired_packages_resolve
+	fi
+	if declare -F dots_pkg_classify_resolved >/dev/null 2>&1; then
+		# fast=1 → skip brew outdated
+		dots_pkg_classify_resolved 1 2>/dev/null || true
+	fi
+
+	local platform_hint="brew"
+	if [[ -n ${DOTS_FORCE_PKG_MGR:-} ]]; then
+		platform_hint="${DOTS_FORCE_PKG_MGR}"
+	elif [[ "$(uname -s)" == "Linux" ]] && ! command -v brew >/dev/null 2>&1; then
+		platform_hint="$(dots_detect_linux_pkg_mgr)"
+	fi
+	echo "Platform map: ${platform_hint}"
+	printf '%-16s %-10s %-18s %s\n' "PACKAGE" "CLASS" "PLATFORM NAME" "STATE"
+	local tool class native state
+	for class in required optional; do
+		while IFS= read -r tool; do
+			[[ -z ${tool} ]] && continue
+			native="$(dots_group_tool_platform_name "${tool}" 2>/dev/null || echo MISSING)"
+			case "${native}" in
+			SKIP)
+				native="unavailable"
+				state=unsupported
+				;;
+			MISSING)
+				native="(unmapped)"
+				state=unmapped
+				;;
+			brew:*)
+				native="${native#brew:}"
+				state="$(_dots_pkg_plan_state_for "${tool}")"
+				;;
+			*)
+				state="$(_dots_pkg_plan_state_for "${tool}")"
+				;;
+			esac
+			printf '%-16s %-10s %-18s %s\n' "${tool}" "${class}" "${native}" "${state}"
+		done < <(dots_group_package_ids "${id}" "${class}" 2>/dev/null || true)
+	done
+}
+
+# Best-effort state for plan/group detail without outdated queries.
+_dots_pkg_plan_state_for() {
+	local name="$1"
+	if ! declare -F dots_pkg_in_list >/dev/null 2>&1; then
+		printf 'unknown\n'
+		return 0
+	fi
+	DOTS_DESIRED_FORMULAE=("${DOTS_DESIRED_FORMULAE[@]+"${DOTS_DESIRED_FORMULAE[@]}"}")
+	DOTS_DESIRED_CASKS=("${DOTS_DESIRED_CASKS[@]+"${DOTS_DESIRED_CASKS[@]}"}")
+	DOTS_PKG_MISSING_LINES=("${DOTS_PKG_MISSING_LINES[@]+"${DOTS_PKG_MISSING_LINES[@]}"}")
+	DOTS_PKG_EXTERNAL_LINES=("${DOTS_PKG_EXTERNAL_LINES[@]+"${DOTS_PKG_EXTERNAL_LINES[@]}"}")
+	DOTS_PKG_INACTIVE_FORMULAE=("${DOTS_PKG_INACTIVE_FORMULAE[@]+"${DOTS_PKG_INACTIVE_FORMULAE[@]}"}")
+	DOTS_PKG_INACTIVE_CASKS=("${DOTS_PKG_INACTIVE_CASKS[@]+"${DOTS_PKG_INACTIVE_CASKS[@]}"}")
+
+	local line
+	for line in "${DOTS_PKG_EXTERNAL_LINES[@]+"${DOTS_PKG_EXTERNAL_LINES[@]}"}"; do
+		[[ ${line} == "${name}"* || ${line} == *" ${name}"* || ${line} == "${name}" ]] && {
+			printf 'external\n'
+			return 0
+		}
+	done
+	if dots_pkg_in_list "${name}" "${DOTS_DESIRED_FORMULAE[@]+"${DOTS_DESIRED_FORMULAE[@]}"}" ||
+		dots_pkg_in_list "${name}" "${DOTS_DESIRED_CASKS[@]+"${DOTS_DESIRED_CASKS[@]}"}"; then
+		for line in "${DOTS_PKG_MISSING_LINES[@]+"${DOTS_PKG_MISSING_LINES[@]}"}"; do
+			[[ ${line} == "${name}" || ${line} == "${name} "* ]] && {
+				printf 'missing\n'
+				return 0
+			}
+		done
+		printf 'managed\n'
+		return 0
+	fi
+	if dots_pkg_in_list "${name}" "${DOTS_PKG_INACTIVE_FORMULAE[@]+"${DOTS_PKG_INACTIVE_FORMULAE[@]}"}" ||
+		dots_pkg_in_list "${name}" "${DOTS_PKG_INACTIVE_CASKS[@]+"${DOTS_PKG_INACTIVE_CASKS[@]}"}"; then
+		printf 'inactive\n'
+		return 0
+	fi
+	# Not in desired set and not classified inactive — treat as not selected
+	if declare -F dots_pkg_has_known_owner >/dev/null 2>&1 && dots_pkg_has_known_owner "${name}"; then
+		printf 'inactive\n'
+		return 0
+	fi
+	printf 'not-selected\n'
+}
+
+# Resolve --profile for plan; populate PROFILE_* / DOTS_RESOLVED_GROUPS / WITH.
+dots_packages_plan_load_profile() {
+	local profile_arg="${1:-}"
+	local path=""
+	PROFILE_NAME=""
+	PROFILE_PACKAGES=()
+	PROFILE_WITH=()
+	DOTS_WITH_COMPONENTS=()
+	DOTS_RESOLVED_GROUPS=()
+
+	if [[ -n ${profile_arg} ]]; then
+		if declare -F dots_resolve_profile_path >/dev/null 2>&1; then
+			path="$(dots_resolve_profile_path "${profile_arg}")" || return 1
+		elif [[ -f ${profile_arg} ]]; then
+			path="${profile_arg}"
+		else
+			path="${DIR}/configs/bootstrap/profiles/${profile_arg}.toml"
+		fi
+		if declare -F dots_load_profile_file >/dev/null 2>&1; then
+			dots_load_profile_file "${path}" >/dev/null || return 1
+			if declare -F dots_compute_effective_with >/dev/null 2>&1; then
+				dots_compute_effective_with >/dev/null 2>&1 || true
+			fi
+		else
+			echo "Error: profile helpers unavailable" >&2
+			return 1
+		fi
+		DOTS_RESOLVED_GROUPS=("${PROFILE_PACKAGES[@]+"${PROFILE_PACKAGES[@]}"}")
+		EFFECTIVE_WITH=("${EFFECTIVE_WITH[@]+"${EFFECTIVE_WITH[@]}"}")
+		if [[ ${#EFFECTIVE_WITH[@]} -gt 0 ]]; then
+			DOTS_WITH_COMPONENTS=("${EFFECTIVE_WITH[@]}")
+		else
+			DOTS_WITH_COMPONENTS=("${PROFILE_WITH[@]+"${PROFILE_WITH[@]}"}")
+		fi
+		PROFILE_NAME="${PROFILE_NAME:-${profile_arg}}"
+	else
+		# Active profile / runtime
+		if declare -F dots_state_load_active >/dev/null 2>&1 && dots_state_load_active 2>/dev/null; then
+			PROFILE_NAME="${DOTS_ACTIVE_PROFILE:-${DOTS_PROFILE:-active}}"
+			if [[ -n ${DOTS_PACKAGE_GROUPS:-} ]]; then
+				# shellcheck disable=SC2206
+				DOTS_RESOLVED_GROUPS=(${DOTS_PACKAGE_GROUPS})
+			fi
+			if [[ -n ${DOTS_ACTIVE_COMPONENTS:-} ]]; then
+				# shellcheck disable=SC2206
+				DOTS_WITH_COMPONENTS=(${DOTS_ACTIVE_COMPONENTS})
+			fi
+			if [[ -n ${DOTS_ACTIVE_PROFILE_FILE:-} && -f ${DOTS_ACTIVE_PROFILE_FILE} ]] &&
+				declare -F dots_load_profile_file >/dev/null 2>&1; then
+				dots_load_profile_file "${DOTS_ACTIVE_PROFILE_FILE}" >/dev/null || true
+				DOTS_RESOLVED_GROUPS=("${PROFILE_PACKAGES[@]+"${PROFILE_PACKAGES[@]}"}")
+				if declare -F dots_compute_effective_with >/dev/null 2>&1; then
+					dots_compute_effective_with >/dev/null 2>&1 || true
+					EFFECTIVE_WITH=("${EFFECTIVE_WITH[@]+"${EFFECTIVE_WITH[@]}"}")
+					[[ ${#EFFECTIVE_WITH[@]} -gt 0 ]] && DOTS_WITH_COMPONENTS=("${EFFECTIVE_WITH[@]}")
+				fi
+			fi
+		fi
+		if [[ ${#DOTS_RESOLVED_GROUPS[@]} -eq 0 ]]; then
+			dots_resolve_package_groups || true
+		fi
+		PROFILE_NAME="${PROFILE_NAME:-"(none)"}"
+	fi
+	dots_validate_package_groups "${DOTS_RESOLVED_GROUPS[@]+"${DOTS_RESOLVED_GROUPS[@]}"}" || return 1
+}
+
+# Read-only package plan for a profile (no mutation, no outdated queries).
+dots_packages_plan() {
+	local profile_arg=""
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+		--profile)
+			shift
+			profile_arg="${1:-}"
+			shift || true
+			;;
+		-h | --help)
+			echo "Usage: ./dots packages plan [--profile NAME|PATH]"
+			echo "Read-only resolved package plan (no install / no auth / no outdated queries)."
+			return 0
+			;;
+		*)
+			echo "Unknown plan option: $1" >&2
+			return 1
+			;;
+		esac
+	done
+
+	# Ensure profiles/components helpers when invoked from unit tests
+	if ! declare -F dots_load_profile_file >/dev/null 2>&1 && [[ -f ${DIR}/helpers/profiles.sh ]]; then
+		# shellcheck disable=SC1091
+		source "${DIR}/helpers/profiles.sh" 2>/dev/null || true
+	fi
+	if ! declare -F dots_component_ids >/dev/null 2>&1 && [[ -f ${DIR}/helpers/components.sh ]]; then
+		# shellcheck disable=SC1091
+		source "${DIR}/helpers/components.sh" 2>/dev/null || true
+	fi
+
+	dots_packages_plan_load_profile "${profile_arg}" || return 1
+
+	local os arch platform
+	os="$(uname -s)"
+	arch="$(uname -m)"
+	case "${os}" in
+	Darwin) platform="darwin/${arch}" ;;
+	Linux) platform="linux/${arch}" ;;
+	*) platform="${os}/${arch}" ;;
+	esac
+
+	echo "Profile: ${PROFILE_NAME}"
+	echo "Platform: ${platform}"
+	echo ""
+	echo "Package groups:"
+	if [[ ${#DOTS_RESOLVED_GROUPS[@]} -eq 0 ]]; then
+		echo "  (none)"
+	else
+		local g
+		for g in "${DOTS_RESOLVED_GROUPS[@]}"; do
+			printf '  %s\n' "${g}"
+		done
+	fi
+	echo ""
+	echo "Optional components:"
+	DOTS_WITH_COMPONENTS=("${DOTS_WITH_COMPONENTS[@]+"${DOTS_WITH_COMPONENTS[@]}"}")
+	if [[ ${#DOTS_WITH_COMPONENTS[@]} -eq 0 ]]; then
+		echo "  (none)"
+	else
+		local c
+		for c in "${DOTS_WITH_COMPONENTS[@]}"; do
+			printf '  %s\n' "${c}"
+		done
+	fi
+	echo "  (informational — reading a plan is not AI consent)"
+	echo ""
+
+	if declare -F dots_pkg_ownership_reset >/dev/null 2>&1; then
+		dots_pkg_ownership_reset
+	fi
+	if declare -F dots_desired_packages_resolve >/dev/null 2>&1; then
+		dots_desired_packages_resolve
+	fi
+	if declare -F dots_pkg_classify_resolved >/dev/null 2>&1; then
+		dots_pkg_classify_resolved 1 2>/dev/null || true
+	fi
+
+	DOTS_DESIRED_FORMULAE=("${DOTS_DESIRED_FORMULAE[@]+"${DOTS_DESIRED_FORMULAE[@]}"}")
+	DOTS_DESIRED_CASKS=("${DOTS_DESIRED_CASKS[@]+"${DOTS_DESIRED_CASKS[@]}"}")
+	local managed="${DOTS_PKG_COUNT_MANAGED:-0}"
+	local missing="${DOTS_PKG_COUNT_MISSING:-0}"
+	local external="${DOTS_PKG_COUNT_EXTERNAL:-0}"
+	local inactive="${DOTS_PKG_COUNT_INACTIVE:-0}"
+	local desired=$((${#DOTS_DESIRED_FORMULAE[@]} + ${#DOTS_DESIRED_CASKS[@]}))
+
+	# Unsupported count: optional/required ids in selected groups with empty native map
+	local unsupported=0 tool native
+	if [[ "$(uname -s)" == "Linux" ]] && ! command -v brew >/dev/null 2>&1; then
+		while IFS= read -r tool; do
+			[[ -z ${tool} ]] && continue
+			native="$(dots_group_tool_platform_name "${tool}" 2>/dev/null || echo MISSING)"
+			[[ ${native} == SKIP || ${native} == MISSING ]] && unsupported=$((unsupported + 1))
+		done < <(dots_tools_for_groups all 2>/dev/null || true)
+	fi
+
+	echo "Summary:"
+	echo "  Desired packages: ${desired}"
+	echo "  Managed/present:  ${managed}"
+	echo "  Would install:    ${missing}"
+	echo "  External:         ${external}"
+	echo "  Inactive (known): ${inactive}"
+	echo "  Unsupported map:  ${unsupported}"
+	echo ""
+	echo "Resolved packages (desired set):"
+	local name state
+	for name in "${DOTS_DESIRED_FORMULAE[@]+"${DOTS_DESIRED_FORMULAE[@]}"}"; do
+		state="$(_dots_pkg_plan_state_for "${name}")"
+		printf '  %-24s %s\n' "${name}" "${state}"
+	done
+	for name in "${DOTS_DESIRED_CASKS[@]+"${DOTS_DESIRED_CASKS[@]}"}"; do
+		state="$(_dots_pkg_plan_state_for "${name}")"
+		printf '  %-24s %s (cask)\n' "${name}" "${state}"
+	done
+	echo ""
+	echo "Read-only plan — no install, no auth, no brew outdated queries."
+	echo "Groups vs components: profile packages= vs with=/--with (see ./dots packages groups)."
 }

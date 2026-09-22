@@ -74,16 +74,20 @@ and selected via profile `packages =`.
 ## CLI
 
 ```bash
-./dots packages status              # full audit (advisories only)
-./dots packages explain dust        # owners + activate hint
-./dots packages outdated            # outdated managed packages
-./dots packages upgrade             # upgrade managed outdated only
-./dots packages upgrade --all       # opt-in: broader Homebrew upgrades
+./dots packages groups                  # capability groups (+ active)
+./dots packages group geo               # one group in detail
+./dots packages plan --profile home     # resolved plan (read-only)
+./dots packages status                  # full audit (advisories only)
+./dots packages explain dust            # owners + activate hint
+./dots packages outdated                # outdated managed packages
+./dots packages upgrade                 # upgrade managed outdated only
+./dots packages upgrade --all           # opt-in: broader Homebrew upgrades
 ./dots packages adopt glow --group modern   # suggest Brewfile lines (no auto-edit)
 # If a package already has a component owner, adopt points to --with instead.
 ```
 
-See [Components and `--with`](../using/components.md).
+Human guide: [Package groups](../using/package-groups.md).
+See also [Components and `--with`](../using/components.md).
 
 ## External casks
 
