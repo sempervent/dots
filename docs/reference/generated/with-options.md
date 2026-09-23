@@ -197,3 +197,15 @@ Language servers for DOTS development/editor workflows
 - **formulae:** `rust-analyzer`, `basedpyright`, `gopls`, `bash-language-server`, `yaml-language-server`, `vscode-langservers-extracted`, `lua-language-server`, `markdown-oxide`, `taplo`, `terraform-ls`, `dockerfile-language-server`, `r`
 - **activate:** `./dots setup --with lsp`
 
+### `ai-server`
+
+Server stack: llama.cpp (llama-server) + Open WebUI via Docker Compose (opt-in models)
+
+- **label:** AI inference server
+- **category:** ai_runtime
+- **platforms:** darwin, linux
+- **brewfile:** `brew/Brewfile.ai-server`
+- **omit_from_all:** yes
+- **formulae:** `docker`, `docker-compose`
+- **activate:** `./dots setup --with ai-server`
+

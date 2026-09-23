@@ -87,6 +87,7 @@ nav:
       - Package groups: using/package-groups.md
       - Components and --with: using/components.md
       - Language servers: using/language-servers.md
+      - AI inference server: using/ai-server.md
       - Skills: using/skills.md
       - Tools catalog: using/tools.md
       - Extending: using/extending.md
@@ -115,6 +116,7 @@ nav:
       - Agent operating manual: maintainers/agents.md
       - Documentation: maintainers/documentation.md
       - Skill (maintainer): maintainers/skill.md
+      - AI server recon: maintainers/ai-server-recon.md
   - Troubleshooting: troubleshooting/index.md
   - Migration Notes:
       - mise: migration/mise.md
