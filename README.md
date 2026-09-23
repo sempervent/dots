@@ -127,7 +127,7 @@ My machine differs slightly      →  ~/.config/dots/profiles/<name>.toml
 |---------|----------------|---------------------|-------------|-----|
 | `base` | core, modern | none | tmux | minimal |
 | `home` | core…gui + infra/media + dev/network/data/geo/security | personal stack (incl. Herdr) | herdr | yes |
-| `work` | core, modern, workstation, dev, data, security | **none** unless `--with` / custom | tmux | limited |
+| `work` | core, modern, workstation, dev, data, geo, security, gui | **none** unless `--with` / custom | tmux | yes (font) |
 | `server` | core, modern, server | **Herdr** (no AI providers) | tmux | no |
 | `all` | full workstation (incl. new tool groups) | all optional | tmux | yes |
 

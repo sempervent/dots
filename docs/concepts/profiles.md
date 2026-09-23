@@ -12,7 +12,7 @@ Authority: `configs/bootstrap/profiles/*.toml`
 |---------|----------------|---------------------|-------------|-----|
 | `base` | `core`, `modern` | none | tmux | minimal |
 | `home` | `core`…`gui` + `infra`/`media` + `dev`/`network`/`data`/`geo`/`security` | `ai` + herdr, skills, ai-skills, images, tex; FluidVoice excluded by default | herdr | yes |
-| `work` | `core`, `modern`, `workstation`, `dev`, `data`, `security` | **none** unless `--with` / custom | tmux | limited |
+| `work` | `core`, `modern`, `workstation`, `dev`, `data`, `geo`, `security`, `gui` | **none** unless `--with` / custom | tmux | yes (font) |
 | `server` | `core`, `modern`, `server` | **Herdr** only (no AI providers) | tmux | no |
 | `all` | full workstation groups incl. `dev`/`security`/`network`/`data`/`geo` | all optional (`include_all_optional`; respects `omit_from_all`) | tmux | yes |
 
@@ -31,8 +31,8 @@ members are omitted automatically.
 
 Conservative allowlist. **Do not** infer employer AI policy. Start with no AI
 clients. Cursor must not be included without approval. Package groups add
-`dev` / `data` / `security` (install-only CLIs); `network` and `geo` stay off
-unless a custom profile or `--packages` opts in.
+`dev` / `data` / `geo` / `security` (install-only CLIs) plus `gui` (JetBrains Mono
+Nerd Font). `network` stays off unless a custom profile or `--packages` opts in.
 
 ### `server`
 
