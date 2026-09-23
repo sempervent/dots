@@ -35,7 +35,8 @@ Usage:
   ./dots backups             list snapshots
   ./dots restore [ID]        restore a snapshot
   ./dots profile             profile management
-  ./dots models              local model management
+  ./dots models              local model management (discover / pull)
+  ./dots models discover     read-only inventory (no ai-server required)
   ./dots check               verify machine
   ./dots update              update DOTS repo + reapply
   ./dots help                this help
@@ -337,9 +338,12 @@ Usage:
 
 ```text
 Usage:
-  ./dots models              local model management
+  ./dots models discover [--verbose] [--json]
+  ./dots models              interactive menu (TTY) or discover (non-TTY)
+  ./dots models --list       same as ./scripts/pull_models.sh --list
 
-(Interactive entrypoint; see `./dots help` and expert scripts such as `./scripts/pull_models.sh` / `./bootstrap.sh`.)
+Discover scans local stores (Ollama, llama.cpp cache, Draw Things, HF, conventions)
+without requiring ai-server setup. Pull/install uses pull_models.sh (see menu).
 ```
 
 ## `./dots backup`

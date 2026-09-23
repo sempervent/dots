@@ -87,6 +87,7 @@ nav:
       - Package groups: using/package-groups.md
       - Components and --with: using/components.md
       - Language servers: using/language-servers.md
+      - Local models: using/local-models.md
       - AI inference server: using/ai-server.md
       - Skills: using/skills.md
       - Tools catalog: using/tools.md

@@ -1,5 +1,8 @@
 # AI inference server (`ai-server`)
 
+For local inventory and Draw Things / Ollama / llama.cpp workflows that do **not**
+require this stack, see [Local models](local-models.md).
+
 Opt-in server stack: **Open WebUI** (browser) → **llama-server** (OpenAI-compatible API) → **GGUF models**.
 
 Workstation tools (`ollama`, `hermes`, …) stay separate. Enable with:
@@ -44,9 +47,9 @@ Backends (`ai_server.backend`): `cpu`, `cuda`, `rocm`, `vulkan`, `intel`, `nativ
 
 ```bash
 dots ai --help
-dots ai discover
-dots ai discover --verbose
-dots ai discover --json
+./dots models discover
+./dots models discover --verbose
+./dots models discover --json
 dots ai doctor
 dots ai models          # managed GGUF in models_dir only
 dots ai model adopt ~/path/to/model.gguf
@@ -65,13 +68,13 @@ dots ai down
 
 | Command | Meaning |
 |---------|---------|
-| `dots ai discover` | Read-only scan of known stores (ai-server dir, configured paths, HF cache, Ollama, conventions). |
+| `./dots models discover` | Read-only scan of known stores (models_dir when ai-server enabled, configured paths, HF cache, Ollama, Draw Things, conventions). |
 | `dots ai models` | GGUF files **managed** under `models_dir` (including adopted symlinks). |
 
 `default_model` must be a **basename present in `models_dir`**. Adopt compatible GGUF from elsewhere before setting default:
 
 ```bash
-dots ai discover
+./dots models discover
 dots ai model adopt ~/somewhere/Qwen3-14B-Q4_K_M.gguf
 dots ai model default Qwen3-14B-Q4_K_M.gguf
 dots ai doctor

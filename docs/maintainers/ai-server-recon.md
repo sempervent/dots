@@ -46,7 +46,7 @@ Contract: **known** (registry) ≠ **selected** (`--with`) ≠ **installed** (pa
 
 Initial v1 listed only `find models_dir -maxdepth 1 '*.gguf'`. DOTS model pulls (`scripts/pull_models.sh`) install into **Ollama blob storage**, **Hugging Face / llama.cpp caches**, and other provider-specific paths—not necessarily `{runtime_root}/models`. Hence previously installed models were **discovered nowhere** by `dots ai models`.
 
-Fix: unified read-only inventory in `scripts/ai_model_inventory.py` (`dots ai discover`); `dots ai models` shows **managed** GGUF under `models_dir` and points to discover/adopt for elsewhere.
+Fix: unified read-only inventory in `scripts/ai_model_inventory.py` (`./dots models discover`, no ai-server.toml required); `dots ai models` shows **managed** GGUF under `models_dir` and points to discover/adopt for elsewhere.
 
 ## Deliberately outside DOTS
 
