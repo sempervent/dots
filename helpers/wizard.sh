@@ -151,7 +151,7 @@ dots_wizard_pick_components() {
 	echo "  Select additions (blank = none). Descriptions from configs/components.toml."
 	echo ""
 
-	local want_ai=0 want_herdr=0 want_skills=0 want_aiskills=0
+	local want_ai=0 want_lsp=0 want_herdr=0 want_skills=0 want_aiskills=0
 	local want_images=0 want_tex=0
 	local excl=""
 	local _desc
@@ -172,7 +172,7 @@ PY
 
 	if [[ ${want_ai} -eq 1 ]]; then
 		echo "  AI applications selected. Exclude any?"
-		for id in cursor codex fluidvoice drawthings; do
+		for id in cursor codex fluidvoice drawthings lsp; do
 			if ! dots_wizard_component_ok_here "${id}"; then
 				echo "  - ${id}: skipped (platform)"
 				continue
@@ -181,6 +181,16 @@ PY
 			ans="$(dots_prompt_yesno "  Exclude ${id} (${_desc})" n)"
 			[[ ${ans} == y ]] && excl="${excl}${excl:+,}${id}"
 		done
+	fi
+
+	dots_ui_section "Developer intelligence"
+	if [[ ${want_ai} -eq 1 ]]; then
+		echo "  AI applications includes the local LSP toolchain."
+		echo "  LSPs are editor tooling and do not send code to AI providers."
+	else
+		_desc="$(dots_component_description lsp 2>/dev/null || echo "Language servers")"
+		ans="$(dots_prompt_yesno "Add Language servers (lsp) — Rust, Python, Go, Bash, Markdown, TOML, Terraform/HCL, Docker, R, YAML, JSON, Lua" n)"
+		[[ ${ans} == y ]] && want_lsp=1
 	fi
 
 	if [[ ${builtin} != server ]]; then
@@ -213,6 +223,7 @@ PY
 
 	local parts=()
 	[[ ${want_ai} -eq 1 ]] && parts+=("ai")
+	[[ ${want_lsp} -eq 1 ]] && parts+=("lsp")
 	[[ ${want_herdr} -eq 1 ]] && parts+=("herdr")
 	[[ ${want_skills} -eq 1 ]] && parts+=("skills")
 	[[ ${want_aiskills} -eq 1 ]] && parts+=("ai-skills")
@@ -508,7 +519,7 @@ dots_wizard_apply() {
 	DOTS_APPLY_STARTED=1
 	# Dry-run: never write under HOME (logs go to TMPDIR)
 	if [[ ${WIZ_DRY_RUN} -eq 1 ]]; then
-		log="$(mktemp "${TMPDIR:-/tmp}/dots-setup.XXXXXX.log")"
+		log="$(mktemp "${TMPDIR:-/tmp}/dots-setup.XXXXXX")"
 	else
 		log="$(dots_state_new_log setup)"
 	fi

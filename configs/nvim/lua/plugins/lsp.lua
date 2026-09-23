@@ -4,31 +4,10 @@
 return {
   {
     "neovim/nvim-lspconfig",
-    dependencies = {
-      { "williamboman/mason.nvim", opts = {} },
-      { "williamboman/mason-lspconfig.nvim" },
-    },
     config = function()
-      local ok_mason, mason_lsp = pcall(require, "mason-lspconfig")
-      if ok_mason then
-        mason_lsp.setup({
-          ensure_installed = { "lua_ls", "bashls", "pyright" },
-          automatic_installation = false,
-        })
-      end
-
-      local servers = {
-        lua_ls = {
-          settings = {
-            Lua = {
-              diagnostics = { globals = { "vim" } },
-              workspace = { checkThirdParty = false },
-            },
-          },
-        },
-        bashls = {},
-        pyright = {},
-      }
+      -- Generated from configs/lsp/servers.toml. DOTS owns the PATH-visible
+      -- binaries; Neovim only configures and attaches clients.
+      local servers = require("config.lsp_servers")
 
       for name, opts in pairs(servers) do
         vim.lsp.config(name, opts)

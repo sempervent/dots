@@ -20,6 +20,7 @@ Usage:
   ./dots components          optional components / --with selectors
   ./dots components list     registry + host compatibility
   ./dots components active   last-selected components (informational)
+  ./dots lsp                 language-server install / status / checks
   ./dots packages            package ownership / drift
   ./dots packages groups     capability groups (read-only)
   ./dots packages group ID   inspect one package group
@@ -87,8 +88,9 @@ Selectors (--with / --without):
     images       Deterministic image toolkit (Magick, etc.)
     tex          Homebrew TeX Live (CLI)
     mactools     Optional macOS workstation layer (Vorssaint + automation/audio/CLI; Brewfile.mactools)
+    lsp          Language servers for DOTS development/editor workflows
   Supergroups:
-    ai           AI applications — All supported AI applications for this platform
+    ai           AI applications — Local runtimes, coding agents, and the LSP toolchain for this platform
   List: ./dots components list
 
 Happy paths:
@@ -139,8 +141,9 @@ Options:
                       images       Deterministic image toolkit (Magick, etc.)
                       tex          Homebrew TeX Live (CLI)
                       mactools     Optional macOS workstation layer (Vorssaint + automation/audio/CLI; Brewfile.mactools)
+                      lsp          Language servers for DOTS development/editor workflows
                     Supergroups:
-                      ai           AI applications — All supported AI applications for this platform
+                      ai           AI applications — Local runtimes, coding agents, and the LSP toolchain for this platform
                     List: ./dots components list
   --with=<list>     Same as --with <list>
   --without <list>  Exclude selectors after expansion (profile without / CLI)
@@ -177,6 +180,7 @@ Examples:
   ./setup.sh --with cursor,drawthings
   ./setup.sh --with skills
   ./setup.sh --with images,tex
+  ./setup.sh --with lsp
   ./setup.sh --dry-run --with ai
   ./bootstrap.sh --profile home
   ./bootstrap.sh --profile work --with ai

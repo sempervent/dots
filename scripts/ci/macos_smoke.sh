@@ -5,6 +5,14 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "${ROOT}"
 
+if ! command -v rg >/dev/null 2>&1; then
+	brew install ripgrep
+fi
+command -v rg >/dev/null 2>&1 || {
+	echo "Error: rg (ripgrep) required for macOS smoke" >&2
+	exit 1
+}
+
 /bin/bash ./bootstrap.sh --profile work --show
 /bin/bash ./bootstrap.sh --profile home --show
 /bin/bash ./bootstrap.sh --profile server --show
@@ -12,8 +20,10 @@ cd "${ROOT}"
 /bin/bash ./setup.sh --dry-run --with ai
 /bin/bash ./setup.sh --dry-run --with fluidvoice
 /bin/bash ./setup.sh --dry-run --with llamacpp
+/bin/bash ./setup.sh --dry-run --with lsp
 brew info --cask fluidvoice || true
 brew info llama.cpp || true
+brew bundle list --file=brew/Brewfile.lsp --brews >/dev/null
 
 # Model planner (mocked; no network downloads)
 DOTS_FORCE_OS=darwin DOTS_FORCE_ARCH=arm64 DOTS_FORCE_RAM_GB=24 \
@@ -39,6 +49,7 @@ bash scripts/tests/skills_location_test.sh
 bash scripts/tests/skills_desired_state_test.sh
 bash scripts/tests/mactools_test.sh
 bash scripts/tests/backup_gate_test.sh
+bash scripts/tests/lsp_toolchain_test.sh
 
 /bin/bash ./dots --version
 /bin/bash ./dots help >/dev/null

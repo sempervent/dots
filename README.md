@@ -33,6 +33,7 @@ underneath for automation.
 ./dots restore             # restore a snapshot (creates a safety snapshot first)
 ./dots profile             # create / preview / switch profiles
 ./dots models              # local model plan & pull
+./dots lsp                 # language-server install / status / checks
 ./dots check               # health verification
 ./dots update              # git pull + optional reapply
 ./dots --version
@@ -166,6 +167,7 @@ the profile / `--with` for that run.
 ./setup.sh --with skills,ai-skills
 ./setup.sh --with ai                 # platform-aware AI applications supergroup
 ./setup.sh --with mactools           # Darwin workstation layer
+./setup.sh --with lsp                # local language-server toolchain
 ./setup.sh --dry-run --with cursor
 ```
 
@@ -180,6 +182,27 @@ the profile / `--with` for that run.
 | `fluidvoice` | Voice dictation (macOS 15+) |
 | `images` / `tex` | Media / TeX toolkits |
 | `mactools` | macOS workstation casks |
+| `lsp` | PATH-visible language servers for Neovim and other clients |
+
+## Language servers
+
+```bash
+./dots lsp
+./dots lsp status
+./dots lsp install --yes
+./dots lsp check
+./dots setup --with lsp
+./setup.sh --with lsp
+./setup.sh --with ai
+```
+
+The `lsp` component covers Rust, Python, Go, Bash, Markdown, TOML,
+Terraform/HCL, Dockerfile, Docker Compose, R, YAML, JSON, and Lua. The `ai`
+supergroup includes this local code-intelligence layer. Selecting `lsp` alone
+does **not** authorize or configure Hermes, Codex, Cursor, OpenCode, Ollama, or
+any cloud provider. DOTS owns PATH-visible binaries; Neovim configures clients
+without downloading duplicate Mason copies. See the
+[language-server guide](docs/using/language-servers.md).
 
 Full subsystem detail lives under `docs/` — not in this README.
 
