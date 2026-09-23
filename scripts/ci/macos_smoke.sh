@@ -5,6 +5,14 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "${ROOT}"
 
+if ! command -v rg >/dev/null 2>&1; then
+	brew install ripgrep
+fi
+command -v rg >/dev/null 2>&1 || {
+	echo "Error: rg (ripgrep) required for macOS smoke" >&2
+	exit 1
+}
+
 /bin/bash ./bootstrap.sh --profile work --show
 /bin/bash ./bootstrap.sh --profile home --show
 /bin/bash ./bootstrap.sh --profile server --show
