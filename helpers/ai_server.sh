@@ -83,6 +83,49 @@ dots_ai_merged_json() {
 		"${DIR}" "${cfg}" "$(dots_ai_project_dir)" print-json 2>/dev/null
 }
 
+dots_ai_inventory() {
+	local cmd="$1"
+	shift
+	dots_require_python 0 >/dev/null || return 1
+	local cfg
+	cfg="$(dots_ai_user_config)"
+	[[ -f ${cfg} ]] || {
+		echo "Error: ai-server not configured." >&2
+		return 1
+	}
+	"${DOTS_PYTHON:-python3}" "${DIR}/scripts/ai_model_inventory.py" "${DIR}" "${cfg}" "${cmd}" "$@"
+}
+
+dots_ai_discover_cmd() {
+	dots_ai_inventory discover "$@"
+}
+
+dots_ai_model_adopt() {
+	local copy=0 target=""
+	local arg
+	for arg in "$@"; do
+		case "${arg}" in
+		--copy) copy=1 ;;
+		-*)
+			echo "Unknown adopt option: ${arg}" >&2
+			return 1
+			;;
+		*)
+			target="${arg}"
+			;;
+		esac
+	done
+	[[ -n ${target} ]] || {
+		echo "Usage: dots ai model adopt [--copy] <path|name|id>" >&2
+		return 1
+	}
+	if [[ ${copy} -eq 1 ]]; then
+		dots_ai_inventory adopt "${target}" --copy
+	else
+		dots_ai_inventory adopt "${target}"
+	fi
+}
+
 dots_ai_seed_config() {
 	local dest src
 	dest="$(dots_ai_user_config)"
@@ -163,19 +206,18 @@ dots_ai_compose_cmd() {
 }
 
 dots_ai_list_models() {
+	# Managed basenames only (ai-server models_dir).
 	local models_dir json
 	json="$(dots_ai_merged_json)" || return 1
 	models_dir="$(printf '%s' "${json}" | "${DOTS_PYTHON:-python3}" -c 'import json,sys; print(json.load(sys.stdin)["models_dir"])')"
 	[[ -d ${models_dir} ]] || return 0
-	local default f base
-	default="$(printf '%s' "${json}" | "${DOTS_PYTHON:-python3}" -c 'import json,sys; print(json.load(sys.stdin)["default_model"])')"
+	local f base
 	while IFS= read -r f; do
 		[[ -n ${f} ]] || continue
 		base="$(basename "${f}")"
 		[[ ${base} == *.part ]] && continue
-		[[ ${base} == .incomplete ]] && continue
 		printf '%s\n' "${base}"
-	done < <(find "${models_dir}" -maxdepth 1 -type f \( -name '*.gguf' -o -name '*.GGUF' \) 2>/dev/null | sort)
+	done < <(find "${models_dir}" -maxdepth 1 \( -type f -o -type l \) \( -name '*.gguf' -o -name '*.GGUF' \) 2>/dev/null | sort)
 }
 
 dots_ai_model_set_default() {
@@ -191,6 +233,14 @@ dots_ai_model_set_default() {
 	fi
 	cfg="$(dots_ai_user_config)"
 	[[ -f ${cfg} ]] || return 1
+	local models_dir
+	models_dir="$(dots_ai_merged_json | "${DOTS_PYTHON:-python3}" -c 'import json,sys; print(json.load(sys.stdin)["models_dir"])')"
+	if [[ ! -f ${models_dir}/${name} ]]; then
+		echo "Error: '${name}' is not in the managed models directory (${models_dir})." >&2
+		echo "Adopt an existing GGUF first:  dots ai model adopt <path>" >&2
+		echo "Or discover inventory:         dots ai discover" >&2
+		return 1
+	fi
 	dots_require_python 0 || return 1
 	NAME="${name}" CFG="${cfg}" "${DOTS_PYTHON:-python3}" - <<'PY'
 import os, pathlib, tomllib
@@ -350,6 +400,26 @@ dots_ai_status() {
 	echo "  models:        ${models}"
 	echo "  Open WebUI:    http://127.0.0.1:${webui_port}"
 	echo "  default model: ${default_model:-(none)}"
+	if dots_ai_configured && dots_ai_require_python_soft; then
+		local dst
+		dst="$(dots_ai_inventory default-status 2>/dev/null || true)"
+		if [[ -n ${dst} ]]; then
+			local ok resolved src
+			ok="$(printf '%s' "${dst}" | "${DOTS_PYTHON:-python3}" -c 'import json,sys; print(json.load(sys.stdin).get("ok"))' 2>/dev/null || true)"
+			resolved="$(printf '%s' "${dst}" | "${DOTS_PYTHON:-python3}" -c 'import json,sys; print(json.load(sys.stdin).get("resolved_path") or "")' 2>/dev/null || true)"
+			src="$(printf '%s' "${dst}" | "${DOTS_PYTHON:-python3}" -c 'import json,sys; print(json.load(sys.stdin).get("source") or "")' 2>/dev/null || true)"
+			if [[ -n ${default_model} ]]; then
+				if [[ ${ok} == True ]]; then
+					echo "  model resolve: OK (${src})"
+					echo "  model path:    ${resolved}"
+				else
+					echo "  model resolve: MISSING in models_dir (found elsewhere: ${src:-unknown})"
+					echo "  model path:    ${resolved:-—}"
+					echo "  hint:          dots ai model adopt ${default_model}"
+				fi
+			fi
+		fi
+	fi
 	if [[ -n ${DOTS_AI_MOCK_DOCKER:-} ]]; then
 		echo "  webui:         (mock)"
 		echo "  llama-server:  (mock)"
@@ -419,13 +489,23 @@ dots_ai_doctor() {
 			warns=$((warns + 1))
 		fi
 		if [[ -n ${default_model} && -f ${models_dir}/${default_model} ]]; then
-			dots_ai_doctor_line PASS "default model present"
+			dots_ai_doctor_line PASS "default model present in models_dir"
 		elif [[ -n ${default_model} ]]; then
-			dots_ai_doctor_line WARN "default model configured but missing: ${default_model}"
+			dots_ai_doctor_line WARN "default model configured but missing in models_dir: ${default_model}"
 			warns=$((warns + 1))
 		else
 			dots_ai_doctor_line WARN "no default model selected"
 			warns=$((warns + 1))
+		fi
+		if dots_ai_require_python_soft; then
+			while IFS= read -r line; do
+				[[ -z ${line} ]] && continue
+				case "${line}" in
+				PASS*) dots_ai_doctor_line PASS "${line#PASS }" ;;
+				WARN*) dots_ai_doctor_line WARN "${line#WARN }"; warns=$((warns + 1)) ;;
+				INFO*) dots_ai_doctor_line INFO "${line#INFO }" ;;
+				esac
+			done < <(dots_ai_inventory doctor 2>/dev/null || true)
 		fi
 		case "${backend}" in
 		cuda)
@@ -483,9 +563,10 @@ dots_ai_up() {
 	fi
 	if [[ ! -f ${models_dir}/${default_model} ]]; then
 		echo "Error: default model missing: ${models_dir}/${default_model}" >&2
-		echo "Available models:" >&2
+		echo "Managed models:" >&2
 		dots_ai_list_models | sed 's/^/  /' >&2 || true
-		echo "Set one with: dots ai model default <model>" >&2
+		echo "Discover others: dots ai discover" >&2
+		echo "Adopt then default: dots ai model adopt <path> && dots ai model default ${default_model}" >&2
 		return 1
 	fi
 	dots_ai_compose_cmd up -d
@@ -519,23 +600,7 @@ dots_ai_ps() {
 }
 
 dots_ai_models_cmd() {
-	local json models_dir default
-	json="$(dots_ai_merged_json 2>/dev/null)" || {
-		echo "AI server not configured." >&2
-		return 1
-	}
-	models_dir="$(printf '%s' "${json}" | "${DOTS_PYTHON:-python3}" -c 'import json,sys; print(json.load(sys.stdin)["models_dir"])')"
-	default="$(printf '%s' "${json}" | "${DOTS_PYTHON:-python3}" -c 'import json,sys; print(json.load(sys.stdin)["default_model"])')"
-	printf '%-40s %10s %s\n' "MODEL" "SIZE" "DEFAULT"
-	local f base size mark
-	while IFS= read -r f; do
-		[[ -n ${f} ]] || continue
-		base="$(basename "${f}")"
-		size="$(wc -c <"${models_dir}/${base}" 2>/dev/null | tr -d ' ')"
-		mark=""
-		[[ ${base} == "${default}" ]] && mark="*"
-		printf '%-40s %10s %s\n' "${base}" "${size}" "${mark}"
-	done < <(dots_ai_list_models)
+	dots_ai_inventory managed "$@"
 }
 
 dots_ai_server_setup() {
@@ -549,5 +614,5 @@ dots_ai_server_setup() {
 	dots_ai_ensure_runtime_dirs || return 1
 	dots_ai_render_compose || return 1
 	echo "Runtime root and compose project ready."
-	echo "Next: add a GGUF model, set default_model, then: dots ai up"
+	echo "Next: dots ai discover → model adopt → model default → dots ai up"
 }

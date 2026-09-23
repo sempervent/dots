@@ -534,12 +534,14 @@ dots_cmd_ai() {
 	restart) dots_ai_restart ;;
 	ps) dots_ai_ps ;;
 	logs) dots_ai_logs "$@" ;;
-	models) dots_ai_models_cmd ;;
+	discover) dots_ai_discover_cmd "$@" ;;
+	models) dots_ai_models_cmd "$@" ;;
 	model)
 		local msub="${1:-}"
 		shift || true
 		case "${msub}" in
 		add) dots_ai_model_add "$@" ;;
+		adopt) dots_ai_model_adopt "$@" ;;
 		remove) dots_ai_model_remove "$@" ;;
 		default) dots_ai_model_set_default "$@" ;;
 		list) dots_ai_models_cmd ;;
@@ -555,6 +557,7 @@ dots_cmd_ai() {
 			cat <<'EOF'
 Usage:
   dots ai model add <path|hf://owner/repo/file.gguf>
+  dots ai model adopt [--copy] <path|name>
   dots ai model remove <name>
   dots ai model default <name>
   dots ai model list
@@ -590,8 +593,9 @@ Usage:
   ./dots ai restart         controlled restart
   ./dots ai logs [service]  compose logs (llama | open-webui)
   ./dots ai ps              service table
-  ./dots ai models          list local GGUF models
-  ./dots ai model …         add / remove / default / info
+  ./dots ai discover        scan known stores (read-only inventory)
+  ./dots ai models          managed GGUF models in models_dir
+  ./dots ai model …         add / adopt / remove / default / info
   ./dots ai install --yes   delegate to ./setup.sh --with ai-server
 EOF
 		;;
