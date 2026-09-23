@@ -35,6 +35,8 @@ source "${DIR}/helpers/packages.sh"
 source "${DIR}/helpers/components.sh"
 # shellcheck source=helpers/lsp.sh
 source "${DIR}/helpers/lsp.sh"
+# shellcheck source=helpers/ai_server.sh
+source "${DIR}/helpers/ai_server.sh"
 # shellcheck source=helpers/package_state.sh
 source "${DIR}/helpers/package_state.sh"
 # shellcheck source=helpers/cask_apps.sh
@@ -56,6 +58,7 @@ Usage:
   ./dots components list     registry + host compatibility
   ./dots components active   last-selected components (informational)
   ./dots lsp                 language-server install / status / checks
+  ./dots ai                  AI inference server (Compose + Open WebUI)
   ./dots packages            package ownership / drift
   ./dots packages groups     capability groups (read-only)
   ./dots packages group ID   inspect one package group
@@ -515,6 +518,91 @@ EOF
 	esac
 }
 
+dots_cmd_ai() {
+	local sub="${1:-}"
+	shift || true
+	if [[ -z ${sub} ]] && [[ -t 0 ]] && [[ -t 1 ]]; then
+		sub=status
+	elif [[ -z ${sub} ]]; then
+		sub=status
+	fi
+	case "${sub}" in
+	status) dots_ai_status ;;
+	doctor) dots_ai_doctor ;;
+	up) dots_ai_up ;;
+	down) dots_ai_down ;;
+	restart) dots_ai_restart ;;
+	ps) dots_ai_ps ;;
+	logs) dots_ai_logs "$@" ;;
+	models) dots_ai_models_cmd ;;
+	model)
+		local msub="${1:-}"
+		shift || true
+		case "${msub}" in
+		add) dots_ai_model_add "$@" ;;
+		remove) dots_ai_model_remove "$@" ;;
+		default) dots_ai_model_set_default "$@" ;;
+		list) dots_ai_models_cmd ;;
+		info)
+			local name="$1"
+			[[ -n ${name} ]] || {
+				echo "Usage: dots ai model info <model.gguf>" >&2
+				return 1
+			}
+			dots_ai_models_cmd | grep -F "${name}" || echo "Model not found: ${name}" >&2
+			;;
+		"" | -h | --help | help)
+			cat <<'EOF'
+Usage:
+  dots ai model add <path|hf://owner/repo/file.gguf>
+  dots ai model remove <name>
+  dots ai model default <name>
+  dots ai model list
+  dots ai model info <name>
+EOF
+			;;
+		*)
+			echo "Unknown ai model subcommand: ${msub}" >&2
+			return 1
+			;;
+		esac
+		;;
+	install)
+		for arg in "$@"; do
+			case "${arg}" in
+			--dry-run) exec "${DIR}/setup.sh" --with ai-server --dry-run ;;
+			--yes | -y) ;;
+			*)
+				echo "Unknown ai install option: ${arg}" >&2
+				return 1
+				;;
+			esac
+		done
+		exec "${DIR}/setup.sh" --with ai-server
+		;;
+	-h | --help | help)
+		cat <<'EOF'
+Usage:
+  ./dots ai status          configured backend, URLs, health (non-fatal if stopped)
+  ./dots ai doctor          PASS/WARN/FAIL environment checks
+  ./dots ai up              start Compose stack (requires default model)
+  ./dots ai down            stop services (preserves models and WebUI data)
+  ./dots ai restart         controlled restart
+  ./dots ai logs [service]  compose logs (llama | open-webui)
+  ./dots ai ps              service table
+  ./dots ai models          list local GGUF models
+  ./dots ai model …         add / remove / default / info
+  ./dots ai install --yes   delegate to ./setup.sh --with ai-server
+EOF
+		;;
+	*)
+		echo "Unknown ai subcommand: ${sub}" >&2
+		echo "Try: ./dots ai --help" >&2
+		return 1
+		;;
+	esac
+}
+
 dots_cmd_update() {
 	dots_ui_load_answers
 	dots_ui_header "Update DOTS"
@@ -853,6 +941,10 @@ components | component)
 lsp)
 	shift || true
 	dots_cmd_lsp "$@"
+	;;
+ai)
+	shift || true
+	dots_cmd_ai "$@"
 	;;
 packages | package)
 	shift || true
