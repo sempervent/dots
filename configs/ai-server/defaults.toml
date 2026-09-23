@@ -23,5 +23,5 @@ image = "ghcr.io/open-webui/open-webui:main"
 extra_args = []
 
 [ai_server.discovery]
-# Additional GGUF search roots (read-only scan for `dots ai discover`).
+# Additional GGUF search roots (read-only scan for `./dots models discover`).
 paths = []

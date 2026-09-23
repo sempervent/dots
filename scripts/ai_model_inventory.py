@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 import stat
 import subprocess
 import sys
@@ -22,20 +23,35 @@ MAX_SCAN_DEPTH = 3
 IMAGE_EXT = {".safetensors", ".ckpt", ".pt", ".pth", ".bin"}
 
 
-def merged_config(repo: Path, user_cfg: Path) -> tuple[dict, dict]:
+def parse_user_cfg_arg(raw: str) -> Path | None:
+    """User config path, or None for defaults-only discovery (no ai-server.toml)."""
+    if not raw or raw == "-":
+        return None
+    p = Path(raw)
+    return p if p.is_file() else None
+
+
+def merged_config(repo: Path, user_cfg: Path | None) -> tuple[dict, dict, bool]:
     defaults = load_toml(repo / "configs/ai-server/defaults.toml")
     backends = load_toml(repo / "configs/ai-server/backends.toml")
-    user = load_toml(user_cfg) if user_cfg.is_file() else {}
-    return merge_config(user, defaults, backends), user
+    user = load_toml(user_cfg) if user_cfg and user_cfg.is_file() else {}
+    merged = merge_config(user, defaults, backends)
+    managed_dir = bool(user_cfg and user_cfg.is_file())
+    if managed_dir:
+        enabled = user.get("ai_server", {}).get("enabled")
+        if enabled is False:
+            managed_dir = False
+    return merged, user, managed_dir
 
 
 def discovery_path_specs(
-    merged: dict, user: dict
+    merged: dict, user: dict, managed_models_dir: bool
 ) -> list[tuple[str, str, bool]]:
     """Return (path, source_label, managed) entries in scan order."""
     out: list[tuple[str, str, bool]] = []
     models_dir = merged["models_dir"]
-    out.append((models_dir, "ai-server", True))
+    src = "models_dir" if managed_models_dir else "convention"
+    out.append((models_dir, src, managed_models_dir))
     disc = user.get("ai_server", {}).get("discovery") or {}
     for raw in disc.get("paths") or []:
         p = expand_home(str(raw).strip())
@@ -230,6 +246,108 @@ def _ollama_models_root() -> str:
     return os.environ.get("OLLAMA_MODELS") or str(Path.home() / ".ollama" / "models")
 
 
+def scan_drawthings_cli(seen: set[str], records: list[dict]) -> None:
+    if os.environ.get("DOTS_AI_SKIP_DRAWTHINGS_CLI"):
+        return
+    try:
+        proc = subprocess.run(
+            [
+                "draw-things-cli",
+                "models",
+                "list",
+                "--downloaded-only",
+                "--offline",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=20,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return
+    if proc.returncode != 0:
+        return
+    for line in proc.stdout.splitlines():
+        line = line.strip()
+        if not line or line.startswith("MODEL") or line.startswith("-") or line.startswith("Tip:"):
+            continue
+        parts = line.split()
+        if not parts:
+            continue
+        model_id = parts[0]
+        if not re.match(r"^\S+\.(ckpt|safetensors)\b", model_id, re.I):
+            continue
+        rid = f"drawthings:{model_id}"
+        if rid in seen:
+            continue
+        seen.add(rid)
+        records.append(
+            {
+                "id": rid,
+                "name": model_id,
+                "path": model_id,
+                "source": "drawthings",
+                "backend": "drawthings",
+                "format": "checkpoint",
+                "size_bytes": 0,
+                "size_note": "Draw Things checkpoint (draw-things-cli models list)",
+                "managed": False,
+                "compatible": False,
+                "default": False,
+            }
+        )
+
+
+def scan_llama_cli_cache(seen: set[str], records: list[dict]) -> None:
+    if os.environ.get("DOTS_AI_SKIP_LLAMA_CLI"):
+        return
+    cli = None
+    for bin_name in ("llama-cli", "llama"):
+        if shutil.which(bin_name):
+            cli = bin_name
+            break
+    if not cli:
+        return
+    try:
+        proc = subprocess.run(
+            [cli, "--cache-list"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return
+    if proc.returncode != 0:
+        return
+    for line in proc.stdout.splitlines():
+        line = line.strip()
+        if not line or "cache" in line.lower():
+            continue
+        if not (line.endswith(".gguf") or "/" in line):
+            continue
+        name = Path(line).name if "/" in line else line
+        rid = f"llamacpp-cache:{name}"
+        if rid in seen:
+            continue
+        seen.add(rid)
+        records.append(
+            {
+                "id": rid,
+                "name": name,
+                "path": line,
+                "source": "llamacpp-cache",
+                "backend": "llama_cpp",
+                "format": "gguf",
+                "size_bytes": 0,
+                "size_note": "logical name from llama-cli --cache-list",
+                "managed": False,
+                "compatible": True,
+                "default": False,
+            }
+        )
+
+
 def scan_ollama_manifests(seen: set[str], records: list[dict]) -> None:
     root = Path(_ollama_models_root()) / "manifests" / "registry.ollama.ai" / "library"
     if not root.is_dir():
@@ -263,15 +381,17 @@ def scan_ollama_manifests(seen: set[str], records: list[dict]) -> None:
         )
 
 
-def discover(repo: Path, user_cfg: Path) -> dict:
-    merged, user = merged_config(repo, user_cfg)
+def discover(repo: Path, user_cfg: Path | None) -> dict:
+    merged, user, managed_models_dir = merged_config(repo, user_cfg)
     default_name = merged.get("default_model") or ""
     models_dir = Path(merged["models_dir"])
     records: list[dict] = []
     seen_paths: set[str] = set()
     seen_ids: set[str] = set()
 
-    for path_str, source, managed in discovery_path_specs(merged, user):
+    for path_str, source, managed in discovery_path_specs(
+        merged, user, managed_models_dir
+    ):
         p = Path(expand_home(path_str))
         if source == "huggingface":
             scan_gguf_directory(p / "hub", "huggingface", False, seen_paths, records)
@@ -281,6 +401,9 @@ def discover(repo: Path, user_cfg: Path) -> dict:
 
     if not scan_ollama_cli(seen_ids, records):
         scan_ollama_manifests(seen_ids, records)
+
+    scan_drawthings_cli(seen_ids, records)
+    scan_llama_cli_cache(seen_ids, records)
 
     compatible = 0
     for rec in records:
@@ -308,6 +431,9 @@ def discover(repo: Path, user_cfg: Path) -> dict:
                 1 for r in records if r.get("managed") and r.get("format") == "gguf"
             ),
             "ollama": sum(1 for r in records if r.get("backend") == "ollama"),
+            "drawthings": sum(
+                1 for r in records if r.get("backend") == "drawthings"
+            ),
         },
     }
 
@@ -326,14 +452,27 @@ def fmt_size(num: int) -> str:
     return "-"
 
 
+def inference_label(rec: dict) -> str:
+    backend = rec.get("backend") or ""
+    if backend == "drawthings":
+        return "drawthings"
+    if backend == "ollama":
+        return "ollama"
+    if backend == "image":
+        return "image"
+    if rec.get("compatible"):
+        return "llama.cpp"
+    return "—"
+
+
 def print_table(data: dict, verbose: bool) -> None:
     print("Discovered AI models")
     print("")
-    print(f"{'NAME':<36} {'SOURCE':<12} {'FORMAT':<8} {'SIZE':>10} {'LLAMA':>5}")
+    print(
+        f"{'NAME':<36} {'SOURCE':<12} {'FORMAT':<8} {'SIZE':>10} {'INFERENCE':>10}"
+    )
     for rec in sorted(data["records"], key=lambda r: (r.get("name") or "").lower()):
-        llama = "yes" if rec.get("compatible") else "no"
-        if rec.get("backend") == "ollama":
-            llama = "no*"
+        infer = inference_label(rec)
         mark = ""
         if rec.get("default"):
             mark = " *"
@@ -342,7 +481,7 @@ def print_table(data: dict, verbose: bool) -> None:
             f"{rec.get('source','')[:12]:<12} "
             f"{rec.get('format','')[:8]:<8} "
             f"{fmt_size(int(rec.get('size_bytes') or 0)):>10} "
-            f"{llama:>5}{mark}"
+            f"{infer:>10}{mark}"
         )
         if verbose:
             print(f"    path: {rec.get('path')}")
@@ -352,8 +491,13 @@ def print_table(data: dict, verbose: bool) -> None:
     print("")
     print(f"{s['total']} models discovered")
     print(f"{s['compatible_llama']} directly usable by llama.cpp")
+    if s.get("drawthings"):
+        print(f"{s['drawthings']} Draw Things checkpoint(s) (image generation)")
     if s["total"] > s["managed_gguf"]:
-        print("Run `dots ai discover` for the full inventory; `dots ai models` lists managed GGUF.")
+        print(
+            "Install/pull: ./scripts/pull_models.sh  |  "
+            "ai-server managed GGUF: dots ai models"
+        )
 
 
 def print_managed(data: dict) -> None:
@@ -385,7 +529,7 @@ def print_managed(data: dict) -> None:
         print("")
         print(
             f"Note: {len(elsewhere)} compatible GGUF model(s) found elsewhere. "
-            "Use `dots ai discover` and `dots ai model adopt <path>`."
+            "Use `./dots models discover` and `dots ai model adopt <path>`."
         )
 
 
@@ -420,13 +564,16 @@ def doctor_lines(data: dict) -> None:
             print(f"WARN configured default model missing: {default_name}")
     elif not default_name:
         if compatible:
-            print("INFO compatible GGUF found; run dots ai discover")
+            print("INFO compatible GGUF found; run ./dots models discover")
         else:
             print("WARN no default model selected")
 
 
-def safe_adopt(repo: Path, user_cfg: Path, target: str, copy: bool) -> int:
-    merged, _user = merged_config(repo, user_cfg)
+def safe_adopt(repo: Path, user_cfg: Path | None, target: str, copy: bool) -> int:
+    if user_cfg is None or not user_cfg.is_file():
+        print("Error: ai-server not configured (missing ai-server.toml).", file=sys.stderr)
+        return 1
+    merged, _user, _managed = merged_config(repo, user_cfg)
     models_dir = Path(merged["models_dir"])
     models_dir.mkdir(parents=True, exist_ok=True)
     src = Path(expand_home(target)).expanduser()
@@ -499,7 +646,7 @@ def resolve_default_status(data: dict) -> dict:
     managed = models_dir / default_name
     if managed.exists():
         out["resolved_path"] = str(managed.resolve())
-        out["source"] = "ai-server"
+        out["source"] = "models_dir"
         out["compatible"] = True
         out["ok"] = True
         return out
@@ -522,7 +669,7 @@ def main() -> int:
         )
         return 2
     repo = Path(sys.argv[1])
-    user_cfg = Path(sys.argv[2])
+    user_cfg = parse_user_cfg_arg(sys.argv[2])
     cmd = sys.argv[3]
     args = sys.argv[4:]
     verbose = "--verbose" in args

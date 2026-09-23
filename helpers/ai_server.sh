@@ -83,6 +83,19 @@ dots_ai_merged_json() {
 		"${DIR}" "${cfg}" "$(dots_ai_project_dir)" print-json 2>/dev/null
 }
 
+dots_model_inventory() {
+	local cmd="$1"
+	shift
+	dots_require_python 0 >/dev/null || return 1
+	local cfg_arg="-"
+	local cfg
+	cfg="$(dots_ai_user_config)"
+	if [[ -f ${cfg} ]]; then
+		cfg_arg="${cfg}"
+	fi
+	"${DOTS_PYTHON:-python3}" "${DIR}/scripts/ai_model_inventory.py" "${DIR}" "${cfg_arg}" "${cmd}" "$@"
+}
+
 dots_ai_inventory() {
 	local cmd="$1"
 	shift
@@ -97,7 +110,7 @@ dots_ai_inventory() {
 }
 
 dots_ai_discover_cmd() {
-	dots_ai_inventory discover "$@"
+	dots_model_inventory discover "$@"
 }
 
 dots_ai_model_adopt() {
@@ -238,7 +251,7 @@ dots_ai_model_set_default() {
 	if [[ ! -f ${models_dir}/${name} ]]; then
 		echo "Error: '${name}' is not in the managed models directory (${models_dir})." >&2
 		echo "Adopt an existing GGUF first:  dots ai model adopt <path>" >&2
-		echo "Or discover inventory:         dots ai discover" >&2
+		echo "Or discover inventory:         ./dots models discover" >&2
 		return 1
 	fi
 	dots_require_python 0 || return 1
@@ -565,7 +578,7 @@ dots_ai_up() {
 		echo "Error: default model missing: ${models_dir}/${default_model}" >&2
 		echo "Managed models:" >&2
 		dots_ai_list_models | sed 's/^/  /' >&2 || true
-		echo "Discover others: dots ai discover" >&2
+		echo "Discover others: ./dots models discover" >&2
 		echo "Adopt then default: dots ai model adopt <path> && dots ai model default ${default_model}" >&2
 		return 1
 	fi
@@ -614,5 +627,5 @@ dots_ai_server_setup() {
 	dots_ai_ensure_runtime_dirs || return 1
 	dots_ai_render_compose || return 1
 	echo "Runtime root and compose project ready."
-	echo "Next: dots ai discover → model adopt → model default → dots ai up"
+	echo "Next: ./dots models discover → model adopt → model default → dots ai up"
 }

@@ -30,6 +30,7 @@ run scripts/tests/provider_mapping_test.sh
 run scripts/tests/lsp_toolchain_test.sh
 run scripts/tests/ai_server_test.sh
 run scripts/tests/ai_model_discovery_test.sh
+run scripts/tests/img_test.sh
 
 echo "=== Bootstrap + setup dry-run ==="
 ./bootstrap.sh --profile server --dry-run

@@ -113,6 +113,47 @@ fi
 echo "=== discover human output ==="
 out="$(dots_ai_discover_cmd 2>&1)"
 echo "${out}" | grep -Fq 'Discovered AI models' && ok "human discover header" || bad "human discover"
+echo "${out}" | grep -Fq 'INFERENCE' && ok "inference column" || bad "inference column"
+
+echo "=== discover without ai-server.toml ==="
+NO_CFG_HOME="${TMP}/home-nocfg"
+mkdir -p "${NO_CFG_HOME}/models"
+write_mini_gguf "${NO_CFG_HOME}/models/local-only.gguf"
+export HOME="${NO_CFG_HOME}"
+json_nc="$(dots_model_inventory discover --json)"
+echo "${json_nc}" | "${DOTS_PYTHON:-python3}" -c '
+import json,sys
+d=json.load(sys.stdin)
+names={r["name"] for r in d["records"]}
+assert "local-only.gguf" in names
+for r in d["records"]:
+    if r["name"]=="local-only.gguf":
+        assert not r.get("managed"), r
+        break
+' && ok "configless discover" || bad "configless discover"
+export HOME="${TMP}/home"
+mkdir -p "${HOME}/.config/dots"
+
+echo "=== drawthings mock inventory ==="
+export DOTS_AI_SKIP_OLLAMA_CLI=1
+export DOTS_AI_SKIP_LLAMA_CLI=1
+MOCK_BIN="${TMP}/mock-bin"
+mkdir -p "${MOCK_BIN}"
+cat >"${MOCK_BIN}/draw-things-cli" <<'MOCK'
+#!/usr/bin/env bash
+echo "MODEL                               NAME"
+echo "flux_2_klein_4b_q6p.ckpt            Flux"
+MOCK
+chmod +x "${MOCK_BIN}/draw-things-cli"
+PATH="${MOCK_BIN}:${PATH}"
+json_dt="$(dots_model_inventory discover --json)"
+PATH="${PATH#"${MOCK_BIN}":}"
+echo "${json_dt}" | "${DOTS_PYTHON:-python3}" -c '
+import json,sys
+d=json.load(sys.stdin)
+dt=[r for r in d["records"] if r.get("backend")=="drawthings"]
+assert len(dt)==1 and dt[0]["name"]=="flux_2_klein_4b_q6p.ckpt"
+' && ok "drawthings scanner" || bad "drawthings scanner"
 
 echo "Passed: ${pass}  Failed: ${fail}"
 [[ ${fail} -eq 0 ]]

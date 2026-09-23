@@ -72,7 +72,8 @@ Usage:
   ./dots backups             list snapshots
   ./dots restore [ID]        restore a snapshot
   ./dots profile             profile management
-  ./dots models              local model management
+  ./dots models              local model management (discover / pull)
+  ./dots models discover     read-only inventory (no ai-server required)
   ./dots check               verify machine
   ./dots update              update DOTS repo + reapply
   ./dots help                this help
@@ -363,64 +364,93 @@ dots_cmd_profile() {
 }
 
 dots_cmd_models() {
-	dots_ui_load_answers
-	# Prefer loading hardware helpers when available
-	# shellcheck source=hardware.sh
-	source "${DIR}/helpers/hardware.sh" 2>/dev/null || true
-	dots_ui_header "Models"
-	if declare -F dots_hw_summary >/dev/null 2>&1; then
-		dots_hw_summary
-	fi
-	DOTS_UI_CHOICE_DEFAULT=1
-	local c
-	c="$(dots_prompt_choice "Models:" \
-		"Show model plan (--list)" \
-		"Pull recommended missing models" \
-		"Choose provider" \
-		"Choose tier + pull" \
-		"Update to registry targets (--update)" \
-		"Edit model policy file" \
-		"Back")"
-	case "${c}" in
-	1) exec "${DIR}/scripts/pull_models.sh" --list ;;
-	2) exec "${DIR}/scripts/pull_models.sh" ;;
-	3)
-		local p
-		DOTS_UI_CHOICE_DEFAULT=1
-		p="$(dots_prompt_choice "Provider:" "ollama" "llamacpp" "drawthings" "fluidvoice" "all")"
-		case "${p}" in
-		1) exec "${DIR}/scripts/pull_models.sh" --provider ollama ;;
-		2) exec "${DIR}/scripts/pull_models.sh" --provider llamacpp ;;
-		3) exec "${DIR}/scripts/pull_models.sh" --provider drawthings ;;
-		4) exec "${DIR}/scripts/pull_models.sh" --provider fluidvoice ;;
-		5) exec "${DIR}/scripts/pull_models.sh" --provider all ;;
-		esac
+	local sub="${1:-}"
+	shift || true
+	case "${sub}" in
+	discover) dots_model_inventory discover "$@" ;;
+	-h | --help | help)
+		cat <<'EOF'
+Usage:
+  ./dots models discover [--verbose] [--json]
+  ./dots models              interactive menu (TTY) or discover (non-TTY)
+  ./dots models --list       same as ./scripts/pull_models.sh --list
+
+Discover scans local stores (Ollama, llama.cpp cache, Draw Things, HF, conventions)
+without requiring ai-server setup. Pull/install uses pull_models.sh (see menu).
+EOF
 		;;
-	4)
-		local t
-		DOTS_UI_CHOICE_DEFAULT=1
-		t="$(dots_prompt_choice "Tier:" "auto" "minimal" "balanced" "large" "max")"
-		case "${t}" in
-		1) exec "${DIR}/scripts/pull_models.sh" --tier auto ;;
-		2) exec "${DIR}/scripts/pull_models.sh" --tier minimal ;;
-		3) exec "${DIR}/scripts/pull_models.sh" --tier balanced ;;
-		4) exec "${DIR}/scripts/pull_models.sh" --tier large ;;
-		5) exec "${DIR}/scripts/pull_models.sh" --tier max ;;
-		esac
+	--list)
+		exec "${DIR}/scripts/pull_models.sh" --list
 		;;
-	5) exec "${DIR}/scripts/pull_models.sh" --update --yes ;;
-	6)
-		mkdir -p "$(dots_config_dir)"
-		local mf
-		mf="$(dots_user_models_file)"
-		if [[ ! -f ${mf} ]]; then
-			dots_write_models_override_bash "${mf}" "auto" "false" "" 0
-			echo "Created ${mf}"
+	"")
+		if [[ -t 0 ]] && [[ -t 1 ]]; then
+			dots_ui_load_answers
+			# shellcheck source=hardware.sh
+			source "${DIR}/helpers/hardware.sh" 2>/dev/null || true
+			dots_ui_header "Models"
+			if declare -F dots_hw_summary >/dev/null 2>&1; then
+				dots_hw_summary
+			fi
+			DOTS_UI_CHOICE_DEFAULT=1
+			local c
+			c="$(dots_prompt_choice "Models:" \
+				"Discover local models (read-only)" \
+				"Show model plan (--list)" \
+				"Pull recommended missing models" \
+				"Choose provider" \
+				"Choose tier + pull" \
+				"Update to registry targets (--update)" \
+				"Edit model policy file" \
+				"Back")"
+			case "${c}" in
+			1) dots_model_inventory discover ;;
+			2) exec "${DIR}/scripts/pull_models.sh" --list ;;
+			3) exec "${DIR}/scripts/pull_models.sh" ;;
+			4)
+				local p
+				DOTS_UI_CHOICE_DEFAULT=1
+				p="$(dots_prompt_choice "Provider:" "ollama" "llamacpp" "drawthings" "fluidvoice" "all")"
+				case "${p}" in
+				1) exec "${DIR}/scripts/pull_models.sh" --provider ollama ;;
+				2) exec "${DIR}/scripts/pull_models.sh" --provider llamacpp ;;
+				3) exec "${DIR}/scripts/pull_models.sh" --provider drawthings ;;
+				4) exec "${DIR}/scripts/pull_models.sh" --provider fluidvoice ;;
+				5) exec "${DIR}/scripts/pull_models.sh" --provider all ;;
+				esac
+				;;
+			5)
+				local t
+				DOTS_UI_CHOICE_DEFAULT=1
+				t="$(dots_prompt_choice "Tier:" "auto" "minimal" "balanced" "large" "max")"
+				case "${t}" in
+				1) exec "${DIR}/scripts/pull_models.sh" --tier auto ;;
+				2) exec "${DIR}/scripts/pull_models.sh" --tier minimal ;;
+				3) exec "${DIR}/scripts/pull_models.sh" --tier balanced ;;
+				4) exec "${DIR}/scripts/pull_models.sh" --tier large ;;
+				5) exec "${DIR}/scripts/pull_models.sh" --tier max ;;
+				esac
+				;;
+			6) exec "${DIR}/scripts/pull_models.sh" --update --yes ;;
+			7)
+				mkdir -p "$(dots_config_dir)"
+				local mf
+				mf="$(dots_user_models_file)"
+				if [[ ! -f ${mf} ]]; then
+					dots_write_models_override_bash "${mf}" "auto" "false" "" 0
+					echo "Created ${mf}"
+				fi
+				echo "Edit: ${mf}"
+				echo "Then: ./dots models → pull"
+				;;
+			8) return 0 ;;
+			esac
+		else
+			dots_model_inventory discover "$@"
 		fi
-		echo "Edit: ${mf}"
-		echo "Then: ./dots models → pull"
 		;;
-	7) return 0 ;;
+	*)
+		exec "${DIR}/scripts/pull_models.sh" "${sub}" "$@"
+		;;
 	esac
 }
 
@@ -534,7 +564,10 @@ dots_cmd_ai() {
 	restart) dots_ai_restart ;;
 	ps) dots_ai_ps ;;
 	logs) dots_ai_logs "$@" ;;
-	discover) dots_ai_discover_cmd "$@" ;;
+	discover)
+		echo "Warning: 'dots ai discover' is deprecated; use './dots models discover'." >&2
+		dots_model_inventory discover "$@"
+		;;
 	models) dots_ai_models_cmd "$@" ;;
 	model)
 		local msub="${1:-}"
@@ -593,8 +626,8 @@ Usage:
   ./dots ai restart         controlled restart
   ./dots ai logs [service]  compose logs (llama | open-webui)
   ./dots ai ps              service table
-  ./dots ai discover        scan known stores (read-only inventory)
-  ./dots ai models          managed GGUF models in models_dir
+  ./dots ai models          managed GGUF models in models_dir (ai-server)
+  ./dots models discover    read-only local inventory (preferred)
   ./dots ai model …         add / adopt / remove / default / info
   ./dots ai install --yes   delegate to ./setup.sh --with ai-server
 EOF
