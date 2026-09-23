@@ -113,5 +113,21 @@ for dep in gum dialog fzf whiptail; do
 	fi
 done
 
+mh="$("${ROOT}/dots" models --help 2>&1)" || {
+	bad "models --help failed"
+	mh=""
+}
+echo "${mh}" | grep -q 'models discover' && ok "models help discover" || bad "models help discover"
+
+disc="$("${ROOT}/dots" models discover --json 2>&1)" || {
+	bad "models discover --json failed"
+	disc=""
+}
+echo "${disc}" | grep -q '"records"' && ok "models discover json" || bad "models discover json"
+
+dep="$("${ROOT}/dots" ai discover 2>&1)" || true
+echo "${dep}" | grep -qi deprecated && ok "ai discover deprecation" || bad "ai discover deprecation"
+echo "${dep}" | grep -q 'Discovered AI models' && ok "ai discover still runs" || bad "ai discover output"
+
 echo "Passed: ${pass}  Failed: ${fail}"
 [[ ${fail} -eq 0 ]]

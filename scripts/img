@@ -9,6 +9,7 @@ STEPS=4
 OUTFILE=""
 NO_OPEN=0
 PROMPT=""
+MODEL_FLAG=""
 
 usage() {
   cat <<'EOF'
@@ -19,6 +20,7 @@ Options:
   -h HEIGHT    Image height (default: 1024)
   -s STEPS     Diffusion steps (default: 4)
   -o FILE      Explicit output PNG path
+  -m MODEL     Draw Things checkpoint (e.g. flux_2_klein_4b_q6p.ckpt)
   -n           Do not open the generated image
   -?           Show help
 
@@ -48,11 +50,15 @@ while [[ $# -gt 0 ]]; do
       OUTFILE="${2:-}"
       shift 2
       ;;
+    -m | --model)
+      MODEL_FLAG="${2:-}"
+      shift 2
+      ;;
     -n)
       NO_OPEN=1
       shift
       ;;
-    -\?|--help|-help)
+    -\? | --help | -help)
       usage
       exit 0
       ;;
@@ -82,17 +88,23 @@ if ! command -v draw-things-cli >/dev/null 2>&1; then
   exit 1
 fi
 
+DOTS_DIR="${DOTS_DIR:-${HOME}/dots}"
+if [[ -f "${DOTS_DIR}/helpers/drawthings.sh" ]]; then
+  # shellcheck source=helpers/drawthings.sh
+  source "${DOTS_DIR}/helpers/drawthings.sh"
+fi
+
 CFG="${DOTS_DRAWTHINGS_CONFIG:-${HOME}/.config/drawthings-mcp/config.toml}"
-REPO_CFG="${DOTS_DIR:-${HOME}/dots}/configs/drawthings/config.toml"
+REPO_CFG="${DOTS_DIR}/configs/drawthings/config.toml"
 [[ -f "${CFG}" ]] || CFG="${REPO_CFG}"
 
-# Resolve output dir + model from shared Draw Things config (same as MCP).
+# Resolve output dir + config default model.
 _resolved="$(python3 - "${CFG}" <<'PY'
 import os, sys
 from pathlib import Path
 cfg_path = Path(sys.argv[1])
 out_dir = os.environ.get("DRAWTHINGS_OUTPUT_DIR", "")
-model = os.environ.get("DRAWTHINGS_MODEL", "")
+model = ""
 if cfg_path.is_file():
     try:
         import tomllib
@@ -101,8 +113,7 @@ if cfg_path.is_file():
         data = {}
     if not out_dir:
         out_dir = ((data.get("output") or {}).get("dir") or "").strip()
-    if not model:
-        model = ((data.get("model") or {}).get("default") or "").strip()
+    model = ((data.get("model") or {}).get("default") or "").strip()
 if not out_dir:
     out_dir = str(Path.home() / "Pictures" / "AI" / "DrawThings")
 print(os.path.expanduser(out_dir))
@@ -110,7 +121,18 @@ print(model)
 PY
 )"
 OUT_DIR="$(printf '%s\n' "${_resolved}" | sed -n '1p')"
-MODEL="$(printf '%s\n' "${_resolved}" | sed -n '2p')"
+CONFIG_MODEL="$(printf '%s\n' "${_resolved}" | sed -n '2p')"
+
+if declare -F drawthings_resolve_model >/dev/null 2>&1; then
+  MODEL="$(drawthings_resolve_model "${CONFIG_MODEL}" "${MODEL_FLAG}")" || exit 1
+else
+  MODEL="${MODEL_FLAG:-${DRAWTHINGS_MODEL:-${CONFIG_MODEL}}}"
+  if [[ -z "${MODEL}" ]]; then
+    echo "No Draw Things model downloaded." >&2
+    echo "Install: ./setup.sh --with drawthings && ./scripts/pull_models.sh --provider drawthings --yes" >&2
+    exit 1
+  fi
+fi
 
 mkdir -p "${OUT_DIR}"
 
@@ -123,12 +145,8 @@ else
   mkdir -p "$(dirname "${OUTFILE}")"
 fi
 
-args=(generate --width "${WIDTH}" --height "${HEIGHT}" --steps "${STEPS}" --output "${OUTFILE}" --prompt "${PROMPT}")
-if [[ -n "${MODEL}" ]]; then
-  args+=(--model "${MODEL}")
-fi
+args=(generate --width "${WIDTH}" --height "${HEIGHT}" --steps "${STEPS}" --output "${OUTFILE}" --prompt "${PROMPT}" --model "${MODEL}")
 
-DOTS_DIR="${DOTS_DIR:-${HOME}/dots}"
 TELEMETRY_BIN="${DOTS_DIR}/scripts/agent-telemetry"
 TELE_ID=""
 if [[ "${DOTS_TELEMETRY:-1}" != "0" ]] && [[ -x "${TELEMETRY_BIN}" ]]; then
@@ -136,7 +154,7 @@ if [[ "${DOTS_TELEMETRY:-1}" != "0" ]] && [[ -x "${TELEMETRY_BIN}" ]]; then
     --backend drawthings \
     --kind visual \
     --label "image generation" \
-    --model "${MODEL:-}" \
+    --model "${MODEL}" \
     --tool img \
     --local-or-cloud local 2>/dev/null || true)"
 fi
@@ -149,9 +167,9 @@ set -e
 
 if [[ -n "${TELE_ID}" ]] && [[ -x "${TELEMETRY_BIN}" ]]; then
   if [[ "${rc}" -eq 0 ]] && [[ -f "${OUTFILE}" ]]; then
-    "${TELEMETRY_BIN}" record-finish --id "${TELE_ID}" --success true --exit-code 0 --model "${MODEL:-}" >/dev/null 2>&1 || true
+    "${TELEMETRY_BIN}" record-finish --id "${TELE_ID}" --success true --exit-code 0 --model "${MODEL}" >/dev/null 2>&1 || true
   else
-    "${TELEMETRY_BIN}" record-finish --id "${TELE_ID}" --success false --exit-code "${rc}" --model "${MODEL:-}" >/dev/null 2>&1 || true
+    "${TELEMETRY_BIN}" record-finish --id "${TELE_ID}" --success false --exit-code "${rc}" --model "${MODEL}" >/dev/null 2>&1 || true
   fi
 fi
 

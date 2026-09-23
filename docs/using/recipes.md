@@ -87,6 +87,7 @@ cp examples/profiles/home-studio.toml ~/.config/dots/profiles/home-studio.toml
 
 ```bash
 ./setup.sh --with ollama,llamacpp
+./dots models discover
 ./scripts/pull_models.sh --list
 ./dots models
 ```

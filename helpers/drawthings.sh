@@ -22,6 +22,80 @@ drawthings_live_config() {
   printf '%s\n' "${DOTS_DRAWTHINGS_LIVE_CONFIG}"
 }
 
+drawthings_first_downloaded_model() {
+  if [[ -n ${DOTS_DRAWTHINGS_MOCK_MODELS_LIST:-} ]]; then
+    python3 - "${DOTS_DRAWTHINGS_MOCK_MODELS_LIST}" <<'PY'
+import re, sys
+text = sys.argv[1]
+for line in text.splitlines():
+    line = line.strip()
+    if re.match(r"^\S+\.(ckpt|safetensors)\b", line, re.I):
+        print(line.split()[0])
+        break
+PY
+    return 0
+  fi
+  if ! command -v draw-things-cli >/dev/null 2>&1; then
+    return 0
+  fi
+  local tmp
+  tmp="$(mktemp "${TMPDIR:-/tmp}/dots-dt-models.XXXXXX")"
+  if draw-things-cli models list --downloaded-only --offline >"${tmp}" 2>&1; then
+    python3 - "${tmp}" <<'PY'
+import re, sys
+from pathlib import Path
+text = Path(sys.argv[1]).read_text(encoding="utf-8", errors="replace")
+for line in text.splitlines():
+    line = line.strip()
+    if not line or line.startswith("MODEL") or line.startswith("-") or line.startswith("Tip:"):
+        continue
+    parts = line.split()
+    if parts and re.match(r"^\S+\.(ckpt|safetensors)\b", parts[0], re.I):
+        print(parts[0])
+        break
+PY
+  fi
+  rm -f "${tmp}"
+}
+
+drawthings_no_model_message() {
+  cat <<'EOF'
+No Draw Things model downloaded.
+Install one:
+  ./scripts/pull_models.sh --provider drawthings --tier balanced --yes
+Or:
+  draw-things-cli models ensure --model flux_2_klein_4b_q6p.ckpt
+List: ./dots models discover
+EOF
+}
+
+# Resolve checkpoint id: explicit arg, env, config default, first downloaded.
+# Prints model id on stdout; returns 1 with drawthings_no_model_message on stderr.
+drawthings_resolve_model() {
+  local from_config="${1:-}"
+  local explicit="${2:-}"
+  if [[ -n ${explicit} ]]; then
+    printf '%s\n' "${explicit}"
+    return 0
+  fi
+  if [[ -n ${DRAWTHINGS_MODEL:-} ]]; then
+    printf '%s\n' "${DRAWTHINGS_MODEL}"
+    return 0
+  fi
+  if [[ -n ${from_config} ]]; then
+    printf '%s\n' "${from_config}"
+    return 0
+  fi
+  local first
+  first="$(drawthings_first_downloaded_model | head -1 || true)"
+  if [[ -n ${first} ]]; then
+    printf '%s\n' "${first}"
+    return 0
+  fi
+  drawthings_no_model_message >&2
+  return 1
+}
+
 drawthings_output_dir_from() {
   local cfg="$1"
   local raw

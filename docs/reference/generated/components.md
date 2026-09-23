@@ -26,3 +26,4 @@ Authoritative registry: `configs/components.toml`.
 | tex | TeX | docs | darwin, linux | brew/Brewfile.tex | no | Homebrew TeX Live (CLI) |
 | mactools | macOS tools | workstation | darwin | brew/Brewfile.mactools | yes | Optional macOS workstation layer (Vorssaint + automation/audio/CLI; Brewfile.mactools) |
 | lsp | Language servers | developer_tooling | darwin, linux | brew/Brewfile.lsp | no | Language servers for DOTS development/editor workflows |
+| ai-server | AI inference server | ai_runtime | darwin, linux | brew/Brewfile.ai-server | yes | Server stack: llama.cpp (llama-server) + Open WebUI via Docker Compose (opt-in models) |

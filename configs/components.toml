@@ -171,6 +171,17 @@ platforms = ["darwin", "linux"]
 brewfile = "brew/Brewfile.lsp"
 description = "Language servers for DOTS development/editor workflows"
 
+[[components]]
+id = "ai-server"
+label = "AI inference server"
+category = "ai_runtime"
+cloud = false
+local_ai = true
+omit_from_all = true
+platforms = ["darwin", "linux"]
+brewfile = "brew/Brewfile.ai-server"
+description = "Server stack: llama.cpp (llama-server) + Open WebUI via Docker Compose (opt-in models)"
+
 # Declarative selector aggregates. Expand to member component ids before install.
 # Nested groups are not supported in v1.0.1.
 [[supergroups]]

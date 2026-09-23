@@ -9,6 +9,11 @@ secrets/
 
 .old_dots/
 
+# AI server runtime (never commit models or WebUI state)
+/srv/ai/
+**/srv/ai/models/**
+**/srv/ai/open-webui/**
+
 .DS_Store
 *.swp
 *.swo

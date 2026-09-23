@@ -1,5 +1,7 @@
 # Models
 
+Step-by-step discover / pull / Draw Things / `img`: [Local models](../using/local-models.md).
+
 Authoritative registry: `configs/models.toml`
 ([generated table](../reference/generated/models.md)).
 
@@ -44,10 +46,15 @@ when the user asks.
 ## CLI
 
 ```bash
+./dots models discover
 ./dots models
 ./scripts/pull_models.sh --list
 ./scripts/pull_models.sh --help
 ```
+
+### Draw Things (image)
+
+After `./setup.sh --with drawthings`, pull a checkpoint (see registry `drawthings_model` ids), then use `img` or MCP. Details: [Local models → Draw Things](../using/local-models.md#draw-things-and-img).
 
 User override file (optional): `~/.config/dots/models.toml` — see
 `./dots status` Models section.

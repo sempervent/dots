@@ -58,6 +58,8 @@ source "${DIR}/helpers/agent_router.sh"
 source "${DIR}/helpers/fnm.sh"
 # shellcheck source=helpers/lsp.sh
 source "${DIR}/helpers/lsp.sh"
+# shellcheck source=helpers/ai_server.sh
+source "${DIR}/helpers/ai_server.sh"
 # shellcheck source=helpers/nvim.sh
 source "${DIR}/helpers/nvim.sh"
 # shellcheck source=helpers/notify.sh
@@ -444,7 +446,7 @@ elif command -v brew >/dev/null 2>&1 || [[ -n ${DOTS_BREW_BIN:-} ]]; then
 		echo "Error: one or more optional components failed (see list above)" >&2
 		exit 1
 	fi
-elif has_component herdr || has_component lsp; then
+elif has_component herdr || has_component lsp || has_component ai-server; then
 	# Linux native path: official Herdr installer (no Homebrew required)
 	if has_component herdr && [[ ${NO_INSTALL:-0} -eq 1 ]]; then
 		if ! command -v herdr >/dev/null 2>&1; then
@@ -466,6 +468,10 @@ if has_component lsp; then
 	else
 		dots_lsp_install || exit 1
 	fi
+fi
+
+if has_component ai-server; then
+	dots_ai_server_setup || exit 1
 fi
 
 echo "=== Symlinks / configuration ==="
