@@ -86,6 +86,7 @@ nav:
       - Recipes: using/recipes.md
       - Package groups: using/package-groups.md
       - Components and --with: using/components.md
+      - Language servers: using/language-servers.md
       - Skills: using/skills.md
       - Tools catalog: using/tools.md
       - Extending: using/extending.md

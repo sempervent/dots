@@ -67,7 +67,7 @@ echo "=== wizard: server customize bertha + ollama/llamacpp + balanced ==="
 # mux 1 (tmux), infra y, models 2 (choose), tier 3 (balanced), cleanup n
 IFS='|' read -r shome sout src smut < <(_wiz_parse server \
 	3 n n bertha \
-	n n n n n \
+	n n n n n n \
 	y y \
 	1 \
 	y \
@@ -93,7 +93,7 @@ if [[ ${os} == Darwin ]]; then
 	IFS='|' read -r chome cout crc cmut < <(_wiz_parse aicustom \
 		1 n n home-custom \
 		n \
-		y y n n n \
+		y y n n n n \
 		n n n n n \
 		2 \
 		3)
@@ -102,7 +102,7 @@ else
 	IFS='|' read -r chome cout crc cmut < <(_wiz_parse aicustom \
 		1 n n home-custom \
 		n \
-		y n \
+		y n n \
 		n n n n n \
 		1 \
 		3)

@@ -27,6 +27,7 @@ run scripts/tests/repository_contract_test.sh
 run scripts/tests/multiplexer_nesting_test.sh
 run scripts/tests/stage0_prereqs_test.sh
 run scripts/tests/provider_mapping_test.sh
+run scripts/tests/lsp_toolchain_test.sh
 
 echo "=== Bootstrap + setup dry-run ==="
 ./bootstrap.sh --profile server --dry-run
@@ -34,6 +35,7 @@ echo "=== Bootstrap + setup dry-run ==="
 ./setup.sh --dry-run --with herdr
 ./setup.sh --dry-run --with hermes,ollama
 ./setup.sh --dry-run --with ai
+./setup.sh --dry-run --with lsp
 ./setup.sh --dry-run --profile base --packages core,modern
 if [[ "$(uname -s)" != "Darwin" ]]; then
 	if ./setup.sh --dry-run --with fluidvoice; then

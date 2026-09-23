@@ -46,7 +46,7 @@ fi
 echo "=== ai supergroup members ==="
 members="$(dots_supergroup_members ai | tr '\n' ' ')"
 members="${members% }"
-want="hermes ollama llamacpp drawthings opencode codex cursor fluidvoice"
+want="hermes ollama llamacpp drawthings opencode codex cursor fluidvoice lsp"
 if [[ ${members} == "${want}" ]]; then
 	ok "ai members declared"
 else
@@ -58,7 +58,7 @@ export DOTS_FORCE_OS=darwin DOTS_FORCE_DARWIN_MAJOR=15
 got=()
 read_expand got ai
 if contains fluidvoice "${got[@]+"${got[@]}"}"; then ok "darwin15 ai includes fluidvoice"; else bad "darwin15 missing fluidvoice"; fi
-for m in hermes ollama llamacpp drawthings opencode codex cursor; do
+for m in hermes ollama llamacpp drawthings opencode codex cursor lsp; do
 	if contains "${m}" "${got[@]+"${got[@]}"}"; then ok "darwin15 ai has ${m}"; else bad "darwin15 missing ${m}"; fi
 done
 
@@ -70,8 +70,8 @@ read_expand got ai
 if contains fluidvoice "${got[@]+"${got[@]}"}"; then bad "linux ai should omit fluidvoice"; else ok "linux ai omits fluidvoice"; fi
 if contains cursor "${got[@]+"${got[@]}"}"; then bad "linux ai should omit cursor"; else ok "linux ai omits cursor"; fi
 if contains codex "${got[@]+"${got[@]}"}"; then bad "linux ai should omit codex"; else ok "linux ai omits codex"; fi
-if contains hermes "${got[@]+"${got[@]}"}" && contains ollama "${got[@]+"${got[@]}"}" && contains opencode "${got[@]+"${got[@]}"}" && contains llamacpp "${got[@]+"${got[@]}"}"; then
-	ok "linux ai keeps hermes/ollama/opencode/llamacpp"
+if contains hermes "${got[@]+"${got[@]}"}" && contains ollama "${got[@]+"${got[@]}"}" && contains opencode "${got[@]+"${got[@]}"}" && contains llamacpp "${got[@]+"${got[@]}"}" && contains lsp "${got[@]+"${got[@]}"}"; then
+	ok "linux ai keeps hermes/ollama/opencode/llamacpp/lsp"
 else
 	bad "linux ai missing portable members: ${got[*]-}"
 fi
@@ -142,7 +142,7 @@ PROFILE_WITH=() PROFILE_WITHOUT=()
 dots_load_profile_file "$(dots_resolve_profile_path home)" >/dev/null
 dots_compute_effective_with
 _ai_leak=0
-for m in hermes ollama llamacpp drawthings opencode codex cursor fluidvoice; do
+for m in hermes ollama llamacpp drawthings opencode codex cursor fluidvoice lsp; do
 	if contains "${m}" "${EFFECTIVE_WITH[@]+"${EFFECTIVE_WITH[@]}"}"; then
 		bad "home --without ai still has ${m}"
 		_ai_leak=1
@@ -159,7 +159,7 @@ PROFILE_WITH=() PROFILE_WITHOUT=()
 dots_load_profile_file "$(dots_resolve_profile_path home)" >/dev/null
 dots_compute_effective_with
 home_got="$(printf '%s\n' "${EFFECTIVE_WITH[@]}" | sort | tr '\n' ' ')"
-home_want="$(printf '%s\n' hermes herdr ollama llamacpp skills ai-skills drawthings opencode codex cursor images tex | sort | tr '\n' ' ')"
+home_want="$(printf '%s\n' hermes herdr ollama llamacpp skills ai-skills drawthings opencode codex cursor images tex lsp | sort | tr '\n' ' ')"
 if [[ ${home_got} == "${home_want}" ]]; then
 	ok "home Darwin set matches prior leaf intent"
 else
