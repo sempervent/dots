@@ -50,7 +50,7 @@ Builtin profiles declare membership in TOML (SoT):
 | Profile | Groups (summary) |
 |---------|------------------|
 | `base` | `core` `modern` |
-| `work` | + `workstation` `dev` `data` `security` |
+| `work` | + `workstation` `dev` `data` `geo` `security` `gui` |
 | `home` | + `infra` `media` `gui` + `dev` `network` `data` `geo` `security` |
 | `server` | `core` `modern` `server` |
 | `all` | workstation set + `dev` `security` `network` `data` `geo` |

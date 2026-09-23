@@ -51,7 +51,7 @@ Headless server — tmux + Herdr available, no GUI/AI providers by default
 Conservative allowlist — no AI clients by default
 
 - **Source:** `configs/bootstrap/profiles/work.toml`
-- **packages:** `core`, `modern`, `workstation`, `dev`, `data`, `security`
+- **packages:** `core`, `modern`, `workstation`, `dev`, `data`, `geo`, `security`, `gui`
 - **with:** (none)
 - **runtime.multiplexer:** `tmux`
 

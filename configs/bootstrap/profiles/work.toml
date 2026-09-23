@@ -7,14 +7,14 @@
 # IMPORTANT: Do NOT infer employer AI policy. Start with NO AI clients.
 # Cursor MUST NOT be included without approval.
 #
-# Package groups: +dev +data +security (install-only CLIs). Network/geo omitted
-# by default — add via custom profile or --packages if needed.
+# Package groups: +dev +data +geo +security +gui (font). Network omitted by default
+# — add via custom profile or --packages if needed.
 
 [profile]
 name = "work"
 description = "Conservative allowlist — no AI clients by default"
 with = []
-packages = ["core", "modern", "workstation", "dev", "data", "security"]
+packages = ["core", "modern", "workstation", "dev", "data", "geo", "security", "gui"]
 open_apps = ["iTerm"]
 
 [runtime]

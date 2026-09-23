@@ -150,7 +150,8 @@ plan_work="$("${ROOT}/dots" packages plan --profile work 2>&1)" || {
 	plan_work=""
 }
 echo "${plan_work}" | grep -qE '^\s+dev$' && ok "plan work has dev" || bad "plan work missing dev"
-echo "${plan_work}" | grep -qE '^\s+geo$' && bad "plan work should omit geo" || ok "plan work omits geo"
+echo "${plan_work}" | grep -qE '^\s+geo$' && ok "plan work has geo" || bad "plan work missing geo"
+echo "${plan_work}" | grep -qE '^\s+gui$' && ok "plan work has gui" || bad "plan work missing gui"
 
 echo "=== plan / groups are non-mutating ==="
 before="$(find "${TMP}" -type f 2>/dev/null | sort | cksum)"

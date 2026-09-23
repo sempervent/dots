@@ -186,21 +186,16 @@ for g in dev network data geo security; do
 done
 if [[ "${PROFILE_RUNTIME_MULTIPLEXER}" == "herdr" ]]; then ok "home multiplexer=herdr"; else bad "home mux=${PROFILE_RUNTIME_MULTIPLEXER}"; fi
 
-# WORK has no AI; has lean workstation tool groups (no geo/network)
+# WORK has no AI; workstation tool groups + geo/gui; network still off by default
 resolve_named work
 if [[ ${#EFFECTIVE_WITH[@]} -eq 0 ]]; then ok "work AI empty"; else bad "work leaked AI"; fi
-for g in dev data security; do
+for g in dev data geo security gui; do
   if dots_array_contains "${g}" "${PROFILE_PACKAGES[@]+"${PROFILE_PACKAGES[@]}"}"; then
     ok "work has ${g} group"
   else
     bad "work missing ${g}"
   fi
 done
-if dots_array_contains geo "${PROFILE_PACKAGES[@]+"${PROFILE_PACKAGES[@]}"}"; then
-  bad "work should omit geo"
-else
-  ok "work omits geo"
-fi
 if dots_array_contains network "${PROFILE_PACKAGES[@]+"${PROFILE_PACKAGES[@]}"}"; then
   bad "work should omit network"
 else
