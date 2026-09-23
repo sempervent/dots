@@ -42,6 +42,12 @@ The **`ai` supergroup** remains workstation-oriented (Hermes, Ollama, LSP, …).
 
 Contract: **known** (registry) ≠ **selected** (`--with`) ≠ **installed** (packages) ≠ **configured** (toml on disk) ≠ **running** (containers).
 
+## Root cause: `dots ai models` visibility (2026-03 follow-up)
+
+Initial v1 listed only `find models_dir -maxdepth 1 '*.gguf'`. DOTS model pulls (`scripts/pull_models.sh`) install into **Ollama blob storage**, **Hugging Face / llama.cpp caches**, and other provider-specific paths—not necessarily `{runtime_root}/models`. Hence previously installed models were **discovered nowhere** by `dots ai models`.
+
+Fix: unified read-only inventory in `scripts/ai_model_inventory.py` (`dots ai discover`); `dots ai models` shows **managed** GGUF under `models_dir` and points to discover/adopt for elsewhere.
+
 ## Deliberately outside DOTS
 
 - Automatic multi‑GB model downloads during `./setup` or `./bootstrap`

@@ -6,6 +6,11 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 DIR="${ROOT}"
 pass=0
 fail=0
+
+write_mini_gguf() {
+	printf 'GGUF\x00\x00\x00' >"$1"
+}
+
 ok() {
 	echo "OK: $1"
 	pass=$((pass + 1))
@@ -51,7 +56,7 @@ if dots_ai_validate_config 2>/dev/null; then bad "invalid backend accepted"; els
 echo "=== compose render ==="
 dots_require_python 0 || bad "python missing"
 mkdir -p "${TMP}/runtime/models"
-touch "${TMP}/runtime/models/tiny.gguf"
+write_mini_gguf "${TMP}/runtime/models/tiny.gguf"
 cat >"${HOME}/.config/dots/ai-server.toml" <<TOML
 [ai_server]
 enabled = true
@@ -120,7 +125,9 @@ echo "${help}" | grep -Fq 'dots ai up' && ok "dots ai --help" || bad "dots ai he
 status="$("${ROOT}/dots" ai status 2>&1)" || status=""
 echo "${status}" | grep -Fq 'AI server' && ok "dots ai status" || bad "dots ai status"
 models_out="$("${ROOT}/dots" ai models 2>&1)" || models_out=""
-echo "${models_out}" | grep -Fq 'tiny.gguf' && ok "dots ai models" || bad "dots ai models"
+echo "${models_out}" | grep -Fq 'Managed models' &&
+	echo "${models_out}" | grep -Fq 'tiny.gguf' &&
+	ok "dots ai models" || bad "dots ai models"
 doctor="$("${ROOT}/dots" ai doctor 2>&1)" || true
 echo "${doctor}" | grep -Fq PASS && ok "dots ai doctor output" || bad "dots ai doctor"
 

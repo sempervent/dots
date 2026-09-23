@@ -44,8 +44,13 @@ Backends (`ai_server.backend`): `cpu`, `cuda`, `rocm`, `vulkan`, `intel`, `nativ
 
 ```bash
 dots ai --help
+dots ai discover
+dots ai discover --verbose
+dots ai discover --json
 dots ai doctor
-dots ai models
+dots ai models          # managed GGUF in models_dir only
+dots ai model adopt ~/path/to/model.gguf
+dots ai model adopt --copy ~/path/to/model.gguf
 dots ai model add ./MyModel.gguf
 dots ai model add hf://owner/repo/model-Q4_K_M.gguf
 dots ai model default model-Q4_K_M.gguf
@@ -54,6 +59,32 @@ dots ai status
 dots ai logs
 dots ai logs llama
 dots ai down
+```
+
+### Managed vs discovered
+
+| Command | Meaning |
+|---------|---------|
+| `dots ai discover` | Read-only scan of known stores (ai-server dir, configured paths, HF cache, Ollama, conventions). |
+| `dots ai models` | GGUF files **managed** under `models_dir` (including adopted symlinks). |
+
+`default_model` must be a **basename present in `models_dir`**. Adopt compatible GGUF from elsewhere before setting default:
+
+```bash
+dots ai discover
+dots ai model adopt ~/somewhere/Qwen3-14B-Q4_K_M.gguf
+dots ai model default Qwen3-14B-Q4_K_M.gguf
+dots ai doctor
+dots ai up
+```
+
+Ollama models appear in `discover` as backend `ollama` and are **not** directly usable by llama-server unless you have a separate GGUF file to adopt.
+
+Custom discovery roots:
+
+```toml
+[ai_server.discovery]
+paths = ["/mnt/models", "/data/gguf"]
 ```
 
 `dots ai down` stops containers and does **not** delete models or WebUI volumes/data directories.
