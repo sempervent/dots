@@ -61,6 +61,7 @@ SCRIPTS=(
 	scripts/tests/dots_wizard_test.sh
 	scripts/tests/dots_wizard_failure_test.sh
 	scripts/tests/lsp_toolchain_test.sh
+	scripts/tests/ai_server_test.sh
 	scripts/tests/wizard_models_progress_test.sh
 	scripts/tests/cask_app_test.sh
 	scripts/tests/optional_failure_summary_test.sh
