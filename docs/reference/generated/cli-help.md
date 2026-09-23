@@ -21,6 +21,7 @@ Usage:
   ./dots components list     registry + host compatibility
   ./dots components active   last-selected components (informational)
   ./dots lsp                 language-server install / status / checks
+  ./dots ai                  AI inference server (Compose + Open WebUI)
   ./dots packages            package ownership / drift
   ./dots packages groups     capability groups (read-only)
   ./dots packages group ID   inspect one package group
@@ -34,7 +35,8 @@ Usage:
   ./dots backups             list snapshots
   ./dots restore [ID]        restore a snapshot
   ./dots profile             profile management
-  ./dots models              local model management
+  ./dots models              local model management (discover / pull)
+  ./dots models discover     read-only inventory (no ai-server required)
   ./dots check               verify machine
   ./dots update              update DOTS repo + reapply
   ./dots help                this help
@@ -89,6 +91,7 @@ Selectors (--with / --without):
     tex          Homebrew TeX Live (CLI)
     mactools     Optional macOS workstation layer (Vorssaint + automation/audio/CLI; Brewfile.mactools)
     lsp          Language servers for DOTS development/editor workflows
+    ai-server    Server stack: llama.cpp (llama-server) + Open WebUI via Docker Compose (opt-in models)
   Supergroups:
     ai           AI applications — Local runtimes, coding agents, and the LSP toolchain for this platform
   List: ./dots components list
@@ -142,6 +145,7 @@ Options:
                       tex          Homebrew TeX Live (CLI)
                       mactools     Optional macOS workstation layer (Vorssaint + automation/audio/CLI; Brewfile.mactools)
                       lsp          Language servers for DOTS development/editor workflows
+                      ai-server    Server stack: llama.cpp (llama-server) + Open WebUI via Docker Compose (opt-in models)
                     Supergroups:
                       ai           AI applications — Local runtimes, coding agents, and the LSP toolchain for this platform
                     List: ./dots components list
@@ -334,9 +338,12 @@ Usage:
 
 ```text
 Usage:
-  ./dots models              local model management
+  ./dots models discover [--verbose] [--json]
+  ./dots models              interactive menu (TTY) or discover (non-TTY)
+  ./dots models --list       same as ./scripts/pull_models.sh --list
 
-(Interactive entrypoint; see `./dots help` and expert scripts such as `./scripts/pull_models.sh` / `./bootstrap.sh`.)
+Discover scans local stores (Ollama, llama.cpp cache, Draw Things, HF, conventions)
+without requiring ai-server setup. Pull/install uses pull_models.sh (see menu).
 ```
 
 ## `./dots backup`

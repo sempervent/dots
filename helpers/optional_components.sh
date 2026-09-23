@@ -203,6 +203,9 @@ apply_optional_brewfiles() {
 	if has_component lsp; then
 		_dots_optional_apply_registry_brewfile "lsp" || true
 	fi
+	if has_component ai-server; then
+		_dots_optional_apply_registry_brewfile "ai-server" || true
+	fi
 }
 
 # Configuration / post-package side effects that must run AFTER backup + links.

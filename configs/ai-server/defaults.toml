@@ -1,0 +1,27 @@
+# Shipped defaults — copied to ~/.config/dots/ai-server.toml on first setup (never overwritten).
+
+[ai_server]
+enabled = true
+inference = "llama_cpp"
+backend = "cpu"
+runtime_root = ""          # empty → platform default (/srv/ai Linux, ~/srv/ai macOS)
+models_dir = ""            # empty → {runtime_root}/models
+webui_port = 3000
+llama_port = 8080
+default_model = ""
+context_size = 8192
+gpu_layers = 0             # -1 = backend default (auto for GPU backends)
+threads = 0                # 0 = llama-server default
+parallel = 1
+publish_llama = false
+
+[ai_server.open_webui]
+image = "ghcr.io/open-webui/open-webui:main"
+
+[ai_server.llama]
+# Optional extra llama-server flags (structured; never shell-evaluated)
+extra_args = []
+
+[ai_server.discovery]
+# Additional GGUF search roots (read-only scan for `./dots models discover`).
+paths = []
