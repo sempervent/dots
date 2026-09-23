@@ -33,6 +33,7 @@ SCRIPTS=(
 	helpers/ui.sh
 	helpers/state.sh
 	helpers/wizard.sh
+	helpers/lsp.sh
 	helpers/cask_apps.sh
 	helpers/backup.sh
 	helpers/mactools.sh
@@ -59,6 +60,7 @@ SCRIPTS=(
 	scripts/tests/dots_cli_test.sh
 	scripts/tests/dots_wizard_test.sh
 	scripts/tests/dots_wizard_failure_test.sh
+	scripts/tests/lsp_toolchain_test.sh
 	scripts/tests/wizard_models_progress_test.sh
 	scripts/tests/cask_app_test.sh
 	scripts/tests/optional_failure_summary_test.sh
@@ -98,6 +100,7 @@ shfmt -d -s \
 	helpers/toml.sh helpers/bootstrap_prereqs.sh \
 	helpers/hardware.sh helpers/models.sh helpers/model_providers.sh \
 	helpers/ui.sh helpers/state.sh helpers/wizard.sh helpers/cask_apps.sh \
+	helpers/lsp.sh \
 	helpers/backup.sh helpers/package_state.sh helpers/linux_distro.sh \
 	shell/runtime.sh shell/fnm.sh \
 	scripts/pull_models.sh \

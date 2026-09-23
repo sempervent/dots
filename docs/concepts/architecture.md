@@ -47,6 +47,7 @@ supergroups       expand to component ids (e.g. ai)
 managed links     repo files → home paths
 skills            packs / standalone via skills CLI
 models            local model registry + pull policy
+language servers  local code-intelligence binaries + editor clients
 runtime.env       generated non-secret runtime
 local.sh          host overrides (never overwritten)
 ```
@@ -66,12 +67,28 @@ local.sh          host overrides (never overwritten)
 | managed file links | `configs/links.toml` |
 | skill packs | `configs/skills/manifest.toml` |
 | local model policy | `configs/models.toml` |
+| language-server inventory / providers / filetypes | `configs/lsp/servers.toml` |
 | built-in profiles | `configs/bootstrap/profiles/*.toml` |
 | agent routing defaults | `configs/agents/router.toml` (+ `skills/agent-router/SKILL.md`) |
 | supported `--with` ids | loaded from `configs/components.toml` (not edited in `setup.sh`) |
 
 Do **not** invent a second registry. Prefer extending these files over new
 hard-coded `case` maps.
+
+## Language-server ownership
+
+```text
+configs/lsp/servers.toml
+  → authoritative server, filetype, provider, health, and Neovim-id registry
+  → brew/Brewfile.lsp realizes Homebrew formulae
+  → helpers/lsp.sh selects native Linux packages or trusted fallbacks
+  → configs/nvim/lua/config/lsp_servers.lua is generated client configuration
+  → ./dots lsp is the human-facing orchestration and status surface
+```
+
+DOTS owns PATH-visible server binaries. Neovim consumes those binaries and does
+not use Mason to install private duplicate copies. Other LSP clients can use the
+same executables.
 
 ## `brew/Brewfile` role
 

@@ -15,6 +15,8 @@ source /dots/helpers/packages.sh
 source /dots/helpers/hardware.sh
 # shellcheck disable=SC1091
 source /dots/helpers/linux_distro.sh
+# shellcheck disable=SC1091
+source /dots/helpers/lsp.sh
 
 echo ""
 dots_linux_platform_report
@@ -139,6 +141,17 @@ if [[ ${req_fail} -ne 0 ]]; then
 	exit 1
 fi
 echo "Optional advisories: ${opt_warn}"
+
+echo ""
+echo "=== LSP provider registry (no installs) ==="
+dots_lsp_validate_registry
+while IFS='|' read -r lsp_id _label _domains _binary _brew lsp_apt lsp_fallback _rest; do
+	if [[ ${mgr} == apt && -n ${lsp_apt} ]] && pkg_exists "${lsp_apt}"; then
+		echo "APT: ${lsp_id} → ${lsp_apt}"
+	else
+		echo "ECOSYSTEM FALLBACK: ${lsp_id} → ${lsp_fallback}"
+	fi
+done < <(dots_lsp_rows)
 
 echo ""
 echo "=== bootstrap --profile server --show ==="

@@ -12,7 +12,7 @@ Registry-driven reference for optional components and supergroups. Do not invent
 
 | id | label | members | description |
 | --- | --- | --- | --- |
-| `ai` | AI applications | `hermes`, `ollama`, `llamacpp`, `drawthings`, `opencode`, `codex`, `cursor`, `fluidvoice` | All supported AI applications for this platform |
+| `ai` | AI applications | `hermes`, `ollama`, `llamacpp`, `drawthings`, `opencode`, `codex`, `cursor`, `fluidvoice`, `lsp` | Local runtimes, coding agents, and the LSP toolchain for this platform |
 
 ## Components
 
@@ -185,4 +185,15 @@ Optional macOS workstation layer (Vorssaint + automation/audio/CLI; Brewfile.mac
 - **formulae:** `mise`, `yazi`, `watchexec`, `hyperfine`, `mprocs`, `xh`, `dust`, `duf`
 - **casks:** `vorssaint`, `raycast`, `keyboard-maestro`, `hazel`, `little-snitch`, `orbstack`, `hookmark`, `devonthink`, `ghostty`, `zed`, `loopback`, `audio-hijack`, `blackhole-2ch`, `vcv-rack`, `obs`, `touchdesigner`, `processing`, `sonic-pi`, `supercollider`, `qgis`, `grandperspective`, `midi-monitor`
 - **activate:** `./dots setup --with mactools`
+
+### `lsp`
+
+Language servers for DOTS development/editor workflows
+
+- **label:** Language servers
+- **category:** developer_tooling
+- **platforms:** darwin, linux
+- **brewfile:** `brew/Brewfile.lsp`
+- **formulae:** `rust-analyzer`, `basedpyright`, `gopls`, `bash-language-server`, `yaml-language-server`, `vscode-langservers-extracted`, `lua-language-server`, `markdown-oxide`, `taplo`, `terraform-ls`, `dockerfile-language-server`, `r`
+- **activate:** `./dots setup --with lsp`
 

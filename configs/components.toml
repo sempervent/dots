@@ -161,12 +161,22 @@ platforms = ["darwin"]
 brewfile = "brew/Brewfile.mactools"
 description = "Optional macOS workstation layer (Vorssaint + automation/audio/CLI; Brewfile.mactools)"
 
+[[components]]
+id = "lsp"
+label = "Language servers"
+category = "developer_tooling"
+cloud = false
+local_ai = false
+platforms = ["darwin", "linux"]
+brewfile = "brew/Brewfile.lsp"
+description = "Language servers for DOTS development/editor workflows"
+
 # Declarative selector aggregates. Expand to member component ids before install.
 # Nested groups are not supported in v1.0.1.
 [[supergroups]]
 id = "ai"
 label = "AI applications"
-description = "All supported AI applications for this platform"
+description = "Local runtimes, coding agents, and the LSP toolchain for this platform"
 members = [
   "hermes",
   "ollama",
@@ -176,4 +186,5 @@ members = [
   "codex",
   "cursor",
   "fluidvoice",
+  "lsp",
 ]

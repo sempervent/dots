@@ -200,6 +200,9 @@ apply_optional_brewfiles() {
 		# Darwin-only (registry platforms); explicit --with on Linux errors before here.
 		_dots_optional_apply_registry_brewfile "mactools" || true
 	fi
+	if has_component lsp; then
+		_dots_optional_apply_registry_brewfile "lsp" || true
+	fi
 }
 
 # Configuration / post-package side effects that must run AFTER backup + links.

@@ -56,6 +56,8 @@ source "${DIR}/helpers/cursor.sh"
 source "${DIR}/helpers/agent_router.sh"
 # shellcheck source=helpers/fnm.sh
 source "${DIR}/helpers/fnm.sh"
+# shellcheck source=helpers/lsp.sh
+source "${DIR}/helpers/lsp.sh"
 # shellcheck source=helpers/nvim.sh
 source "${DIR}/helpers/nvim.sh"
 # shellcheck source=helpers/notify.sh
@@ -137,6 +139,7 @@ Examples:
   ./setup.sh --with cursor,drawthings
   ./setup.sh --with skills
   ./setup.sh --with images,tex
+  ./setup.sh --with lsp
   ./setup.sh --dry-run --with ai
   ./bootstrap.sh --profile home
   ./bootstrap.sh --profile work --with ai
@@ -441,15 +444,27 @@ elif command -v brew >/dev/null 2>&1 || [[ -n ${DOTS_BREW_BIN:-} ]]; then
 		echo "Error: one or more optional components failed (see list above)" >&2
 		exit 1
 	fi
-elif has_component herdr; then
+elif has_component herdr || has_component lsp; then
 	# Linux native path: official Herdr installer (no Homebrew required)
-	if [[ ${NO_INSTALL:-0} -eq 1 ]]; then
+	if has_component herdr && [[ ${NO_INSTALL:-0} -eq 1 ]]; then
 		if ! command -v herdr >/dev/null 2>&1; then
 			echo "Error: herdr missing (--no-install)" >&2
 			exit 1
 		fi
-	else
+	elif has_component herdr; then
 		dots_ensure_herdr || exit 1
+	fi
+fi
+
+if has_component lsp; then
+	echo "=== Language servers ==="
+	if [[ ${NO_INSTALL:-0} -eq 1 ]]; then
+		dots_lsp_check || {
+			echo "Error: required language servers missing (--no-install)" >&2
+			exit 1
+		}
+	else
+		dots_lsp_install || exit 1
 	fi
 fi
 

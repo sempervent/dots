@@ -31,6 +31,8 @@ source "${DOTS_DIR}/helpers/components.sh"
 source "${DOTS_DIR}/helpers/profiles.sh"
 # shellcheck source=../helpers/packages.sh
 source "${DOTS_DIR}/helpers/packages.sh"
+# shellcheck source=../helpers/lsp.sh
+source "${DOTS_DIR}/helpers/lsp.sh"
 
 ok() { echo -e "${GREEN}✓${NC} $1"; PASSED=$((PASSED + 1)); }
 warn() { echo -e "${YELLOW}⚠${NC} $1"; WARNINGS=$((WARNINGS + 1)); }
@@ -198,6 +200,25 @@ while IFS= read -r _tool; do
     warn "optional tool missing: ${_tool}"
   fi
 done < <(dots_tools_for_groups optional 2>/dev/null || true)
+
+_lsp_selected=0
+for _c in "${EFFECTIVE_WITH[@]+"${EFFECTIVE_WITH[@]}"}"; do
+  [[ "${_c}" == "lsp" ]] && _lsp_selected=1 && break
+done
+if [[ "${_lsp_selected}" -eq 1 ]]; then
+  echo -e "\n${BLUE}Language servers${NC}"
+  while IFS='|' read -r _id _label _domains _binary _brew _apt _fallback _package _repo _asset_x64 _asset_arm _archive_path _required _nvim _health _version_args _filetypes _extensions; do
+    [[ -n "${_id}" ]] || continue
+    if dots_lsp_server_satisfied "${_binary}" "${_health}"; then
+      ok "${_binary}"
+    elif [[ "${_required}" == "true" ]]; then
+      fail "${_binary} missing (required by lsp component)"
+    else
+      warn "${_binary} missing (optional LSP)"
+    fi
+  done < <(dots_lsp_rows)
+fi
+
 echo -e "\n${BLUE}Node / fnm${NC}"
 if command -v fnm >/dev/null 2>&1; then
   ok "fnm $(fnm --version 2>/dev/null | head -1)"

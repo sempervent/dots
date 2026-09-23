@@ -1,0 +1,273 @@
+# configs/lsp/servers.toml — authoritative DOTS language-server registry
+#
+# Binary ownership lives here. Homebrew realizes `brew` entries, while
+# helpers/lsp.sh selects apt or the declared trusted fallback on Linux.
+# Neovim client configuration is generated from `nvim` + `nvim_config`.
+
+version = 1
+
+[[servers]]
+id = "rust-analyzer"
+label = "Rust"
+domains = ["Rust"]
+filetypes = ["rust"]
+extensions = [".rs"]
+binary = "rust-analyzer"
+platforms = ["darwin", "linux"]
+brew = "rust-analyzer"
+apt = "rust-analyzer"
+fallback = "github_gzip"
+fallback_repo = "rust-lang/rust-analyzer"
+fallback_asset_amd64 = "rust-analyzer-x86_64-unknown-linux-gnu.gz"
+fallback_asset_arm64 = "rust-analyzer-aarch64-unknown-linux-gnu.gz"
+required = true
+nvim = "rust_analyzer"
+health = "executable"
+version_args = ["--version"]
+
+[servers.nvim_config]
+filetypes = ["rust"]
+
+[[servers]]
+id = "basedpyright"
+label = "Python"
+domains = ["Python"]
+filetypes = ["python"]
+extensions = [".py"]
+binary = "basedpyright-langserver"
+platforms = ["darwin", "linux"]
+brew = "basedpyright"
+apt = ""
+fallback = "python_venv"
+fallback_package = "basedpyright"
+required = true
+nvim = "basedpyright"
+health = "executable"
+version_args = []
+
+[servers.nvim_config]
+filetypes = ["python"]
+
+[[servers]]
+id = "gopls"
+label = "Go"
+domains = ["Go"]
+filetypes = ["go", "gomod", "gowork", "gotmpl"]
+extensions = [".go", "go.mod", "go.work"]
+binary = "gopls"
+platforms = ["darwin", "linux"]
+brew = "gopls"
+apt = "gopls"
+fallback = "go"
+fallback_package = "golang.org/x/tools/gopls@latest"
+required = true
+nvim = "gopls"
+health = "executable"
+version_args = ["version"]
+
+[servers.nvim_config]
+filetypes = ["go", "gomod", "gowork", "gotmpl"]
+
+[[servers]]
+id = "bash-language-server"
+label = "Bash"
+domains = ["Bash", "shell"]
+filetypes = ["sh", "bash", "zsh"]
+extensions = [".sh", ".bash", ".zsh"]
+binary = "bash-language-server"
+platforms = ["darwin", "linux"]
+brew = "bash-language-server"
+apt = ""
+fallback = "npm"
+fallback_package = "bash-language-server"
+required = true
+nvim = "bashls"
+health = "executable"
+version_args = ["--version"]
+
+[servers.nvim_config]
+cmd = ["bash-language-server", "start"]
+filetypes = ["sh", "bash", "zsh"]
+
+[[servers]]
+id = "yaml-language-server"
+label = "YAML / Compose"
+domains = ["YAML", "Docker Compose", "GitHub Actions", "Kubernetes"]
+filetypes = ["yaml", "yaml.docker-compose", "yaml.github-actions"]
+extensions = [".yml", ".yaml", "docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml"]
+binary = "yaml-language-server"
+platforms = ["darwin", "linux"]
+brew = "yaml-language-server"
+apt = ""
+fallback = "npm"
+fallback_package = "yaml-language-server"
+required = true
+nvim = "yamlls"
+health = "executable"
+version_args = []
+
+[servers.nvim_config]
+cmd = ["yaml-language-server", "--stdio"]
+filetypes = ["yaml", "yaml.docker-compose", "yaml.github-actions"]
+
+[servers.nvim_config.settings.yaml]
+validate = true
+completion = true
+hover = true
+schemaStore = { enable = true }
+schemas = { "https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json" = ["docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml"], "https://json.schemastore.org/github-workflow.json" = [".github/workflows/*.yml", ".github/workflows/*.yaml"], kubernetes = ["k8s/*.yml", "k8s/*.yaml", "kubernetes/*.yml", "kubernetes/*.yaml"] }
+
+[[servers]]
+id = "vscode-json-language-server"
+label = "JSON"
+domains = ["JSON", "JSONC"]
+filetypes = ["json", "jsonc"]
+extensions = [".json", ".jsonc"]
+binary = "vscode-json-language-server"
+platforms = ["darwin", "linux"]
+brew = "vscode-langservers-extracted"
+apt = ""
+fallback = "npm"
+fallback_package = "vscode-langservers-extracted"
+required = true
+nvim = "jsonls"
+health = "executable"
+version_args = []
+
+[servers.nvim_config]
+cmd = ["vscode-json-language-server", "--stdio"]
+filetypes = ["json", "jsonc"]
+
+[[servers]]
+id = "lua-language-server"
+label = "Lua"
+domains = ["Lua", "Neovim Lua"]
+filetypes = ["lua"]
+extensions = [".lua"]
+binary = "lua-language-server"
+platforms = ["darwin", "linux"]
+brew = "lua-language-server"
+apt = ""
+fallback = "github_tar"
+fallback_repo = "LuaLS/lua-language-server"
+fallback_asset_amd64 = "lua-language-server-{version}-linux-x64.tar.gz"
+fallback_asset_arm64 = "lua-language-server-{version}-linux-arm64.tar.gz"
+fallback_binary_path = "bin/lua-language-server"
+required = true
+nvim = "lua_ls"
+health = "executable"
+version_args = ["--version"]
+
+[servers.nvim_config]
+filetypes = ["lua"]
+
+[servers.nvim_config.settings.Lua.diagnostics]
+globals = ["vim"]
+
+[servers.nvim_config.settings.Lua.workspace]
+checkThirdParty = false
+library = ["__DOTS_VIMRUNTIME__"]
+
+[[servers]]
+id = "markdown-oxide"
+label = "Markdown"
+domains = ["Markdown", "MDX"]
+filetypes = ["markdown", "markdown.mdx"]
+extensions = [".md", ".mdx"]
+binary = "markdown-oxide"
+platforms = ["darwin", "linux"]
+brew = "markdown-oxide"
+apt = ""
+fallback = "github_binary"
+fallback_repo = "Feel-ix-343/markdown-oxide"
+fallback_asset_amd64 = "markdown-oxide-v{version}-x86_64-unknown-linux-gnu"
+fallback_asset_arm64 = "markdown-oxide-v{version}-aarch64-unknown-linux-gnu"
+required = true
+nvim = "markdown_oxide"
+health = "executable"
+version_args = ["--version"]
+
+[servers.nvim_config]
+filetypes = ["markdown", "markdown.mdx"]
+
+[[servers]]
+id = "taplo"
+label = "TOML"
+domains = ["TOML"]
+filetypes = ["toml"]
+extensions = [".toml", "Cargo.toml", "pyproject.toml"]
+binary = "taplo"
+platforms = ["darwin", "linux"]
+brew = "taplo"
+apt = ""
+fallback = "npm"
+fallback_package = "@taplo/cli"
+required = true
+nvim = "taplo"
+health = "executable"
+version_args = ["--version"]
+
+[servers.nvim_config]
+filetypes = ["toml"]
+
+[[servers]]
+id = "terraform-ls"
+label = "Terraform / HCL"
+domains = ["Terraform", "HCL"]
+filetypes = ["terraform", "terraform-vars", "hcl"]
+extensions = [".tf", ".tfvars", ".hcl"]
+binary = "terraform-ls"
+platforms = ["darwin", "linux"]
+brew = "terraform-ls"
+apt = ""
+fallback = "go"
+fallback_package = "github.com/hashicorp/terraform-ls@latest"
+required = true
+nvim = "terraformls"
+health = "executable"
+version_args = ["version"]
+
+[servers.nvim_config]
+filetypes = ["terraform", "terraform-vars", "hcl"]
+
+[[servers]]
+id = "dockerfile-language-server"
+label = "Dockerfile"
+domains = ["Dockerfile"]
+filetypes = ["dockerfile"]
+extensions = ["Dockerfile", "Dockerfile.*"]
+binary = "docker-langserver"
+platforms = ["darwin", "linux"]
+brew = "dockerfile-language-server"
+apt = ""
+fallback = "npm"
+fallback_package = "dockerfile-language-server-nodejs"
+required = true
+nvim = "dockerls"
+health = "executable"
+version_args = []
+
+[servers.nvim_config]
+cmd = ["docker-langserver", "--stdio"]
+filetypes = ["dockerfile"]
+
+[[servers]]
+id = "r-languageserver"
+label = "R"
+domains = ["R", "R Markdown"]
+filetypes = ["r", "rmd"]
+extensions = [".R", ".Rmd"]
+binary = "Rscript"
+platforms = ["darwin", "linux"]
+brew = "r"
+apt = ""
+fallback = "cran"
+fallback_package = "languageserver"
+required = true
+nvim = "r_language_server"
+health = "r_package"
+version_args = []
+
+[servers.nvim_config]
+cmd = ["R", "--no-echo", "-e", "languageserver::run()"]
+filetypes = ["r", "rmd"]
