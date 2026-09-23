@@ -11,3 +11,6 @@ gpu_layers = 0
 
 [ai_server.llama]
 extra_args = []
+
+[ai_server.discovery]
+paths = []
