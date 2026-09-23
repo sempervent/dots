@@ -1,0 +1,4 @@
+# Optional: ./setup.sh --with ai-server
+# Docker CLI for Compose lifecycle (does NOT pull images or models).
+brew "docker"
+brew "docker-compose"

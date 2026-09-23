@@ -1,0 +1,13 @@
+# Example machine config — copy to ~/.config/dots/ai-server.toml and edit.
+# Seeded automatically on ./setup.sh --with ai-server (first run only).
+
+[ai_server]
+backend = "cpu"
+runtime_root = "/srv/ai"
+default_model = "your-model-q4_k_m.gguf"
+webui_port = 3000
+context_size = 8192
+gpu_layers = 0
+
+[ai_server.llama]
+extra_args = []

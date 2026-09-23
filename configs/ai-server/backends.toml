@@ -1,0 +1,49 @@
+# configs/ai-server/backends.toml — inference backend registry (llama.cpp v1)
+#
+# Authority for Docker images and doctor checks. User selection: ai-server.toml [ai_server].backend
+
+version = 1
+inference = "llama_cpp"
+
+[[backends]]
+id = "cpu"
+label = "CPU"
+llama_image = "ghcr.io/ggml-org/llama.cpp:server"
+gpu_layers_default = 0
+doctor = ["docker"]
+
+[[backends]]
+id = "cuda"
+label = "NVIDIA CUDA"
+llama_image = "ghcr.io/ggml-org/llama.cpp:server-cuda"
+gpu_layers_default = -1
+doctor = ["docker", "nvidia_container"]
+
+[[backends]]
+id = "rocm"
+label = "AMD ROCm"
+llama_image = "ghcr.io/ggml-org/llama.cpp:server-rocm"
+gpu_layers_default = -1
+doctor = ["docker", "rocm_devices"]
+
+[[backends]]
+id = "vulkan"
+label = "Vulkan"
+llama_image = "ghcr.io/ggml-org/llama.cpp:server-vulkan"
+gpu_layers_default = -1
+doctor = ["docker", "vulkan"]
+
+[[backends]]
+id = "intel"
+label = "Intel SYCL"
+llama_image = "ghcr.io/ggml-org/llama.cpp:server-intel"
+gpu_layers_default = -1
+doctor = ["docker", "intel_gpu"]
+
+[[backends]]
+id = "native"
+label = "Native llama-server (host)"
+llama_image = ""
+gpu_layers_default = -1
+doctor = ["native_llama_server"]
+compose = false
