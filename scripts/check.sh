@@ -289,8 +289,62 @@ if command -v zsh >/dev/null 2>&1; then
   echo "${zsh_probe}" | rg -q 'FNM_OK' && ok "zsh: fnm available in interactive shell" || warn "zsh: fnm not visible (open new shell after setup)"
   echo "${zsh_probe}" | rg -q 'fnm_multishells|NODE=.*/fnm' && ok "zsh: node is fnm-managed" || warn "zsh: node may not be fnm-managed (${zsh_probe})"
   echo "${zsh_probe}" | rg -q 'STARSHIP_OK' && ok "zsh: starship available" || warn "zsh: starship missing"
-  echo "${zsh_probe}" | rg -q 'STARSHIP_INIT' && ok "zsh: Starship initialized" || warn "zsh: Starship not initialized (STARSHIP_SHELL unset)"
   echo "${zsh_probe}" | rg -q 'OMZ_OK' && ok "zsh: Oh My Zsh still loads" || warn "zsh: Oh My Zsh not detected"
+fi
+
+echo -e "\n${BLUE}Prompt${NC}"
+_dots_starship_config_display() {
+  if [[ -n "${STARSHIP_CONFIG:-}" ]]; then
+    printf '%s (STARSHIP_CONFIG)\n' "${STARSHIP_CONFIG}"
+  elif [[ -e "${HOME}/.config/starship.toml" ]]; then
+    if [[ -L "${HOME}/.config/starship.toml" ]]; then
+      local _t
+      _t="$(readlink "${HOME}/.config/starship.toml" 2>/dev/null || true)"
+      printf '~/.config/starship.toml -> %s\n' "${_t:-?}"
+    else
+      printf '~/.config/starship.toml (regular file)\n'
+    fi
+  else
+    printf '(not deployed)\n'
+  fi
+}
+if command -v zsh >/dev/null 2>&1; then
+  info "shell: zsh"
+  if command -v starship >/dev/null 2>&1; then
+    ok "starship: installed"
+  else
+    warn "starship: missing (minimal Zsh fallback prompt)"
+  fi
+  info "config: $(_dots_starship_config_display)"
+  if [[ -n "${STARSHIP_CONFIG:-}" && ! -e "${STARSHIP_CONFIG}" ]]; then
+    warn "STARSHIP_CONFIG points at missing file: ${STARSHIP_CONFIG}"
+  fi
+  if [[ -f "${DOTS_DIR}/zsh/prompt.zsh" ]]; then
+    ok "zsh/prompt.zsh present"
+  else
+    fail "zsh/prompt.zsh missing"
+  fi
+  zsh_prompt_probe="$(STARSHIP_SHELL=bash DOTS_GREETING=0 DOTS_AUTO_TMUX=0 TERM=xterm-256color zsh -ic '
+[[ -z "${ZSH_THEME:-}" ]] && echo OMZ_THEME_EMPTY
+(( ${precmd_functions[(Ie)prompt_starship_precmd]:-0} )) && echo STARSHIP_HOOK
+print -r -- "$PROMPT" | grep -q starship && echo PROMPT_STARSHIP
+print -r -- "$PROMPT" | grep -q "LOCAL_OVERRIDE" && echo PROMPT_LOCAL
+' 2>/dev/null | tr '\n' ' ')"
+  echo "${zsh_prompt_probe}" | rg -q 'OMZ_THEME_EMPTY' && ok "OMZ theme: disabled (ZSH_THEME empty)" || warn "OMZ theme: ZSH_THEME may be set (${zsh_prompt_probe})"
+  if command -v starship >/dev/null 2>&1; then
+    echo "${zsh_prompt_probe}" | rg -q 'STARSHIP_HOOK' && ok "Starship Zsh hook: active" || warn "Starship Zsh hook: MISSING"
+    if echo "${zsh_prompt_probe}" | rg -q 'PROMPT_LOCAL'; then
+      warn "prompt overridden in ~/.zshrc.local"
+    elif echo "${zsh_prompt_probe}" | rg -q 'PROMPT_STARSHIP'; then
+      ok "owner: Starship"
+    elif echo "${zsh_prompt_probe}" | rg -q 'STARSHIP_HOOK'; then
+      ok "owner: Starship (hook registered)"
+    else
+      warn "prompt is not owned by Starship (check inherited STARSHIP_SHELL / OMZ theme)"
+    fi
+  fi
+else
+  info "shell: zsh not installed"
 fi
 
 echo -e "\n${BLUE}Starship / font / editor / notify (default)${NC}"
