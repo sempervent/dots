@@ -69,6 +69,7 @@ SCRIPTS=(
 	scripts/tests/optional_failure_summary_test.sh
 	scripts/tests/activation_transaction_test.sh
 	scripts/tests/prompt_contract_test.sh
+	scripts/tests/zsh_prompt_starship_test.sh
 	scripts/tests/backup_test.sh
 	scripts/tests/skills_location_test.sh
 	scripts/tests/skills_desired_state_test.sh
