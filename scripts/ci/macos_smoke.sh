@@ -44,6 +44,7 @@ bash scripts/tests/cask_app_test.sh
 bash scripts/tests/optional_failure_summary_test.sh
 bash scripts/tests/activation_transaction_test.sh
 bash scripts/tests/prompt_contract_test.sh
+bash scripts/tests/zsh_prompt_starship_test.sh
 bash scripts/tests/backup_test.sh
 bash scripts/tests/skills_location_test.sh
 bash scripts/tests/skills_desired_state_test.sh
