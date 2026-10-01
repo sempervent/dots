@@ -21,6 +21,8 @@ mkdir -p "${HOME}"
 
 echo "=== dots CLI surface ==="
 
+expected_ver="$(tr -d '[:space:]' <"${ROOT}/VERSION")"
+
 out="$("${ROOT}/dots" help 2>&1)" || {
 	bad "help failed"
 	out=""
@@ -33,13 +35,13 @@ ver="$("${ROOT}/dots" --version 2>&1)" || {
 	bad "version failed"
 	ver=""
 }
-echo "${ver}" | grep -Eq 'dots 1\.4\.0' && ok "version 1.4.0" || bad "version got: ${ver}"
-[[ -f ${ROOT}/VERSION ]] && [[ $(tr -d '[:space:]' <"${ROOT}/VERSION") == 1.4.0 ]] && ok "VERSION file" || bad "VERSION file"
+echo "${ver}" | grep -Fq "dots ${expected_ver}" && ok "version ${expected_ver}" || bad "version got: ${ver}"
+[[ -f ${ROOT}/VERSION ]] && [[ $(tr -d '[:space:]' <"${ROOT}/VERSION") == "${expected_ver}" ]] && ok "VERSION file" || bad "VERSION file"
 
 # status on fresh HOME (no active profile)
 st="$("${ROOT}/dots" status 2>&1)" || true
 echo "${st}" | grep -q 'DOTS Status' && ok "status header" || bad "status header"
-echo "${st}" | grep -q '1.4.0' && ok "status shows version" || bad "status version"
+echo "${st}" | grep -Fq "${expected_ver}" && ok "status shows version" || bad "status version"
 echo "${st}" | grep -qi 'profile' && ok "status mentions profile" || bad "status profile"
 echo "${st}" | grep -qi 'Backup' && ok "status mentions backups" || bad "status backups"
 echo "${out}" | grep -q './dots packages' && ok "help lists packages" || bad "help packages"
