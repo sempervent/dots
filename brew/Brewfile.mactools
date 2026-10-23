@@ -53,6 +53,8 @@ brew "mprocs"
 brew "xh"
 brew "dust"
 brew "duf"
+tap "Zingzy/tap"
+brew "diskbloom"
 
 # --- disk / GIS / MIDI (install-only; no config / permissions / kills) ---
 cask "qgis"
