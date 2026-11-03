@@ -1,57 +1,29 @@
-# Zsh completion for ./dots — wraps shared shell/dots_completion.sh via bashcompinit
-# when available; otherwise installs a native compsys completer.
+# Zsh: ensure generated `_dots` is on fpath and registered.
+# Primary install path: ~/.local/share/zsh/site-functions/_dots (setup symlink).
+# Repo fallback: $DOTS_DIR/generated/completions for developers before setup.
 
-autoload -Uz bashcompinit 2>/dev/null && bashcompinit 2>/dev/null || true
+_dots_site="${HOME}/.local/share/zsh/site-functions"
+_dots_repo="${DOTS_DIR}/generated/completions"
 
-if [[ -f "${DOTS_DIR}/shell/dots_completion.sh" ]]; then
-  # shellcheck disable=SC1091
-  source "${DOTS_DIR}/shell/dots_completion.sh"
+if [[ -d ${_dots_site} ]]; then
+  case " ${fpath} " in
+    *" ${_dots_site} "*) ;;
+    *) fpath=("${_dots_site}" ${fpath}) ;;
+  esac
+fi
+if [[ -f ${_dots_repo}/_dots ]]; then
+  case " ${fpath} " in
+    *" ${_dots_repo} "*) ;;
+    *) fpath=("${_dots_repo}" ${fpath}) ;;
+  esac
 fi
 
-_dots_zsh() {
-  local -a cmds topics
-  cmds=(
-    setup status components lsp ai packages backup backups restore
-    profile models check update help
-  )
-  topics=(
-    overview getting-started shell completion keybindings profiles
-    components supergroups packages ai models lsp skills backup
-    diagnostics update commands files
-  )
+autoload -Uz compinit 2>/dev/null || true
+# Avoid heavy re-init if already done; still ensure _dots is known
+if ! typeset -f _dots >/dev/null 2>&1; then
+  autoload -Uz _dots 2>/dev/null || true
+fi
+compdef _dots dots 2>/dev/null || true
+compdef _dots ./dots 2>/dev/null || true
 
-  if (( CURRENT == 2 )); then
-    _describe -t commands 'dots command' cmds
-    return
-  fi
-
-  case "${words[2]}" in
-  help)
-    if [[ ${words[CURRENT]} == -* ]]; then
-      _values 'help flags' --plain --search --version --list-topics
-    else
-      _describe -t topics 'help topic' topics
-    fi
-    ;;
-  components)
-    _values 'components' list active show help
-    ;;
-  packages)
-    _values 'packages' groups group plan status explain outdated upgrade adopt help
-    ;;
-  lsp)
-    _values 'lsp' status check install list help
-    ;;
-  models)
-    _values 'models' discover pull plan help
-    ;;
-  ai)
-    _values 'ai' status doctor up down help
-    ;;
-  setup)
-    _values 'setup' --dry-run --yes --profile --with --without --help
-    ;;
-  esac
-}
-
-compdef _dots_zsh dots 2>/dev/null || true
+unset _dots_site _dots_repo

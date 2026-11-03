@@ -193,7 +193,19 @@ def generate() -> dict[str, str]:
     }
     for c in cmds:
         name = str(c.get("name") or "")
-        if name in {"setup", "packages", "components", "models", "lsp", "backup", "status", "check"}:
+        if name in {
+            "setup",
+            "packages",
+            "components",
+            "models",
+            "lsp",
+            "backup",
+            "status",
+            "check",
+            "shell",
+            "completion",
+            "help",
+        }:
             out[f"dots-{name}.1"] = write_subcommand_1(name, c, ver)
     return out
 

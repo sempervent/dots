@@ -54,8 +54,14 @@ Verify machine health against the active/selected profile.
 .B dots update
 git pull the DOTS repo and optionally reapply setup.
 .TP
-.B dots help [topic] [\-\-plain] [\-\-search QUERY]
+.B dots help [topic] [\-\-plain] [\-\-search QUERY] [\-\-cheatsheet]
 Interactive Textual help (dots\-help) for this machine.
+.TP
+.B dots shell [status|keys|startup]
+Inspect shell, prompt, and keybinding ownership.
+.TP
+.B dots completion [status|paths]
+DOTS CLI completion and fzf\-tab diagnostics.
 .SH FUZZY COMPLETION
 On Zsh, Tab uses fzf\-tab over compsys candidates. Ctrl\-R searches
 history, Ctrl\-T inserts files, Alt\-C jumps directories, and **Tab

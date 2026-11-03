@@ -12,4 +12,5 @@ PY="$(dots_find_python311)" || {
 }
 "${PY}" "${ROOT}/scripts/docs/generate_usage.py"
 "${PY}" "${ROOT}/scripts/docs/generate_manpages.py"
+"${PY}" "${ROOT}/scripts/docs/generate_completions.py"
 exec "${PY}" "${ROOT}/scripts/docs/generate_reference.py" "$@"

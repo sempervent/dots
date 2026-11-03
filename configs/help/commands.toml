@@ -147,11 +147,11 @@ related = ["setup", "check", "help"]
 
 [[commands]]
 name = "help"
-usage = "dots help [topic] [--plain] [--search QUERY]"
+usage = "dots help [topic] [--plain] [--search QUERY] [--cheatsheet]"
 category = "discovery"
 description = "Interactive Textual help (dots-help) for this machine."
 mutating = false
-related = ["status", "check"]
+related = ["status", "check", "shell", "completion"]
 [[commands.examples]]
 command = "dots help"
 description = "Open the interactive help TUI."
@@ -161,3 +161,37 @@ description = "Jump to fuzzy completion topic."
 [[commands.examples]]
 command = "dots help --plain packages"
 description = "Plain-text packages topic."
+[[commands.examples]]
+command = "dots help --cheatsheet"
+description = "Machine-specific cheat sheet."
+
+[[commands]]
+name = "shell"
+usage = "dots shell [status|keys|startup]"
+category = "diagnostics"
+description = "Inspect shell, prompt, and keybinding ownership."
+mutating = false
+related = ["completion", "status", "help", "check"]
+[[commands.examples]]
+command = "dots shell status"
+description = "Who owns Tab / Ctrl-R / prompt."
+[[commands.examples]]
+command = "dots shell keys"
+description = "Concise keybinding table for this machine."
+[[commands.examples]]
+command = "dots shell startup"
+description = "Timed interactive shell startup samples."
+
+[[commands]]
+name = "completion"
+usage = "dots completion [status|paths]"
+category = "diagnostics"
+description = "DOTS CLI completion and fzf-tab diagnostics."
+mutating = false
+related = ["shell", "help"]
+[[commands.examples]]
+command = "dots completion status"
+description = "Show completion engine and binding owners."
+[[commands.examples]]
+command = "dots completion paths"
+description = "Show installed completion script paths."

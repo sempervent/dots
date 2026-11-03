@@ -3,46 +3,24 @@
 .
 .TH DOTS\-HELP 1 "2026-11-02" "DOTS 1.5.0" "User Commands"
 .SH NAME
-dots\-help \- interactive DOTS help for the current machine
+dots\-help \- Interactive Textual help (dots\-help) for this machine.
 .SH SYNOPSIS
-.B dots\-help
-[topic] [--plain] [--search QUERY] [--version]
-.br
-.B dots help
-[topic] …
+.B dots help [topic] [\-\-plain] [\-\-search QUERY] [\-\-cheatsheet]
 .SH DESCRIPTION
-Opens a Textual TUI documenting commands, profiles, components,
-packages, AI, models, LSP, skills, keybindings, fuzzy completion,
-backup/restore, and configuration for
-.B this
-host. Falls back to plain text when the TUI cannot start.
-.SH KEYS
+Interactive Textual help (dots\-help) for this machine.
+.SH EXAMPLES
 .TP
-.B q
-Quit
+.B dots help
+Open the interactive help TUI.
 .TP
-.B /
-Search
+.B dots help completion
+Jump to fuzzy completion topic.
 .TP
-.B ?
-Keybindings topic
+.B dots help \-\-plain packages
+Plain\-text packages topic.
 .TP
-.B Enter
-Open selected topic
-.SH TOPICS
-Use
-.B dots\-help --list\-topics
-or open e.g.
-.B dots\-help completion
-.
-.SH PLAIN MODE
-.B dots\-help --plain
-[topic] prints ANSI\-free text under NO_COLOR / pipes.
-.SH FILES
-.I configs/help/commands.toml
-,
-.I configs/help/topics.toml
-,
-.I docs/help/*.md
+.B dots help \-\-cheatsheet
+Machine\-specific cheat sheet.
 .SH SEE ALSO
-.BR dots (1)
+.BR dots (1),
+.BR dots\-help (1)
