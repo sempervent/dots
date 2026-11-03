@@ -24,6 +24,10 @@ sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
 source "${ROOT}/scripts/ci/ensure_lint_tools.sh"
 dots_ensure_lint_tools
 
+# shellcheck source=ensure_uv.sh
+source "${ROOT}/scripts/ci/ensure_uv.sh"
+dots_ensure_uv
+
 # Prefer pinned tools for the remainder of the job
 if [[ -n ${GITHUB_PATH:-} ]]; then
 	echo "${BIN_DIR}" >>"${GITHUB_PATH}"
@@ -32,6 +36,7 @@ export PATH="${BIN_DIR}:${PATH}"
 
 command -v shellcheck
 command -v shfmt
+command -v uv
 command -v rg
 command -v zsh
 echo "OK: CI runner prepared"
