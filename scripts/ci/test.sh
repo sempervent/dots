@@ -66,6 +66,7 @@ run scripts/tests/keybinding_collision_test.sh
 run scripts/tests/dots_help_test.sh
 run scripts/tests/dots_ux_v15_test.sh
 run scripts/tests/dots_agent_test.sh
+run scripts/tests/openrig_runtime_test.sh
 run scripts/tests/python_runtime_test.sh
 
 echo "=== Model policy (mocked; no downloads) ==="

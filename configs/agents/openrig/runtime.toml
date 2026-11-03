@@ -1,0 +1,26 @@
+# OpenRig runtime desired-state (v1.6.1).
+# Reviewed: openrig.dev docs + @openrig/cli 0.7.7 (2026-11-03).
+# Upstream supports Node 22 or 24; Apple silicon prefers 22.
+# DOTS installs/activates the preferred major via fnm (never nvm).
+
+version = 1
+
+[node]
+# Preferred major when converging a fresh or broken toolchain.
+preferred_major = 22
+# Upstream-supported majors (OpenRig refuses Node 20 / odd releases).
+accepted_majors = [22, 24]
+
+[package]
+name = "@openrig/cli"
+# Reviewed published version at authoring time (install tracks npm latest).
+reviewed_version = "0.7.7"
+reviewed_date = "2026-11-03"
+# Relative to `npm root -g` / @openrig/cli /
+abi_script = "scripts/check-abi.mjs"
+
+[policy]
+# Never run generic `rig setup` from DOTS (owns tmux/Herdr/providers).
+run_rig_setup = false
+# Never elevate for global npm installs.
+allow_sudo_npm = false

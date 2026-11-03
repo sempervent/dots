@@ -39,6 +39,8 @@ SCRIPTS=(
 	helpers/mactools.sh
 	helpers/package_state.sh
 	helpers/linux_distro.sh
+	helpers/fnm.sh
+	helpers/openrig.sh
 	shell/runtime.sh
 	shell/fnm.sh
 	shell/exports.sh
@@ -106,6 +108,7 @@ shfmt -d -s \
 	helpers/ui.sh helpers/state.sh helpers/wizard.sh helpers/cask_apps.sh \
 	helpers/lsp.sh \
 	helpers/backup.sh helpers/package_state.sh helpers/linux_distro.sh \
+	helpers/fnm.sh helpers/openrig.sh \
 	shell/runtime.sh shell/fnm.sh \
 	scripts/pull_models.sh \
 	scripts/ci/prepare_runner.sh \

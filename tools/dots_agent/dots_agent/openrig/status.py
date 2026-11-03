@@ -167,16 +167,32 @@ def print_team_status(rep: dict[str, Any]) -> None:
 
 
 def doctor_checks(cfg: AgentConfig | None = None) -> list[tuple[str, str]]:
+    """Lightweight read-only probes (no installs). Prefer helpers/openrig.sh doctor in CLI."""
     cfg = cfg or load_config()
     rows: list[tuple[str, str]] = []
+    rows.append(("fnm", "OK" if shutil.which("fnm") else "FAIL missing"))
+    node = shutil.which("node")
+    npm = shutil.which("npm")
+    if node:
+        code, ver = _run([node, "-v"])
+        major = (ver or "").lstrip("v").split(".", 1)[0]
+        if major in ("22", "24"):
+            rows.append(("node", f"OK {ver} (accepted OpenRig major)"))
+        else:
+            rows.append(("node", f"FAIL {ver} (need 22 or 24)"))
+    else:
+        rows.append(("node", "FAIL missing"))
+    if npm:
+        rows.append(("npm", f"OK {shutil.which('npm')}"))
+    else:
+        rows.append(("npm", "FAIL missing"))
     if shutil.which("rig"):
         code, ver = _run(["rig", "--version"])
         rows.append(("openrig_cli", f"OK {ver.splitlines()[0] if ver else ''}"))
         code, _ = _run(["rig", "doctor"])
         rows.append(("openrig_doctor", "OK" if code == 0 else "WARN"))
     else:
-        rows.append(("openrig_cli", "FAIL missing"))
-    rows.append(("node", "OK" if shutil.which("node") else "FAIL"))
+        rows.append(("openrig_cli", "FAIL missing — ./dots setup --with openrig"))
     rows.append(("tmux", "OK" if shutil.which("tmux") else "FAIL"))
     rows.append(("herdr", "OK" if shutil.which("herdr") else "WARN missing (tmux fallback)"))
     rows.append(("pi", "OK" if shutil.which("pi") else "WARN missing"))
@@ -184,16 +200,15 @@ def doctor_checks(cfg: AgentConfig | None = None) -> list[tuple[str, str]]:
     conf = Path.home() / ".tmux.conf"
     if conf.is_file() and "BEGIN DOTS-OPENRIG" in conf.read_text(encoding="utf-8", errors="ignore"):
         frag = conf.read_text(encoding="utf-8", errors="ignore")
-        # Extract fragment and ensure no prefix override
         if "set -g prefix" in frag.split("BEGIN DOTS-OPENRIG")[-1].split("END DOTS-OPENRIG")[0]:
             rows.append(("tmux_fragment", "FAIL sets prefix"))
         else:
             rows.append(("tmux_fragment", "OK"))
     else:
         rows.append(("tmux_fragment", "WARN not merged"))
-    # Specs present
     root = cfg.root / "configs" / "agents" / "openrig"
     for t in ("dots-pair", "dots-triad", "dots-investigate"):
         ok = (root / "rigs" / f"{t}.yaml").is_file()
         rows.append((f"rigspec_{t}", "OK" if ok else "FAIL"))
+    rows.append(("runtime_policy", "OK" if (root / "runtime.toml").is_file() else "FAIL"))
     return rows
