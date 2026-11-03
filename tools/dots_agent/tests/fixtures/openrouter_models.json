@@ -1,0 +1,53 @@
+{
+  "fetched_at": 0,
+  "url": "fixture",
+  "models": [
+    {
+      "id": "test/cheap-short",
+      "context_length": 4096,
+      "pricing": { "prompt": "0.0000001", "completion": "0.0000002" },
+      "supported_parameters": ["tools", "tool_choice"]
+    },
+    {
+      "id": "test/cheap-no-tools",
+      "context_length": 128000,
+      "pricing": { "prompt": "0.0000001", "completion": "0.0000001" },
+      "supported_parameters": []
+    },
+    {
+      "id": "test/cheap-capable",
+      "context_length": 128000,
+      "pricing": { "prompt": "0.000001", "completion": "0.000002" },
+      "supported_parameters": ["tools", "tool_choice", "response_format"]
+    },
+    {
+      "id": "anthropic/claude-sonnet-fixture",
+      "context_length": 200000,
+      "pricing": { "prompt": "0.000003", "completion": "0.000015" },
+      "supported_parameters": ["tools", "tool_choice", "response_format"]
+    },
+    {
+      "id": "test/strong-expensive",
+      "context_length": 200000,
+      "pricing": { "prompt": "0.00001", "completion": "0.00003" },
+      "supported_parameters": ["tools", "tool_choice", "response_format"]
+    },
+    {
+      "id": "test/over-budget",
+      "context_length": 200000,
+      "pricing": { "prompt": "0.001", "completion": "0.002" },
+      "supported_parameters": ["tools", "tool_choice"]
+    },
+    {
+      "id": "test/unrated-cheap",
+      "context_length": 128000,
+      "pricing": { "prompt": "0.0000005", "completion": "0.000001" },
+      "supported_parameters": ["tools", "tool_choice"]
+    },
+    {
+      "id": "test/missing-price",
+      "context_length": 128000,
+      "supported_parameters": ["tools"]
+    }
+  ]
+}
