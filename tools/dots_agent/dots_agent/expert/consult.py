@@ -10,7 +10,35 @@ from typing import Any
 
 from dots_agent.budget import Budget
 from dots_agent.config import AgentConfig
-from dots_agent.secrets import reject_or_redact
+from dots_agent.secrets import load_litellm_master_key, reject_or_redact
+
+
+def _classify_transport_failure(exc: BaseException) -> str:
+    """Distinguish pre-provider failures from ambiguous/provider responses."""
+    if isinstance(exc, urllib.error.HTTPError):
+        # HTTP response received from gateway/provider path
+        return "provider_responded"
+    if isinstance(exc, urllib.error.URLError):
+        reason = getattr(exc, "reason", None)
+        msg = str(reason or exc).lower()
+        if isinstance(reason, ConnectionRefusedError) or "connection refused" in msg:
+            return "request_not_sent"
+        if isinstance(reason, TimeoutError) or "timed out" in msg or "timeout" in msg:
+            return "request_status_unknown"
+        if "name or service not known" in msg or "nodename nor servname" in msg or "dns" in msg:
+            return "request_not_sent"
+        if isinstance(reason, OSError):
+            return "request_not_sent"
+        return "request_status_unknown"
+    if isinstance(exc, TimeoutError):
+        return "request_status_unknown"
+    if isinstance(exc, ConnectionRefusedError):
+        return "request_not_sent"
+    if isinstance(exc, OSError):
+        return "request_not_sent"
+    if isinstance(exc, json.JSONDecodeError):
+        return "provider_responded"
+    return "request_status_unknown"
 
 
 def _gateway_chat(
@@ -36,7 +64,12 @@ def _gateway_chat(
         "Content-Type": "application/json",
         "User-Agent": "dots-expert/0.1",
     }
-    key = master_key or os.environ.get("LITELLM_MASTER_KEY") or "sk-dots-litellm-local"
+    key = master_key or load_litellm_master_key()
+    if not key:
+        raise RuntimeError(
+            "LITELLM_MASTER_KEY unset — run ./dots setup --with litellm "
+            "(or export LITELLM_MASTER_KEY)"
+        )
     headers["Authorization"] = f"Bearer {key}"
     req = urllib.request.Request(url, data=data, headers=headers, method="POST")
     with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -102,7 +135,6 @@ def consult_expert(
     threshold = cfg.approval_threshold_usd
     if est > threshold + 1e-12:
         if interactive:
-            # Caller must have pre-approved; we don't prompt here in library form
             if not approve_expensive:
                 return {
                     "ok": False,
@@ -121,12 +153,18 @@ def consult_expert(
             "ok": False,
             "error": "session budget exhausted or max remote calls reached",
             "budget": budget.snapshot(),
+            "result_state": "BUDGET_BLOCKED",
         }
 
     try:
         budget.reserve(est)
     except RuntimeError as exc:
-        return {"ok": False, "error": str(exc), "budget": budget.snapshot()}
+        return {
+            "ok": False,
+            "error": str(exc),
+            "budget": budget.snapshot(),
+            "result_state": "BUDGET_BLOCKED",
+        }
 
     if dry_run:
         budget.settle(est, 0.0)
@@ -136,6 +174,7 @@ def consult_expert(
             "model": model,
             "estimated_cost_usd": est,
             "budget": budget.snapshot(),
+            "cost_basis": "none",
         }
 
     messages = [
@@ -157,15 +196,30 @@ def consult_expert(
             messages=messages,
             provider_sort=cfg.provider_sort,
         )
-    except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError) as exc:
-        budget.settle(est, est)  # conservative: keep reserved as spent on failure path? 
-        # Better: release reservation without charging if call never reached provider.
-        # We already incremented remote_call_count; charge estimate to prevent loops.
+    except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError, RuntimeError) as exc:
+        kind = _classify_transport_failure(exc)
+        if kind == "request_not_sent":
+            # Definitely never reached provider — do not fabricate spend.
+            budget.release_reservation(est, count_against_max=True)
+            cost_basis = "none"
+            charged = 0.0
+        elif kind == "provider_responded":
+            # Provider/gateway answered with an error — conservative: charge estimate.
+            charged = budget.settle(est, est)
+            cost_basis = "estimated"
+        else:
+            # Ambiguous (timeout mid-flight etc.) — conservative unknown charge.
+            charged = budget.settle(est, est)
+            cost_basis = "unknown"
         return {
             "ok": False,
             "error": f"LiteLLM/OpenRouter call failed: {exc}",
             "budget": budget.snapshot(),
             "secret_hits_redacted": len(hits),
+            "transport": kind,
+            "cost_basis": cost_basis,
+            "charged_usd": charged,
+            "result_state": "FAILED",
         }
 
     actual = extract_actual_cost(resp)
@@ -183,8 +237,10 @@ def consult_expert(
         "estimated_cost_usd": est,
         "actual_cost_usd": actual,
         "charged_usd": charged,
+        "cost_basis": "actual" if actual is not None else "estimated",
         "budget": budget.snapshot(),
         "routing": {"provider_sort": cfg.provider_sort, "via": "litellm"},
         "secret_hits_redacted": len(hits),
         "filesystem_access": None,
+        "result_state": "COMPLETED",
     }

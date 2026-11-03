@@ -30,8 +30,9 @@ Supergroup `ai` expands to the AI application ids listed in
 [generated supergroups](../reference/generated/supergroups.md).
 
 Phase 1 orchestration docs: [architecture](architecture.md),
-[model-scout](model-scout.md), [litellm](litellm.md).
-OpenRig / OS sandbox / evals are **deferred**.
+[model-scout](model-scout.md), [litellm](litellm.md),
+[v1.6 roadmap](v1.6-roadmap.md).
+OpenRig / OS sandbox / evals are **DEFERRED** (Phases 2–4).
 
 ## Herdr
 

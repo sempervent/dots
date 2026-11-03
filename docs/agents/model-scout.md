@@ -52,3 +52,23 @@ Missing price metadata → cannot auto-select (never treat as free).
 After a **model** is selected, OpenRouter provider preference uses
 `provider.sort = "price"` (verified OpenRouter provider routing docs).
 Model selection ≠ provider selection.
+
+## Developer: MCP Inspector (optional)
+
+Phase 1 does **not** install a persistent Inspector service. For local schema
+checks without a browser:
+
+```bash
+npx -y @modelcontextprotocol/inspector --cli "$(pwd)/scripts/dots-model-scout" \
+  --method tools/list
+npx -y @modelcontextprotocol/inspector --cli "$(pwd)/scripts/dots-expert" \
+  --method tools/list
+```
+
+Authoritative Pi discovery after setup:
+
+```bash
+pi mcp list
+```
+
+Fuller DOTS developer-tool integration is Phase 2.

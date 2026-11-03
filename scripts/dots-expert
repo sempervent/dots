@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Launch dots-expert MCP (stdio) — billable path via LiteLLM.
+# Launch dots-expert MCP (stdio). Runtime — no dependency installation.
 set -euo pipefail
 
 SCRIPT_PATH="${BASH_SOURCE[0]}"
@@ -12,10 +12,20 @@ DOTS_DIR="$(cd "$(dirname "${SCRIPT_PATH}")/.." && pwd)"
 PROJECT_DIR="${DOTS_DIR}/tools/dots_agent"
 export DOTS_DIR
 
-if ! command -v uv >/dev/null 2>&1; then
-	echo "Error: uv required for dots-expert" >&2
+_key_file="${HOME}/.config/dots/secrets/litellm-master-key"
+if [[ -f ${_key_file} ]] && [[ -z ${LITELLM_MASTER_KEY:-} ]]; then
+	LITELLM_MASTER_KEY="$(tr -d '[:space:]' <"${_key_file}")"
+	export LITELLM_MASTER_KEY
+fi
+
+if [[ ! -x ${PROJECT_DIR}/.venv/bin/python ]]; then
+	echo "Error: DOTS agent environment is not installed." >&2
+	echo "Run: ./dots setup --with pi" >&2
 	exit 1
 fi
 
-exec uv run --directory "${PROJECT_DIR}" --python-preference system \
-	python -m dots_agent.expert.mcp_server
+if command -v uv >/dev/null 2>&1; then
+	exec uv run --directory "${PROJECT_DIR}" --python-preference system --frozen --no-sync \
+		python -m dots_agent.expert.mcp_server
+fi
+exec "${PROJECT_DIR}/.venv/bin/python" -m dots_agent.expert.mcp_server

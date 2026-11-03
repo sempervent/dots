@@ -20,7 +20,13 @@ rg -q 'id = "pi"' "${ROOT}/configs/components.toml" && ok "component pi" || bad 
 rg -q 'id = "litellm"' "${ROOT}/configs/components.toml" && ok "component litellm" || bad "litellm"
 rg -q '"pi"' "${ROOT}/configs/components.toml" && ok "ai members mention pi" || bad "ai pi"
 rg -q '127.0.0.1:4000' "${ROOT}/services/litellm/compose.yml" && ok "localhost bind" || bad "bind"
-! rg -q '0.0.0.0:4000' "${ROOT}/services/litellm/compose.yml" && ok "no 0.0.0.0 publish" || bad "exposed"
+# Host publish must not be 0.0.0.0:4000 (container may still listen on 0.0.0.0 inside netns).
+! rg -q -- '"0.0.0.0:4000' "${ROOT}/services/litellm/compose.yml" && ok "no 0.0.0.0 host publish" || bad "exposed"
+! rg -q 'sk-dots-litellm-local' "${ROOT}/services/litellm/compose.yml" && ok "no predictable master key" || bad "predictable key"
+rg -q 'LITELLM_MASTER_KEY' "${ROOT}/services/litellm/compose.yml" && ok "master key required" || bad "master key env"
+rg -q -- '--frozen' "${ROOT}/scripts/dots-agent" && rg -q -- '--no-sync' "${ROOT}/scripts/dots-agent" && ok "runtime frozen/no-sync" || bad "runtime sync"
+! rg -q 'uv sync' "${ROOT}/scripts/dots-agent" && ok "no runtime uv sync" || bad "runtime uv sync"
+[[ -f ${ROOT}/docs/agents/v1.6-roadmap.md ]] && ok "v1.6 roadmap" || bad "roadmap"
 
 echo "=== CLI dispatch ==="
 "${ROOT}/dots" agent 2>&1 | grep -q 'Agent Harness' && ok "dots agent menu" || bad "menu"

@@ -55,7 +55,8 @@ dots_pi_install() {
 	if [[ ${DRY_RUN:-0} -eq 1 ]]; then
 		echo "[dry-run] ensure Node ≥ ${DOTS_PI_MIN_NODE}"
 		echo "[dry-run] npm install -g --ignore-scripts ${DOTS_PI_NPM_PKG}"
-		echo "[dry-run] merge Pi MCP servers (dots-model-scout, dots-expert)"
+		echo "[dry-run] sync tools/dots_agent (uv)"
+		echo "[dry-run] merge Pi MCP + models.json for local providers"
 		return 0
 	fi
 	if command -v pi >/dev/null 2>&1; then
@@ -77,20 +78,36 @@ dots_pi_install() {
 		return 1
 	fi
 	pi --version 2>/dev/null || true
-	dots_pi_merge_mcp || true
-	dots_agent_uv_sync || true
+
+	# Desired-state: harness + MCP are required for the pi component, not advisory.
+	if ! dots_agent_uv_sync; then
+		echo "Error: DOTS agent harness (tools/dots_agent) failed to converge" >&2
+		return 1
+	fi
+	if ! dots_pi_merge_mcp; then
+		echo "Error: Pi MCP merge failed" >&2
+		return 1
+	fi
+	if ! dots_pi_merge_models; then
+		echo "Error: Pi models.json merge failed" >&2
+		return 1
+	fi
+	return 0
 }
 
 dots_agent_uv_sync() {
 	local project="${DIR}/tools/dots_agent"
-	[[ -f ${project}/pyproject.toml ]] || return 0
+	[[ -f ${project}/pyproject.toml ]] || {
+		echo "Error: missing ${project}/pyproject.toml" >&2
+		return 1
+	}
 	if ! command -v uv >/dev/null 2>&1; then
-		echo "Warn: uv missing — skip tools/dots_agent sync" >&2
-		return 0
+		echo "Error: uv required to install tools/dots_agent" >&2
+		return 1
 	fi
 	uv sync --directory "${project}" --python-preference system || {
-		echo "Warn: uv sync failed for tools/dots_agent" >&2
-		return 0
+		echo "Error: uv sync failed for tools/dots_agent" >&2
+		return 1
 	}
 	ensure_dir "${HOME}/.local/bin"
 	if [[ -f ${DIR}/scripts/dots-agent ]]; then
@@ -105,16 +122,19 @@ dots_agent_uv_sync() {
 		chmod +x "${DIR}/scripts/dots-expert" 2>/dev/null || true
 		ln -sfn "${DIR}/scripts/dots-expert" "${HOME}/.local/bin/dots-expert"
 	fi
-	echo "OK: tools/dots_agent synced"
+	echo "OK: tools/dots_agent synced (runtime will use --frozen --no-sync)"
 }
 
 dots_pi_merge_mcp() {
 	# Structured merge into ~/.pi/agent/mcp.json without wiping unrelated servers.
 	local py
 	py="$(command -v python3 || true)"
-	[[ -n ${py} ]] || return 0
+	[[ -n ${py} ]] || {
+		echo "Error: python3 required to merge Pi MCP config" >&2
+		return 1
+	}
 	DOTS_DIR="${DIR}" "${py}" - <<'PY'
-import json, os, pathlib, shutil, datetime
+import json, os, pathlib, shutil, datetime, sys
 
 dots = pathlib.Path(os.environ["DOTS_DIR"])
 home = pathlib.Path.home()
@@ -123,7 +143,6 @@ mcp_path.parent.mkdir(parents=True, exist_ok=True)
 
 scout = str(home / ".local" / "bin" / "dots-model-scout")
 expert = str(home / ".local" / "bin" / "dots-expert")
-# Fall back to repo scripts when not linked yet
 if not pathlib.Path(scout).exists():
     scout = str(dots / "scripts" / "dots-model-scout")
 if not pathlib.Path(expert).exists():
@@ -173,8 +192,44 @@ if changed:
         )
         shutil.copy2(mcp_path, bak)
     mcp_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    mcp_path.chmod(0o600)
     print(f"OK: merged DOTS MCP servers into {mcp_path}")
 else:
     print(f"OK: Pi MCP configuration already converged ({mcp_path})")
+sys.exit(0)
+PY
+}
+
+dots_pi_merge_models() {
+	# Structured merge of local Ollama/llama.cpp into ~/.pi/agent/models.json
+	local project="${DIR}/tools/dots_agent"
+	local py="${project}/.venv/bin/python"
+	if [[ ! -x ${py} ]]; then
+		py="$(command -v python3 || true)"
+	fi
+	[[ -n ${py} ]] || {
+		echo "Error: python required to merge Pi models.json" >&2
+		return 1
+	}
+	DOTS_DIR="${DIR}" "${py}" - <<'PY'
+import os, sys
+sys.path.insert(0, os.path.join(os.environ["DOTS_DIR"], "tools", "dots_agent"))
+from dots_agent.config import load_config
+from dots_agent.providers import detect_local
+from dots_agent.pi_models import merge_local_provider
+
+cfg = load_config()
+local = detect_local(cfg)
+if local.name == "none" or not local.healthy:
+    print(f"OK: no local provider reachable — models.json left unchanged ({local.detail})")
+    raise SystemExit(0)
+result = merge_local_provider(local)
+if not result.get("ok"):
+    print(f"Error: {result.get('error')}", file=sys.stderr)
+    raise SystemExit(1)
+print(
+    f"OK: Pi models.json provider={result.get('provider')} "
+    f"model={result.get('model')} changed={result.get('changed')}"
+)
 PY
 }

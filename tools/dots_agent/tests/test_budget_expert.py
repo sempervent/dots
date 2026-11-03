@@ -76,3 +76,27 @@ def test_local_disables_remote():
         estimated_cost_usd=0.01,
     )
     assert result["ok"] is False
+
+
+def test_urlerror_connection_refused_no_spend():
+    import urllib.error
+
+    cfg = load_config()
+    b = Budget(session_budget_usd=1.0, max_remote_calls=3)
+
+    def refuse(**kwargs):
+        raise urllib.error.URLError(ConnectionRefusedError("refused"))
+
+    result = consult_expert(
+        cfg=cfg,
+        budget=b,
+        model="x/y",
+        question="q",
+        estimated_cost_usd=0.05,
+        approve_expensive=True,
+        gateway_callable=refuse,
+    )
+    assert result["ok"] is False
+    assert result["transport"] == "request_not_sent"
+    assert result["charged_usd"] == 0.0
+    assert b.snapshot()["spent_usd"] == 0.0

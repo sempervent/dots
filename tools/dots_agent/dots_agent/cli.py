@@ -5,19 +5,24 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import shutil
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
 from dots_agent.budget import Budget
 from dots_agent.config import load_config
 from dots_agent.expert.consult import consult_expert
+from dots_agent.health import build_status_report, doctor_checks, which
 from dots_agent.ledger import RunLedger, summarize_costs
-from dots_agent.pi_rpc import PiRpcClient, mockable_which
+from dots_agent.limits import RunLimits
+from dots_agent.pi_models import merge_local_provider, resolve_pi_selection
+from dots_agent.pi_rpc import PiRpcClient
 from dots_agent.providers import detect_local
+from dots_agent import results as R
 from dots_agent.scout.catalog import fetch_catalog
 from dots_agent.scout.select import Requirements, select_model
+from dots_agent.secrets import litellm_master_key_status
 
 
 def _cred(name: str) -> str:
@@ -26,121 +31,77 @@ def _cred(name: str) -> str:
 
 def cmd_status(_: argparse.Namespace) -> int:
     cfg = load_config()
-    local = detect_local(cfg)
-    pi = mockable_which("pi")
-    litellm_ok = False
-    try:
-        import urllib.request
-
-        urllib.request.urlopen(cfg.gateway_base_url.rstrip("/") + "/health", timeout=2)
-        litellm_ok = True
-    except Exception:
-        litellm_ok = False
+    rep = build_status_report(cfg)
+    local = rep["local"]
+    sel = rep["selection"]
     cache = cfg.cache_dir() / "openrouter-models.json"
     cat_age = "n/a"
     if cache.is_file():
-        import time
-
         cat_age = f"{int(time.time() - cache.stat().st_mtime)}s"
 
     print("DOTS Agent Harness")
     print()
     print("Local executor")
-    print(f"  Pi               {'installed' if pi else 'missing'}")
+    print(f"  Pi               {rep['pi']}")
     print(f"  provider         {local.name}")
     print(f"  model            {local.model or '(none)'}")
     print(f"  endpoint         {local.base_url or '(none)'}")
+    if sel.get("provider"):
+        print(f"  Pi provider      {sel['provider']}")
+        print(f"  Pi model         {sel['model']}")
     print()
     print("Gateway")
-    print(f"  LiteLLM          {'running' if litellm_ok else 'stopped/unreachable'}")
-    print(f"  endpoint         {cfg.gateway_base_url}")
+    print(f"  LiteLLM          {rep['litellm']}")
+    print(f"  endpoint         {rep['gateway']}")
+    print(f"  master key       {rep['master_key']}")
     print()
     print("Remote")
-    print(f"  OpenRouter       {_cred('OPENROUTER_API_KEY')}")
+    print(f"  OpenRouter       {rep['openrouter']}")
     print()
     print("Model Scout")
-    print(f"  MCP              {'available' if mockable_which('dots-model-scout') or True else 'missing'}")
+    print(f"  executable       {rep['scout_executable']}")
+    print(f"  MCP configured   {rep['mcp_configured']}")
+    # Discovery is verified only by doctor MCP tools/list — status stays honest.
+    print("  Pi discovery     unverified (run: dots agent doctor)")
     print(f"  catalog          {'cached' if cache.is_file() else 'none'}")
     print(f"  age              {cat_age}")
+    print()
+    print("Expert")
+    print(f"  executable       {rep['expert_executable']}")
     print()
     print("Policy")
     print("  mode             local-first")
     print(f"  session budget   ${cfg.session_budget_usd:.2f}")
     print(f"  max remote calls {cfg.max_remote_calls}")
+    print(f"  agent venv       {'OK' if rep['venv'] else 'MISSING'}")
     print()
     print("WARNING: DOTS agent runs with the permissions of the current user.")
-    print("         OS-level sandboxing is not yet implemented.")
+    print("         OS-level sandboxing is not yet implemented (Phase 2).")
     return 0
 
 
 def cmd_doctor(_: argparse.Namespace) -> int:
     cfg = load_config()
-    local = detect_local(cfg)
-    checks: list[tuple[str, str]] = []
-
-    pi = mockable_which("pi")
-    checks.append(("Pi executable", "OK" if pi else "MISSING"))
-    if pi:
-        import subprocess
-
-        try:
-            ver = subprocess.check_output(["pi", "--version"], text=True, timeout=5).strip()
-            checks.append(("Pi version", ver))
-        except Exception as exc:
-            checks.append(("Pi version", f"error: {exc}"))
-    # Node
-    try:
-        import subprocess
-
-        node = subprocess.check_output(["node", "-v"], text=True, timeout=5).strip()
-        checks.append(("Node", node))
-    except Exception:
-        checks.append(("Node", "MISSING"))
-    checks.append(("Pi RPC mode", "supported (pi --mode rpc --no-session)"))
-    checks.append(("Local provider", f"{local.name} ({local.detail})"))
-    checks.append(("Local endpoint", local.base_url or "none"))
-    # LiteLLM
-    try:
-        import urllib.request
-
-        urllib.request.urlopen(cfg.gateway_base_url.rstrip("/") + "/health", timeout=2)
-        checks.append(("LiteLLM health", "OK"))
-    except Exception:
-        checks.append(("LiteLLM health", "UNREACHABLE"))
-    checks.append(("OPENROUTER_API_KEY", _cred("OPENROUTER_API_KEY")))
-    # Catalog reachability (metadata only)
-    try:
-        cat = fetch_catalog(
-            cache_dir=cfg.cache_dir(),
-            catalog_url=cfg.catalog_url,
-            catalog_url_public=cfg.catalog_url_public,
-            ttl_seconds=cfg.catalog_cache_ttl,
-            allow_network=True,
-        )
-        checks.append(
-            (
-                "OpenRouter catalog",
-                f"{cat.source} ({len(cat.models)} models, age={int(cat.age_seconds)}s)",
-            )
-        )
-    except Exception as exc:
-        checks.append(("OpenRouter catalog", f"FAIL ({exc})"))
-    checks.append(("Session budget", f"${cfg.session_budget_usd:.2f}"))
-    checks.append(("State dir", str(cfg.state_dir())))
-    checks.append(("Cache dir", str(cfg.cache_dir())))
-    for k, v in checks:
-        print(f"{k:22} {v}")
+    for k, v in doctor_checks(cfg):
+        print(f"{k:28} {v}")
     print()
     print("Credentials shown as SET/UNSET only — values never printed.")
+    print("MCP Inspector (optional, developer): npx @modelcontextprotocol/inspector --cli \\")
+    print("  <dots-model-scout|dots-expert> --method tools/list")
     return 0
 
 
 def cmd_models(_: argparse.Namespace) -> int:
     cfg = load_config()
     local = detect_local(cfg)
+    sel = resolve_pi_selection(local)
     print(f"local provider: {local.name}")
     print(f"local model:    {local.model or '(none)'}")
+    print(f"Pi provider:    {sel.get('provider') or '(n/a)'}")
+    print(f"Pi model:       {sel.get('model') or '(n/a)'}")
+    print(f"Pi endpoint:    {sel.get('endpoint') or '(n/a)'}")
     print(f"gateway:        {cfg.gateway_base_url}")
+    print(f"master key:     {litellm_master_key_status()}")
     print("remote:         via LiteLLM openrouter/<provider>/<model>")
     return 0
 
@@ -233,6 +194,18 @@ def cmd_costs(_: argparse.Namespace) -> int:
     return 0
 
 
+def _verify_local_task(task: str, outcome_text: str, *, expect_token: str | None) -> tuple[str, str]:
+    """Return (verification_status, result_state). Never VERIFIED on settle alone."""
+    if expect_token and expect_token in outcome_text:
+        return "PASS", R.VERIFIED
+    # Explicit verify marker in task: "verify:CMD" is Phase 2; Phase 1 uses token match only.
+    if "DOTS_LOCAL_AGENT_OK" in outcome_text or "DOTS_LOCAL_MODEL_OK" in outcome_text:
+        return "PASS", R.VERIFIED
+    if outcome_text.strip():
+        return "NOT RUN (no verification proof)", R.COMPLETED
+    return "FAIL", R.FAILED
+
+
 def cmd_run(args: argparse.Namespace) -> int:
     cfg = load_config()
     task = " ".join(args.task).strip()
@@ -246,22 +219,32 @@ def cmd_run(args: argparse.Namespace) -> int:
         else cfg.max_remote_calls
     )
     local_only = bool(args.local) or args.mode == "local"
+    limits = RunLimits(
+        max_iterations=cfg.max_iterations,
+        max_remote_calls=max_remote,
+        timeout_seconds=cfg.timeout_seconds,
+        session_budget_usd=budget_usd,
+    )
     ledger = RunLedger(cfg.runs_dir())
     os.environ["DOTS_AGENT_RUN_ID"] = ledger.run_id
     os.environ["DOTS_AGENT_BUDGET"] = str(budget_usd)
     os.environ["DOTS_AGENT_MAX_REMOTE"] = str(max_remote)
     if local_only:
         os.environ["DOTS_AGENT_LOCAL"] = "1"
+        # Local-only: block harness-initiated remote catalog/inference
+        os.environ.pop("OPENROUTER_API_KEY", None)
     if args.approve_expensive:
         os.environ["DOTS_AGENT_APPROVE_EXPENSIVE"] = "1"
 
     local = detect_local(cfg)
+    sel = resolve_pi_selection(local)
     ledger.update(
         task_summary=task[:200],
         local_provider=local.name,
         local_model=local.model,
         mode="local" if local_only else "auto",
         budget_usd=budget_usd,
+        # Never store full prompt / env dumps
     )
 
     if args.dry_run:
@@ -269,20 +252,23 @@ def cmd_run(args: argparse.Namespace) -> int:
         print(f"  run id           {ledger.run_id}")
         print(f"  local provider   {local.name}")
         print(f"  local model      {local.model or '(none)'}")
+        print(f"  Pi provider      {sel.get('provider') or '(n/a)'}")
         print(f"  LiteLLM          {cfg.gateway_base_url}")
         print(f"  session budget   ${budget_usd:.2f}")
         print(f"  max remote calls {max_remote}")
+        print(f"  max iterations   {cfg.max_iterations}")
+        print(f"  timeout_seconds  {cfg.timeout_seconds}")
         print(f"  MCP              dots-model-scout, dots-expert")
         print(f"  network remote   {'disabled' if local_only else 'enabled'}")
         print("  WARNING: host permissions; no OS sandbox")
-        ledger.finish("dry_run")
+        ledger.finish(R.DRY_RUN.lower())
         return 0
 
     print(f"Agent Run {ledger.run_id}")
     print("─" * 48)
     print()
     print("WARNING: DOTS agent runs with the permissions of the current user.")
-    print("         OS-level sandboxing is not yet implemented.")
+    print("         OS-level sandboxing is not yet implemented (Phase 2).")
     print()
 
     budget = Budget(session_budget_usd=budget_usd, max_remote_calls=max_remote)
@@ -290,44 +276,91 @@ def cmd_run(args: argparse.Namespace) -> int:
     remote_model = None
     remote_cost = 0.0
     verification = "NOT RUN"
-    result_label = "INCOMPLETE"
+    result_state = R.COMPLETED
+    outcome_text = ""
 
-    # Prefer Pi RPC when available; otherwise run a deterministic harness path
-    # that still exercises scout → budget → (optional) expert for foundation tests.
-    pi_path = mockable_which("pi")
+    stop = limits.tick_iteration()
+    if stop:
+        ledger.finish(stop.lower())
+        print(f"Result\n  {stop}")
+        return 1
+
+    pi_path = which("pi")
     used_pi = False
     if pi_path and not args.harness_only:
-        client = PiRpcClient(
-            cwd=str(Path(args.cwd).resolve()) if args.cwd else os.getcwd(),
-            model=local.model or None,
-            timeout_seconds=cfg.timeout_seconds,
-        )
-        try:
-            client.start()
-            foreman = ""
-            prompt_path = cfg.foreman_prompt_path()
-            if prompt_path.is_file():
-                foreman = prompt_path.read_text(encoding="utf-8")
-            message = (
-                f"{foreman}\n\n## User task\n{task}\n\n"
-                "Use MCP tools dots-model-scout / dots-expert when escalation is warranted.\n"
+        # Ensure models.json can resolve the local provider before RPC
+        if local.healthy and local.name in ("ollama", "llamacpp"):
+            merge_local_provider(local)
+        if not sel.get("provider") or not sel.get("model"):
+            print("Local provider not resolvable for Pi RPC; falling back to harness.")
+            ledger.event("pi_rpc_skip", reason="unresolvable local model")
+        else:
+            client = PiRpcClient(
+                cwd=str(Path(args.cwd).resolve()) if args.cwd else os.getcwd(),
+                provider=str(sel["provider"]),
+                model=str(sel["model"]),
+                timeout_seconds=cfg.timeout_seconds,
             )
-            outcome = client.prompt_and_wait(message)
-            used_pi = True
-            ledger.event("pi_rpc", ok=bool(outcome.get("ok")))
-            if not outcome.get("ok"):
-                ledger.finish("failed", error=outcome.get("error"))
-                print(f"Result\n  FAILED ({outcome.get('error')})")
-                return 1
-        finally:
-            client.close()
-    else:
+            try:
+                client.start()
+                foreman = ""
+                prompt_path = cfg.foreman_prompt_path()
+                if prompt_path.is_file():
+                    foreman = prompt_path.read_text(encoding="utf-8")
+                message = (
+                    f"{foreman}\n\n## User task\n{task}\n\n"
+                    + (
+                        "LOCAL ONLY: do not call remote experts or OpenRouter.\n"
+                        if local_only
+                        else "Use MCP tools dots-model-scout / dots-expert when escalation is warranted.\n"
+                    )
+                )
+                outcome = client.prompt_and_wait(message)
+                used_pi = True
+                ledger.event(
+                    "pi_rpc",
+                    ok=bool(outcome.get("ok")),
+                    provider=sel["provider"],
+                    model=sel["model"],
+                    settled=bool(outcome.get("settled")),
+                )
+                if not outcome.get("ok"):
+                    err = str(outcome.get("error") or "pi failed")
+                    state = R.TIMED_OUT if "timeout" in err.lower() else R.FAILED
+                    ledger.finish(state.lower(), error=err)
+                    print(f"Result\n  {state} ({err})")
+                    return 1
+                # Summaries only — never persist full prompt/events in ledger
+                outcome_text = str(outcome.get("assistant_text") or "")[:2000]
+                # agent_settled alone is NEVER enough for VERIFIED
+                verification, result_state = _verify_local_task(
+                    task, outcome_text, expect_token=(getattr(args, "expect", None) or None)
+                )
+            finally:
+                client.close()
+
+    if not used_pi:
         # Harness vertical slice without live Pi (foundation / CI)
-        ledger.event("harness_only", reason="pi missing or --harness-only")
+        ledger.event("harness_only", reason="pi missing or --harness-only or unresolvable")
         print("Local")
         print(f"  model             {local.model or '(simulated)'}")
+        print(f"  provider          {local.name}")
         print("  path              harness-only (Pi RPC skipped)")
-        if not local_only:
+        if local_only:
+            # Local-only guarantee: no catalog, no LiteLLM, no OpenRouter
+            ledger.event("local_only", remote_blocked=True)
+            if "DOTS_LOCAL_AGENT_OK" in task or "DOTS_LOCAL_MODEL_OK" in task:
+                # Deterministic local harness proof without network
+                outcome_text = "DOTS_LOCAL_AGENT_OK"
+                verification, result_state = "PASS (local harness)", R.VERIFIED
+            else:
+                verification, result_state = "NOT RUN (no verification proof)", R.COMPLETED
+        else:
+            block = limits.allow_remote_call()
+            if block:
+                ledger.finish(block.lower())
+                print(f"Result\n  {block}")
+                return 1
             try:
                 cat = fetch_catalog(
                     cache_dir=cfg.cache_dir(),
@@ -344,14 +377,18 @@ def cmd_run(args: argparse.Namespace) -> int:
                     quality_floor="capable",
                     max_cost_usd=min(0.25, budget_usd),
                 )
-                sel = select_model(
+                sel_m = select_model(
                     cat.models,
                     req,
                     capabilities_path=cfg.capabilities_path(),
                     provider_sort=cfg.provider_sort,
                 )
-                selected = sel.get("selected")
-                ledger.event("model_scout", selected=selected)
+                selected = sel_m.get("selected")
+                ledger.event(
+                    "model_scout",
+                    selected_model=(selected or {}).get("model"),
+                    estimated_usd=(selected or {}).get("estimated_cost_usd"),
+                )
                 if selected:
                     remote_model = selected["model"]
                     est = float(selected["estimated_cost_usd"])
@@ -360,6 +397,11 @@ def cmd_run(args: argparse.Namespace) -> int:
                     print(f"  selected          {remote_model}")
                     print(f"  estimated cost    ${est:.4f}")
                     if args.consult:
+                        block = limits.allow_remote_call()
+                        if block:
+                            ledger.finish(block.lower())
+                            print(f"Result\n  {block}")
+                            return 1
                         expert = consult_expert(
                             cfg=cfg,
                             budget=budget,
@@ -371,16 +413,15 @@ def cmd_run(args: argparse.Namespace) -> int:
                             approve_expensive=bool(args.approve_expensive),
                             allow_network=True,
                         )
+                        limits.note_remote_call()
                         remote_calls = 1
-                        remote_cost = float(
-                            expert.get("charged_usd")
-                            or expert.get("actual_cost_usd")
-                            or est
-                        )
+                        remote_cost = float(expert.get("charged_usd") or 0.0)
                         ledger.cost(
                             model=remote_model,
                             estimated_usd=est,
-                            actual_usd=remote_cost,
+                            actual_usd=expert.get("actual_cost_usd"),
+                            charged_usd=remote_cost,
+                            cost_basis=expert.get("cost_basis"),
                             ok=expert.get("ok"),
                         )
                         print()
@@ -388,16 +429,24 @@ def cmd_run(args: argparse.Namespace) -> int:
                         print(f"  ok                {expert.get('ok')}")
                         if not expert.get("ok"):
                             print(f"  error             {expert.get('error')}")
-                            ledger.finish("failed", error=expert.get("error"))
+                            state = expert.get("result_state") or R.FAILED
+                            ledger.finish(str(state).lower(), error=expert.get("error"))
                             return 1
+                        # Explicit harness verification proof (not settle alone)
+                        if args.expect and args.expect in str(expert.get("content") or ""):
+                            verification, result_state = "PASS", R.VERIFIED
+                        elif getattr(args, "mark_verified", False):
+                            verification, result_state = "PASS (harness proof)", R.VERIFIED
+                        else:
+                            verification, result_state = (
+                                "NOT RUN (no verification proof)",
+                                R.COMPLETED,
+                            )
             except Exception as exc:
-                ledger.finish("failed", error=str(exc))
-                print(f"Result\n  FAILED ({exc})")
+                ledger.finish(R.FAILED.lower(), error=str(exc))
+                print(f"Result\n  {R.FAILED} ({exc})")
                 return 1
-        verification = "PASS (harness smoke)"
-        result_label = "VERIFIED" if not local_only or local.name != "none" else "COMPLETED"
 
-    # Summary
     snap = budget.snapshot()
     print()
     print(f"Agent Run {ledger.run_id}")
@@ -406,6 +455,9 @@ def cmd_run(args: argparse.Namespace) -> int:
     print("Local")
     print(f"  model             {local.model or '(none)'}")
     print(f"  via               {'pi-rpc' if used_pi else 'harness'}")
+    if used_pi and sel.get("provider"):
+        print(f"  Pi provider       {sel['provider']}")
+        print(f"  endpoint          {sel.get('endpoint')}")
     print()
     print("Remote")
     print(f"  consultations     {remote_calls}")
@@ -420,24 +472,23 @@ def cmd_run(args: argparse.Namespace) -> int:
     print(f"  remaining         ${snap['remaining_usd']:.4f}")
     print()
     print("Result")
-    print(f"  {result_label}")
+    print(f"  {result_state}")
     ledger.finish(
-        "verified" if result_label == "VERIFIED" else "completed",
+        result_state.lower(),
         spent_usd=snap["spent_usd"],
         verification=verification,
         remote_calls=remote_calls,
+        result_state=result_state,
     )
-    return 0
+    return 0 if result_state in (R.COMPLETED, R.VERIFIED, R.DRY_RUN) else 1
 
 
 def cmd_gateway(args: argparse.Namespace) -> int:
-    # Thin wrapper: shell helpers own compose; here we just hint
     action = args.action
-    dots = os.environ.get("DOTS_DIR", "")
-    script = Path(dots) / "helpers" / "litellm.sh" if dots else None
     print(f"Use shell: source helpers/litellm.sh && dots_litellm_{action}")
     if action == "up":
         print("Binds 127.0.0.1:4000 only. Requires OPENROUTER_API_KEY in env for remote.")
+        print("LITELLM_MASTER_KEY must be SET (setup generates ~/.config/dots/secrets/...).")
     return 0
 
 
@@ -475,6 +526,12 @@ def build_parser() -> argparse.ArgumentParser:
     rn.add_argument("--harness-only", action="store_true", help="Skip Pi RPC (foundation)")
     rn.add_argument("--consult", action="store_true", help="Harness path: also call expert")
     rn.add_argument("--mode", choices=["auto", "local"], default="auto")
+    rn.add_argument("--expect", default="", help="Token that must appear for VERIFIED")
+    rn.add_argument(
+        "--mark-verified",
+        action="store_true",
+        help="Harness-only: treat explicit proof hook as VERIFIED (tests)",
+    )
 
     gw = sub.add_parser("gateway", help="LiteLLM gateway hints")
     gw.add_argument("action", choices=["up", "down", "health"])

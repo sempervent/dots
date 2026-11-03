@@ -34,11 +34,12 @@ def _get_budget() -> Budget:
 
 
 @mcp.tool(
+    name="consult_expert",
     annotations={
         "readOnlyHint": False,
         "destructiveHint": False,
         "openWorldHint": True,
-    }
+    },
 )
 def consult_expert_tool(
     model: str,

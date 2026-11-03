@@ -85,6 +85,44 @@ class PiRpcClient:
             time.sleep(0.05)
         return None
 
+    @staticmethod
+    def extract_assistant_text(events: list[dict[str, Any]]) -> str:
+        """Pull assistant text from RPC events (content blocks / deltas)."""
+        chunks: list[str] = []
+        for ev in events:
+            et = ev.get("type")
+            if et in ("message_update", "message_delta", "text_delta"):
+                delta = ev.get("delta") or ev.get("text") or ""
+                if isinstance(delta, str) and delta:
+                    chunks.append(delta)
+                continue
+            msg = ev.get("message")
+            if isinstance(msg, dict):
+                content = msg.get("content")
+                if isinstance(content, str) and content:
+                    chunks.append(content)
+                elif isinstance(content, list):
+                    for block in content:
+                        if isinstance(block, dict) and block.get("type") == "text":
+                            t = block.get("text")
+                            if t:
+                                chunks.append(str(t))
+            # agent_end carries full message history
+            if et == "agent_end":
+                for m in ev.get("messages") or []:
+                    if not isinstance(m, dict) or m.get("role") != "assistant":
+                        continue
+                    content = m.get("content")
+                    if isinstance(content, str) and content:
+                        chunks.append(content)
+                    elif isinstance(content, list):
+                        for block in content:
+                            if isinstance(block, dict) and block.get("type") == "text":
+                                t = block.get("text")
+                                if t:
+                                    chunks.append(str(t))
+        return "".join(chunks)
+
     def prompt_and_wait(self, message: str) -> dict[str, Any]:
         self.settled = False
         cid = self.send({"type": "prompt", "message": message})
@@ -98,7 +136,14 @@ class PiRpcClient:
         deadline = time.time() + self.timeout_seconds
         while time.time() < deadline:
             if self.settled:
-                return {"ok": True, "events": list(self.events), "response": resp}
+                events = list(self.events)
+                return {
+                    "ok": True,
+                    "events": events,
+                    "response": resp,
+                    "assistant_text": self.extract_assistant_text(events),
+                    "settled": True,
+                }
             if self.process and self.process.poll() is not None:
                 return {
                     "ok": False,

@@ -47,6 +47,19 @@ class Budget:
             self.spent_usd += charge
             return charge
 
+    def release_reservation(self, reserved_usd: float, *, count_against_max: bool = True) -> None:
+        """Drop a reservation without charging spend.
+
+        Used when the request definitely never reached the provider
+        (connection refused, DNS failure before send, etc.).
+        remote_call_count stays incremented when count_against_max is True
+        so loops cannot hammer a dead gateway for free.
+        """
+        with self._lock:
+            self.reserved_usd = max(0.0, self.reserved_usd - reserved_usd)
+            if not count_against_max and self.remote_call_count > 0:
+                self.remote_call_count -= 1
+
     def snapshot(self) -> dict[str, float | int]:
         with self._lock:
             return {

@@ -99,7 +99,8 @@ def compare_models(
 
 
 @mcp.tool(
-    annotations={"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False}
+    name="estimate_cost",
+    annotations={"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False},
 )
 def estimate_cost_tool(
     model: str,
@@ -123,7 +124,8 @@ def estimate_cost_tool(
 
 
 @mcp.tool(
-    annotations={"readOnlyHint": True, "destructiveHint": False, "openWorldHint": True}
+    name="explain_choice",
+    annotations={"readOnlyHint": True, "destructiveHint": False, "openWorldHint": True},
 )
 def explain_choice_tool(
     task_type: str = "debugging",

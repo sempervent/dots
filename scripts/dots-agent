@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Launch DOTS agent harness CLI.
+# Launch DOTS agent harness CLI (runtime — no dependency installation).
 set -euo pipefail
 
 SCRIPT_PATH="${BASH_SOURCE[0]}"
@@ -12,17 +12,25 @@ DOTS_DIR="$(cd "$(dirname "${SCRIPT_PATH}")/.." && pwd)"
 PROJECT_DIR="${DOTS_DIR}/tools/dots_agent"
 export DOTS_DIR
 
-if ! command -v uv >/dev/null 2>&1; then
-	echo "Error: uv is required for dots-agent." >&2
+# Load LiteLLM master key into env without printing it (if present).
+_key_file="${HOME}/.config/dots/secrets/litellm-master-key"
+if [[ -f ${_key_file} ]] && [[ -z ${LITELLM_MASTER_KEY:-} ]]; then
+	# shellcheck disable=SC2002
+	LITELLM_MASTER_KEY="$(tr -d '[:space:]' <"${_key_file}")"
+	export LITELLM_MASTER_KEY
+fi
+
+if [[ ! -x ${PROJECT_DIR}/.venv/bin/python ]]; then
+	echo "Error: DOTS agent environment is not installed." >&2
+	echo "Run:" >&2
+	echo "  ./dots setup --with pi" >&2
 	exit 1
 fi
 
-if [[ ! -d ${PROJECT_DIR}/.venv ]]; then
-	uv sync --directory "${PROJECT_DIR}" --python-preference system || {
-		echo "Error: uv sync failed for tools/dots_agent" >&2
-		exit 1
-	}
+# --frozen --no-sync: never contact PyPI or mutate the lock/venv at runtime.
+if command -v uv >/dev/null 2>&1; then
+	exec uv run --directory "${PROJECT_DIR}" --python-preference system --frozen --no-sync \
+		python -m dots_agent "$@"
 fi
 
-exec uv run --directory "${PROJECT_DIR}" --python-preference system --frozen \
-	python -m dots_agent "$@"
+exec "${PROJECT_DIR}/.venv/bin/python" -m dots_agent "$@"

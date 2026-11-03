@@ -27,13 +27,29 @@ local Pi applies advice + verifies
 | OpenRouter | Live remote marketplace + provider price routing |
 | dots-expert | Billable consultation (text in → text out; no FS) |
 
-## Deferred (later PRs)
+## Phase 1 evidence (use these labels only)
+
+| Claim | Status |
+|-------|--------|
+| Model scout selection + cost estimate | **MOCKED** (+ live metadata when network available) |
+| Budget reserve → LiteLLM mock → settle → ledger | **MOCKED** (Phase 1 acceptance test) |
+| Connection-refused does not fabricate spend | **MOCKED** |
+| Runtime launchers never `uv sync` | **PROVEN** (code + shell gate) |
+| LiteLLM non-predictable master key | **CONFIGURED** (generated at setup; compose requires env) |
+| Pi `models.json` structured merge | **MOCKED** (+ live when local provider present) |
+| Pi RPC local inference | **PROVEN** on machines with Pi + local model (else SKIP) |
+| MCP tools/list + `pi mcp list` discovery | **PROVEN** when executables / Pi present |
+| OS sandbox / OpenRig / evals | **DEFERRED** (see [v1.6-roadmap](v1.6-roadmap.md)) |
+
+## Deferred (Phases 2–5)
 
 - OpenRig session/topology orchestration
 - OS-level sandboxing
 - Agent eval suite / capability benchmarking
 - Multi-agent orchestration / consensus
 - Advanced automatic failure heuristics
+
+See [v1.6-roadmap.md](v1.6-roadmap.md).
 
 ## Threat model (acknowledged, not fully solved)
 
