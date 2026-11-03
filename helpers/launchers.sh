@@ -55,6 +55,9 @@ dots_ensure_launchers() {
   _dots_link_script agent-telemetry
   _dots_link_script agent-stats
   _dots_link_script dots-help
+  _dots_link_script dots-agent
+  _dots_link_script dots-model-scout
+  _dots_link_script dots-expert
 
   # Draw Things: link when already managed / previously installed
   if [[ -f "${HOME}/.config/drawthings-mcp/config.toml" ]] \

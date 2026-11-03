@@ -972,6 +972,37 @@ EOF
 	esac
 }
 
+dots_cmd_agent() {
+	local helper="${DIR}/scripts/dots-agent"
+	if [[ ! -x ${helper} ]]; then
+		chmod +x "${helper}" 2>/dev/null || true
+	fi
+	if [[ ! -x ${helper} ]]; then
+		echo "Error: missing ${helper}" >&2
+		echo "       Run: ./dots setup --with pi" >&2
+		return 1
+	fi
+	if [[ $# -eq 0 ]]; then
+		cat <<'EOF'
+DOTS Agent Harness
+
+  ./dots agent status          Local executor / gateway / sandbox policy
+  ./dots agent doctor          Diagnostics (SET/UNSET; sandbox FAIL/WARN/OK)
+  ./dots agent sandbox status  Sandbox provider / backends / MCP allowlist
+  ./dots agent models          Local + remote routing summary
+  ./dots agent scout …         Cheapest qualifying OpenRouter model
+  ./dots agent run …           Safe sandboxed task (default); --unsafe-host to bypass
+  ./dots agent worktrees       List isolated agent worktrees
+  ./dots agent mcp status      Trusted MCP allowlist
+  ./dots agent costs           DOTS-recorded spend
+
+Default runs are sandboxed (fail-closed). Explicit bypass: --unsafe-host
+EOF
+		return 0
+	fi
+	exec "${helper}" "$@"
+}
+
 # --- dispatch ---
 cmd="${1:-setup}"
 case "${cmd}" in
@@ -1006,6 +1037,10 @@ lsp)
 ai)
 	shift || true
 	dots_cmd_ai "$@"
+	;;
+agent)
+	shift || true
+	dots_cmd_agent "$@"
 	;;
 packages | package)
 	shift || true

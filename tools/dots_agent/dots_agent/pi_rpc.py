@@ -1,0 +1,189 @@
+"""Pi RPC client — JSONL over stdin/stdout (no TUI scraping)."""
+
+from __future__ import annotations
+
+import json
+import os
+import shutil
+import subprocess
+import threading
+import time
+import uuid
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Callable
+
+
+@dataclass
+class PiRpcClient:
+    cwd: str
+    provider: str | None = None
+    model: str | None = None
+    pi_bin: str = "pi"
+    timeout_seconds: int = 1800
+    env: dict[str, str] | None = None
+    extra_args: list[str] = field(default_factory=list)
+    process: subprocess.Popen[bytes] | None = None
+    events: list[dict[str, Any]] = field(default_factory=list)
+    _reader: threading.Thread | None = None
+    _lock: threading.Lock = field(default_factory=threading.Lock)
+    settled: bool = False
+    last_error: str | None = None
+
+    def start(self) -> None:
+        bin_path = shutil.which(self.pi_bin) or self.pi_bin
+        cmd = [bin_path, "--mode", "rpc", "--no-session"]
+        if self.provider:
+            cmd.extend(["--provider", self.provider])
+        if self.model:
+            cmd.extend(["--model", self.model])
+        cmd.extend(self.extra_args)
+        # Never default to full parent env — caller must pass an allowlisted env.
+        env = dict(self.env) if self.env is not None else {
+            "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+            "HOME": os.environ.get("HOME", str(Path.home())),
+            "LANG": os.environ.get("LANG", "C"),
+            "TERM": os.environ.get("TERM", "dumb"),
+        }
+        self.process = subprocess.Popen(
+            cmd,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=self.cwd,
+            env=env,
+        )
+        self._reader = threading.Thread(target=self._read_loop, daemon=True)
+        self._reader.start()
+
+    def _read_loop(self) -> None:
+        assert self.process and self.process.stdout
+        while True:
+            line = self.process.stdout.readline()
+            if not line:
+                break
+            try:
+                record = json.loads(line.decode("utf-8"))
+            except json.JSONDecodeError:
+                with self._lock:
+                    self.last_error = "malformed JSON from Pi"
+                continue
+            with self._lock:
+                self.events.append(record)
+                if record.get("type") == "agent_settled":
+                    self.settled = True
+
+    def send(self, command: dict[str, Any]) -> str:
+        assert self.process and self.process.stdin
+        cid = command.get("id") or str(uuid.uuid4())
+        command = {**command, "id": cid}
+        raw = json.dumps(command).encode("utf-8") + b"\n"
+        self.process.stdin.write(raw)
+        self.process.stdin.flush()
+        return str(cid)
+
+    def wait_response(self, cmd_id: str, timeout: float = 60.0) -> dict[str, Any] | None:
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            with self._lock:
+                for ev in self.events:
+                    if (
+                        ev.get("type") == "response"
+                        and ev.get("id") == cmd_id
+                    ):
+                        return ev
+            time.sleep(0.05)
+        return None
+
+    @staticmethod
+    def extract_assistant_text(events: list[dict[str, Any]]) -> str:
+        """Pull assistant text from RPC events (content blocks / deltas)."""
+        chunks: list[str] = []
+        for ev in events:
+            et = ev.get("type")
+            if et in ("message_update", "message_delta", "text_delta"):
+                delta = ev.get("delta") or ev.get("text") or ""
+                if isinstance(delta, str) and delta:
+                    chunks.append(delta)
+                continue
+            msg = ev.get("message")
+            if isinstance(msg, dict):
+                content = msg.get("content")
+                if isinstance(content, str) and content:
+                    chunks.append(content)
+                elif isinstance(content, list):
+                    for block in content:
+                        if isinstance(block, dict) and block.get("type") == "text":
+                            t = block.get("text")
+                            if t:
+                                chunks.append(str(t))
+            # agent_end carries full message history
+            if et == "agent_end":
+                for m in ev.get("messages") or []:
+                    if not isinstance(m, dict) or m.get("role") != "assistant":
+                        continue
+                    content = m.get("content")
+                    if isinstance(content, str) and content:
+                        chunks.append(content)
+                    elif isinstance(content, list):
+                        for block in content:
+                            if isinstance(block, dict) and block.get("type") == "text":
+                                t = block.get("text")
+                                if t:
+                                    chunks.append(str(t))
+        return "".join(chunks)
+
+    def prompt_and_wait(self, message: str) -> dict[str, Any]:
+        self.settled = False
+        cid = self.send({"type": "prompt", "message": message})
+        resp = self.wait_response(cid, timeout=30.0)
+        if not resp or not resp.get("success"):
+            return {
+                "ok": False,
+                "error": (resp or {}).get("error") or "prompt rejected",
+                "response": resp,
+            }
+        deadline = time.time() + self.timeout_seconds
+        while time.time() < deadline:
+            if self.settled:
+                events = list(self.events)
+                return {
+                    "ok": True,
+                    "events": events,
+                    "response": resp,
+                    "assistant_text": self.extract_assistant_text(events),
+                    "settled": True,
+                }
+            if self.process and self.process.poll() is not None:
+                return {
+                    "ok": False,
+                    "error": f"Pi exited with {self.process.returncode}",
+                    "events": list(self.events),
+                }
+            time.sleep(0.1)
+        self.cancel()
+        return {"ok": False, "error": "timeout waiting for agent_settled"}
+
+    def cancel(self) -> None:
+        if not self.process:
+            return
+        try:
+            if self.process.stdin:
+                self.process.stdin.close()
+        except Exception:
+            pass
+        try:
+            self.process.terminate()
+            self.process.wait(timeout=5)
+        except Exception:
+            try:
+                self.process.kill()
+            except Exception:
+                pass
+
+    def close(self) -> None:
+        self.cancel()
+
+
+def mockable_which(name: str) -> str | None:
+    return shutil.which(name)

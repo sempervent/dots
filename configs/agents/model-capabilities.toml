@@ -1,0 +1,111 @@
+# Conservative local quality floors for OpenRouter model families.
+# OpenRouter metadata cannot prove "can solve this bug" — this registry
+# only supplies coarse qualitative tiers for selection filtering.
+#
+# Unknown models do NOT inherit "strong". They may appear as unrated
+# candidates but cannot win an automatic quality_floor=strong selection.
+#
+# Provenance is required on every rule. Prefer vendor/OpenRouter evidence.
+
+version = 1
+
+[[families]]
+# Pattern matched against OpenRouter model id (provider/model), case-insensitive
+id_pattern = "anthropic/claude-opus"
+quality = "frontier"
+task_classes = ["general", "coding", "debugging", "architecture", "reasoning", "tool_use"]
+source = "https://openrouter.ai/anthropic/claude-opus-4.1"
+reviewed_date = "2026-11-03"
+notes = "Frontier coding/reasoning family; treat as expensive expert."
+
+[[families]]
+id_pattern = "anthropic/claude-sonnet"
+quality = "strong"
+task_classes = ["general", "coding", "debugging", "architecture", "reasoning", "tool_use"]
+source = "https://openrouter.ai/anthropic/claude-sonnet-4"
+reviewed_date = "2026-11-03"
+notes = "Strong general coding/debug quality floor."
+
+[[families]]
+id_pattern = "openai/gpt-5"
+quality = "frontier"
+task_classes = ["general", "coding", "debugging", "architecture", "reasoning", "tool_use"]
+source = "https://openrouter.ai/openai/gpt-5"
+reviewed_date = "2026-11-03"
+notes = "Frontier OpenAI family when available on account."
+
+[[families]]
+id_pattern = "openai/gpt-4o"
+quality = "strong"
+task_classes = ["general", "coding", "debugging", "reasoning", "tool_use"]
+source = "https://openrouter.ai/openai/gpt-4o"
+reviewed_date = "2026-11-03"
+notes = "Capable multimodal coding model."
+
+[[families]]
+id_pattern = "openai/o3"
+quality = "frontier"
+task_classes = ["reasoning", "debugging", "architecture", "coding"]
+source = "https://openrouter.ai/openai/o3"
+reviewed_date = "2026-11-03"
+notes = "Reasoning-heavy expert."
+
+[[families]]
+id_pattern = "google/gemini-2.5-pro"
+quality = "strong"
+task_classes = ["general", "coding", "debugging", "reasoning", "tool_use"]
+source = "https://openrouter.ai/google/gemini-2.5-pro"
+reviewed_date = "2026-11-03"
+notes = "Strong long-context coding."
+
+[[families]]
+id_pattern = "google/gemini-2.5-flash"
+quality = "capable"
+task_classes = ["general", "coding", "tool_use"]
+source = "https://openrouter.ai/google/gemini-2.5-flash"
+reviewed_date = "2026-11-03"
+notes = "Fast/cheap capable tier."
+
+[[families]]
+id_pattern = "deepseek/deepseek-r1"
+quality = "strong"
+task_classes = ["reasoning", "debugging", "coding"]
+source = "https://openrouter.ai/deepseek/deepseek-r1"
+reviewed_date = "2026-11-03"
+notes = "Strong reasoning; verify tool support in live catalog."
+
+[[families]]
+id_pattern = "deepseek/deepseek-chat"
+quality = "capable"
+task_classes = ["general", "coding", "tool_use"]
+source = "https://openrouter.ai/deepseek/deepseek-chat"
+reviewed_date = "2026-11-03"
+notes = "Capable cheap coding candidate."
+
+[[families]]
+id_pattern = "qwen/qwen"
+quality = "capable"
+task_classes = ["general", "coding", "tool_use"]
+source = "https://openrouter.ai/qwen"
+reviewed_date = "2026-11-03"
+notes = "Broad Qwen family; individual models may vary — unrated edges stay unrated."
+
+[[families]]
+id_pattern = "meta-llama/llama-3.3-70b"
+quality = "capable"
+task_classes = ["general", "coding", "tool_use"]
+source = "https://openrouter.ai/meta-llama/llama-3.3-70b-instruct"
+reviewed_date = "2026-11-03"
+notes = "Capable open-weight coding."
+
+[[families]]
+id_pattern = "mistralai/mistral-small"
+quality = "basic"
+task_classes = ["general"]
+source = "https://openrouter.ai/mistralai/mistral-small"
+reviewed_date = "2026-11-03"
+notes = "Basic/general; not strong debugging floor."
+
+[tiers]
+# Ordered weakest → strongest for floor comparisons
+order = ["unrated", "basic", "capable", "strong", "frontier"]

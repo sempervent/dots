@@ -103,6 +103,24 @@ def build_zsh() -> str:
     pkg_subs = ["groups", "group", "plan", "status", "explain", "outdated", "upgrade", "adopt", "help"]
     component_subs = ["list", "active", "show", "help"]
     ai_subs = ["status", "doctor", "up", "down", "help"]
+    agent_subs = [
+        "status",
+        "doctor",
+        "sandbox",
+        "models",
+        "scout",
+        "route",
+        "eval",
+        "team",
+        "run",
+        "worktrees",
+        "diff",
+        "apply",
+        "discard",
+        "mcp",
+        "costs",
+        "gateway",
+    ]
 
     lines = [
         HEADER_ZSH.rstrip(),
@@ -112,7 +130,7 @@ def build_zsh() -> str:
         "  typeset -A opt_args",
         "  local -a commands topics selectors groups profiles providers tiers",
         "  local -a lsp_subs model_subs shell_subs completion_subs pkg_subs",
-        "  local -a component_subs ai_subs lsp_ids",
+        "  local -a component_subs ai_subs agent_subs lsp_ids",
         "",
         "  commands=(",
         *cmd_pairs,
@@ -136,6 +154,7 @@ def build_zsh() -> str:
         "  pkg_subs=(" + " ".join(f"'{s}'" for s in pkg_subs) + ")",
         "  component_subs=(" + " ".join(f"'{s}'" for s in component_subs) + ")",
         "  ai_subs=(" + " ".join(f"'{s}'" for s in ai_subs) + ")",
+        "  agent_subs=(" + " ".join(f"'{s}'" for s in agent_subs) + ")",
         "  lsp_ids=(" + " ".join(f"'{s}'" for s in lsp_ids) + ")",
         "",
         "  _arguments -C \\",
@@ -211,6 +230,21 @@ def build_zsh() -> str:
         "      ;;",
         "    ai)",
         "      _values 'ai' ${ai_subs[@]}",
+        "      ;;",
+        "    agent)",
+        "      if (( CURRENT == 3 )) && [[ ${words[2]} == eval ]]; then",
+        "        _values 'eval' list run results compare regressions baseline calibrate import-openrouter",
+        "      elif (( CURRENT >= 3 )) && [[ ${words[2]} == eval && ${words[3]} == run ]]; then",
+        "        _values 'eval-run' --local --remote --suite --model --budget --runs --task-class --help",
+        "      elif (( CURRENT == 3 )) && [[ ${words[2]} == team ]]; then",
+        "        _values 'team' status list doctor up down open tasks messages restore-check reconcile run diff",
+        "      elif (( CURRENT >= 3 )) && [[ ${words[2]} == team && ${words[3]} == up ]]; then",
+        "        _values 'team-up' dots-pair dots-triad dots-investigate --project --dry-run --help",
+        "      elif (( CURRENT == 3 )) && [[ ${words[2]} == route ]]; then",
+        "        _values 'route' --task --language --context --output --quality --max-cost --simulate --local --json --help",
+        "      else",
+        "        _values 'agent' ${agent_subs[@]}",
+        "      fi",
         "      ;;",
         "    shell)",
         "      _values 'shell' ${shell_subs[@]}",
@@ -307,6 +341,7 @@ _dots_complete() {{
   local pkg_subs='groups group plan status explain outdated upgrade adopt help'
   local component_subs='list active show help'
   local ai_subs='status doctor up down help'
+  local agent_subs='status doctor sandbox models scout route eval team run worktrees diff apply discard mcp costs gateway'
 
   _dots_custom_profiles() {{
     local d="${{HOME}}/.config/dots/profiles" f
@@ -386,6 +421,9 @@ _dots_complete() {{
     ;;
   ai)
     COMPREPLY=($(compgen -W "${{ai_subs}}" -- "${{cur}}"))
+    ;;
+  agent)
+    COMPREPLY=($(compgen -W "${{agent_subs}}" -- "${{cur}}"))
     ;;
   shell)
     COMPREPLY=($(compgen -W "${{shell_subs}}" -- "${{cur}}"))

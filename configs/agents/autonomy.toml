@@ -1,0 +1,50 @@
+# DOTS agent autonomy / recovery policy (v1.6 Phase 5).
+# Autonomy NEVER overrides sandbox, budget, credentials, or unsafe-host gates.
+
+version = 1
+policy_version = 1
+
+[autonomy]
+# manual | guarded | auto — guarded is the release default
+default_mode = "guarded"
+
+[bounds]
+max_transient_retries = 2
+max_local_replans = 2
+max_expert_escalations = 2
+max_team_reroutes = 1
+max_identical_fingerprints = 3
+backoff_base_seconds = 1.0
+backoff_max_seconds = 30.0
+
+[recovery]
+# Ordered ladder — each step bounded by [bounds]
+ladder = [
+  "transient_retry",
+  "local_replan",
+  "remote_expert",
+  "team_reroute",
+  "human_attention",
+]
+
+[forbidden]
+# Automation must never perform these without human
+increase_budget = true
+disable_sandbox = true
+switch_to_unsafe_host = true
+read_protected_secrets = true
+broaden_filesystem = true
+broaden_network = true
+run_sudo = true
+git_push = true
+git_force_push = true
+external_deploy = true
+
+[progress]
+# Structural no-progress: same fingerprint + no verification delta
+require_verification_delta = true
+min_iterations_before_stuck = 2
+
+[idempotency]
+# Crash after possible send / before persist → reconcile, do not rebill blindly
+unknown_billable_state = "RECONCILIATION_REQUIRED"

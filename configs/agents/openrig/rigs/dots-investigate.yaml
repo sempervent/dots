@@ -1,0 +1,40 @@
+# DOTS investigate — lead + investigator + builder for hard debugging.
+version: "0.2"
+name: dots-investigate
+summary: Debugging team — read-only investigation then bounded fix.
+
+startup:
+  files: []
+  actions: []
+
+pods:
+  - id: team
+    label: Investigate
+    members:
+      - id: lead
+        agent_ref: "local:agents/lead"
+        profile: default
+        runtime: pi
+        cwd: "."
+      - id: investigator
+        agent_ref: "local:agents/investigator"
+        profile: default
+        runtime: pi
+        cwd: "."
+      - id: builder
+        agent_ref: "local:agents/builder"
+        profile: default
+        runtime: pi
+        cwd: "."
+    edges:
+      - from: lead
+        to: investigator
+        kind: delegates_to
+      - from: lead
+        to: builder
+        kind: delegates_to
+      - from: investigator
+        to: builder
+        kind: can_observe
+
+edges: []

@@ -1,0 +1,30 @@
+# LiteLLM proxy config for DOTS agent harness (Phase 1).
+# Secrets come from the environment — never commit keys.
+#
+# Naming (verified against LiteLLM OpenRouter docs):
+#   model: openrouter/<provider>/<model>
+#
+# DOTS-side hard session budget is authoritative for Phase 1.
+# LiteLLM spend logs are telemetry only (no DB-backed budget gate required here).
+
+model_list:
+  - model_name: dots/local
+    litellm_params:
+      model: openai/dots-local
+      api_base: os.environ/DOTS_LOCAL_API_BASE
+      api_key: os.environ/DOTS_LOCAL_API_KEY
+
+  # Pass-through: clients request openrouter/<provider>/<model>
+  - model_name: openrouter/*
+    litellm_params:
+      model: openrouter/*
+      api_key: os.environ/OPENROUTER_API_KEY
+
+litellm_settings:
+  drop_params: true
+  set_verbose: false
+  # Prefer cheapest provider when OpenRouter offers multiple
+  # (also pass provider.sort=price from consult_expert when supported)
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY

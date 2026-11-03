@@ -10,4 +10,4 @@ Supergroups expand to member component ids before install.
 
 | id | label | members | description |
 | --- | --- | --- | --- |
-| ai | AI applications | hermes, ollama, llamacpp, drawthings, opencode, codex, cursor, fluidvoice, lsp | Local runtimes, coding agents, and the LSP toolchain for this platform |
+| ai | AI applications | hermes, ollama, llamacpp, drawthings, opencode, codex, cursor, fluidvoice, lsp, pi, litellm, agent-sandbox, openrig | Local runtimes, coding agents, and the LSP toolchain for this platform |

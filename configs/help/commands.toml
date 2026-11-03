@@ -61,10 +61,69 @@ usage = "dots ai [status|doctor|up|down|…]"
 category = "ai"
 description = "AI inference server (Compose + Open WebUI) control plane."
 mutating = true
-related = ["models", "setup", "help"]
+related = ["models", "setup", "help", "agent"]
 [[commands.examples]]
 command = "dots ai status"
 description = "Show AI server stack status."
+
+[[commands]]
+name = "agent"
+usage = "dots agent [status|doctor|sandbox|models|scout|eval|team|run|…]"
+category = "ai"
+description = "Local-first agent harness (Pi, OpenRig, evals, guarded autonomy)."
+mutating = true
+related = ["ai", "models", "setup", "help"]
+[[commands.examples]]
+command = "dots agent status"
+description = "Show local executor, gateway, sandbox, autonomy, and budget policy."
+[[commands.examples]]
+command = "dots agent doctor"
+description = "Read-only harness diagnostics including sandbox FAIL/WARN/OK."
+[[commands.examples]]
+command = "dots agent sandbox status"
+description = "Sandbox provider, OS backends, and MCP allowlist."
+[[commands.examples]]
+command = "dots agent scout --task debugging --language rust --tools --quality strong"
+description = "Select model by expected cost-to-success when empirical evidence exists."
+[[commands.examples]]
+command = "dots agent route --task debugging --language python --quality strong --simulate"
+description = "Inspect evidence-based routing without inference."
+[[commands.examples]]
+command = "dots agent eval list"
+description = "List deterministic eval tasks."
+[[commands.examples]]
+command = "dots agent eval run --local --suite smoke"
+description = "Run smoke evals against the configured local model (oracle/mock in CI)."
+[[commands.examples]]
+command = "dots agent eval results"
+description = "Summarize empirical pass rates with Wilson lower bounds."
+[[commands.examples]]
+command = "dots agent team up dots-triad --project . --dry-run"
+description = "Plan an OpenRig triad (no mutation)."
+[[commands.examples]]
+command = "dots agent team status"
+description = "OpenRig daemon/terminal/budget/policy status."
+[[commands.examples]]
+command = "dots agent run --task-class debugging \"Diagnose and fix the failing test.\""
+description = "Safe sandboxed run (default); use --unsafe-host to bypass."
+[[commands.examples]]
+command = "dots agent failures"
+description = "List structural failure fingerprints from local ledgers."
+[[commands.examples]]
+command = "dots agent metrics"
+description = "Aggregate local run/outcome/recovery metrics."
+[[commands.examples]]
+command = "dots agent replay RUN_ID"
+description = "Offline policy replay (zero network, mutations, or billable calls)."
+[[commands.examples]]
+command = "dots agent worktrees"
+description = "List isolated agent worktrees."
+[[commands.examples]]
+command = "dots agent mcp status"
+description = "Trusted MCP allowlist for safe runs."
+[[commands.examples]]
+command = "dots agent costs"
+description = "Show DOTS-recorded spend from the local ledger."
 
 [[commands]]
 name = "packages"

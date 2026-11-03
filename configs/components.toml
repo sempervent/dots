@@ -182,6 +182,46 @@ platforms = ["darwin", "linux"]
 brewfile = "brew/Brewfile.ai-server"
 description = "Server stack: llama.cpp (llama-server) + Open WebUI via Docker Compose (opt-in models)"
 
+[[components]]
+id = "pi"
+label = "Pi Coding Agent"
+category = "ai_client"
+cloud = false
+local_ai = true
+platforms = ["darwin", "linux"]
+brewfile = "brew/Brewfile.pi"
+description = "Programmable coding-agent runtime for DOTS local-first agent orchestration (npm; Node ≥22.19)"
+
+[[components]]
+id = "litellm"
+label = "LiteLLM Gateway"
+category = "ai_gateway"
+cloud = false
+local_ai = true
+platforms = ["darwin", "linux"]
+brewfile = "brew/Brewfile.litellm"
+description = "Unified model gateway for local and remote agent inference (localhost Compose; OpenRouter via env)"
+
+[[components]]
+id = "agent-sandbox"
+label = "Agent Sandbox"
+category = "agent_security"
+cloud = false
+local_ai = false
+platforms = ["darwin", "linux"]
+brewfile = "brew/Brewfile.agent-sandbox"
+description = "Filesystem/network policy and OS-level command sandbox for DOTS agents (provider: pi-sandbox)"
+
+[[components]]
+id = "openrig"
+label = "OpenRig"
+category = "agent_orchestration"
+cloud = false
+local_ai = true
+platforms = ["darwin", "linux"]
+brewfile = "brew/Brewfile.openrig"
+description = "Persistent multi-agent orchestration for Pi, Codex and other coding runtimes (npm @openrig/cli; Node ≥22)"
+
 # Declarative selector aggregates. Expand to member component ids before install.
 # Nested groups are not supported in v1.0.1.
 [[supergroups]]
@@ -198,4 +238,8 @@ members = [
   "cursor",
   "fluidvoice",
   "lsp",
+  "pi",
+  "litellm",
+  "agent-sandbox",
+  "openrig",
 ]

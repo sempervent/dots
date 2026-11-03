@@ -1,0 +1,21 @@
+# DOTS-owned MCP server trust metadata (Phase 2).
+# Safe harness runs expose only servers listed under [agent.mcp].safe_servers
+# (see configs/agents/defaults.toml). Interactive `pi` keeps the user's MCP config.
+
+version = 1
+
+[[mcp_servers]]
+id = "dots-model-scout"
+trust = "read_only_network"
+filesystem = false
+shell = false
+billable = false
+description = "OpenRouter catalog metadata selection only"
+
+[[mcp_servers]]
+id = "dots-expert"
+trust = "billable_remote"
+filesystem = false
+shell = false
+billable = true
+description = "LiteLLM → OpenRouter consultation; no FS/shell"
