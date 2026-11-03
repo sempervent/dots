@@ -12,7 +12,7 @@ Registry-driven reference for optional components and supergroups. Do not invent
 
 | id | label | members | description |
 | --- | --- | --- | --- |
-| `ai` | AI applications | `hermes`, `ollama`, `llamacpp`, `drawthings`, `opencode`, `codex`, `cursor`, `fluidvoice`, `lsp`, `pi`, `litellm`, `agent-sandbox` | Local runtimes, coding agents, and the LSP toolchain for this platform |
+| `ai` | AI applications | `hermes`, `ollama`, `llamacpp`, `drawthings`, `opencode`, `codex`, `cursor`, `fluidvoice`, `lsp`, `pi`, `litellm`, `agent-sandbox`, `openrig` | Local runtimes, coding agents, and the LSP toolchain for this platform |
 
 ## Components
 
@@ -239,4 +239,14 @@ Filesystem/network policy and OS-level command sandbox for DOTS agents (provider
 - **brewfile:** `brew/Brewfile.agent-sandbox`
 - **formulae:** `ripgrep`
 - **activate:** `./dots setup --with agent-sandbox`
+
+### `openrig`
+
+Persistent multi-agent orchestration for Pi, Codex and other coding runtimes (npm @openrig/cli; Node ≥22)
+
+- **label:** OpenRig
+- **category:** agent_orchestration
+- **platforms:** darwin, linux
+- **brewfile:** `brew/Brewfile.openrig`
+- **activate:** `./dots setup --with openrig`
 

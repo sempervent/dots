@@ -82,5 +82,5 @@ fabricated as OpenRouter dollars.
 
 OpenRig queue is authoritative for task ownership/handoff. DOTS ledger remains
 authoritative for cost, routing, sandbox, verification. Triad review cycles are
-bounded (`max_review_rounds = 2`) then escalate to human — Phase 5 owns richer
-autonomous recovery.
+bounded (`max_review_rounds = 2`) then escalate; richer recovery is owned by
+[autonomy](autonomy.md) (Phase 5).

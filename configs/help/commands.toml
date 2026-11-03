@@ -68,14 +68,14 @@ description = "Show AI server stack status."
 
 [[commands]]
 name = "agent"
-usage = "dots agent [status|doctor|sandbox|models|scout|route|eval|team|run|worktrees|mcp|costs]"
+usage = "dots agent [status|doctor|sandbox|models|scout|route|eval|team|run|inspect|timeline|failures|attention|metrics|resume|replay|worktrees|mcp|costs]"
 category = "ai"
-description = "Local-first agent harness (sandboxed Pi + OpenRig teams + eval-driven scout + budgeted experts)."
+description = "Local-first agent harness (sandboxed Pi + OpenRig teams + eval routing + guarded autonomy + budgeted experts)."
 mutating = true
 related = ["ai", "models", "setup", "help"]
 [[commands.examples]]
 command = "dots agent status"
-description = "Show local executor, gateway, sandbox, and budget policy."
+description = "Show local executor, gateway, sandbox, autonomy, and budget policy."
 [[commands.examples]]
 command = "dots agent doctor"
 description = "Read-only harness diagnostics including sandbox FAIL/WARN/OK."
@@ -106,6 +106,15 @@ description = "OpenRig daemon/terminal/budget/policy status."
 [[commands.examples]]
 command = "dots agent run --task-class debugging \"Diagnose and fix the failing test.\""
 description = "Safe sandboxed run (default); use --unsafe-host to bypass."
+[[commands.examples]]
+command = "dots agent failures"
+description = "List structural failure fingerprints from local ledgers."
+[[commands.examples]]
+command = "dots agent metrics"
+description = "Aggregate local run/outcome/recovery metrics."
+[[commands.examples]]
+command = "dots agent replay RUN_ID"
+description = "Offline policy replay (zero network, mutations, or billable calls)."
 [[commands.examples]]
 command = "dots agent worktrees"
 description = "List isolated agent worktrees."

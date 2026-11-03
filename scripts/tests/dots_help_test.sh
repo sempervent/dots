@@ -103,13 +103,13 @@ out="$("${HELP}" --version 2>&1)" || {
 	bad "--version failed"
 	out=""
 }
-echo "${out}" | grep -Fq "DOTS 1.5.1" && ok "--version reports DOTS version" || bad "--version: ${out}"
+echo "${out}" | grep -Fq "DOTS 1.6.0" && ok "--version reports DOTS version" || bad "--version: ${out}"
 
 plain="$("${HELP}" --plain 2>&1)" || {
 	bad "--plain failed"
 	plain=""
 }
-echo "${plain}" | grep -q 'DOTS 1.5.1\|Overview\|OVERVIEW' && ok "--plain overview" || bad "--plain overview"
+echo "${plain}" | grep -q 'DOTS 1.6.0\|Overview\|OVERVIEW' && ok "--plain overview" || bad "--plain overview"
 echo "${plain}" | grep -qi 'home' && ok "--plain shows profile" || bad "--plain profile"
 printf '%s' "${plain}" | grep -q $'\x1b\[' && bad "--plain leaked ANSI under NO_COLOR" || ok "--plain no ANSI"
 

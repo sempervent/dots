@@ -1,4 +1,4 @@
-# Agent architecture (v1.6 Phase 1)
+# Agent architecture (v1.6)
 
 ## Vertical slice
 
@@ -42,13 +42,12 @@ local Pi applies advice + verifies
 | OS sandbox / worktrees / MCP trust | **implemented** (Phase 2) |
 | Eval-driven expected-cost routing | **implemented** (Phase 3; see [evals](evals.md), [model-scout](model-scout.md)) |
 | OpenRig multi-agent orchestration | **implemented** (Phase 4; see [openrig](openrig.md)) |
+| Guarded autonomy / recovery / resume / replay | **implemented** (Phase 5; see [autonomy](autonomy.md)) |
 
-## Deferred (Phase 5 + Final)
+## Stretch / Final
 
-- Automatic stuck detection / runtime escalation heuristics
-- Self-healing / recovery policy
-- Multi-model consensus
-- Full CI / release convergence
+- Multi-model consensus (stretch; not required for v1.6.0)
+- Full CI / release convergence (Final gate)
 
 See [v1.6-roadmap.md](v1.6-roadmap.md).
 

@@ -106,6 +106,7 @@ nav:
       - Model Scout: agents/model-scout.md
       - Evaluations: agents/evals.md
       - OpenRig teams: agents/openrig.md
+      - Autonomy / recovery: agents/autonomy.md
       - LiteLLM: agents/litellm.md
       - Models: agents/models.md
       - v1.6 roadmap: agents/v1.6-roadmap.md

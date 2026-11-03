@@ -30,3 +30,4 @@ Authoritative registry: `configs/components.toml`.
 | pi | Pi Coding Agent | ai_client | darwin, linux | brew/Brewfile.pi | no | Programmable coding-agent runtime for DOTS local-first agent orchestration (npm; Node ≥22.19) |
 | litellm | LiteLLM Gateway | ai_gateway | darwin, linux | brew/Brewfile.litellm | no | Unified model gateway for local and remote agent inference (localhost Compose; OpenRouter via env) |
 | agent-sandbox | Agent Sandbox | agent_security | darwin, linux | brew/Brewfile.agent-sandbox | no | Filesystem/network policy and OS-level command sandbox for DOTS agents (provider: pi-sandbox) |
+| openrig | OpenRig | agent_orchestration | darwin, linux | brew/Brewfile.openrig | no | Persistent multi-agent orchestration for Pi, Codex and other coding runtimes (npm @openrig/cli; Node ≥22) |

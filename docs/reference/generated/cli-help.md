@@ -11,7 +11,7 @@ Captured from safe `--help` / `help` invocations. If a binary is missing or help
 ## `./dots`
 
 ```text
-DOTS — machine environment manager  (v1.5.1)
+DOTS — machine environment manager  (v1.6.0)
 
 Usage:
   ./dots setup [options]            Interactive or noninteractive setup / reconfigure tow...
@@ -19,7 +19,7 @@ Usage:
   ./dots components [list|active|show ID] Inspect optional components and --with selectors.
   ./dots lsp [status|check|install|list] Language-server install, status, and checks.
   ./dots ai [status|doctor|up|down|…] AI inference server (Compose + Open WebUI) control pl...
-  ./dots agent [status|doctor|sandbox|models|scout|run|worktrees|mcp|costs] Local-first agent harness (sandboxed Pi + model-scout...
+  ./dots agent [status|doctor|sandbox|models|scout|route|eval|team|run|inspect|timeline|failures|attention|metrics|resume|replay|worktrees|mcp|costs] Local-first agent harness (sandboxed Pi + OpenRig tea...
   ./dots packages [groups|group|plan|status|explain|outdated|upgrade|adopt] Package ownership, drift, groups, and upgrades.
   ./dots backup [--name N]          Snapshot managed targets under ~/.local/state/dots/ba...
   ./dots backups                    List recoverable DOTS snapshots.
@@ -90,6 +90,7 @@ Selectors (--with / --without):
     pi           Programmable coding-agent runtime for DOTS local-first agent orchestration (npm; Node ≥22.19)
     litellm      Unified model gateway for local and remote agent inference (localhost Compose; OpenRouter via env)
     agent-sandbox Filesystem/network policy and OS-level command sandbox for DOTS agents (provider: pi-sandbox)
+    openrig      Persistent multi-agent orchestration for Pi, Codex and other coding runtimes (npm @openrig/cli; Node ≥22)
   Supergroups:
     ai           AI applications — Local runtimes, coding agents, and the LSP toolchain for this platform
   List: ./dots components list
@@ -148,6 +149,7 @@ Options:
                       pi           Programmable coding-agent runtime for DOTS local-first agent orchestration (npm; Node ≥22.19)
                       litellm      Unified model gateway for local and remote agent inference (localhost Compose; OpenRouter via env)
                       agent-sandbox Filesystem/network policy and OS-level command sandbox for DOTS agents (provider: pi-sandbox)
+                      openrig      Persistent multi-agent orchestration for Pi, Codex and other coding runtimes (npm @openrig/cli; Node ≥22)
                     Supergroups:
                       ai           AI applications — Local runtimes, coding agents, and the LSP toolchain for this platform
                     List: ./dots components list
