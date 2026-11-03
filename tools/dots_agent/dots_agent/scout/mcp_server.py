@@ -41,12 +41,28 @@ def find_model(
     quality_floor: str = "strong",
     max_cost_usd: float = 0.5,
 ) -> str:
-    """Select the cheapest OpenRouter model that meets structured requirements.
+    """Select the model with lowest expected cost-to-success when empirical evidence exists.
 
-    Queries MODEL METADATA only — does not send task text or source code to any model.
+    Falls back to curated quality + request-cost ranking. Queries MODEL METADATA
+    and local eval evidence only — does not send task text to any model.
     """
     cfg = load_config()
     cat = _catalog()
+    from dots_agent.evals.storage import EvalStore
+    from dots_agent.routing.evidence import load_empirical_evidence
+
+    store = EvalStore(cfg.evals_dir())
+
+    def evidence_lookup(model_id: str, task_class: str):
+        return load_empirical_evidence(
+            store,
+            model_id=model_id,
+            task_class=task_class,
+            minimum_attempts=cfg.evidence_minimum_attempts,
+            max_age_days=cfg.evidence_max_age_days,
+            wilson_z=cfg.wilson_z,
+        )
+
     req = Requirements(
         task_type=task_type,
         languages=list(languages or []),
@@ -64,6 +80,11 @@ def find_model(
         capabilities_path=cfg.capabilities_path(),
         max_candidates=cfg.max_candidates,
         provider_sort=cfg.provider_sort,
+        evidence_lookup=evidence_lookup,
+        quality_cfg=cfg.quality_floors(),
+        minimum_attempts=cfg.evidence_minimum_attempts,
+        preference=cfg.routing_preference,
+        routing_policy_version=cfg.routing_policy_version,
     )
     result["catalog"] = {
         "source": cat.source,

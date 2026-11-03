@@ -132,6 +132,58 @@ class AgentConfig:
         )
         return self.root / rel
 
+    def evals_dir(self) -> Path:
+        p = self.state_dir() / "evals"
+        p.mkdir(parents=True, exist_ok=True)
+        return p
+
+    def eval_registry_path(self) -> Path:
+        rel = self.raw.get("evals", {}).get(
+            "registry", "configs/agents/evals/registry.toml"
+        )
+        return self.root / rel
+
+    @property
+    def routing_policy_version(self) -> int:
+        return int(self.raw.get("routing", {}).get("policy_version", 1))
+
+    @property
+    def routing_preference(self) -> str:
+        return str(self.raw.get("routing", {}).get("preference", "economy"))
+
+    def quality_floors(self) -> dict[str, float]:
+        q = self.raw.get("routing", {}).get("quality") or {}
+        return {
+            "basic": float(q.get("basic", 0.40)),
+            "capable": float(q.get("capable", 0.60)),
+            "strong": float(q.get("strong", 0.80)),
+            "frontier": float(q.get("frontier", 0.90)),
+        }
+
+    @property
+    def evidence_minimum_attempts(self) -> int:
+        return int(self.raw.get("routing", {}).get("evidence", {}).get("minimum_attempts", 5))
+
+    @property
+    def evidence_max_age_days(self) -> float:
+        return float(self.raw.get("routing", {}).get("evidence", {}).get("max_age_days", 90))
+
+    @property
+    def wilson_z(self) -> float:
+        return float(self.raw.get("routing", {}).get("evidence", {}).get("wilson_z", 1.96))
+
+    @property
+    def eval_default_suite(self) -> str:
+        return str(self.raw.get("evals", {}).get("default_suite", "standard"))
+
+    @property
+    def eval_default_local_runs(self) -> int:
+        return int(self.raw.get("evals", {}).get("default_local_runs", 3))
+
+    @property
+    def eval_default_remote_runs(self) -> int:
+        return int(self.raw.get("evals", {}).get("default_remote_runs", 1))
+
 
 def load_config(root: Path | None = None) -> AgentConfig:
     root = root or dots_root()
