@@ -57,11 +57,11 @@ echo "=== package state classification (mocked prefixes) ==="
 fake_node_root="${TMP}/fnm/node-versions/v22.11.0/installation"
 mkdir -p "${fake_node_root}/bin" "${fake_node_root}/lib/node_modules"
 cat >"${fake_node_root}/bin/node" <<'EOF'
-#!/bin/sh
+#!/usr/bin/env bash
 echo v22.11.0
 EOF
 cat >"${fake_node_root}/bin/npm" <<'EOF'
-#!/bin/sh
+#!/usr/bin/env bash
 case "$1" in
   --version) echo 10.9.0 ;;
   prefix) [[ "$2" == "-g" ]] && echo "$(cd "$(dirname "$0")/.." && pwd)" ;;
@@ -78,7 +78,7 @@ unset DRY_RUN
 rm -f "${fake_node_root}/bin/rig"
 # override npm list to empty
 cat >"${fake_node_root}/bin/npm" <<'EOF'
-#!/bin/sh
+#!/usr/bin/env bash
 case "$1" in
   --version) echo 10.9.0 ;;
   prefix) [[ "$2" == "-g" ]] && echo "$(cd "$(dirname "$0")/.." && pwd)" ;;
@@ -93,7 +93,7 @@ state="$(dots_openrig_package_state)"
 
 # INSTALLED_COMPATIBLE
 cat >"${fake_node_root}/bin/npm" <<'EOF'
-#!/bin/sh
+#!/usr/bin/env bash
 case "$1" in
   --version) echo 10.9.0 ;;
   prefix) [[ "$2" == "-g" ]] && echo "$(cd "$(dirname "$0")/.." && pwd)" ;;
@@ -104,7 +104,7 @@ esac
 EOF
 chmod +x "${fake_node_root}/bin/npm"
 cat >"${fake_node_root}/bin/rig" <<'EOF'
-#!/bin/sh
+#!/usr/bin/env bash
 echo "0.7.7 (deadbeef)"
 EOF
 chmod +x "${fake_node_root}/bin/rig"
@@ -114,13 +114,13 @@ state="$(dots_openrig_package_state)"
 # Stale PATH: rig elsewhere should be WRONG_PREFIX when npm list empty but foreign rig exists
 mkdir -p "${TMP}/stale/bin"
 cat >"${TMP}/stale/bin/rig" <<'EOF'
-#!/bin/sh
+#!/usr/bin/env bash
 echo "0.6.0-stale"
 EOF
 chmod +x "${TMP}/stale/bin/rig"
 rm -f "${fake_node_root}/bin/rig"
 cat >"${fake_node_root}/bin/npm" <<'EOF'
-#!/bin/sh
+#!/usr/bin/env bash
 case "$1" in
   --version) echo 10.9.0 ;;
   prefix) [[ "$2" == "-g" ]] && echo "$(cd "$(dirname "$0")/.." && pwd)" ;;
@@ -152,7 +152,7 @@ fi
 # Wrong npm: put foreign npm earlier than node dir
 mkdir -p "${TMP}/foreign/bin" "${TMP}/npm-only/bin"
 cat >"${TMP}/npm-only/bin/npm" <<'EOF'
-#!/bin/sh
+#!/usr/bin/env bash
 case "$1" in
   --version) echo 9.0.0 ;;
   prefix) echo /usr/local ;;
@@ -173,7 +173,7 @@ mkdir -p "${fake_node_root}/lib/node_modules/@openrig/cli/scripts"
 echo 'console.log("abi-ok")' >"${fake_node_root}/lib/node_modules/@openrig/cli/scripts/check-abi.mjs"
 # Fix npm root/prefix for this layout
 cat >"${fake_node_root}/bin/npm" <<'EOF'
-#!/bin/sh
+#!/usr/bin/env bash
 case "$1" in
   --version) echo 10.9.0 ;;
   prefix)
@@ -208,7 +208,7 @@ export PATH="${fake_node_root}/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bi
 # Provide a fake fnm so doctor classifies Node
 mkdir -p "${TMP}/fnmbin"
 cat >"${TMP}/fnmbin/fnm" <<'EOF'
-#!/bin/sh
+#!/usr/bin/env bash
 echo "fnm 1.0.0-test"
 EOF
 chmod +x "${TMP}/fnmbin/fnm"
@@ -217,7 +217,7 @@ export PATH="${TMP}/fnmbin:${fake_node_root}/bin:/opt/homebrew/bin:/usr/local/bi
 mkdir -p "${fake_node_root}/lib/node_modules/@openrig/cli/scripts"
 echo 'process.exit(0)' >"${fake_node_root}/lib/node_modules/@openrig/cli/scripts/check-abi.mjs"
 cat >"${fake_node_root}/bin/rig" <<'EOF'
-#!/bin/sh
+#!/usr/bin/env bash
 case "$1" in
   --version) echo "0.7.7 (test)" ;;
   --help) exit 0 ;;
@@ -227,7 +227,7 @@ EOF
 chmod +x "${fake_node_root}/bin/rig"
 # node -e for ABI: our fake node only prints version — make it exec scripts
 cat >"${fake_node_root}/bin/node" <<'EOF'
-#!/bin/sh
+#!/usr/bin/env bash
 if [[ "${1:-}" == "-v" || "${1:-}" == "--version" ]]; then
   echo v22.11.0
   exit 0
