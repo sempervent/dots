@@ -1,11 +1,13 @@
 # Agent Harness
 
-DOTS local-first agent orchestration (v1.6):
+DOTS local-first agent orchestration:
 
 ```text
 OpenRig team → Pi seats (sandboxed) → eval routing → guarded autonomy
   → LiteLLM experts → verify → resume/replay/observe
 ```
+
+Overview: `docs/agents/architecture.md`. Diagrams: `docs/agents/diagrams.md`.
 
 ## Commands
 

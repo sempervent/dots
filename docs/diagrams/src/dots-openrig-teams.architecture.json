@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "OpenRig Teams Ownership",
+    "output": "docs/diagrams/dots-openrig-teams.html",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "dots-owns",
+        "label": "DOTS owns safety",
+        "focus": ["cli", "templates", "sandbox", "tmux"],
+        "note": "DOTS keeps install, trust, budgets, and seat projection."
+      },
+      {
+        "id": "openrig-owns",
+        "label": "OpenRig owns orchestration",
+        "focus": ["daemon", "queue", "seats", "snapshots"],
+        "note": "OpenRig runs the daemon, queue, seat lifecycle, and snapshots."
+      },
+      {
+        "id": "seat-path",
+        "label": "Seat into Pi",
+        "focus": ["templates", "seats", "sandbox", "pi"],
+        "note": "Projected seats still execute as sandboxed Pi workers."
+      }
+    ]
+  },
+  "components": [
+    { "id": "cli", "type": "frontend", "label": "dots agent team", "sublabel": "up / doctor", "pos": [40, 240], "size": [140, 56], "tag": "DOTS" },
+    { "id": "templates", "type": "backend", "label": "Templates", "sublabel": "pair / triad", "pos": [230, 140], "size": [124, 56], "tag": "DOTS" },
+    { "id": "sandbox", "type": "security", "label": "Sandbox", "sublabel": "budget wrap", "pos": [230, 340], "size": [124, 56], "tag": "DOTS" },
+    { "id": "tmux", "type": "frontend", "label": "Herdr/tmux", "sublabel": "DOTS fragment", "pos": [40, 100], "size": [140, 56], "tag": "DOTS" },
+    { "id": "daemon", "type": "backend", "label": "Daemon", "sublabel": "OpenRig kernel", "pos": [430, 240], "size": [124, 56], "tag": "OpenRig" },
+    { "id": "queue", "type": "messagebus", "label": "Queue", "sublabel": "dispatch", "pos": [610, 140], "size": [120, 56], "tag": "OpenRig" },
+    { "id": "seats", "type": "cloud", "label": "Seats", "sublabel": "workers", "pos": [610, 340], "size": [120, 56], "tag": "OpenRig" },
+    { "id": "snapshots", "type": "database", "label": "Snapshots", "sublabel": "restore", "pos": [790, 240], "size": [120, 56], "tag": "OpenRig" },
+    { "id": "pi", "type": "backend", "label": "Pi Seat", "sublabel": "sandboxed", "pos": [790, 380], "size": [120, 56], "tag": "shared" }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "DOTS ownership", "wraps": ["cli", "templates", "sandbox", "tmux"], "pad": 16 },
+    { "kind": "region", "label": "OpenRig ownership", "wraps": ["daemon", "queue", "seats", "snapshots"], "pad": 16 },
+    { "kind": "security-group", "label": "execution still DOTS-bounded", "wraps": ["sandbox", "pi"], "pad": 12 }
+  ],
+  "connections": [
+    { "id": "cli-templates", "from": "cli", "to": "templates", "label": "project", "variant": "emphasis", "fromSide": "top", "toSide": "left" },
+    { "id": "cli-sandbox", "from": "cli", "to": "sandbox", "label": "policy", "variant": "security", "fromSide": "bottom", "toSide": "left" },
+    { "id": "cli-daemon", "from": "cli", "to": "daemon", "label": "orchestrate" },
+    { "id": "tmux-cli", "from": "tmux", "to": "cli", "fromSide": "bottom", "toSide": "top" },
+    { "id": "templates-daemon", "from": "templates", "to": "daemon" },
+    { "id": "daemon-queue", "from": "daemon", "to": "queue", "label": "enqueue", "fromSide": "top", "toSide": "left" },
+    { "id": "daemon-seats", "from": "daemon", "to": "seats", "label": "lifecycle", "fromSide": "bottom", "toSide": "left" },
+    { "id": "seats-pi", "from": "seats", "to": "pi", "label": "run" },
+    { "id": "sandbox-pi", "from": "sandbox", "to": "pi", "label": "wrap", "variant": "security", "labelDy": 24 },
+    { "id": "daemon-snap", "from": "daemon", "to": "snapshots", "variant": "dashed", "fromSide": "right", "toSide": "left" },
+    { "id": "queue-snap", "from": "queue", "to": "snapshots", "label": "record", "variant": "dashed", "fromSide": "right", "toSide": "top" }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "DOTS keeps the keys",
+      "items": [
+        "Install, sandbox, budgets, and seat templates stay DOTS-owned",
+        "DOTS never runs rig setup or sources nvm"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "OpenRig coordinates",
+      "items": [
+        "Daemon, queue, seats, and snapshots are OpenRig concerns",
+        "Herdr/tmux views remain DOTS-managed fragments"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Seats are still sandboxed",
+      "items": [
+        "Projected workers execute through Pi under DOTS trust rules",
+        "Team spend still hits DOTS budget controls"
+      ]
+    }
+  ]
+}

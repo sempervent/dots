@@ -1,6 +1,6 @@
 # GENERATED — DO NOT EDIT. Source: configs/help/commands.toml
 # Generator: scripts/docs/generate_usage.py
-DOTS — machine environment manager  (v1.6.1)
+DOTS — machine environment manager  (v1.6.2)
 
 Usage:
   ./dots setup [options]            Interactive or noninteractive setup / reconfigure tow...
