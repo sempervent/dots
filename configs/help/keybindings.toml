@@ -1,0 +1,74 @@
+# configs/help/keybindings.toml — intended DOTS interactive bindings
+#
+# Metadata describes intended state. Runtime diagnostics (./dots shell status)
+# verify actual ownership. Do not treat this file as proof a binding is active.
+
+version = 1
+
+[[bindings]]
+key = "Ctrl-R"
+context = "shell"
+feature = "history"
+description = "Fuzzy history search"
+requires = ["fzf|atuin"]
+expected_zsh = ["atuin-search", "fzf-history-widget"]
+
+[[bindings]]
+key = "Ctrl-T"
+context = "shell"
+feature = "files"
+description = "Fuzzy file path insertion"
+requires = ["fzf"]
+expected_zsh = ["fzf-file-widget"]
+
+[[bindings]]
+key = "Alt-C"
+context = "shell"
+feature = "directories"
+description = "Fuzzy directory jump"
+requires = ["fzf"]
+expected_zsh = ["fzf-cd-widget"]
+
+[[bindings]]
+key = "Tab"
+context = "zsh"
+feature = "completion"
+description = "Contextual fuzzy completion (fzf-tab over compsys)"
+requires = ["fzf-tab", "zsh"]
+expected_zsh = ["fzf-tab-complete"]
+
+[[bindings]]
+key = "**<Tab>"
+context = "shell"
+feature = "recursive-files"
+description = "Explicit recursive fzf filesystem completion"
+requires = ["fzf"]
+
+[[bindings]]
+key = "Ctrl-Space"
+context = "zsh-viins"
+feature = "autosuggest"
+description = "Accept zsh-autosuggestions ghost text"
+requires = ["zsh-autosuggestions"]
+expected_zsh = ["autosuggest-accept"]
+
+[[bindings]]
+key = "Ctrl-Y"
+context = "fzf-tab"
+feature = "multi-select"
+description = "Toggle multi-select inside fzf-tab UI"
+requires = ["fzf-tab"]
+
+[[bindings]]
+key = "Ctrl-Space"
+context = "tmux"
+feature = "prefix"
+description = "tmux prefix (when DOTS_MULTIPLEXER=tmux)"
+requires = ["tmux"]
+
+[[bindings]]
+key = "Ctrl-A"
+context = "herdr"
+feature = "prefix"
+description = "Herdr prefix (when DOTS_MULTIPLEXER=herdr)"
+requires = ["herdr"]

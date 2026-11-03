@@ -135,6 +135,7 @@ class DotsHelpApp(App[None]):
         Binding("q", "quit", "Quit"),
         Binding("slash", "search", "Search", key_display="/"),
         Binding("question_mark", "keys", "Keys", key_display="?"),
+        Binding("c", "cheatsheet", "Cheat sheet"),
         Binding("ctrl+p", "palette", "Palette"),
         Binding("g", "top", "Top"),
         Binding("G", "bottom", "Bottom"),
@@ -165,6 +166,8 @@ class DotsHelpApp(App[None]):
         yield Static(self._status_line(), id="status")
         yield Footer()
 
+    # status line already documents / ? q; Footer shows c for cheat sheet
+
     def on_mount(self) -> None:
         self._select_topic(self.current_id)
         # Highlight matching list item
@@ -178,7 +181,7 @@ class DotsHelpApp(App[None]):
         st = self.state
         return (
             f"Profile: {st.profile or '—'}   Host: {st.host}   Shell: {st.shell}   "
-            f"/ search   ? keys   Enter open   q quit"
+            f"/ search   c cheat   ? keys   q quit"
         )
 
     def _select_topic(self, topic_id: str) -> None:
@@ -209,6 +212,13 @@ class DotsHelpApp(App[None]):
 
     def action_keys(self) -> None:
         self._select_topic("keybindings")
+
+    def action_cheatsheet(self) -> None:
+        from .cheatsheet import render_cheatsheet
+
+        md = self.query_one("#content", Markdown)
+        md.update(render_cheatsheet(self.state, self.reg, markdown=True))
+        self.current_id = "cheatsheet"
 
     def action_palette(self) -> None:
         self.action_command_palette()

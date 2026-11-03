@@ -366,6 +366,31 @@ def profiles_dynamic(reg: Registry, st: MachineState) -> str:
     return base.rstrip() + "\n" + "\n".join(lines)
 
 
+def shell_dynamic(reg: Registry, st: MachineState) -> str:
+    base = read_topic_body(reg, {"body": "docs/help/shell.md"})
+    extra = "\n".join(
+        [
+            "",
+            "## Diagnostics on this host",
+            "",
+            f"- Shell: `{st.shell}`",
+            f"- Multiplexer: `{st.multiplexer or '(unset)'}`",
+            f"- fzf: {st.mark(st.fzf)}",
+            f"- fd: {st.mark(st.fd)}",
+            f"- fzf-tab: {st.mark(st.fzf_tab)}",
+            "",
+            "```bash",
+            "./dots shell status",
+            "./dots shell keys",
+            "./dots shell startup",
+            "./dots completion status",
+            "```",
+            "",
+        ]
+    )
+    return base.rstrip() + "\n" + extra
+
+
 def backup_dynamic(reg: Registry, st: MachineState) -> str:
     base = read_topic_body(reg, {"body": "docs/help/backup.md"})
     extra = "\n".join(
@@ -401,6 +426,7 @@ DYNAMIC = {
     "skills": skills_dynamic,
     "profiles": profiles_dynamic,
     "backup": backup_dynamic,
+    "shell": shell_dynamic,
 }
 
 

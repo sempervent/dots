@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import difflib
 import os
 import sys
 
@@ -33,9 +34,16 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("topic", nargs="?", help="Topic id (e.g. completion, packages, backup)")
     p.add_argument("--plain", action="store_true", help="Plain text (no TUI)")
     p.add_argument("--search", metavar="QUERY", help="Search topics/commands/components")
+    p.add_argument("--cheatsheet", action="store_true", help="Machine-specific cheat sheet")
+    p.add_argument("--markdown", action="store_true", help="Markdown output (with --cheatsheet)")
     p.add_argument("--version", action="store_true", help="Print DOTS version")
     p.add_argument("--list-topics", action="store_true", help="List topic ids")
     return p
+
+
+def _suggest_topic(reg, needle: str) -> list[str]:
+    ids = [str(t.get("id") or "") for t in reg.topic_rows() if t.get("id")]
+    return difflib.get_close_matches(needle, ids, n=3, cutoff=0.6)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -43,6 +51,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
+    from .cheatsheet import render_cheatsheet
     from .registry import Registry
     from .render import render_plain
     from .state import gather_state
@@ -56,6 +65,25 @@ def main(argv: list[str] | None = None) -> int:
         for t in reg.topic_rows():
             print(f"{t.get('id')}\t{t.get('title')}")
         return 0
+
+    if args.cheatsheet:
+        text = render_cheatsheet(gather_state(reg), reg, markdown=args.markdown)
+        sys.stdout.write(text if text.endswith("\n") else text + "\n")
+        return 0
+
+    if args.topic:
+        known = {str(t.get("id")) for t in reg.topic_rows()}
+        if args.topic not in known:
+            print(f"Unknown help topic: {args.topic}", file=sys.stderr)
+            hits = _suggest_topic(reg, args.topic)
+            if hits:
+                print("Did you mean:", file=sys.stderr)
+                for h in hits:
+                    print(f"  {h}", file=sys.stderr)
+            print("Help: dots-help --list-topics", file=sys.stderr)
+            # Still show closest or overview in plain if --plain
+            if not args.plain and _can_textual():
+                return 1
 
     force_plain = args.plain or args.search or (not _can_textual())
     if force_plain:

@@ -24,21 +24,21 @@ id = "shell"
 title = "Shell & Prompt"
 body = "docs/help/shell.md"
 order = 30
-keywords = ["shell", "zsh", "bash", "starship", "prompt", "oh-my-zsh"]
+keywords = ["shell", "zsh", "bash", "starship", "prompt", "oh-my-zsh", "startup", "diagnose", "broken", "doctor"]
 
 [[topics]]
 id = "completion"
 title = "Fuzzy Completion"
 body = "docs/help/completion.md"
 order = 40
-keywords = ["completion", "fzf", "fzf-tab", "tab", "autocomplete", "ctrl-r", "ctrl-t", "fuzzy"]
+keywords = ["completion", "fzf", "fzf-tab", "tab", "autocomplete", "ctrl-r", "ctrl-t", "fuzzy", "compsys"]
 
 [[topics]]
 id = "keybindings"
 title = "Keybindings"
 body = "docs/help/keybindings.md"
 order = 50
-keywords = ["keys", "keybindings", "shortcuts", "ctrl-space", "tmux", "herdr", "prefix"]
+keywords = ["keys", "keybindings", "shortcuts", "keyboard", "bindings", "ctrl-space", "tmux", "herdr", "prefix"]
 
 [[topics]]
 id = "profiles"
@@ -108,7 +108,7 @@ id = "diagnostics"
 title = "Diagnostics"
 body = "docs/help/diagnostics.md"
 order = 150
-keywords = ["check", "status", "doctor", "health", "diagnostics"]
+keywords = ["check", "status", "doctor", "health", "diagnostics", "diagnose", "broken", "verify"]
 
 [[topics]]
 id = "update"
