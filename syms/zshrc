@@ -75,6 +75,10 @@ fi
 
 # fzf + fzf-tab config BEFORE tools so Atuin can own Ctrl-R afterward {{{1
 [[ -f "${DOTS_DIR}/zsh/fzf.zsh" ]] && source "${DOTS_DIR}/zsh/fzf.zsh"
+# Final DOTS key policy AFTER plugins + fzf-tab (Ctrl-] autosuggest; release Ctrl-Space)
+if typeset -f dots_bind_keybindings >/dev/null 2>&1; then
+  dots_bind_keybindings
+fi
 # 1}}}
 
 # ./dots CLI completion (topics for `dots help <Tab>`) {{{1

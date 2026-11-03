@@ -46,9 +46,14 @@ def render_cheatsheet(st: MachineState | None = None, reg: Registry | None = Non
     if st.shell == "zsh":
         bullet("Tab             contextual fuzzy completion")
         bullet("**<Tab>         recursive fuzzy file completion")
-        bullet("Ctrl-Space      accept autosuggestion")
+        bullet("Ctrl-]          accept autosuggestion")
     else:
         bullet("**<Tab>         recursive fuzzy file completion (Bash fzf)")
+    lines.append("")
+
+    h("Multiplexers")
+    bullet("Ctrl-Space      tmux prefix (reserved)")
+    bullet("Ctrl-A          Herdr prefix (reserved)")
     lines.append("")
 
     h("DOTS")

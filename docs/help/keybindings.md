@@ -1,17 +1,29 @@
 # Keybindings
 
-Curated DOTS bindings (do not invent others).
+Authoritative intended map (see `configs/help/keybindings.toml`). Runtime
+ownership is verified by `./dots shell status`.
 
 | Key | Context | Action |
 |-----|---------|--------|
-| Ctrl-R | Zsh/Bash | Fuzzy history (Atuin or fzf) |
-| Ctrl-T | Zsh/Bash | fzf file insert |
-| Alt-C | Zsh/Bash | fzf directory jump |
-| Tab | Zsh | fzf-tab contextual completion |
-| Ctrl-Space | Zsh insert | Accept autosuggestion |
-| Ctrl-Space | tmux | Prefix (when tmux is the multiplexer) |
-| Ctrl-Y | fzf-tab UI | Multi-select toggle |
-| Esc / h j k l | Zsh vi | Vi command-mode navigation |
+| Ctrl-Space | tmux | Prefix (**reserved** — never shell) |
+| Ctrl-A | Herdr | Prefix (**reserved** — never a global shell shortcut) |
+| Ctrl-R | shell | Fuzzy history (Atuin when installed, else fzf) |
+| Ctrl-T | shell | Fuzzy file insertion |
+| Alt-C | shell | Fuzzy directory jump |
+| Tab | Zsh | Contextual fuzzy completion (fzf-tab) |
+| **\<Tab\> | shell | Recursive fzf filesystem completion |
+| Ctrl-] | Zsh vi insert | Accept autosuggestion |
+| Ctrl-Y | fzf-tab UI | Toggle multi-select |
 
-Herdr uses its own prefix from `~/.config/herdr/config.toml` when selected —
-check that file rather than assuming tmux bindings.
+## Invariants
+
+- **Ctrl-Space** belongs exclusively to tmux.
+- **Ctrl-A** belongs exclusively to Herdr.
+- Shell features must not compete with those prefixes.
+
+Diagnose:
+
+```bash
+./dots shell status
+./dots shell keys
+```

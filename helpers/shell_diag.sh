@@ -68,8 +68,11 @@ bindkey "^R" 2>/dev/null | head -1
 bindkey "^T" 2>/dev/null | head -1
 bindkey -M viins "^I" 2>/dev/null | head -1
 bindkey "^I" 2>/dev/null | head -1
+bindkey -M viins "^]" 2>/dev/null | head -1
+bindkey "^]" 2>/dev/null | head -1
 bindkey -M viins "^ " 2>/dev/null | head -1
 bindkey "^ " 2>/dev/null | head -1
+bindkey "^@" 2>/dev/null | head -1
 typeset -f fzf-file-widget >/dev/null && echo FZF_FILE_OK
 typeset -f fzf-cd-widget >/dev/null && echo FZF_CD_OK
 [[ -n ${STARSHIP_SHELL:-} ]] && echo STARSHIP_OK
@@ -132,7 +135,7 @@ dots_shell_status() {
 	tab_owner="unknown"
 	hist_owner="unknown"
 	file_owner="unknown"
-	space_owner="unknown"
+	as_owner="unknown"
 
 	if command -v zsh >/dev/null 2>&1; then
 		probe="$(dots_shell_zsh_bind_probe || true)"
@@ -145,13 +148,13 @@ dots_shell_status() {
 		echo "prompt             ${prompt_owner}"
 		echo "completion         Zsh compsys"
 
-		local r_line t_line i_line sp_line
+		local r_line t_line i_line as_line sp_line
 		r_line="$(echo "${probe}" | sed -n '1p')"
 		t_line="$(echo "${probe}" | sed -n '2p')"
 		i_line="$(echo "${probe}" | sed -n '3p')"
 		[[ -z ${i_line} || ${i_line} == *"undefined"* ]] && i_line="$(echo "${probe}" | sed -n '4p')"
-		sp_line="$(echo "${probe}" | sed -n '5p')"
-		[[ -z ${sp_line} || ${sp_line} == *"undefined"* ]] && sp_line="$(echo "${probe}" | sed -n '6p')"
+		as_line="$(echo "${probe}" | sed -n '5p')"
+		[[ -z ${as_line} || ${as_line} == *"undefined"* ]] && as_line="$(echo "${probe}" | sed -n '6p')"
 
 		if echo "${r_line}" | grep -Eq 'atuin'; then
 			hist_owner="Atuin"
@@ -177,12 +180,12 @@ dots_shell_status() {
 			file_owner="${t_line:-missing}"
 		fi
 
-		if echo "${sp_line}" | grep -Eq 'autosuggest-accept'; then
-			space_owner="autosuggest-accept"
-		elif [[ -z ${sp_line} || ${sp_line} == *"undefined"* ]]; then
-			space_owner="unavailable"
+		if echo "${as_line}" | grep -Eq 'autosuggest-accept'; then
+			as_owner="autosuggest-accept"
+		elif [[ -z ${as_line} || ${as_line} == *"undefined"* || ${as_line} == *"self-insert"* ]]; then
+			as_owner="missing"
 		else
-			space_owner="${sp_line}"
+			as_owner="${as_line}"
 		fi
 
 		echo "Tab selector       ${tab_owner}"
@@ -198,8 +201,12 @@ dots_shell_status() {
 			echo "  Alt-C            unknown/missing"
 		fi
 		echo ""
-		echo "Other"
-		echo "  Ctrl-Space       ${space_owner}"
+		echo "Autosuggest"
+		echo "  Ctrl-]           ${as_owner}"
+		echo ""
+		echo "Reserved prefixes"
+		echo "  Ctrl-Space       tmux prefix (must not be shell)"
+		echo "  Ctrl-A           Herdr prefix (must not be global shell)"
 
 		# Conflict warnings
 		echo ""
@@ -212,8 +219,14 @@ dots_shell_status() {
 			echo "WARN: Ctrl-R is bound to history-incremental-search-backward, expected Atuin/fzf"
 			echo "  Reapply: ./dots setup"
 		fi
-		if [[ ${space_owner} == unavailable ]]; then
-			echo "WARN: Ctrl-Space is unavailable"
+		if echo "${probe}" | grep -E '(\^ |\^@).*autosuggest-accept'; then
+			echo "ERROR: Ctrl-Space conflicts with tmux prefix (still bound to autosuggest-accept)"
+			echo "  Fix: ensure zsh/keybindings.zsh dots_bind_keybindings runs after plugins"
+		fi
+		if [[ ${as_owner} != autosuggest-accept ]]; then
+			echo "WARN: Ctrl-] is not autosuggest-accept (${as_owner})"
+		else
+			echo "OK: Ctrl-] → autosuggest-accept"
 		fi
 		if echo "${probe}" | grep -q DOTS_COMP_OK; then
 			echo "OK: _dots completion function loaded in probe"
@@ -267,11 +280,13 @@ for b in data.get("bindings") or []:
     print(f"{key:<14} {ctx:<14} {desc}")
 PY
 	else
+		printf '%-14s %-14s %s\n' "Ctrl-Space" "tmux" "prefix (reserved)"
+		printf '%-14s %-14s %s\n' "Ctrl-A" "Herdr" "prefix (reserved)"
 		printf '%-14s %-14s %s\n' "Ctrl-R" "shell" "fuzzy history"
 		printf '%-14s %-14s %s\n' "Ctrl-T" "shell" "fuzzy file insert"
 		printf '%-14s %-14s %s\n' "Alt-C" "shell" "fuzzy directory"
 		printf '%-14s %-14s %s\n' "Tab" "zsh" "contextual fuzzy completion"
-		printf '%-14s %-14s %s\n' "Ctrl-Space" "zsh vi insert" "accept autosuggestion"
+		printf '%-14s %-14s %s\n' "Ctrl-]" "zsh vi insert" "accept autosuggestion"
 	fi
 	echo ""
 	echo "Runtime ownership: ./dots shell status"

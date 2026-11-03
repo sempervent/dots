@@ -393,7 +393,9 @@ if command -v zsh >/dev/null 2>&1; then
 bindkey "^R" 2>/dev/null | head -1
 bindkey "^T" 2>/dev/null | head -1
 bindkey -M viins "^I" 2>/dev/null | head -1
+bindkey -M viins "^]" 2>/dev/null | head -1
 bindkey "^ " 2>/dev/null | head -1
+bindkey "^@" 2>/dev/null | head -1
 typeset -f fzf-file-widget >/dev/null && echo FZF_FILE_OK
 typeset -f _fzf_compgen_path >/dev/null && echo FZF_COMPGEN_OK
 ' 2>/dev/null)"
@@ -418,10 +420,15 @@ typeset -f _fzf_compgen_path >/dev/null && echo FZF_COMPGEN_OK
   else
     warn "Zsh fuzzy Tab completion unavailable — normal completion remains functional"
   fi
-  if echo "${_fzf_bind_probe}" | rg -q 'autosuggest-accept'; then
-    ok "Ctrl-Space autosuggest-accept"
+  if echo "${_fzf_bind_probe}" | rg -q '\^\].*autosuggest-accept'; then
+    ok "Ctrl-] autosuggest-accept"
   else
-    info "Ctrl-Space autosuggest-accept not bound (plugin absent?)"
+    info "Ctrl-] autosuggest-accept not bound (plugin absent?)"
+  fi
+  if echo "${_fzf_bind_probe}" | rg -q '(\^ |\^@).*autosuggest-accept'; then
+    fail "Ctrl-Space still bound to autosuggest-accept (conflicts with tmux prefix)"
+  else
+    ok "Ctrl-Space not claimed by Zsh autosuggest (reserved for tmux)"
   fi
   if [[ "${_fzf_fd_ok}" -eq 1 ]]; then
     if echo "${_fzf_bind_probe}" | rg -q 'FZF_COMPGEN_OK'; then

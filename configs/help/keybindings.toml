@@ -2,8 +2,29 @@
 #
 # Metadata describes intended state. Runtime diagnostics (./dots shell status)
 # verify actual ownership. Do not treat this file as proof a binding is active.
+#
+# Invariants (v1.5.0):
+#   Ctrl-Space is reserved exclusively for the tmux prefix.
+#   Ctrl-A is reserved exclusively for the Herdr prefix.
+#   Shell features must route around those keys.
 
 version = 1
+
+[[bindings]]
+key = "Ctrl-Space"
+context = "tmux"
+feature = "prefix"
+description = "tmux prefix (reserved; never used by Zsh/fzf-tab)"
+requires = ["tmux"]
+reserved = true
+
+[[bindings]]
+key = "Ctrl-A"
+context = "herdr"
+feature = "prefix"
+description = "Herdr prefix (reserved; never a global DOTS shell shortcut)"
+requires = ["herdr"]
+reserved = true
 
 [[bindings]]
 key = "Ctrl-R"
@@ -45,7 +66,7 @@ description = "Explicit recursive fzf filesystem completion"
 requires = ["fzf"]
 
 [[bindings]]
-key = "Ctrl-Space"
+key = "Ctrl-]"
 context = "zsh-viins"
 feature = "autosuggest"
 description = "Accept zsh-autosuggestions ghost text"
@@ -58,17 +79,3 @@ context = "fzf-tab"
 feature = "multi-select"
 description = "Toggle multi-select inside fzf-tab UI"
 requires = ["fzf-tab"]
-
-[[bindings]]
-key = "Ctrl-Space"
-context = "tmux"
-feature = "prefix"
-description = "tmux prefix (when DOTS_MULTIPLEXER=tmux)"
-requires = ["tmux"]
-
-[[bindings]]
-key = "Ctrl-A"
-context = "herdr"
-feature = "prefix"
-description = "Herdr prefix (when DOTS_MULTIPLEXER=herdr)"
-requires = ["herdr"]

@@ -38,7 +38,7 @@ id = "keybindings"
 title = "Keybindings"
 body = "docs/help/keybindings.md"
 order = 50
-keywords = ["keys", "keybindings", "shortcuts", "keyboard", "bindings", "ctrl-space", "tmux", "herdr", "prefix"]
+keywords = ["keys", "keybindings", "shortcuts", "keyboard", "bindings", "ctrl-space", "ctrl-]", "tmux", "herdr", "prefix", "autosuggest"]
 
 [[topics]]
 id = "profiles"
