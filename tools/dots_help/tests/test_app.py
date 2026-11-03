@@ -85,8 +85,30 @@ def test_app_starts_navigates_search_quits(isolated_home):
             assert app.query_one("#content")
             await pilot.press("j")
             await pilot.press("/")
-            # Escape closes search modal if open
             await pilot.press("escape")
+            await pilot.press("c")
+            assert app.current_id == "cheatsheet"
             await pilot.press("q")
 
     asyncio.run(_run())
+
+
+def test_cheatsheet_plain(isolated_home):
+    from dots_help.cheatsheet import render_cheatsheet
+    from dots_help.registry import Registry
+    from dots_help.state import gather_state
+
+    text = render_cheatsheet(gather_state(Registry(ROOT)), Registry(ROOT))
+    assert "CHEAT SHEET" in text or "cheat" in text.lower()
+    assert "\x1b[" not in text
+    assert "dots" in text.lower()
+
+
+def test_search_synonyms(isolated_home):
+    from dots_help.registry import Registry
+    from dots_help.topics import search
+
+    reg = Registry(ROOT)
+    assert any(h.topic_id == "completion" for h in search(reg, "autocomplete"))
+    assert any(h.topic_id == "keybindings" for h in search(reg, "keyboard"))
+    assert any(h.topic_id in {"diagnostics", "shell"} for h in search(reg, "doctor"))
