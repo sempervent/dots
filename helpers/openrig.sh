@@ -163,8 +163,8 @@ dots_openrig_expected_rig_bin() {
 	printf '%s\n' "${prefix}/bin/rig"
 }
 
-# Prefer the rig that belongs to the active npm prefix; fall back to PATH only
-# when it resolves to that same prefix (reject stale PATH hits).
+# Prefer the rig that belongs to the active npm prefix. Reject PATH hits from
+# other Node prefixes (stale fnm versions / Homebrew leftovers).
 dots_openrig_rig_bin() {
 	local expected path
 	expected="$(dots_openrig_expected_rig_bin 2>/dev/null || true)"
@@ -174,15 +174,11 @@ dots_openrig_rig_bin() {
 	fi
 	path="$(command -v rig 2>/dev/null || true)"
 	[[ -n ${path} ]] || return 1
+	# Active npm prefix is known but has no rig — any other PATH hit is stale.
 	if [[ -n ${expected} ]]; then
-		local rp ep
-		rp="$(cd "$(dirname "${path}")" && pwd -P)/$(basename "${path}")"
-		ep="$(cd "$(dirname "${expected}")" && pwd -P)/$(basename "${expected}")"
-		if [[ ${rp} != "${ep}" ]]; then
-			# Stale PATH entry from another Node prefix
-			return 1
-		fi
+		return 1
 	fi
+	# No npm prefix available (broken toolchain) — last-resort PATH discovery.
 	printf '%s\n' "${path}"
 }
 
@@ -201,7 +197,8 @@ dots_openrig_package_state() {
 
 	list_out="$("${npm_bin}" list -g --depth=0 "${DOTS_OPENRIG_NPM_PKG}" 2>/dev/null || true)"
 	if ! printf '%s\n' "${list_out}" | grep -Fq "${DOTS_OPENRIG_NPM_PKG}@"; then
-		if [[ -n ${path_rig} && -n ${expected} && ${path_rig} != "${expected}" && -x ${path_rig} ]]; then
+		# Package absent under active npm, but some rig is on PATH → stale/wrong prefix.
+		if [[ -n ${path_rig} && -x ${path_rig} ]]; then
 			echo "INSTALLED_WRONG_PREFIX"
 			return 0
 		fi
