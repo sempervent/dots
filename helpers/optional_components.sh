@@ -214,7 +214,9 @@ apply_optional_brewfiles() {
 		fi
 	fi
 	if has_component openrig; then
-		# npm-based; Brewfile.openrig is intentionally empty. Does not run rig setup.
+		# Brewfile.openrig pulls fnm+tmux; helpers/openrig.sh converges Node/npm/@openrig/cli+ABI.
+		# Does not run `rig setup` (DOTS owns tmux/Herdr/providers).
+		_dots_optional_apply_registry_brewfile "openrig" || true
 		if declare -F dots_openrig_install >/dev/null 2>&1; then
 			dots_openrig_install || dots_optional_record_failure "openrig" "OpenRig install failed"
 		fi

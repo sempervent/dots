@@ -57,9 +57,10 @@ offline (zero network / mutations / billable calls).
 | `pi` | Local coding-agent runtime (npm; Node ≥22.19) |
 | `litellm` | Localhost gateway (Compose binds `127.0.0.1:4000`) |
 | `agent-sandbox` | Sandbox policy + OS backends (provider: pi-sandbox) |
-| `openrig` | Persistent multi-agent teams (npm `@openrig/cli`) |
+| `openrig` | Persistent multi-agent teams — `./dots setup --with openrig` converges fnm, Node, `@openrig/cli`, and ABI |
 
 Selecting `pi` alone does **not** authorize OpenRouter. See [OpenRig teams](../agents/openrig.md).
+DOTS uses **fnm** (never nvm) for the Node that installs OpenRig.
 
 ## Safety
 
