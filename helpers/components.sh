@@ -289,6 +289,8 @@ dots_expand_with_selectors() {
 			esac
 		else
 			echo "Error: unknown component or supergroup '${tok}'" >&2
+			dots_suggest_component "${tok}" || true
+			echo "Help: dots-help components" >&2
 			dots_print_selector_help >&2
 			return 1
 		fi
@@ -323,6 +325,8 @@ dots_expand_without_selectors() {
 			esac
 		else
 			echo "Error: unknown component or supergroup '${tok}'" >&2
+			dots_suggest_component "${tok}" || true
+			echo "Help: dots-help components" >&2
 			dots_print_selector_help >&2
 			return 1
 		fi
@@ -383,6 +387,24 @@ PY
 	echo "List: ./dots components list"
 	echo "Run:  dots-help components"
 }
+
+# After an unknown selector, suggest close component/supergroup ids.
+dots_suggest_component() {
+	local needle="$1"
+	# shellcheck source=helpers/suggest.sh
+	if ! declare -F dots_suggest_print >/dev/null 2>&1; then
+		[[ -f ${DIR}/helpers/suggest.sh ]] && source "${DIR}/helpers/suggest.sh"
+	fi
+	declare -F dots_suggest_print >/dev/null 2>&1 || return 1
+	local -a cands=()
+	local x
+	while IFS= read -r x; do
+		[[ -n ${x} ]] && cands+=("${x}")
+	done < <(dots_suggest_known_components 2>/dev/null || true)
+	((${#cands[@]} == 0)) && return 1
+	dots_suggest_print "${needle}" "${cands[@]}"
+}
+
 
 # Validate CSV / list of component names (not groups); print unknowns to stderr.
 dots_validate_components() {

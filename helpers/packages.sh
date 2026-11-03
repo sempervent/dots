@@ -57,6 +57,18 @@ dots_validate_package_groups() {
 		fi
 	done
 	if [[ ${unknown} -ne 0 ]]; then
+		if declare -F dots_suggest_print >/dev/null 2>&1; then
+			local -a _pg=()
+			local _g
+			while IFS= read -r _g; do
+				[[ -n ${_g} ]] && _pg+=("${_g}")
+			done < <(dots_known_package_groups)
+			for g in "$@"; do
+				[[ -z ${g} ]] && continue
+				dots_group_is_known "${g}" && continue
+				dots_suggest_print "${g}" "${_pg[@]+"${_pg[@]}"}" || true
+			done
+		fi
 		echo "Supported groups: $(dots_known_package_groups | tr '\n' ' ')" >&2
 		echo "Authority: $(dots_groups_registry_path)" >&2
 		return 1
@@ -616,6 +628,14 @@ dots_packages_group_show() {
 	fi
 	if ! dots_group_is_known "${id}"; then
 		echo "Error: unknown package group '${id}'" >&2
+		if declare -F dots_suggest_print >/dev/null 2>&1; then
+			local -a _pg=()
+			local _g
+			while IFS= read -r _g; do
+				[[ -n ${_g} ]] && _pg+=("${_g}")
+			done < <(dots_known_package_groups)
+			dots_suggest_print "${id}" "${_pg[@]+"${_pg[@]}"}" || true
+		fi
 		echo "Supported groups: $(dots_known_package_groups | tr '\n' ' ')" >&2
 		return 1
 	fi

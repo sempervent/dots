@@ -45,6 +45,10 @@ source "${DIR}/helpers/cask_apps.sh"
 source "${DIR}/helpers/hardware.sh"
 # shellcheck source=helpers/linux_distro.sh
 source "${DIR}/helpers/linux_distro.sh"
+# shellcheck source=helpers/suggest.sh
+source "${DIR}/helpers/suggest.sh"
+# shellcheck source=helpers/shell_diag.sh
+source "${DIR}/helpers/shell_diag.sh"
 
 dots_usage() {
 	# Prefer generated synopsis (configs/help/commands.toml → scripts/docs/generate_usage.py)
@@ -228,6 +232,23 @@ dots_cmd_status() {
 	else
 		echo "  check: unavailable"
 	fi
+
+	echo ""
+	echo "Shell:"
+	local shn prompt_bits=()
+	shn="$(basename "${SHELL:-unknown}")"
+	command -v starship >/dev/null 2>&1 && prompt_bits+=("Starship")
+	if [[ -f ${ZSH_CUSTOM:-${HOME}/.oh-my-zsh/custom}/plugins/fzf-tab/fzf-tab.plugin.zsh ]] ||
+		[[ -f ${ZSH_CUSTOM:-${HOME}/.oh-my-zsh/custom}/plugins/fzf-tab/fzf-tab.zsh ]]; then
+		prompt_bits+=("fzf-tab")
+	fi
+	if [[ ${#prompt_bits[@]} -gt 0 ]]; then
+		local IFS=' · '
+		echo "  ${shn} · ${prompt_bits[*]}"
+	else
+		echo "  ${shn}"
+	fi
+	echo "  detail: ./dots shell status"
 
 	echo ""
 	echo "Help:"
@@ -1018,6 +1039,14 @@ update)
 	shift || true
 	dots_cmd_update "$@"
 	;;
+shell)
+	shift || true
+	dots_cmd_shell "$@"
+	;;
+completion)
+	shift || true
+	dots_cmd_completion "$@"
+	;;
 "")
 	dots_cmd_setup
 	;;
@@ -1027,7 +1056,10 @@ update)
 		dots_cmd_setup "$@"
 	else
 		echo "Unknown command: ${cmd}" >&2
-		echo "Run: dots-help commands" >&2
+		mapfile -t _dots_cmds < <(dots_suggest_known_commands)
+		dots_suggest_print "${cmd}" "${_dots_cmds[@]+"${_dots_cmds[@]}"}" || true
+		echo "Help:" >&2
+		echo "  dots-help commands" >&2
 		dots_usage >&2
 		exit 1
 	fi
