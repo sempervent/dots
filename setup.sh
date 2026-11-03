@@ -78,6 +78,8 @@ source "${DIR}/helpers/pi.sh"
 source "${DIR}/helpers/litellm.sh"
 # shellcheck source=helpers/agent_sandbox.sh
 source "${DIR}/helpers/agent_sandbox.sh"
+# shellcheck source=helpers/openrig.sh
+source "${DIR}/helpers/openrig.sh"
 # shellcheck source=helpers/shell_diag.sh
 source "${DIR}/helpers/shell_diag.sh"
 # shellcheck source=helpers/leaf.sh

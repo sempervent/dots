@@ -212,6 +212,16 @@ platforms = ["darwin", "linux"]
 brewfile = "brew/Brewfile.agent-sandbox"
 description = "Filesystem/network policy and OS-level command sandbox for DOTS agents (provider: pi-sandbox)"
 
+[[components]]
+id = "openrig"
+label = "OpenRig"
+category = "agent_orchestration"
+cloud = false
+local_ai = true
+platforms = ["darwin", "linux"]
+brewfile = "brew/Brewfile.openrig"
+description = "Persistent multi-agent orchestration for Pi, Codex and other coding runtimes (npm @openrig/cli; Node ≥22)"
+
 # Declarative selector aggregates. Expand to member component ids before install.
 # Nested groups are not supported in v1.0.1.
 [[supergroups]]
@@ -231,4 +241,5 @@ members = [
   "pi",
   "litellm",
   "agent-sandbox",
+  "openrig",
 ]

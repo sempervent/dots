@@ -213,6 +213,12 @@ apply_optional_brewfiles() {
 			dots_agent_sandbox_install || dots_optional_record_failure "agent-sandbox" "Agent sandbox install failed"
 		fi
 	fi
+	if has_component openrig; then
+		# npm-based; Brewfile.openrig is intentionally empty. Does not run rig setup.
+		if declare -F dots_openrig_install >/dev/null 2>&1; then
+			dots_openrig_install || dots_optional_record_failure "openrig" "OpenRig install failed"
+		fi
+	fi
 	if has_component mactools; then
 		# Darwin-only (registry platforms); explicit --with on Linux errors before here.
 		_dots_optional_apply_registry_brewfile "mactools" || true

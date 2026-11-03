@@ -1,4 +1,4 @@
-# DOTS agent harness defaults (v1.6 Phase 3).
+# DOTS agent harness defaults (v1.6 Phase 4).
 # Live override (optional): ~/.config/dots/agents.toml
 # Repo template: configs/agents/defaults.toml
 #
@@ -104,6 +104,15 @@ default_local_runs = 3
 default_remote_runs = 1
 # Smoke suites keep wall time low
 smoke_tasks_per_class = 1
+
+[openrig]
+# Reviewed npm @openrig/cli — do not track latest blindly
+reviewed_version = "0.7.7"
+reviewed_date = "2026-11-03"
+# DOTS never runs `rig setup` from install helpers
+skip_rig_setup = true
+default_template = "dots-triad"
+team_budget_usd = 3.00
 
 [policy]
 # Shown to the local Pi foreman
