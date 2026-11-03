@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import time
@@ -93,12 +94,46 @@ def cmd_team_list(_: Any) -> int:
 
 
 def cmd_team_doctor(_: Any) -> int:
+    """Read-only diagnostics. Prefer shell desired-state doctor when available."""
     cfg = load_config()
+    helper = cfg.root / "helpers" / "openrig.sh"
+    fnm_helper = cfg.root / "helpers" / "fnm.sh"
+    toml_helper = cfg.root / "helpers" / "toml.sh"
+    if helper.is_file() and fnm_helper.is_file():
+        root_q = shlex.quote(str(cfg.root))
+        toml_q = shlex.quote(str(toml_helper))
+        fnm_q = shlex.quote(str(fnm_helper))
+        openrig_q = shlex.quote(str(helper))
+        script = f"""
+set -euo pipefail
+DIR={root_q}
+# shellcheck disable=SC1091
+source {toml_q}
+# shellcheck disable=SC1091
+source {fnm_q}
+# shellcheck disable=SC1091
+source {openrig_q}
+dots_openrig_doctor
+"""
+        proc = subprocess.run(
+            ["bash", "-c", script],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        out = (proc.stdout or "") + (proc.stderr or "")
+        print(out.rstrip())
+        if proc.returncode != 0:
+            return 1
+        return 0
+
     rc = 0
     for k, v in doctor_checks(cfg):
         print(f"{k:28} {v}")
         if v.startswith("FAIL"):
             rc = 1
+    if rc != 0:
+        print("\nRepair:\n  ./dots setup --with openrig")
     return rc
 
 
