@@ -105,6 +105,7 @@ nav:
       - Security (Phase 2): agents/security.md
       - Model Scout: agents/model-scout.md
       - Evaluations: agents/evals.md
+      - OpenRig teams: agents/openrig.md
       - LiteLLM: agents/litellm.md
       - Models: agents/models.md
       - v1.6 roadmap: agents/v1.6-roadmap.md

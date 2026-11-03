@@ -1,9 +1,9 @@
 # Agent Harness
 
-DOTS local-first agent orchestration (Phases 1–3):
+DOTS local-first agent orchestration (Phases 1–4):
 
 ```text
-Pi (sandboxed) → worktree → eval evidence → model-scout → budget → LiteLLM → verify
+OpenRig team → Pi seats (sandboxed) → eval routing → LiteLLM experts → verify
 ```
 
 ## Commands
@@ -18,6 +18,9 @@ Pi (sandboxed) → worktree → eval evidence → model-scout → budget → Lit
 ./dots agent eval list
 ./dots agent eval run --local --suite smoke
 ./dots agent eval results
+./dots agent team status
+./dots agent team up dots-triad --project . --dry-run
+./dots agent team open
 ./dots agent run --task-class debugging "Diagnose and fix the failing test."
 ./dots agent run --in-place "…"
 ./dots agent run --unsafe-host "…"                             # explicit bypass
@@ -42,8 +45,9 @@ empirical evidence is adequate; curated capability registry otherwise.
 | `pi` | Local coding-agent runtime (npm; Node ≥22.19) |
 | `litellm` | Localhost gateway (Compose binds `127.0.0.1:4000`) |
 | `agent-sandbox` | Sandbox policy + OS backends (provider: pi-sandbox) |
+| `openrig` | Persistent multi-agent teams (npm `@openrig/cli`) |
 
-Selecting `pi` alone does **not** authorize OpenRouter.
+Selecting `pi` alone does **not** authorize OpenRouter. See [OpenRig teams](../agents/openrig.md).
 
 ## Safety
 

@@ -41,13 +41,13 @@ local Pi applies advice + verifies
 | MCP tools/list + `pi mcp list` discovery | **PROVEN** when executables / Pi present |
 | OS sandbox / worktrees / MCP trust | **implemented** (Phase 2) |
 | Eval-driven expected-cost routing | **implemented** (Phase 3; see [evals](evals.md), [model-scout](model-scout.md)) |
-| OpenRig multi-agent orchestration | **DEFERRED** (Phase 4; see [v1.6-roadmap](v1.6-roadmap.md)) |
+| OpenRig multi-agent orchestration | **implemented** (Phase 4; see [openrig](openrig.md)) |
 
-## Deferred (Phases 4–5 + Final)
+## Deferred (Phase 5 + Final)
 
-- OpenRig session/topology orchestration
-- Multi-agent teams / planner-builder-reviewer roles
 - Automatic stuck detection / runtime escalation heuristics
+- Self-healing / recovery policy
+- Multi-model consensus
 - Full CI / release convergence
 
 See [v1.6-roadmap.md](v1.6-roadmap.md).
