@@ -63,6 +63,13 @@ def overview_dynamic(reg: Registry, st: MachineState) -> str:
         f"- fzf-tab {st.mark(st.fzf_tab)}",
         f"- shell `{st.shell}`",
         "",
+        "## Discoverability",
+        "",
+        "- Optional components: `./dots components list`",
+        "- Select features: `./dots setup --with <ids>` (profile `with=`)",
+        "- CLI synopsis: `./dots --help`",
+        "- Topic help: `dots-help components` / `./dots help components`",
+        "",
     ]
     return "\n".join(lines)
 

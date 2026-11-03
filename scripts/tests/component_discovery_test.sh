@@ -182,9 +182,13 @@ else
 fi
 
 echo "=== CLI help discoverability ==="
-help_out="$("${ROOT}/dots" help 2>&1)" || true
-echo "${help_out}" | grep -q components && ok "help mentions components" || bad "help components"
-echo "${help_out}" | grep -q '\-\-with\|with=' && ok "help mentions --with" || bad "help --with"
+# ./dots --help = CLI synopsis; ./dots help = interactive/plain topic help (dots-help)
+synopsis="$("${ROOT}/dots" --help 2>&1)" || true
+echo "${synopsis}" | grep -q components && ok "help mentions components" || bad "help components"
+echo "${synopsis}" | grep -q '\-\-with\|with=' && ok "help mentions --with" || bad "help --with"
+plain_help="$("${ROOT}/dots" help --plain 2>&1)" || true
+echo "${plain_help}" | grep -qi components && ok "dots-help overview mentions components" || bad "plain components"
+echo "${plain_help}" | grep -q '\-\-with\|with=' && ok "dots-help overview mentions --with" || bad "plain --with"
 setup_help="$("${ROOT}/dots" setup --help 2>&1)" || true
 echo "${setup_help}" | grep -q '\-\-with' && ok "setup --help --with" || bad "setup help with"
 echo "${setup_help}" | grep -q '\-\-without' && ok "setup --help --without" || bad "setup help without"
