@@ -73,20 +73,12 @@ if [[ -f "${DOTS_DIR}/shell/functions.sh" ]]; then
 fi
 # 1}}}
 
-# Modern tools: zoxide, direnv, atuin (not OMZ z) {{{1
-[[ -f "${DOTS_DIR}/shell/tools.sh" ]] && source "${DOTS_DIR}/shell/tools.sh"
+# fzf + fzf-tab config BEFORE tools so Atuin can own Ctrl-R afterward {{{1
+[[ -f "${DOTS_DIR}/zsh/fzf.zsh" ]] && source "${DOTS_DIR}/zsh/fzf.zsh"
 # 1}}}
 
-# fzf — prefer official integration when OMZ fzf plugin did not load it {{{1
-if ! typeset -f fzf-file-widget >/dev/null 2>&1; then
-  if command -v fzf >/dev/null 2>&1; then
-    if fzf --zsh >/dev/null 2>&1; then
-      source <(fzf --zsh)
-    elif [[ -f "${HOME}/.fzf.zsh" ]]; then
-      source "${HOME}/.fzf.zsh"
-    fi
-  fi
-fi
+# Modern tools: zoxide, direnv, atuin (not OMZ z) {{{1
+[[ -f "${DOTS_DIR}/shell/tools.sh" ]] && source "${DOTS_DIR}/shell/tools.sh"
 # 1}}}
 
 # Platform hooks {{{1

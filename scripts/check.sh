@@ -347,6 +347,80 @@ else
   info "shell: zsh not installed"
 fi
 
+echo -e "\n${BLUE}Fuzzy completion${NC}"
+if command -v fzf >/dev/null 2>&1; then
+  ok "fzf $(fzf --version 2>/dev/null | head -1)"
+else
+  fail "fzf missing (required in core package group)"
+fi
+_fzf_fd_ok=0
+if command -v fd >/dev/null 2>&1 || command -v fdfind >/dev/null 2>&1; then
+  ok "fd path source available"
+  _fzf_fd_ok=1
+else
+  warn "fd missing — fzf falls back to find for filesystem walks"
+fi
+if [[ -f "${DOTS_DIR}/shell/fzf.sh" && -f "${DOTS_DIR}/zsh/fzf.zsh" && -f "${DOTS_DIR}/bash/fzf.sh" ]]; then
+  ok "fzf config modules present (shell/zsh/bash)"
+else
+  fail "fzf config modules missing"
+fi
+_fzf_tab_plugin="${ZSH_CUSTOM:-${HOME}/.oh-my-zsh/custom}/plugins/fzf-tab"
+if [[ -f "${_fzf_tab_plugin}/fzf-tab.plugin.zsh" ]] || [[ -f "${_fzf_tab_plugin}/fzf-tab.zsh" ]]; then
+  ok "fzf-tab plugin installed"
+else
+  warn "fzf-tab missing — Zsh fuzzy Tab unavailable (normal completion remains; re-run ./setup.sh)"
+fi
+if command -v zsh >/dev/null 2>&1; then
+  _fzf_bind_probe="$(DOTS_GREETING=0 DOTS_AUTO_TMUX=0 TERM=xterm-256color zsh -ic '
+bindkey "^R" 2>/dev/null | head -1
+bindkey "^T" 2>/dev/null | head -1
+bindkey -M viins "^I" 2>/dev/null | head -1
+bindkey "^ " 2>/dev/null | head -1
+typeset -f fzf-file-widget >/dev/null && echo FZF_FILE_OK
+typeset -f _fzf_compgen_path >/dev/null && echo FZF_COMPGEN_OK
+' 2>/dev/null)"
+  if echo "${_fzf_bind_probe}" | rg -q 'atuin-search|fzf-history-widget|history-incremental-search'; then
+    if echo "${_fzf_bind_probe}" | rg -q 'atuin-search'; then
+      ok "Ctrl-R owned by Atuin"
+    elif echo "${_fzf_bind_probe}" | rg -q 'fzf-history-widget'; then
+      ok "Ctrl-R owned by fzf"
+    else
+      ok "Ctrl-R history search bound"
+    fi
+  else
+    warn "Ctrl-R binding unclear"
+  fi
+  if echo "${_fzf_bind_probe}" | rg -q 'fzf-file-widget|FZF_FILE_OK'; then
+    ok "Ctrl-T fzf-file-widget"
+  else
+    warn "Ctrl-T fzf file widget not detected"
+  fi
+  if echo "${_fzf_bind_probe}" | rg -q 'fzf-tab-complete'; then
+    ok "Zsh Tab owned by fzf-tab"
+  else
+    warn "Zsh fuzzy Tab completion unavailable — normal completion remains functional"
+  fi
+  if echo "${_fzf_bind_probe}" | rg -q 'autosuggest-accept'; then
+    ok "Ctrl-Space autosuggest-accept"
+  else
+    info "Ctrl-Space autosuggest-accept not bound (plugin absent?)"
+  fi
+  if [[ "${_fzf_fd_ok}" -eq 1 ]]; then
+    if echo "${_fzf_bind_probe}" | rg -q 'FZF_COMPGEN_OK'; then
+      ok "fd path generator wired for ** completion"
+    else
+      info "fd present; ** generator may load after first fzf completion use"
+    fi
+  fi
+  if [[ -n "${ZSH:-}" ]] || [[ -f "${HOME}/.oh-my-zsh/oh-my-zsh.sh" ]]; then
+    ok "OMZ completion ecosystem available"
+  else
+    warn "Oh My Zsh not detected"
+  fi
+fi
+unset _fzf_tab_plugin _fzf_bind_probe _fzf_fd_ok
+
 echo -e "\n${BLUE}Starship / font / editor / notify (default)${NC}"
 if command -v starship >/dev/null 2>&1; then
   ok "starship $(starship --version 2>/dev/null | head -1)"
