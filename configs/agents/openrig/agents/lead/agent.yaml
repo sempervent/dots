@@ -1,0 +1,31 @@
+name: dots-lead
+version: "1.0"
+description: DOTS lead — decompose work, own queue state, integrate verification
+
+defaults:
+  runtime: pi
+  effort: medium
+  lifecycle:
+    execution_mode: interactive_resident
+    restore_policy: resume_if_possible
+
+profiles:
+  default:
+    uses:
+      skills: []
+      guidance: [role]
+      subagents: []
+      plugins: []
+      runtime_resources: []
+
+resources:
+  guidance:
+    - id: role
+      path: guidance/role.md
+
+startup:
+  files:
+    - path: guidance/role.md
+      delivery_hint: send_text
+      required: true
+  actions: []

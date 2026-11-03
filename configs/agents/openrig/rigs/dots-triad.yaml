@@ -1,0 +1,40 @@
+# DOTS triad — lead + builder + reviewer (default multi-agent).
+version: "0.2"
+name: dots-triad
+summary: General development team with independent reviewer verification.
+
+startup:
+  files: []
+  actions: []
+
+pods:
+  - id: team
+    label: Triad
+    members:
+      - id: lead
+        agent_ref: "local:agents/lead"
+        profile: default
+        runtime: pi
+        cwd: "."
+      - id: builder
+        agent_ref: "local:agents/builder"
+        profile: default
+        runtime: pi
+        cwd: "."
+      - id: reviewer
+        agent_ref: "local:agents/reviewer"
+        profile: default
+        runtime: pi
+        cwd: "."
+    edges:
+      - from: lead
+        to: builder
+        kind: delegates_to
+      - from: lead
+        to: reviewer
+        kind: delegates_to
+      - from: reviewer
+        to: builder
+        kind: can_observe
+
+edges: []

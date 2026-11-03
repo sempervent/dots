@@ -1,0 +1,31 @@
+name: dots-investigator
+version: "1.0"
+description: DOTS investigator — read-only diagnosis and evidence collection
+
+defaults:
+  runtime: pi
+  effort: high
+  lifecycle:
+    execution_mode: interactive_resident
+    restore_policy: resume_if_possible
+
+profiles:
+  default:
+    uses:
+      skills: []
+      guidance: [role]
+      subagents: []
+      plugins: []
+      runtime_resources: []
+
+resources:
+  guidance:
+    - id: role
+      path: guidance/role.md
+
+startup:
+  files:
+    - path: guidance/role.md
+      delivery_hint: send_text
+      required: true
+  actions: []

@@ -1,0 +1,31 @@
+name: dots-reviewer
+version: "1.0"
+description: DOTS reviewer — independent verification (read-only by policy)
+
+defaults:
+  runtime: pi
+  effort: medium
+  lifecycle:
+    execution_mode: interactive_resident
+    restore_policy: resume_if_possible
+
+profiles:
+  default:
+    uses:
+      skills: []
+      guidance: [role]
+      subagents: []
+      plugins: []
+      runtime_resources: []
+
+resources:
+  guidance:
+    - id: role
+      path: guidance/role.md
+
+startup:
+  files:
+    - path: guidance/role.md
+      delivery_hint: send_text
+      required: true
+  actions: []
