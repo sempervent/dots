@@ -1,0 +1,96 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "OpenRig Desired-State Install",
+    "output": "docs/diagrams/dots-openrig-install.html",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "runtime",
+        "label": "Managed runtime",
+        "focus": ["setup", "fnm", "node", "npm"],
+        "note": "DOTS ensures fnm, then a supported Node/npm pair — never nvm."
+      },
+      {
+        "id": "cli-abi",
+        "label": "CLI and ABI",
+        "focus": ["npm", "cli", "abi", "pass"],
+        "note": "Install @openrig/cli under the managed npm, then prove ABI."
+      },
+      {
+        "id": "remediation",
+        "label": "Doctor remediation",
+        "focus": ["abi", "reinstall", "doctor", "pass"],
+        "note": "ABI failure triggers one safe reinstall; doctor stays read-only."
+      }
+    ]
+  },
+  "lanes": [
+    { "id": "operator", "label": "Operator" },
+    { "id": "runtime", "label": "fnm + Node" },
+    { "id": "packages", "label": "npm + OpenRig" },
+    { "id": "verify", "label": "Verify + Doctor", "variant": "exception" }
+  ],
+  "phases": [
+    { "id": "bootstrap", "label": "Bootstrap runtime", "fromCol": 0, "toCol": 2 },
+    { "id": "install", "label": "Install CLI", "fromCol": 3, "toCol": 4, "variant": "emphasis" },
+    { "id": "prove", "label": "Prove + report", "fromCol": 5, "toCol": 5, "variant": "dashed" }
+  ],
+  "groups": [
+    { "id": "managed_node", "label": "Managed Node pair", "lane": "runtime", "fromCol": 1, "toCol": 2, "variant": "emphasis" },
+    { "id": "abi_gate", "label": "ABI gate", "lane": "verify", "fromCol": 4, "toCol": 5, "variant": "security" }
+  ],
+  "mainPath": ["setup", "fnm", "node", "npm", "cli", "abi", "tmux", "pass"],
+  "nodes": [
+    { "id": "setup", "lane": "operator", "col": 0, "type": "frontend", "label": "setup --with openrig", "sublabel": "desired state", "width": 148 },
+    { "id": "fnm", "lane": "runtime", "col": 1, "type": "backend", "label": "Ensure fnm", "sublabel": "not nvm", "width": 132, "tag": "DOTS" },
+    { "id": "node", "lane": "runtime", "col": 2, "type": "backend", "label": "Ensure Node", "sublabel": "prefer 22; 22/24", "width": 132 },
+    { "id": "npm", "lane": "packages", "col": 2, "type": "backend", "label": "Verify npm", "sublabel": "user prefix", "width": 132, "tag": "no sudo" },
+    { "id": "cli", "lane": "packages", "col": 3, "type": "cloud", "label": "@openrig/cli", "sublabel": "npm install -g", "width": 132 },
+    { "id": "abi", "lane": "verify", "col": 4, "type": "security", "label": "ABI Check", "sublabel": "check-abi.mjs", "width": 132, "tag": "blocking" },
+    { "id": "reinstall", "lane": "verify", "col": 3, "type": "messagebus", "label": "Safe Reinstall", "sublabel": "once", "width": 132 },
+    { "id": "tmux", "lane": "packages", "col": 4, "type": "frontend", "label": "tmux Fragment", "sublabel": "mouse/scrollback", "width": 132 },
+    { "id": "doctor", "lane": "verify", "col": 5, "type": "security", "label": "Doctor", "sublabel": "read-only", "width": 132 },
+    { "id": "pass", "lane": "operator", "col": 5, "type": "backend", "label": "PASS", "sublabel": "or remediate", "width": 132 }
+  ],
+  "edges": [
+    { "id": "setup-fnm", "from": "setup", "to": "fnm", "variant": "emphasis" },
+    { "id": "fnm-node", "from": "fnm", "to": "node" },
+    { "id": "node-npm", "from": "node", "to": "npm", "label": "same pair", "variant": "security" },
+    { "id": "npm-cli", "from": "npm", "to": "cli", "variant": "emphasis" },
+    { "id": "cli-abi", "from": "cli", "to": "abi", "label": "prove", "variant": "security" },
+    { "id": "abi-reinstall", "from": "abi", "to": "reinstall", "label": "fail once", "variant": "dashed", "role": "error" },
+    { "id": "reinstall-cli", "from": "reinstall", "to": "cli", "label": "retry", "variant": "dashed", "role": "return" },
+    { "id": "abi-tmux", "from": "abi", "to": "tmux", "label": "ok", "variant": "emphasis" },
+    { "id": "tmux-pass", "from": "tmux", "to": "pass" },
+    { "id": "abi-doctor", "from": "abi", "to": "doctor", "label": "report", "variant": "dashed", "role": "branch" },
+    { "id": "doctor-pass", "from": "doctor", "to": "pass", "label": "status" }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Desired state",
+      "items": [
+        "One command converges fnm, Node, npm, and OpenRig CLI",
+        "Accepted Node majors are 22 and 24; DOTS prefers 22"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Hard refusals",
+      "items": [
+        "Never nvm, never curl|sh, never sudo npm",
+        "npm install success alone is not enough — ABI must pass"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Doctor",
+      "items": [
+        "Doctor is read-only and prints setup --with openrig when diverged",
+        "Wrong-prefix rig on PATH triggers reinstall under active npm"
+      ]
+    }
+  ]
+}

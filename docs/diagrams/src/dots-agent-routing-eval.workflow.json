@@ -1,0 +1,96 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Eval-Driven Routing",
+    "output": "docs/diagrams/dots-agent-routing-eval.html",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "local-first",
+        "label": "Local first",
+        "focus": ["task", "local", "verify"],
+        "note": "Prefer completing the task with the local model when it clears the quality floor."
+      },
+      {
+        "id": "evidence",
+        "label": "Evidence gate",
+        "focus": ["local", "wilson", "expected", "budget"],
+        "note": "Wilson floor and expected cost decide whether remote is eligible."
+      },
+      {
+        "id": "remote",
+        "label": "Remote consult",
+        "focus": ["budget", "litellm", "expert", "settle", "verify"],
+        "note": "Billable calls reserve budget, complete via LiteLLM, then settle."
+      }
+    ]
+  },
+  "lanes": [
+    { "id": "intent", "label": "Task" },
+    { "id": "local", "label": "Local Path" },
+    { "id": "policy", "label": "Routing Policy", "variant": "exception" },
+    { "id": "remote", "label": "Remote Consult" }
+  ],
+  "phases": [
+    { "id": "attempt", "label": "Attempt local", "fromCol": 0, "toCol": 1 },
+    { "id": "decide", "label": "Evidence decide", "fromCol": 2, "toCol": 3, "variant": "emphasis" },
+    { "id": "spend", "label": "Spend + prove", "fromCol": 4, "toCol": 5, "variant": "dashed" }
+  ],
+  "groups": [
+    { "id": "quality_gate", "label": "Quality floor", "lane": "policy", "fromCol": 2, "toCol": 3, "variant": "emphasis" },
+    { "id": "billable", "label": "Billable path", "lane": "remote", "fromCol": 3, "toCol": 5, "variant": "security" }
+  ],
+  "mainPath": ["task", "local", "wilson", "expected", "budget", "litellm", "expert", "settle", "verify"],
+  "nodes": [
+    { "id": "task", "lane": "intent", "col": 0, "type": "external", "label": "Task Class", "sublabel": "coding / debug", "width": 132 },
+    { "id": "local", "lane": "local", "col": 1, "type": "backend", "label": "Local Pi", "sublabel": "attempt", "width": 132, "tag": "prefer" },
+    { "id": "wilson", "lane": "policy", "col": 2, "type": "security", "label": "Wilson Floor", "sublabel": "eval evidence", "width": 132, "tag": "P(ok)" },
+    { "id": "expected", "lane": "remote", "col": 2, "type": "security", "label": "Expected Cost", "sublabel": "cost / P(ok)", "width": 132 },
+    { "id": "budget", "lane": "remote", "col": 3, "type": "security", "label": "Budget Reserve", "sublabel": "hard cap", "width": 132 },
+    { "id": "litellm", "lane": "remote", "col": 4, "type": "cloud", "label": "LiteLLM", "sublabel": "localhost", "width": 132 },
+    { "id": "expert", "lane": "remote", "col": 5, "type": "external", "label": "Expert", "sublabel": "OpenRouter", "width": 132 },
+    { "id": "settle", "lane": "policy", "col": 5, "type": "database", "label": "Settle Ledger", "sublabel": "honest spend", "width": 132 },
+    { "id": "verify", "lane": "local", "col": 5, "type": "backend", "label": "Verify", "sublabel": "local proof", "width": 132 },
+    { "id": "stay_local", "lane": "policy", "col": 1, "type": "messagebus", "label": "Stay Local", "sublabel": "floor unmet", "width": 132 }
+  ],
+  "edges": [
+    { "id": "task-local", "from": "task", "to": "local", "variant": "emphasis" },
+    { "id": "local-wilson", "from": "local", "to": "wilson", "label": "escalate?", "variant": "security" },
+    { "id": "wilson-stay", "from": "wilson", "to": "stay_local", "label": "below floor", "variant": "dashed", "role": "branch" },
+    { "id": "wilson-expected", "from": "wilson", "to": "expected", "variant": "emphasis" },
+    { "id": "expected-budget", "from": "expected", "to": "budget", "label": "eligible", "variant": "security" },
+    { "id": "budget-litellm", "from": "budget", "to": "litellm", "variant": "emphasis" },
+    { "id": "litellm-expert", "from": "litellm", "to": "expert" },
+    { "id": "expert-settle", "from": "expert", "to": "settle", "label": "response", "variant": "dashed", "role": "return" },
+    { "id": "settle-verify", "from": "settle", "to": "verify", "variant": "emphasis" },
+    { "id": "local-verify", "from": "local", "to": "verify", "label": "success", "variant": "dashed", "role": "branch" },
+    { "id": "stay-local-back", "from": "stay_local", "to": "local", "label": "continue", "variant": "dashed", "role": "return" }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Local first",
+      "items": [
+        "Local Pi attempts the task before any billable consult",
+        "Verification is a local proof, not an LLM claim"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Expected cost",
+      "items": [
+        "Wilson floor uses eval evidence for the task class",
+        "Route on cost / P(success), not cheapest request alone"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Budget honesty",
+      "items": [
+        "Reserve before LiteLLM; settle after response",
+        "Connection refused never fabricates spend"
+      ]
+    }
+  ]
+}

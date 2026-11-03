@@ -1,0 +1,95 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Guarded Autonomy Ladder",
+    "output": "docs/diagrams/dots-agent-autonomy-ladder.html",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "happy",
+        "label": "Success path",
+        "focus": ["run", "fingerprint", "verified"],
+        "note": "Structural signals decide success; Verified requires explicit proof."
+      },
+      {
+        "id": "ladder",
+        "label": "Recovery ladder",
+        "focus": ["fingerprint", "retry", "replan", "expert", "reroute", "attention"],
+        "note": "Failures climb a bounded ladder; identical fingerprints escalate to humans."
+      },
+      {
+        "id": "hard-stops",
+        "label": "Hard stops",
+        "focus": ["fingerprint", "blocked", "attention"],
+        "note": "Sandbox, budget, and policy blocks never auto-bypass."
+      }
+    ]
+  },
+  "lanes": [
+    { "id": "run", "label": "Run" },
+    { "id": "ladder", "label": "Recovery Ladder" },
+    { "id": "stops", "label": "Stops + Attention", "variant": "exception" },
+    { "id": "exit", "label": "Terminal" }
+  ],
+  "phases": [
+    { "id": "detect", "label": "Detect", "fromCol": 0, "toCol": 1 },
+    { "id": "recover", "label": "Recover", "fromCol": 2, "toCol": 4, "variant": "emphasis" },
+    { "id": "end", "label": "Exit", "fromCol": 5, "toCol": 5, "variant": "dashed" }
+  ],
+  "groups": [
+    { "id": "ladder_group", "label": "Bounded ladder", "lane": "ladder", "fromCol": 2, "toCol": 4, "variant": "emphasis" },
+    { "id": "halt_group", "label": "Human or hard stop", "lane": "stops", "fromCol": 4, "toCol": 5, "variant": "security" }
+  ],
+  "mainPath": ["run", "fingerprint", "retry", "replan", "expert", "reroute", "attention"],
+  "nodes": [
+    { "id": "run", "lane": "run", "col": 0, "type": "backend", "label": "Running", "sublabel": "Pi / team", "width": 124 },
+    { "id": "fingerprint", "lane": "run", "col": 1, "type": "security", "label": "Fingerprint", "sublabel": "structural", "width": 124, "tag": "detect" },
+    { "id": "retry", "lane": "ladder", "col": 2, "type": "backend", "label": "Transient Retry", "sublabel": "bounded", "width": 124 },
+    { "id": "replan", "lane": "ladder", "col": 3, "type": "backend", "label": "Local Replan", "sublabel": "bounded", "width": 124 },
+    { "id": "expert", "lane": "ladder", "col": 4, "type": "cloud", "label": "Remote Expert", "sublabel": "budgeted", "width": 124 },
+    { "id": "reroute", "lane": "ladder", "col": 5, "type": "messagebus", "label": "Team Reroute", "sublabel": "auto mode", "width": 124 },
+    { "id": "attention", "lane": "stops", "col": 5, "type": "security", "label": "Human Attention", "sublabel": "NEEDS_ATTENTION", "width": 124, "tag": "pause" },
+    { "id": "blocked", "lane": "stops", "col": 2, "type": "security", "label": "Policy Blocked", "sublabel": "sandbox/budget", "width": 124 },
+    { "id": "verified", "lane": "exit", "col": 5, "type": "frontend", "label": "Verified", "sublabel": "proof ok", "width": 124, "tag": "done" },
+    { "id": "completed", "lane": "exit", "col": 3, "type": "frontend", "label": "Completed", "sublabel": "no proof claim", "width": 124 }
+  ],
+  "edges": [
+    { "id": "run-fp", "from": "run", "to": "fingerprint", "variant": "emphasis" },
+    { "id": "fp-retry", "from": "fingerprint", "to": "retry", "label": "failure", "variant": "security" },
+    { "id": "retry-replan", "from": "retry", "to": "replan" },
+    { "id": "replan-expert", "from": "replan", "to": "expert" },
+    { "id": "expert-reroute", "from": "expert", "to": "reroute" },
+    { "id": "reroute-attention", "from": "reroute", "to": "attention", "label": "exhausted", "variant": "security" },
+    { "id": "fp-verified", "from": "fingerprint", "to": "verified", "label": "proof", "variant": "emphasis", "role": "branch" },
+    { "id": "fp-completed", "from": "fingerprint", "to": "completed", "label": "finished", "variant": "dashed", "role": "branch" },
+    { "id": "fp-blocked", "from": "fingerprint", "to": "blocked", "label": "hard stop", "variant": "security", "role": "error" },
+    { "id": "retry-fingerprint", "from": "retry", "to": "fingerprint", "label": "recovered", "variant": "dashed", "role": "return" }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Guarded default",
+      "items": [
+        "Default mode climbs retry → replan → expert; team reroute needs auto",
+        "Identical fingerprints escalate to human attention"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Never override",
+      "items": [
+        "Autonomy cannot bypass sandbox, budget, credentials, or human gates",
+        "Natural-language model phrases are not failure detectors"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Outcomes",
+      "items": [
+        "Verified requires explicit proof; Completed does not claim proof",
+        "Resume, replay, timeline, and metrics remain available after stops"
+      ]
+    }
+  ]
+}

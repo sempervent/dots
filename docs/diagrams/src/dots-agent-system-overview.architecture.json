@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "DOTS Agent System Overview",
+    "output": "docs/diagrams/dots-agent-system-overview.html",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "local-path",
+        "label": "Local-first path",
+        "focus": ["operator", "cli", "sandbox", "pi"],
+        "note": "Operator work stays on Pi inside the sandbox and worktree."
+      },
+      {
+        "id": "evidence-route",
+        "label": "Evidence and routing",
+        "focus": ["pi", "scout", "evals", "budget", "litellm"],
+        "note": "Scout and evals feed expected-cost routing before any billable call."
+      },
+      {
+        "id": "teams-autonomy",
+        "label": "Teams and recovery",
+        "focus": ["cli", "openrig", "pi", "autonomy"],
+        "note": "OpenRig seats still run under DOTS safety; autonomy observes outcomes."
+      }
+    ]
+  },
+  "components": [
+    { "id": "operator", "type": "external", "label": "Operator", "sublabel": "CLI", "pos": [36, 250], "size": [110, 56] },
+    { "id": "cli", "type": "frontend", "label": "dots agent", "sublabel": "run / team", "pos": [190, 250], "size": [124, 56], "tag": "DOTS" },
+    { "id": "sandbox", "type": "security", "label": "Sandbox", "sublabel": "worktree", "pos": [360, 140], "size": [120, 56], "tag": "safe" },
+    { "id": "pi", "type": "backend", "label": "Pi", "sublabel": "local tools", "pos": [530, 250], "size": [120, 56], "tag": "local" },
+    { "id": "scout", "type": "backend", "label": "Model Scout", "sublabel": "catalog", "pos": [530, 110], "size": [120, 56] },
+    { "id": "evals", "type": "database", "label": "Eval Evidence", "sublabel": "task class", "pos": [700, 110], "size": [120, 56] },
+    { "id": "budget", "type": "security", "label": "Budget", "sublabel": "reserve", "pos": [700, 250], "size": [120, 56] },
+    { "id": "litellm", "type": "cloud", "label": "LiteLLM", "sublabel": ":4000", "pos": [870, 250], "size": [120, 56] },
+    { "id": "expert", "type": "external", "label": "Expert", "sublabel": "OpenRouter", "pos": [1040, 250], "size": [120, 56] },
+    { "id": "openrig", "type": "messagebus", "label": "OpenRig", "sublabel": "teams", "pos": [360, 380], "size": [120, 56] },
+    { "id": "autonomy", "type": "backend", "label": "Autonomy", "sublabel": "recover", "pos": [700, 380], "size": [120, 56] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "DOTS-managed local host", "wraps": ["cli", "sandbox", "pi", "scout", "evals", "budget", "litellm", "openrig", "autonomy"], "pad": 20 },
+    { "kind": "security-group", "label": "execution trust boundary", "wraps": ["sandbox", "pi"], "pad": 14 }
+  ],
+  "connections": [
+    { "id": "op-cli", "from": "operator", "to": "cli", "label": "invoke", "variant": "emphasis" },
+    { "id": "cli-sandbox", "from": "cli", "to": "sandbox", "label": "safe", "variant": "security", "fromSide": "top", "toSide": "left" },
+    { "id": "sandbox-pi", "from": "sandbox", "to": "pi" },
+    { "id": "cli-pi", "from": "cli", "to": "pi", "label": "run" },
+    { "id": "pi-scout", "from": "pi", "to": "scout", "label": "select", "fromSide": "top", "toSide": "bottom", "labelDy": -20 },
+    { "id": "scout-evals", "from": "scout", "to": "evals", "label": "P(ok)" },
+    { "id": "evals-budget", "from": "evals", "to": "budget", "label": "E[cost]", "fromSide": "bottom", "toSide": "top", "labelDy": 28 },
+    { "id": "pi-budget", "from": "pi", "to": "budget" },
+    { "id": "budget-litellm", "from": "budget", "to": "litellm", "label": "reserve" },
+    { "id": "litellm-expert", "from": "litellm", "to": "expert", "label": "call" },
+    { "id": "cli-openrig", "from": "cli", "to": "openrig", "label": "team", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "labelDy": 24 },
+    { "id": "openrig-pi", "from": "openrig", "to": "pi", "label": "seat", "variant": "dashed", "fromSide": "right", "toSide": "bottom", "labelDy": 24 },
+    { "id": "pi-autonomy", "from": "pi", "to": "autonomy", "label": "outcome", "variant": "dashed", "fromSide": "bottom", "toSide": "left" }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Local first",
+      "items": [
+        "Pi verifies work on the host before any remote consult",
+        "Sandbox and worktree wrap default runs"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Evidence before spend",
+      "items": [
+        "Scout and evals drive expected-cost routing",
+        "Budget reserve/settle gates LiteLLM and experts"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Teams stay bounded",
+      "items": [
+        "OpenRig seats still execute under DOTS trust rules",
+        "Autonomy recovers with structural signals only"
+      ]
+    }
+  ]
+}
