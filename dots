@@ -47,46 +47,40 @@ source "${DIR}/helpers/hardware.sh"
 source "${DIR}/helpers/linux_distro.sh"
 
 dots_usage() {
+	# Prefer generated synopsis (configs/help/commands.toml → scripts/docs/generate_usage.py)
+	# Strip generator comment headers so --help stays clean for humans/CI.
+	local gen="${DIR}/scripts/generated/dots_usage.inc"
+	if [[ -f ${gen} ]]; then
+		grep -v '^#' "${gen}" || true
+		return 0
+	fi
 	cat <<EOF
 DOTS — machine environment manager  (v$(dots_version))
 
 Usage:
-  ./dots                     interactive setup
   ./dots setup               setup / reconfigure
   ./dots status              current state (read-only)
-  ./dots components          optional components / --with selectors
-  ./dots components list     registry + host compatibility
-  ./dots components active   last-selected components (informational)
-  ./dots lsp                 language-server install / status / checks
-  ./dots ai                  AI inference server (Compose + Open WebUI)
-  ./dots packages            package ownership / drift
-  ./dots packages groups     capability groups (read-only)
-  ./dots packages group ID   inspect one package group
-  ./dots packages plan […]   resolved package plan (read-only)
-  ./dots packages status     full package audit
-  ./dots packages explain N  explain one package's ownership state
-  ./dots packages outdated   outdated managed packages
-  ./dots packages upgrade    upgrade DOTS-managed packages
-  ./dots packages adopt …    suggest Brewfile declaration (no auto-edit)
-  ./dots backup [--name N]   snapshot managed targets
-  ./dots backups             list snapshots
-  ./dots restore [ID]        restore a snapshot
-  ./dots profile             profile management
-  ./dots models              local model management (discover / pull)
-  ./dots models discover     read-only inventory (no ai-server required)
-  ./dots check               verify machine
-  ./dots update              update DOTS repo + reapply
-  ./dots help                this help
+  ./dots help                interactive help (dots-help)
+  ./dots --help              this synopsis
   ./dots --version
 
-Optional components use profile with= or ./setup.sh --with <ids>
-(see ./dots components list). Docs:
-  https://sempervent.github.io/dots/using/components/
-
-Automation / expert scripts (still supported):
-  ./bootstrap.sh   ./setup.sh   ./configure.sh
-  ./scripts/pull_models.sh   ./scripts/check.sh
+Regenerate synopsis: python3 scripts/docs/generate_usage.py
 EOF
+}
+
+dots_cmd_help() {
+	local helper="${DIR}/scripts/dots-help"
+	if [[ -x ${helper} ]]; then
+		exec "${helper}" "$@"
+	fi
+	if command -v dots-help >/dev/null 2>&1; then
+		exec dots-help "$@"
+	fi
+	echo "dots-help not installed yet; showing CLI synopsis." >&2
+	echo "Run ./setup.sh to install the Textual help TUI." >&2
+	echo "" >&2
+	dots_usage
+	return 0
 }
 
 dots_cmd_status() {
@@ -234,6 +228,11 @@ dots_cmd_status() {
 	else
 		echo "  check: unavailable"
 	fi
+
+	echo ""
+	echo "Help:"
+	echo "  dots-help"
+	echo "  man dots"
 }
 
 dots_cmd_backup() {
@@ -955,9 +954,13 @@ EOF
 # --- dispatch ---
 cmd="${1:-setup}"
 case "${cmd}" in
--h | --help | help)
+-h | --help)
 	dots_usage
 	exit 0
+	;;
+help)
+	shift || true
+	dots_cmd_help "$@"
 	;;
 --version | -V | version)
 	echo "dots $(dots_version)"
@@ -1024,6 +1027,7 @@ update)
 		dots_cmd_setup "$@"
 	else
 		echo "Unknown command: ${cmd}" >&2
+		echo "Run: dots-help commands" >&2
 		dots_usage >&2
 		exit 1
 	fi

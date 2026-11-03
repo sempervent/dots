@@ -77,6 +77,10 @@ fi
 [[ -f "${DOTS_DIR}/zsh/fzf.zsh" ]] && source "${DOTS_DIR}/zsh/fzf.zsh"
 # 1}}}
 
+# ./dots CLI completion (topics for `dots help <Tab>`) {{{1
+[[ -f "${DOTS_DIR}/zsh/dots_completion.zsh" ]] && source "${DOTS_DIR}/zsh/dots_completion.zsh"
+# 1}}}
+
 # Modern tools: zoxide, direnv, atuin (not OMZ z) {{{1
 [[ -f "${DOTS_DIR}/shell/tools.sh" ]] && source "${DOTS_DIR}/shell/tools.sh"
 # 1}}}

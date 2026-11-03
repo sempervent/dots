@@ -22,6 +22,8 @@ if [[ ! -x ${VENV}/bin/mkdocs ]]; then
 fi
 
 echo "=== generate --check ==="
+"${PY}" "${ROOT}/scripts/docs/generate_usage.py" --check
+"${PY}" "${ROOT}/scripts/docs/generate_manpages.py" --check
 "${PY}" "${ROOT}/scripts/docs/generate_reference.py" --check
 
 echo "=== mkdocs build --strict ==="

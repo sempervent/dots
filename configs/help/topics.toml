@@ -1,0 +1,132 @@
+# configs/help/topics.toml — narrative help topics for dots-help
+#
+# body = path relative to repo root (Markdown).
+# keywords drive / search and alias matching.
+
+version = 1
+
+[[topics]]
+id = "overview"
+title = "Overview"
+body = "docs/help/overview.md"
+order = 10
+keywords = ["overview", "summary", "machine", "home"]
+
+[[topics]]
+id = "getting-started"
+title = "Getting Started"
+body = "docs/help/getting-started.md"
+order = 20
+keywords = ["start", "install", "bootstrap", "first", "wizard"]
+
+[[topics]]
+id = "shell"
+title = "Shell & Prompt"
+body = "docs/help/shell.md"
+order = 30
+keywords = ["shell", "zsh", "bash", "starship", "prompt", "oh-my-zsh"]
+
+[[topics]]
+id = "completion"
+title = "Fuzzy Completion"
+body = "docs/help/completion.md"
+order = 40
+keywords = ["completion", "fzf", "fzf-tab", "tab", "autocomplete", "ctrl-r", "ctrl-t", "fuzzy"]
+
+[[topics]]
+id = "keybindings"
+title = "Keybindings"
+body = "docs/help/keybindings.md"
+order = 50
+keywords = ["keys", "keybindings", "shortcuts", "ctrl-space", "tmux", "herdr", "prefix"]
+
+[[topics]]
+id = "profiles"
+title = "Profiles"
+body = "docs/help/profiles.md"
+order = 60
+keywords = ["profile", "home", "work", "server", "base", "all"]
+
+[[topics]]
+id = "components"
+title = "Components"
+body = "docs/help/components.md"
+order = 70
+keywords = ["components", "with", "optional", "supergroup"]
+
+[[topics]]
+id = "supergroups"
+title = "Supergroups"
+body = "docs/help/supergroups.md"
+order = 80
+keywords = ["supergroup", "ai", "with ai"]
+
+[[topics]]
+id = "packages"
+title = "Packages"
+body = "docs/help/packages.md"
+order = 90
+keywords = ["packages", "brew", "groups", "ownership", "drift", "inactive"]
+
+[[topics]]
+id = "ai"
+title = "AI"
+body = "docs/help/ai.md"
+order = 100
+keywords = ["ai", "hermes", "ollama", "opencode", "codex", "cursor", "drawthings"]
+
+[[topics]]
+id = "models"
+title = "Models"
+body = "docs/help/models.md"
+order = 110
+keywords = ["models", "gguf", "pull", "tier", "policy"]
+
+[[topics]]
+id = "lsp"
+title = "Language Servers"
+body = "docs/help/lsp.md"
+order = 120
+keywords = ["lsp", "language", "neovim", "rust-analyzer", "pyright"]
+
+[[topics]]
+id = "skills"
+title = "Skills"
+body = "docs/help/skills.md"
+order = 130
+keywords = ["skills", "agents", "archify", "ai-skills"]
+
+[[topics]]
+id = "backup"
+title = "Backup & Restore"
+body = "docs/help/backup.md"
+order = 140
+keywords = ["backup", "restore", "snapshot", "old_dots", "recovery"]
+
+[[topics]]
+id = "diagnostics"
+title = "Diagnostics"
+body = "docs/help/diagnostics.md"
+order = 150
+keywords = ["check", "status", "doctor", "health", "diagnostics"]
+
+[[topics]]
+id = "update"
+title = "Update / Maintenance"
+body = "docs/help/update.md"
+order = 160
+keywords = ["update", "upgrade", "maintenance", "git pull"]
+
+[[topics]]
+id = "commands"
+title = "Commands"
+body = "docs/help/commands.md"
+order = 170
+keywords = ["commands", "cli", "usage", "synopsis"]
+
+[[topics]]
+id = "files"
+title = "Files & Configuration"
+body = "docs/help/files.md"
+order = 180
+keywords = ["files", "config", "paths", "environment", "manpath"]

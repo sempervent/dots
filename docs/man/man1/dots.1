@@ -1,0 +1,87 @@
+.\" GENERATED — DO NOT EDIT.
+.\" Source: configs/help/commands.toml + scripts/docs/generate_manpages.py
+.
+.TH DOTS 1 "2026-11-02" "DOTS 1.5.0" "User Commands"
+.SH NAME
+dots \- desired\-state environment manager
+.SH SYNOPSIS
+.B dots
+[command] [options]
+.SH DESCRIPTION
+DOTS converges a workstation toward a declarative desired state:
+profiles, package groups, optional components, skills, and models.
+Primary interactive shell UX includes fuzzy completion (fzf\-tab) and
+.B dots\-help
+for machine\-aware documentation.
+.SH COMMANDS
+.TP
+.B dots setup [options]
+Interactive or noninteractive setup / reconfigure toward desired state.
+.TP
+.B dots status
+Show current DOTS state (profile, packages summary, components).
+.TP
+.B dots components [list|active|show ID]
+Inspect optional components and \-\-with selectors.
+.TP
+.B dots lsp [status|check|install|list]
+Language\-server install, status, and checks.
+.TP
+.B dots ai [status|doctor|up|down|…]
+AI inference server (Compose + Open WebUI) control plane.
+.TP
+.B dots packages [groups|group|plan|status|explain|outdated|upgrade|adopt]
+Package ownership, drift, groups, and upgrades.
+.TP
+.B dots backup [\-\-name N]
+Snapshot managed targets under ~/.local/state/dots/backups/.
+.TP
+.B dots backups
+List recoverable DOTS snapshots.
+.TP
+.B dots restore [ID]
+Restore a snapshot (creates a safety snapshot first).
+.TP
+.B dots profile …
+Create, preview, or switch machine profiles.
+.TP
+.B dots models [discover|pull|…]
+Local model plan, discovery, and pull workflows.
+.TP
+.B dots check [\-\-profile NAME]
+Verify machine health against the active/selected profile.
+.TP
+.B dots update
+git pull the DOTS repo and optionally reapply setup.
+.TP
+.B dots help [topic] [\-\-plain] [\-\-search QUERY]
+Interactive Textual help (dots\-help) for this machine.
+.SH FUZZY COMPLETION
+On Zsh, Tab uses fzf\-tab over compsys candidates. Ctrl\-R searches
+history, Ctrl\-T inserts files, Alt\-C jumps directories, and **Tab
+runs recursive fzf path completion. See
+.BR dots\-help (1)
+topic
+.B completion
+.
+.SH FILES
+.TP
+.I ~/.config/dots/
+Runtime state, active profile, models overlay.
+.TP
+.I ~/.local/state/dots/backups/
+Snapshots created by
+.BR dots\-backup .
+.SH SEE ALSO
+.BR dots\-help (1),
+.BR dots\-packages (1),
+.BR dots\-models (1),
+.BR dots\-lsp (1),
+.BR dots\-backup (1)
+.SH RECOVERY
+Use
+.B dots backup
+/
+.B dots restore
+for managed targets. Legacy trees may appear as
+.IR ~/.old_dots .

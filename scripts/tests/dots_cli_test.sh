@@ -23,13 +23,15 @@ echo "=== dots CLI surface ==="
 
 expected_ver="$(tr -d '[:space:]' <"${ROOT}/VERSION")"
 
-out="$("${ROOT}/dots" help 2>&1)" || {
-	bad "help failed"
+# Fast conventional synopsis (must NOT launch Textual)
+out="$("${ROOT}/dots" --help 2>&1)" || {
+	bad "--help failed"
 	out=""
 }
-echo "${out}" | grep -q 'interactive setup' && ok "help mentions interactive setup" || bad "help text"
-echo "${out}" | grep -q './dots status' && ok "help lists status" || bad "help status"
-echo "${out}" | grep -q 'bootstrap.sh' && ok "help mentions expert scripts" || bad "help experts"
+echo "${out}" | grep -qiE 'setup|interactive' && ok "--help mentions setup" || bad "--help text"
+echo "${out}" | grep -q './dots status' && ok "--help lists status" || bad "--help status"
+echo "${out}" | grep -q 'bootstrap.sh' && ok "--help mentions expert scripts" || bad "--help experts"
+echo "${out}" | grep -q '^#' && bad "--help leaked generator comments" || ok "--help clean"
 
 ver="$("${ROOT}/dots" --version 2>&1)" || {
 	bad "version failed"

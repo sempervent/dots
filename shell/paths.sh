@@ -99,3 +99,23 @@ if [ -n "${JAVA_HOME:-}" ]; then
 fi
 
 export PATH
+
+# User man pages (dots(1), dots-help(1), …) without clobbering system MANPATH.
+# Only prepend when the DOTS man root exists; leave MANPATH unset otherwise so
+# man(1) keeps its compiled-in defaults.
+_dots_man_root="${HOME}/.local/share/man"
+if [ -d "${_dots_man_root}/man1" ]; then
+  case ":${MANPATH:-}:" in
+    *":${_dots_man_root}:"*) ;;
+    *)
+      if [ -n "${MANPATH:-}" ]; then
+        MANPATH="${_dots_man_root}:${MANPATH}"
+      else
+        # Trailing colon asks man to append system defaults after this prefix.
+        MANPATH="${_dots_man_root}:"
+      fi
+      export MANPATH
+      ;;
+  esac
+fi
+unset _dots_man_root

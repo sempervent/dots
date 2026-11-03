@@ -32,6 +32,7 @@ secrets/
 tools/drawthings_mcp/.venv/
 tools/opencode_mcp/.venv/
 tools/codex_mcp/.venv/
+tools/dots_help/.venv/
 tools/**/__pycache__/
 
 # Pinned lint toolchain cache (scripts/ci/ensure_lint_tools.sh)

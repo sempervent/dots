@@ -381,6 +381,7 @@ for g in groups:
         print("  %-12s %s%s" % (gid, lab, (" — " + desc) if desc else ""))
 PY
 	echo "List: ./dots components list"
+	echo "Run:  dots-help components"
 }
 
 # Validate CSV / list of component names (not groups); print unknowns to stderr.

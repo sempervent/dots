@@ -92,6 +92,7 @@ nav:
       - Skills: using/skills.md
       - Tools catalog: using/tools.md
       - Fuzzy completion: using/fuzzy-completion.md
+      - DOTS Help (dots-help): using/dots-help.md
       - Extending: using/extending.md
   - Platforms:
       - Linux: platforms/linux.md

@@ -347,6 +347,23 @@ else
   info "shell: zsh not installed"
 fi
 
+echo -e "\n${BLUE}DOTS Help${NC}"
+if command -v dots-help >/dev/null 2>&1 || [[ -x ${DOTS_DIR}/scripts/dots-help ]]; then
+  ok "dots-help launcher available"
+else
+  warn "dots-help missing — re-run ./setup.sh (installs tools/dots_help via uv)"
+fi
+if [[ -f ${HOME}/.local/share/man/man1/dots.1 ]] || [[ -f ${DOTS_DIR}/docs/man/man1/dots.1 ]]; then
+  ok "man dots page present"
+else
+  warn "man dots missing — regenerate with python3 scripts/docs/generate_manpages.py"
+fi
+if [[ -f ${DOTS_DIR}/configs/help/commands.toml ]]; then
+  ok "help command metadata present"
+else
+  fail "configs/help/commands.toml missing"
+fi
+
 echo -e "\n${BLUE}Fuzzy completion${NC}"
 if command -v fzf >/dev/null 2>&1; then
   ok "fzf $(fzf --version 2>/dev/null | head -1)"

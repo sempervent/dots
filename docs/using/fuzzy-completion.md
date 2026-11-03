@@ -46,6 +46,18 @@ Bash does not use fzf-tab. It keeps the official fzf integration:
 - Ctrl-R / Ctrl-T / Alt-C
 - `**<Tab>` path completion (fd-backed when `fd` is available)
 
+## Discoverability
+
+```bash
+dots-help                 # interactive help for this machine
+dots-help completion      # this cheat-sheet, live capability state
+man dots
+```
+
+| Discover | Search args | History | Files | Docs |
+|----------|-------------|---------|-------|------|
+| `dots-help` | Tab | Ctrl-R | Ctrl-T | `man dots` |
+
 ## Install / health
 
 `./setup.sh` clones fzf-tab next to the other Oh My Zsh custom plugins (clone once;

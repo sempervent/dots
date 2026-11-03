@@ -22,6 +22,8 @@ else
 fi
 
 echo "=== generate --check ==="
+python3 "${ROOT}/scripts/docs/generate_usage.py" --check
+python3 "${ROOT}/scripts/docs/generate_manpages.py" --check
 python3 "${ROOT}/scripts/docs/generate_reference.py" --check
 
 echo "=== mkdocs build --strict ==="
