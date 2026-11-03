@@ -39,6 +39,27 @@ def esc(text: str) -> str:
     return text.replace("\\", "\\\\").replace("-", "\\-")
 
 
+def wrap_roff(text: str, width: int = 78) -> list[str]:
+    """Wrap prose for mandoc STYLE (input lines ≤80 bytes)."""
+    text = text.strip()
+    if not text:
+        return [""]
+    words = text.split()
+    lines: list[str] = []
+    cur = ""
+    for w in words:
+        candidate = w if not cur else f"{cur} {w}"
+        if len(candidate.encode("utf-8")) <= width:
+            cur = candidate
+        else:
+            if cur:
+                lines.append(cur)
+            cur = w
+    if cur:
+        lines.append(cur)
+    return lines or [""]
+
+
 def write_dots_1(cmds: list[dict], ver: str) -> str:
     lines = [
         HEADER,
@@ -59,9 +80,9 @@ def write_dots_1(cmds: list[dict], ver: str) -> str:
     for c in cmds:
         usage = esc(str(c.get("usage") or c.get("name")))
         desc = esc(str(c.get("description") or ""))
-        lines.append(f".TP")
+        lines.append(".TP")
         lines.append(f".B {usage}")
-        lines.append(desc)
+        lines.extend(wrap_roff(desc))
     lines.extend(
         [
             ".SH FUZZY COMPLETION",
@@ -156,15 +177,22 @@ def write_dots_help_1(ver: str) -> str:
 def write_subcommand_1(name: str, cmd: dict, ver: str) -> str:
     usage = esc(str(cmd.get("usage") or f"dots {name}"))
     desc = esc(str(cmd.get("description") or ""))
+    name_line = f"dots\\-{esc(name)} \\- {desc}"
+    # Keep .SH NAME on one logical phrase; truncate if still too long for STYLE.
+    if len(name_line.encode("utf-8")) > 78:
+        short = desc
+        while len(f"dots\\-{esc(name)} \\- {short}".encode("utf-8")) > 78 and short:
+            short = short.rsplit(" ", 1)[0].rstrip(",;")
+        name_line = f"dots\\-{esc(name)} \\- {short}" if short else f"dots\\-{esc(name)}"
     lines = [
         HEADER,
         f'.TH DOTS\\-{name.upper()} 1 "2026-11-02" "DOTS {ver}" "User Commands"',
         ".SH NAME",
-        f"dots\\-{esc(name)} \\- {desc}",
+        name_line,
         ".SH SYNOPSIS",
         f".B {usage}",
         ".SH DESCRIPTION",
-        desc,
+        *wrap_roff(desc),
         ".SH EXAMPLES",
     ]
     examples = cmd.get("examples") or []
@@ -174,8 +202,9 @@ def write_subcommand_1(name: str, cmd: dict, ver: str) -> str:
         lines.append(".")
     for ex in examples:
         lines.append(".TP")
-        lines.append(f".B {esc(str(ex.get('command') or ''))}")
-        lines.append(esc(str(ex.get("description") or "")))
+        cmd_line = esc(str(ex.get("command") or ""))
+        lines.append(f".B {cmd_line}")
+        lines.extend(wrap_roff(esc(str(ex.get("description") or ""))))
     lines.extend(
         [
             ".SH SEE ALSO",

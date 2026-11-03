@@ -68,9 +68,9 @@ description = "Show AI server stack status."
 
 [[commands]]
 name = "agent"
-usage = "dots agent [status|doctor|sandbox|models|scout|route|eval|team|run|inspect|timeline|failures|attention|metrics|resume|replay|worktrees|mcp|costs]"
+usage = "dots agent [status|doctor|sandbox|models|scout|eval|team|run|…]"
 category = "ai"
-description = "Local-first agent harness (sandboxed Pi + OpenRig teams + eval routing + guarded autonomy + budgeted experts)."
+description = "Local-first agent harness (Pi, OpenRig, evals, guarded autonomy)."
 mutating = true
 related = ["ai", "models", "setup", "help"]
 [[commands.examples]]

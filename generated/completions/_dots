@@ -16,7 +16,7 @@ _dots() {
     'components:Inspect optional components and --with selectors.'
     'lsp:Language-server install, status, and checks.'
     'ai:AI inference server (Compose + Open WebUI) control plan…'
-    'agent:Local-first agent harness (sandboxed Pi + OpenRig teams…'
+    'agent:Local-first agent harness (Pi, OpenRig, evals, guarded…'
     'packages:Package ownership, drift, groups, and upgrades.'
     'backup:Snapshot managed targets under ~/.local/state/dots/back…'
     'backups:List recoverable DOTS snapshots.'
