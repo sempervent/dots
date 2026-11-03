@@ -1,9 +1,9 @@
 # Agent Harness
 
-DOTS local-first agent orchestration (Phases 1–2):
+DOTS local-first agent orchestration (Phases 1–3):
 
 ```text
-Pi (sandboxed) → worktree → model-scout MCP → budget → LiteLLM → OpenRouter → verify
+Pi (sandboxed) → worktree → eval evidence → model-scout → budget → LiteLLM → verify
 ```
 
 ## Commands
@@ -14,13 +14,26 @@ Pi (sandboxed) → worktree → model-scout MCP → budget → LiteLLM → OpenR
 ./dots agent sandbox status
 ./dots agent models
 ./dots agent scout --task debugging --tools --quality strong --max-cost 0.50
-./dots agent run "Diagnose and fix the failing test."          # safe default
+./dots agent route --task debugging --language python --quality strong --simulate
+./dots agent eval list
+./dots agent eval run --local --suite smoke
+./dots agent eval results
+./dots agent run --task-class debugging "Diagnose and fix the failing test."
 ./dots agent run --in-place "…"
 ./dots agent run --unsafe-host "…"                             # explicit bypass
 ./dots agent worktrees
 ./dots agent mcp status
 ./dots agent costs
 ```
+
+## Agent Evaluations
+
+See [evals](../agents/evals.md). Deterministic scorers only; no LLM-as-judge.
+
+## Model Routing
+
+See [model-scout](../agents/model-scout.md). Expected cost-to-success when
+empirical evidence is adequate; curated capability registry otherwise.
 
 ## Components
 

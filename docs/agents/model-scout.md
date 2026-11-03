@@ -1,74 +1,58 @@
-# Model Scout
+# Model Scout (evidence-based)
 
-Read-only MCP server: `dots-model-scout`.
-
-## Tools
-
-| Tool | Purpose |
-|------|---------|
-| `find_model` | Cheapest qualifying OpenRouter model |
-| `compare_models` | Cost compare explicit ids |
-| `estimate_cost` | Price estimate for one model |
-| `explain_choice` | Deterministic why/why-not |
-
-## Catalog
-
-Authenticated (preferred):
-
-```text
-GET https://openrouter.ai/api/v1/models/user
-```
-
-Public fallback when `OPENROUTER_API_KEY` is unset:
-
-```text
-GET https://openrouter.ai/api/v1/models
-```
-
-Cache: `~/.cache/dots/agents/openrouter-models.json` (default TTL 15m).
+Model Scout selects a **model**. LiteLLM/OpenRouter still select provider
+deployment for that model. DOTS budget controls spend. Pi executes locally.
+The eval subsystem supplies empirical quality evidence.
 
 ## Selection order
 
-1. Account availability (user catalog when keyed)
-2. Required modality (vision)
-3. Required context length
-4. Required API/tool parameters
-5. Local capability quality floor (`configs/agents/model-capabilities.toml`)
-6. Maximum estimated request cost
-7. Sort remaining by estimated task cost
+```text
+1. hard API capability constraints
+2. quality / reliability floor
+3. context requirement
+4. budget
+5. minimize expected cost-to-success (empirical) else request cost (curated)
+6. latency tie-breaker (balanced preference)
+7. model ID deterministic final tie-break
+```
 
-## Cost formula
+## Formulas
 
 ```text
-estimated_cost =
-    input_tokens  * pricing.prompt
-  + output_tokens * pricing.completion
+estimated_attempt_cost = input_tokens * prompt_price + output_tokens * completion_price
+
+conservative_success_probability = Wilson_lower(successes, attempts)
+
+expected_cost_to_success = estimated_attempt_cost / conservative_success_probability
 ```
 
-Missing price metadata → cannot auto-select (never treat as free).
+Local models use API cost `$0`. With adequate empirical reliability they win
+under economy preference — local-first as an empirical result.
 
-## Provider routing
+## Evidence hierarchy
 
-After a **model** is selected, OpenRouter provider preference uses
-`provider.sort = "price"` (verified OpenRouter provider routing docs).
-Model selection ≠ provider selection.
+| Rank | Source | Role |
+|------|--------|------|
+| 1 | Exact-model DOTS eval evidence | Authoritative when `attempts ≥ minimum` and not stale |
+| 2 | Imported external benchmarks | Tie-break / bootstrap only — **not** task success probability |
+| 3 | Curated `model-capabilities.toml` | Bootstrap prior |
+| 4 | Unrated | Never satisfies an explicit quality floor above `unrated` |
 
-## Developer: MCP Inspector (optional)
+Popularity rankings are informational only.
 
-Phase 1 does **not** install a persistent Inspector service. For local schema
-checks without a browser:
+## Inspect routing
 
 ```bash
-npx -y @modelcontextprotocol/inspector --cli "$(pwd)/scripts/dots-model-scout" \
-  --method tools/list
-npx -y @modelcontextprotocol/inspector --cli "$(pwd)/scripts/dots-expert" \
-  --method tools/list
+./dots agent route \
+  --task debugging \
+  --language python \
+  --context 12000 \
+  --output 3000 \
+  --quality strong \
+  --max-cost 0.50 \
+  --simulate
 ```
 
-Authoritative Pi discovery after setup:
+`--simulate` uses cached catalog + stored evidence; no inference calls.
 
-```bash
-pi mcp list
-```
-
-Fuller DOTS developer-tool integration is Phase 2.
+`routing_policy_version` is recorded with decisions (currently `1`).

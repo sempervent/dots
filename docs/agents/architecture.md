@@ -39,15 +39,16 @@ local Pi applies advice + verifies
 | Pi `models.json` structured merge | **MOCKED** (+ live when local provider present) |
 | Pi RPC local inference | **PROVEN** on machines with Pi + local model (else SKIP) |
 | MCP tools/list + `pi mcp list` discovery | **PROVEN** when executables / Pi present |
-| OS sandbox / OpenRig / evals | **DEFERRED** (see [v1.6-roadmap](v1.6-roadmap.md)) |
+| OS sandbox / worktrees / MCP trust | **implemented** (Phase 2) |
+| Eval-driven expected-cost routing | **implemented** (Phase 3; see [evals](evals.md), [model-scout](model-scout.md)) |
+| OpenRig multi-agent orchestration | **DEFERRED** (Phase 4; see [v1.6-roadmap](v1.6-roadmap.md)) |
 
-## Deferred (Phases 2–5)
+## Deferred (Phases 4–5 + Final)
 
 - OpenRig session/topology orchestration
-- OS-level sandboxing
-- Agent eval suite / capability benchmarking
-- Multi-agent orchestration / consensus
-- Advanced automatic failure heuristics
+- Multi-agent teams / planner-builder-reviewer roles
+- Automatic stuck detection / runtime escalation heuristics
+- Full CI / release convergence
 
 See [v1.6-roadmap.md](v1.6-roadmap.md).
 
