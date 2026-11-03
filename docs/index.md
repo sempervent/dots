@@ -23,6 +23,8 @@ Live docs: [https://sempervent.github.io/dots/](https://sempervent.github.io/dot
 | macOS workstation apps (Vorssaint, Raycast, …) | [mactools](macos/mactools.md) |
 | Agents, models, routing | [Agent harness](agents/harness.md) · [Models](agents/models.md) |
 | Fuzzy Tab / Ctrl-R / Ctrl-T | [Fuzzy completion](using/fuzzy-completion.md) |
+| Interactive help / man pages / cheat sheet | [dots-help](using/dots-help.md) |
+| Shell bindings / completion diagnostics | `dots shell status` · `dots completion status` |
 | Fix something that broke | [Troubleshooting](troubleshooting/index.md) |
 | Extend the repo safely | [Extending](using/extending.md) |
 | CLI flags (generated) | [CLI reference](reference/cli.md) |
@@ -33,6 +35,8 @@ Live docs: [https://sempervent.github.io/dots/](https://sempervent.github.io/dot
 git clone https://github.com/sempervent/dots.git ~/dots
 cd ~/dots
 ./dots                     # interactive setup
+dots-help                  # machine-aware interactive docs
+man dots                   # Unix manual
 ./dots setup --dry-run     # preview without mutating
 ./dots status              # read-only dashboard
 ./dots check               # health verification
@@ -49,6 +53,7 @@ cd ~/dots
 | Skill packs | `configs/skills/manifest.toml` |
 | Local models | `configs/models.toml` |
 | Built-in profiles | `configs/bootstrap/profiles/*.toml` |
+| CLI / help / man metadata | `configs/help/commands.toml` + `topics.toml` |
 
 See [Architecture](concepts/architecture.md) for the full map.
 

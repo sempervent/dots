@@ -32,6 +32,10 @@ if command -v brew >/dev/null 2>&1; then
 fi
 source_if_exists /etc/bash_completion.d/git-prompt
 
+# ./dots CLI completion (includes `dots help <topic>`)
+# shellcheck disable=SC1091
+source_if_exists "${DOTS_DIR}/shell/dots_completion.sh"
+
 # sudo completion when available
 if [[ -n "${PS1:-}" ]]; then
   complete -cf sudo 2>/dev/null || true

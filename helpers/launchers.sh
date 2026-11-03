@@ -54,6 +54,7 @@ dots_ensure_launchers() {
   _dots_link_script hermes-notify-hook
   _dots_link_script agent-telemetry
   _dots_link_script agent-stats
+  _dots_link_script dots-help
 
   # Draw Things: link when already managed / previously installed
   if [[ -f "${HOME}/.config/drawthings-mcp/config.toml" ]] \

@@ -420,6 +420,9 @@ dots_backup_restore() {
 	local snap
 	snap="$(dots_backup_resolve_id "${id}")" || {
 		echo "Error: snapshot not found: ${id}" >&2
+		echo "Help:" >&2
+		echo "  dots backups" >&2
+		echo "  dots-help backup" >&2
 		return 1
 	}
 	local files="${snap}/files"

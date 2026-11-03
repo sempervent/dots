@@ -1,0 +1,211 @@
+#compdef dots
+# GENERATED — DO NOT EDIT
+# Source: configs/help/commands.toml + registries via scripts/docs/generate_completions.py
+# Runtime: cheap filesystem reads only (profiles / snapshots). No network.
+
+_dots() {
+  local curcontext="$curcontext" state state_descr line
+  typeset -A opt_args
+  local -a commands topics selectors groups profiles providers tiers
+  local -a lsp_subs model_subs shell_subs completion_subs pkg_subs
+  local -a component_subs ai_subs lsp_ids
+
+  commands=(
+    'setup:Interactive or noninteractive setup / reconfigure towar…'
+    'status:Show current DOTS state (profile, packages summary, com…'
+    'components:Inspect optional components and --with selectors.'
+    'lsp:Language-server install, status, and checks.'
+    'ai:AI inference server (Compose + Open WebUI) control plan…'
+    'packages:Package ownership, drift, groups, and upgrades.'
+    'backup:Snapshot managed targets under ~/.local/state/dots/back…'
+    'backups:List recoverable DOTS snapshots.'
+    'restore:Restore a snapshot (creates a safety snapshot first).'
+    'profile:Create, preview, or switch machine profiles.'
+    'models:Local model plan, discovery, and pull workflows.'
+    'check:Verify machine health against the active/selected profi…'
+    'update:git pull the DOTS repo and optionally reapply setup.'
+    'help:Interactive Textual help (dots-help) for this machine.'
+    'shell:Inspect shell, prompt, and keybinding ownership.'
+    'completion:DOTS CLI completion and fzf-tab diagnostics.'
+  )
+  topics=(
+    'overview:Overview'
+    'getting-started:Getting Started'
+    'shell:Shell & Prompt'
+    'completion:Fuzzy Completion'
+    'keybindings:Keybindings'
+    'profiles:Profiles'
+    'components:Components'
+    'supergroups:Supergroups'
+    'packages:Packages'
+    'ai:AI'
+    'models:Models'
+    'lsp:Language Servers'
+    'skills:Skills'
+    'backup:Backup & Restore'
+    'diagnostics:Diagnostics'
+    'update:Update / Maintenance'
+    'commands:Commands'
+    'files:Files & Configuration'
+  )
+  selectors=(
+    'ai:AI applications'
+    'herdr:Herdr'
+    'hermes:Hermes'
+    'ollama:Ollama'
+    'llamacpp:llama.cpp'
+    'archify:Archify'
+    'skills:Engineering skills'
+    'ai-skills:AI skills'
+    'drawthings:Draw Things'
+    'opencode:OpenCode'
+    'codex:Codex'
+    'cursor:Cursor'
+    'fluidvoice:FluidVoice'
+    'images:Images toolkit'
+    'tex:TeX'
+    'mactools:macOS tools'
+    'lsp:Language servers'
+    'ai-server:AI inference server'
+  )
+  groups=(
+    'core:Portable essentials'
+    'modern:Shared ergonomic CLI'
+    'workstation:Desktop-user tools (not headless)'
+    'infra:Containers / k8s / terraform'
+    'media:Image / video processing'
+    'gui:macOS GUI / fonts'
+    'server:Headless extras'
+    'dev:Local CI / lint / Rust ergonomics (install-only…'
+    'security:Secrets scanning / SBOM / signing CLIs (install…'
+    'network:Network / remote / k8s context CLIs (install-on…'
+    'data:Tabular / analytical CLIs'
+    'geo:Geospatial CLI tooling'
+  )
+  profiles=('base' 'home' 'work' 'server' 'all')
+  providers=('ollama' 'llamacpp' 'drawthings' 'fluidvoice' 'all')
+  tiers=('auto' 'minimal' 'balanced' 'large' 'max')
+  lsp_subs=('status' 'install' 'check' 'list')
+  model_subs=('discover' 'pull' 'plan' '--list')
+  shell_subs=('status' 'keys' 'startup')
+  completion_subs=('status' 'paths')
+  pkg_subs=('groups' 'group' 'plan' 'status' 'explain' 'outdated' 'upgrade' 'adopt' 'help')
+  component_subs=('list' 'active' 'show' 'help')
+  ai_subs=('status' 'doctor' 'up' 'down' 'help')
+  lsp_ids=('rust-analyzer' 'basedpyright' 'gopls' 'bash-language-server' 'yaml-language-server' 'vscode-json-language-server' 'lua-language-server' 'markdown-oxide' 'taplo' 'terraform-ls' 'dockerfile-language-server' 'r-languageserver')
+
+  _arguments -C \
+    '1:command:->cmd' \
+    '*::arg:->args' && return 0
+
+  case $state in
+  cmd)
+    _describe -t commands 'dots command' commands
+    ;;
+  args)
+    case ${words[1]} in
+    setup)
+      case ${words[CURRENT-1]} in
+      --profile|--profile=*)
+        _dots_profiles
+        ;;
+      --with|--with=*|--without|--without=*)
+        _describe -t selectors 'component/supergroup' selectors
+        ;;
+      *)
+        _values 'setup options' \
+          '--dry-run[preview without mutating]' \
+          '--yes[noninteractive]' \
+          '--profile[profile name or path]:profile:_dots_profiles' \
+          '--with[components/supergroups]:selector:->setup_sel' \
+          '--without[exclude selectors]:selector:->setup_sel' \
+          '--help[usage]'
+        if [[ $state == setup_sel ]]; then
+          _describe -t selectors 'component/supergroup' selectors
+        fi
+        ;;
+      esac
+      ;;
+    help)
+      if [[ ${words[CURRENT]} == -* ]]; then
+        _values 'help flags' --plain --search --cheatsheet --version --list-topics --markdown
+      else
+        _describe -t topics 'help topic' topics
+      fi
+      ;;
+    components|component)
+      if (( CURRENT == 2 )); then
+        _values 'components' ${component_subs[@]}
+      elif [[ ${words[2]} == show ]]; then
+        _describe -t selectors 'component' selectors
+      fi
+      ;;
+    packages|package)
+      if (( CURRENT == 2 )); then
+        _values 'packages' ${pkg_subs[@]}
+      elif [[ ${words[2]} == group ]]; then
+        _describe -t groups 'package group' groups
+      fi
+      ;;
+    lsp)
+      if (( CURRENT == 2 )); then
+        _values 'lsp' ${lsp_subs[@]}
+      elif [[ ${words[2]} == status || ${words[2]} == check ]]; then
+        _values 'lsp server' ${lsp_ids[@]}
+      fi
+      ;;
+    models)
+      case ${words[CURRENT-1]} in
+      --provider) _values 'provider' ${providers[@]} ;;
+      --tier) _values 'tier' ${tiers[@]} ;;
+      *)
+        if (( CURRENT == 2 )); then
+          _values 'models' ${model_subs[@]} --provider --tier --help
+        fi
+        ;;
+      esac
+      ;;
+    ai)
+      _values 'ai' ${ai_subs[@]}
+      ;;
+    shell)
+      _values 'shell' ${shell_subs[@]}
+      ;;
+    completion)
+      _values 'completion' ${completion_subs[@]}
+      ;;
+    profile)
+      _dots_profiles
+      ;;
+    restore)
+      _dots_snapshots
+      ;;
+    esac
+    ;;
+  esac
+}
+
+_dots_profiles() {
+  local -a all
+  all=('base' 'home' 'work' 'server' 'all')
+  local custom="${HOME}/.config/dots/profiles"
+  if [[ -d $custom ]]; then
+    local f
+    for f in "$custom"/*.toml(N); do
+      all+=("${f:t:r}")
+    done
+  fi
+  _values 'profile' ${all[@]}
+}
+
+_dots_snapshots() {
+  local dir="${HOME}/.local/state/dots/backups"
+  local -a snaps
+  if [[ -d $dir ]]; then
+    local d
+    for d in "$dir"/*(N/); do
+      snaps+=("${d:t}")
+    done
+  fi
+  (( ${#snaps} )) && _values 'snapshot' ${snaps[@]} || return 1
+}

@@ -14,7 +14,10 @@ Primary human interface: **`./dots`**. Expert scripts remain supported.
 | `./dots models` | Local model plan & pull UX |
 | `./dots check` | Health verification |
 | `./dots update` | Repo update + optional reapply |
-| `./dots help` / `./dots --version` | Help / version |
+| `./dots help` / `dots-help` | Interactive Textual help (this machine) |
+| `./dots --help` | Fast Bash synopsis (no TUI) |
+| `./dots --version` | Version |
+| `man dots` / `man dots-help` | Unix manuals |
 | `./bootstrap.sh` | Profile → Stage 0 → setup → check |
 | `./setup.sh` | Packages / links / components |
 | `./configure.sh` | Profile TOML only |

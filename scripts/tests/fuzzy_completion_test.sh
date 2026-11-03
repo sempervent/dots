@@ -92,7 +92,7 @@ EOF
 	cat >"${home}/.oh-my-zsh/custom/plugins/zsh-autosuggestions/zsh-autosuggestions.plugin.zsh" <<'EOF'
 autosuggest-accept() { }
 zle -N autosuggest-accept
-bindkey '^ ' autosuggest-accept
+# Plugin stub intentionally does NOT bind Ctrl-Space (reserved for tmux).
 EOF
 
 	mkdir -p "${home}/.oh-my-zsh/custom/plugins/zsh-history-substring-search"
@@ -123,7 +123,9 @@ bindkey "^I" | head -1 | sed "s/^/TAB_DEFAULT=/"
 bindkey -M viins "^I" | head -1 | sed "s/^/TAB_VIINS=/"
 bindkey "^R" | head -1 | sed "s/^/CTRL_R=/"
 bindkey "^T" | head -1 | sed "s/^/CTRL_T=/"
+bindkey -M viins "^]" | head -1 | sed "s/^/CTRL_BRACKET=/"
 bindkey "^ " | head -1 | sed "s/^/CTRL_SPACE=/"
+bindkey "^@" | head -1 | sed "s/^/CTRL_AT=/"
 typeset -f fzf-file-widget >/dev/null && echo FZF_FILE=1 || echo FZF_FILE=0
 typeset -f _fzf_compgen_path >/dev/null && echo FZF_COMPGEN=1 || echo FZF_COMPGEN=0
 print -r -- "PLUGINS=${(j:,:)plugins}"
@@ -182,12 +184,19 @@ else
 	bad "bashrc order: bash/fzf.sh must precede tools.sh"
 fi
 
-if rg -q "bindkey '\^ ' autosuggest-accept" "${ROOT}/zsh/fzf.zsh" \
-	&& rg -q "bindkey '\^ ' autosuggest-accept" "${ROOT}/zsh/oh-my-zsh.zsh"; then
-	ok "Ctrl-Space remains autosuggest-accept"
+if rg -q "autosuggest-accept" "${ROOT}/zsh/keybindings.zsh" \
+	&& rg -q "\^\]" "${ROOT}/zsh/keybindings.zsh"; then
+	ok "Ctrl-] autosuggest-accept owned by keybindings.zsh"
 else
-	bad "Ctrl-Space autosuggest-accept binding missing"
+	bad "Ctrl-] autosuggest-accept missing from keybindings.zsh"
 fi
+if rg -q "bindkey '\^ ' autosuggest-accept" "${ROOT}/zsh/fzf.zsh" \
+	|| rg -q "bindkey '\^ ' autosuggest-accept" "${ROOT}/zsh/oh-my-zsh.zsh"; then
+	bad "Ctrl-Space still bound to autosuggest-accept (conflicts with tmux)"
+else
+	ok "Ctrl-Space not bound for autosuggest in fzf/OMZ modules"
+fi
+rg -q 'dots_bind_keybindings' "${ROOT}/syms/zshrc" && ok "zshrc calls dots_bind_keybindings" || bad "zshrc missing dots_bind_keybindings"
 rg -q 'ctrl-y:toggle' "${ROOT}/zsh/fzf.zsh" && ok "fzf-tab multi-select uses ctrl-y" || bad "multi-select should use ctrl-y"
 rg -q 'Fuzzy completion' "${ROOT}/scripts/check.sh" && ok "check.sh Fuzzy completion section" || bad "check.sh missing section"
 
@@ -212,10 +221,15 @@ else
 	else
 		bad "Ctrl-T / fzf-file-widget missing (${out})"
 	fi
-	if echo "${out}" | rg -q 'CTRL_SPACE=.*autosuggest-accept'; then
-		ok "Ctrl-Space autosuggest-accept after startup"
+	if echo "${out}" | rg -q 'CTRL_BRACKET=.*autosuggest-accept'; then
+		ok "Ctrl-] autosuggest-accept after startup"
 	else
-		bad "Ctrl-Space not autosuggest-accept (${out})"
+		bad "Ctrl-] not autosuggest-accept (${out})"
+	fi
+	if echo "${out}" | rg -q 'CTRL_SPACE=.*autosuggest-accept|CTRL_AT=.*autosuggest-accept'; then
+		bad "Ctrl-Space still autosuggest-accept (${out})"
+	else
+		ok "Ctrl-Space not claimed by autosuggest after startup"
 	fi
 	if echo "${out}" | rg -q 'CTRL_R=.*"fzf-tab'; then
 		bad "fzf-tab stole Ctrl-R"

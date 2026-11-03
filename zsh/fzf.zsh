@@ -8,7 +8,8 @@
 #   Ctrl-T       → fzf-file-widget
 #   Alt-C        → fzf-cd-widget (when the terminal delivers Meta-c)
 #   Ctrl-R       → Atuin when installed, else fzf-history-widget / native
-#   Ctrl-Space   → autosuggest-accept (NOT fzf-tab multi-select)
+#   Ctrl-]       → autosuggest-accept (owned by zsh/keybindings.zsh)
+#   Ctrl-Space   → RESERVED tmux prefix (never shell)
 #   **<Tab>      → fzf native recursive completion (via fzf-completion orig)
 
 [[ -f "${DOTS_DIR}/shell/fzf.sh" ]] && source "${DOTS_DIR}/shell/fzf.sh"
@@ -54,7 +55,7 @@ if zle -l 2>/dev/null | grep -q '^fzf-tab-complete$' \
   zstyle ':completion:*' menu no
   zstyle ':completion:*:git-checkout:*' sort false
 
-  # Multi-select: Ctrl-Y (preserve Ctrl-Space for autosuggest-accept)
+  # Multi-select: Ctrl-Y (Ctrl-Space is reserved for tmux prefix — never use it here)
   zstyle ':fzf-tab:*' fzf-bindings-default \
     'tab:down' \
     'btab:up' \
@@ -96,6 +97,3 @@ if zle -l 2>/dev/null | grep -q '^fzf-tab-complete$' \
   bindkey -M emacs '^I' fzf-tab-complete
   bindkey -M viins '^I' fzf-tab-complete
 fi
-
-# Re-assert autosuggest accept (must not lose to fzf-tab multi-select)
-bindkey '^ ' autosuggest-accept 2>/dev/null || true
