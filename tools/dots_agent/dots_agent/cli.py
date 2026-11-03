@@ -147,6 +147,21 @@ def cmd_scout(args: argparse.Namespace) -> int:
         allow_network=allow_net,
         force_live=bool(getattr(args, "live", False)),
     )
+    from dots_agent.evals.storage import EvalStore
+    from dots_agent.routing.evidence import load_empirical_evidence
+
+    store = EvalStore(cfg.evals_dir())
+
+    def evidence_lookup(model_id: str, task_class: str):
+        return load_empirical_evidence(
+            store,
+            model_id=model_id,
+            task_class=task_class,
+            minimum_attempts=cfg.evidence_minimum_attempts,
+            max_age_days=cfg.evidence_max_age_days,
+            wilson_z=cfg.wilson_z,
+        )
+
     req = Requirements(
         task_type=args.task,
         languages=[args.language] if args.language else [],
@@ -163,12 +178,19 @@ def cmd_scout(args: argparse.Namespace) -> int:
         capabilities_path=cfg.capabilities_path(),
         max_candidates=cfg.max_candidates,
         provider_sort=cfg.provider_sort,
+        evidence_lookup=evidence_lookup,
+        quality_cfg=cfg.quality_floors(),
+        minimum_attempts=cfg.evidence_minimum_attempts,
+        preference=cfg.routing_preference,
+        routing_policy_version=cfg.routing_policy_version,
     )
     result["catalog"] = {
         "source": cat.source,
         "age_seconds": int(cat.age_seconds),
         "stale": cat.stale,
     }
+    if cat.stale:
+        result.setdefault("warnings", []).append("CATALOG STALE")
     if args.json:
         print(json.dumps(result, indent=2))
         return 0
@@ -188,16 +210,27 @@ def cmd_scout(args: argparse.Namespace) -> int:
     if sel:
         print("Selected")
         print(f"  {sel['model']}")
-        print(f"  estimated cost        ${sel['estimated_cost_usd']:.3f}")
+        print(f"  evidence              {sel.get('evidence', 'curated')}")
+        print(f"  estimated cost        ${sel.get('estimated_cost_usd', 0):.3f}")
+        ecs = sel.get("expected_cost_to_success_usd")
+        if ecs is not None:
+            print(f"  expected success      ${ecs:.3f}")
         print(f"  context               {sel['context_length']}")
         print(f"  tools                 {'yes' if sel['supports_tools'] else 'no'}")
     else:
         print("Selected")
         print("  (none)")
     print()
+    print("Why")
+    for line in result.get("explanation") or []:
+        print(f"  {line}")
+    print()
     print("Alternatives")
     for alt in result.get("alternatives") or []:
-        print(f"  {alt['model']:<40} ${alt['estimated_cost_usd']:.3f}")
+        extra = ""
+        if alt.get("expected_cost_to_success_usd") is not None:
+            extra = f"  ecs=${alt['expected_cost_to_success_usd']:.3f}"
+        print(f"  {alt['model']:<40} ${alt['estimated_cost_usd']:.3f}{extra}")
     if not result.get("alternatives"):
         print("  (none)")
     print()
@@ -206,6 +239,9 @@ def cmd_scout(args: argparse.Namespace) -> int:
         print(f"  {v:>3} {k}")
     print()
     print(f"Catalog: {cat.source} (age {int(cat.age_seconds)}s)")
+    if result.get("warnings"):
+        for w in result["warnings"]:
+            print(f"WARNING: {w}")
     return 0
 
 
@@ -340,6 +376,39 @@ def cmd_run(args: argparse.Namespace) -> int:
         print("Sandbox: enabled (fail-closed)")
     for w in session.warnings:
         print(f"Note: {w}")
+
+    # Phase 3: pre-task local empirical floor (explicit task-class; default general)
+    task_class = str(getattr(args, "task_class", None) or "general")
+    quality_floor = str(getattr(args, "quality", None) or "capable")
+    from dots_agent.evals.cli_eval import wire_local_escalation_check
+
+    local_ev = wire_local_escalation_check(cfg, task_class, quality_floor)
+    ledger.event(
+        "route_decision",
+        routing_policy_version=cfg.routing_policy_version,
+        task_class=task_class,
+        quality_floor=quality_floor,
+        local_empirical=local_ev,
+        evidence_source=local_ev.get("evidence"),
+        selected_executor="local",
+        remote_eligible_early=(
+            not local_only
+            and not local_ev.get("ok")
+            and local_ev.get("reason") in ("below_floor", "insufficient_empirical")
+        ),
+    )
+    print(f"Task class: {task_class} (quality floor {quality_floor})")
+    if local_ev.get("ok"):
+        print(
+            f"Local empirical: meets floor "
+            f"(n={local_ev.get('attempts')}, "
+            f"conservative={local_ev.get('conservative_success_rate')})"
+        )
+    else:
+        print(
+            f"Local empirical: {local_ev.get('reason')} "
+            f"(n={local_ev.get('attempts', 0)}) — remote expert eligible earlier in auto"
+        )
     print()
 
     budget = Budget(session_budget_usd=budget_usd, max_remote_calls=max_remote)
@@ -742,6 +811,12 @@ def build_parser() -> argparse.ArgumentParser:
     rn.add_argument("--harness-only", action="store_true", help="Skip Pi RPC (foundation)")
     rn.add_argument("--consult", action="store_true", help="Harness path: also call expert")
     rn.add_argument("--mode", choices=["auto", "local"], default="auto")
+    rn.add_argument(
+        "--task-class",
+        default="general",
+        help="Task class for routing evidence (default: general)",
+    )
+    rn.add_argument("--quality", default="capable", help="Quality floor for auto routing")
     rn.add_argument("--expect", default="", help="Token that must appear for VERIFIED")
     rn.add_argument(
         "--mark-verified",
@@ -789,7 +864,75 @@ def build_parser() -> argparse.ArgumentParser:
     gw = sub.add_parser("gateway", help="LiteLLM gateway hints")
     gw.add_argument("action", choices=["up", "down", "health"])
 
+    ev = sub.add_parser("eval", help="Deterministic model evaluations")
+    ev_sub = ev.add_subparsers(dest="eval_cmd", required=True)
+    ev_list = ev_sub.add_parser("list", help="List eval tasks")
+    ev_list.add_argument("--suite", choices=["smoke", "standard", "full"], default=None)
+    ev_run = ev_sub.add_parser("run", help="Run eval suite")
+    ev_run.add_argument("--local", action="store_true", help="Evaluate configured local model")
+    ev_run.add_argument("--remote", action="store_true", help="Opt-in paid remote eval")
+    ev_run.add_argument("--model", default=None)
+    ev_run.add_argument("--suite", choices=["smoke", "standard", "full"], default=None)
+    ev_run.add_argument("--runs", type=int, default=None)
+    ev_run.add_argument("--budget", type=float, default=None)
+    ev_run.add_argument("--task-class", default=None)
+    ev_run.add_argument("--task", action="append", default=[])
+    ev_run.add_argument("--solver", default="oracle", choices=["oracle", "fail", "noop"])
+    ev_run.add_argument("--preserve", action="store_true")
+    ev_run.add_argument("--require-sandbox", action="store_true")
+    ev_res = ev_sub.add_parser("results", help="Summarize stored eval results")
+    ev_res.add_argument("--task-class", default=None)
+    ev_cmp = ev_sub.add_parser("compare", help="Compare two models")
+    ev_cmp.add_argument("model_a")
+    ev_cmp.add_argument("model_b")
+    ev_reg = ev_sub.add_parser("regressions", help="Detect regressions vs baseline")
+    ev_reg.add_argument("--run", default=None)
+    ev_reg.add_argument("--min-attempts", type=int, default=5)
+    ev_base = ev_sub.add_parser("baseline", help="Promote an eval run as baseline")
+    ev_base.add_argument("run_id")
+    ev_sub.add_parser("calibrate", help="Compare curated tiers vs empirical")
+    ev_imp = ev_sub.add_parser(
+        "import-openrouter",
+        help="Fetch OpenRouter benchmark metadata (secondary evidence)",
+    )
+    ev_imp.add_argument("--offline", action="store_true")
+
+    rt = sub.add_parser("route", help="Inspect evidence-based model routing")
+    rt.add_argument("--task", default="debugging")
+    rt.add_argument("--language", default="")
+    rt.add_argument("--context", type=int, default=12000)
+    rt.add_argument("--output", type=int, default=3000)
+    rt.add_argument("--quality", default="strong")
+    rt.add_argument("--max-cost", type=float, default=0.50)
+    rt.add_argument("--tools", action="store_true")
+    rt.add_argument("--structured", action="store_true")
+    rt.add_argument("--simulate", action="store_true", help="No inference; cache+evidence only")
+    rt.add_argument("--local", action="store_true", help="Cache-only catalog")
+    rt.add_argument("--json", action="store_true")
+
     return p
+
+
+def cmd_eval(args: argparse.Namespace) -> int:
+    from dots_agent.evals import cli_eval as E
+
+    dispatch = {
+        "list": E.cmd_eval_list,
+        "run": E.cmd_eval_run,
+        "results": E.cmd_eval_results,
+        "compare": E.cmd_eval_compare,
+        "regressions": E.cmd_eval_regressions,
+        "baseline": E.cmd_eval_baseline,
+        "calibrate": E.cmd_eval_calibrate,
+        "import-openrouter": E.cmd_eval_import_openrouter,
+    }
+    return dispatch[args.eval_cmd](args)
+
+
+def cmd_route(args: argparse.Namespace) -> int:
+    from dots_agent.evals.cli_eval import cmd_route as _route
+
+    return _route(args)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -810,6 +953,8 @@ def main(argv: list[str] | None = None) -> int:
         "apply": cmd_apply,
         "discard": cmd_discard,
         "mcp": cmd_mcp,
+        "eval": cmd_eval,
+        "route": cmd_route,
     }
     return dispatch[args.cmd](args)
 

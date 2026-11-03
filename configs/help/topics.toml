@@ -104,6 +104,18 @@ order = 140
 keywords = ["backup", "restore", "snapshot", "old_dots", "recovery"]
 
 [[topics]]
+id = "agent-evals"
+title = "Agent Evaluations"
+body = "docs/agents/evals.md"
+keywords = ["eval", "evaluation", "wilson", "expected cost", "routing evidence", "benchmark"]
+
+[[topics]]
+id = "agent-routing"
+title = "Model Routing"
+body = "docs/agents/model-scout.md"
+keywords = ["route", "model scout", "expected cost", "quality floor", "empirical"]
+
+[[topics]]
 id = "agent"
 title = "Agent Harness"
 body = "docs/help/agent.md"

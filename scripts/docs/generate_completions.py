@@ -109,6 +109,8 @@ def build_zsh() -> str:
         "sandbox",
         "models",
         "scout",
+        "route",
+        "eval",
         "run",
         "worktrees",
         "diff",
@@ -229,7 +231,15 @@ def build_zsh() -> str:
         "      _values 'ai' ${ai_subs[@]}",
         "      ;;",
         "    agent)",
-        "      _values 'agent' ${agent_subs[@]}",
+        "      if (( CURRENT == 3 )) && [[ ${words[2]} == eval ]]; then",
+        "        _values 'eval' list run results compare regressions baseline calibrate import-openrouter",
+        "      elif (( CURRENT >= 3 )) && [[ ${words[2]} == eval && ${words[3]} == run ]]; then",
+        "        _values 'eval-run' --local --remote --suite --model --budget --runs --task-class --help",
+        "      elif (( CURRENT == 3 )) && [[ ${words[2]} == route ]]; then",
+        "        _values 'route' --task --language --context --output --quality --max-cost --simulate --local --json --help",
+        "      else",
+        "        _values 'agent' ${agent_subs[@]}",
+        "      fi",
         "      ;;",
         "    shell)",
         "      _values 'shell' ${shell_subs[@]}",
@@ -326,7 +336,7 @@ _dots_complete() {{
   local pkg_subs='groups group plan status explain outdated upgrade adopt help'
   local component_subs='list active show help'
   local ai_subs='status doctor up down help'
-  local agent_subs='status doctor sandbox models scout run worktrees diff apply discard mcp costs gateway'
+  local agent_subs='status doctor sandbox models scout route eval run worktrees diff apply discard mcp costs gateway'
 
   _dots_custom_profiles() {{
     local d="${{HOME}}/.config/dots/profiles" f

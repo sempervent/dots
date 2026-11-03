@@ -3,11 +3,11 @@
 .
 .TH DOTS\-AGENT 1 "2026-11-02" "DOTS 1.5.1" "User Commands"
 .SH NAME
-dots\-agent \- Local\-first agent harness (sandboxed Pi + model\-scout + budgeted LiteLLM experts).
+dots\-agent \- Local\-first agent harness (sandboxed Pi + eval\-driven scout + budgeted LiteLLM experts).
 .SH SYNOPSIS
-.B dots agent [status|doctor|sandbox|models|scout|run|worktrees|mcp|costs]
+.B dots agent [status|doctor|sandbox|models|scout|route|eval|run|worktrees|mcp|costs]
 .SH DESCRIPTION
-Local\-first agent harness (sandboxed Pi + model\-scout + budgeted LiteLLM experts).
+Local\-first agent harness (sandboxed Pi + eval\-driven scout + budgeted LiteLLM experts).
 .SH EXAMPLES
 .TP
 .B dots agent status
@@ -20,9 +20,21 @@ Read\-only harness diagnostics including sandbox FAIL/WARN/OK.
 Sandbox provider, OS backends, and MCP allowlist.
 .TP
 .B dots agent scout \-\-task debugging \-\-language rust \-\-tools \-\-quality strong
-Select cheapest qualifying OpenRouter model (metadata only).
+Select model by expected cost\-to\-success when empirical evidence exists.
 .TP
-.B dots agent run "Diagnose and fix the failing test."
+.B dots agent route \-\-task debugging \-\-language python \-\-quality strong \-\-simulate
+Inspect evidence\-based routing without inference.
+.TP
+.B dots agent eval list
+List deterministic eval tasks.
+.TP
+.B dots agent eval run \-\-local \-\-suite smoke
+Run smoke evals against the configured local model (oracle/mock in CI).
+.TP
+.B dots agent eval results
+Summarize empirical pass rates with Wilson lower bounds.
+.TP
+.B dots agent run \-\-task\-class debugging "Diagnose and fix the failing test."
 Safe sandboxed run (default); use \-\-unsafe\-host to bypass.
 .TP
 .B dots agent worktrees
