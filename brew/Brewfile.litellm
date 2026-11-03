@@ -1,0 +1,3 @@
+# Optional: ./setup.sh --with litellm
+# LiteLLM runs via Docker Compose (services/litellm/). No Homebrew packages.
+# Intentionally empty Brewfile — side effects live in helpers/litellm.sh.

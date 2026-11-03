@@ -1,0 +1,62 @@
+# DOTS agent harness defaults (v1.6 Phase 1).
+# Live override (optional): ~/.config/dots/agents.toml
+# Repo template: configs/agents/defaults.toml
+#
+# Selecting `pi` alone does NOT authorize OpenRouter.
+# Selecting `litellm` alone does NOT modify Pi.
+
+version = 1
+
+[agent]
+mode = "auto"
+session_budget_usd = 1.00
+max_remote_calls = 3
+max_iterations = 25
+timeout_seconds = 1800
+# Per-call interactive approval threshold
+approval_threshold_usd = 0.50
+# Live smoke hard cap (DOTS_AGENT_LIVE_TEST=1)
+live_test_max_usd = 0.05
+
+[local]
+provider = "auto" # auto | llamacpp | ollama
+model = "auto"
+# Used when provider resolves to llama.cpp OpenAI-compatible router
+llamacpp_base_url = "http://127.0.0.1:8080/v1"
+ollama_base_url = "http://127.0.0.1:11434"
+
+[gateway]
+base_url = "http://127.0.0.1:4000"
+# Logical aliases configured in services/litellm/config.yaml
+local_alias = "dots/local"
+remote_prefix = "openrouter/"
+
+[scout]
+catalog_cache_ttl_seconds = 900
+max_candidates = 5
+# Official OpenRouter account-filtered catalog (authenticated)
+catalog_url = "https://openrouter.ai/api/v1/models/user"
+# Public fallback when no API key (read-only list; may differ from account)
+catalog_url_public = "https://openrouter.ai/api/v1/models"
+provider_sort = "price"
+
+[escalation]
+local_attempts_before_suggested_escalation = 2
+# Compact context only — never dump the whole repo
+max_context_chars = 24000
+
+[mcp]
+model_scout_name = "dots-model-scout"
+expert_name = "dots-expert"
+
+[paths]
+# Relative to XDG; expanded at runtime
+cache_dir = "dots/agents"
+state_dir = "dots/agents"
+# Pi MCP merge targets (user-level; never wholesale overwrite)
+pi_mcp_json = "~/.pi/agent/mcp.json"
+pi_settings_json = "~/.pi/agent/settings.json"
+
+[policy]
+# Shown to the local Pi foreman
+system_prompt_path = "configs/agents/local-foreman.md"

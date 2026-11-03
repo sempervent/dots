@@ -1,0 +1,4 @@
+# Optional: ./setup.sh --with pi
+# Pi is installed via npm (@earendil-works/pi-coding-agent), not Homebrew.
+# Ensure Node tooling is available (fnm / modern package group).
+# Intentionally empty Brewfile — side effects live in helpers/pi.sh.

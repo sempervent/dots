@@ -72,6 +72,10 @@ source "${DIR}/helpers/telemetry.sh"
 source "${DIR}/helpers/launchers.sh"
 # shellcheck source=helpers/dots_help.sh
 source "${DIR}/helpers/dots_help.sh"
+# shellcheck source=helpers/pi.sh
+source "${DIR}/helpers/pi.sh"
+# shellcheck source=helpers/litellm.sh
+source "${DIR}/helpers/litellm.sh"
 # shellcheck source=helpers/shell_diag.sh
 source "${DIR}/helpers/shell_diag.sh"
 # shellcheck source=helpers/leaf.sh
