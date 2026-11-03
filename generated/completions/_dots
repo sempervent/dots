@@ -16,6 +16,7 @@ _dots() {
     'components:Inspect optional components and --with selectors.'
     'lsp:Language-server install, status, and checks.'
     'ai:AI inference server (Compose + Open WebUI) control plan…'
+    'agent:Local-first agent harness (Pi + model-scout + budgeted…'
     'packages:Package ownership, drift, groups, and upgrades.'
     'backup:Snapshot managed targets under ~/.local/state/dots/back…'
     'backups:List recoverable DOTS snapshots.'
@@ -43,6 +44,7 @@ _dots() {
     'lsp:Language Servers'
     'skills:Skills'
     'backup:Backup & Restore'
+    'agent:Agent Harness'
     'diagnostics:Diagnostics'
     'update:Update / Maintenance'
     'commands:Commands'
@@ -67,6 +69,8 @@ _dots() {
     'mactools:macOS tools'
     'lsp:Language servers'
     'ai-server:AI inference server'
+    'pi:Pi Coding Agent'
+    'litellm:LiteLLM Gateway'
   )
   groups=(
     'core:Portable essentials'

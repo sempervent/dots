@@ -9,9 +9,9 @@ _dots_complete() {
   local cmd="${COMP_WORDS[1]:-}"
   local sub="${COMP_WORDS[2]:-}"
 
-  local commands='setup status components lsp ai packages backup backups restore profile models check update help shell completion'
-  local topics='overview getting-started shell completion keybindings profiles components supergroups packages ai models lsp skills backup diagnostics update commands files'
-  local selectors='ai herdr hermes ollama llamacpp archify skills ai-skills drawthings opencode codex cursor fluidvoice images tex mactools lsp ai-server'
+  local commands='setup status components lsp ai agent packages backup backups restore profile models check update help shell completion'
+  local topics='overview getting-started shell completion keybindings profiles components supergroups packages ai models lsp skills backup agent diagnostics update commands files'
+  local selectors='ai herdr hermes ollama llamacpp archify skills ai-skills drawthings opencode codex cursor fluidvoice images tex mactools lsp ai-server pi litellm'
   local groups='core modern workstation infra media gui server dev security network data geo'
   local profiles='base home work server all'
   local providers='ollama llamacpp drawthings fluidvoice all'

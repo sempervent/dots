@@ -104,6 +104,13 @@ order = 140
 keywords = ["backup", "restore", "snapshot", "old_dots", "recovery"]
 
 [[topics]]
+id = "agent"
+title = "Agent Harness"
+body = "docs/help/agent.md"
+order = 145
+keywords = ["agent", "pi", "litellm", "model-scout", "openrouter", "budget", "escalation", "expert"]
+
+[[topics]]
 id = "diagnostics"
 title = "Diagnostics"
 body = "docs/help/diagnostics.md"

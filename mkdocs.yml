@@ -101,6 +101,9 @@ nav:
       - mactools: macos/mactools.md
   - Agents and AI:
       - Agent harness: agents/harness.md
+      - Architecture (v1.6): agents/architecture.md
+      - Model Scout: agents/model-scout.md
+      - LiteLLM: agents/litellm.md
       - Models: agents/models.md
   - Reference:
       - CLI: reference/cli.md

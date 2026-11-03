@@ -27,3 +27,5 @@ Authoritative registry: `configs/components.toml`.
 | mactools | macOS tools | workstation | darwin | brew/Brewfile.mactools | yes | Optional macOS workstation layer (Vorssaint + automation/audio/CLI; Brewfile.mactools) |
 | lsp | Language servers | developer_tooling | darwin, linux | brew/Brewfile.lsp | no | Language servers for DOTS development/editor workflows |
 | ai-server | AI inference server | ai_runtime | darwin, linux | brew/Brewfile.ai-server | yes | Server stack: llama.cpp (llama-server) + Open WebUI via Docker Compose (opt-in models) |
+| pi | Pi Coding Agent | ai_client | darwin, linux | brew/Brewfile.pi | no | Programmable coding-agent runtime for DOTS local-first agent orchestration (npm; Node ≥22.19) |
+| litellm | LiteLLM Gateway | ai_gateway | darwin, linux | brew/Brewfile.litellm | no | Unified model gateway for local and remote agent inference (localhost Compose; OpenRouter via env) |
