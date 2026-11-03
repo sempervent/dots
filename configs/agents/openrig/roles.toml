@@ -1,0 +1,54 @@
+# Role routing defaults for OpenRig Pi seats (Phase 4).
+# Quality floors map through Phase 3 expected-cost routing evidence.
+
+version = 1
+
+[roles.lead]
+task_class = "reasoning"
+quality = "strong"
+runtime = "pi"
+sandbox = "read_mostly"
+mcp = ["dots-model-scout", "dots-expert"]
+write = false
+coordination = true
+
+[roles.builder]
+task_class = "coding"
+quality = "capable"
+runtime = "pi"
+sandbox = "worktree_rw"
+mcp = ["dots-model-scout", "dots-expert"]
+write = true
+coordination = false
+
+[roles.reviewer]
+task_class = "debugging"
+quality = "strong"
+runtime = "pi"
+sandbox = "read_only"
+mcp = ["dots-model-scout", "dots-expert"]
+write = false
+coordination = false
+
+[roles.investigator]
+task_class = "debugging"
+quality = "strong"
+runtime = "pi"
+sandbox = "read_only"
+mcp = ["dots-model-scout", "dots-expert"]
+write = false
+coordination = false
+
+[team]
+default_template = "dots-triad"
+team_budget_usd = 3.00
+max_review_rounds = 2
+terminal_provider_preferred = "herdr"
+terminal_provider_fallback = "tmux"
+herdr_session_prefix = "openrig"
+routing_policy_version = 1
+
+[team.templates]
+dots-pair = ["lead", "builder"]
+dots-triad = ["lead", "builder", "reviewer"]
+dots-investigate = ["lead", "investigator", "builder"]

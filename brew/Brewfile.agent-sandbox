@@ -1,0 +1,8 @@
+# Optional: ./setup.sh --with agent-sandbox
+# Provider: pi-sandbox (Pi extension). OS backends:
+#   macOS  — sandbox-exec (system)
+#   Linux  — bubblewrap + socat (package maps); ripgrep required on both.
+#
+# ripgrep is already in core/modern groups; keep an explicit brew dep for
+# sandbox-init when users install the leaf without core.
+brew "ripgrep"

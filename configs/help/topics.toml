@@ -104,6 +104,38 @@ order = 140
 keywords = ["backup", "restore", "snapshot", "old_dots", "recovery"]
 
 [[topics]]
+id = "agent-evals"
+title = "Agent Evaluations"
+body = "docs/agents/evals.md"
+keywords = ["eval", "evaluation", "wilson", "expected cost", "routing evidence", "benchmark"]
+
+[[topics]]
+id = "agent-routing"
+title = "Model Routing"
+body = "docs/agents/model-scout.md"
+keywords = ["route", "model scout", "expected cost", "quality floor", "empirical"]
+
+[[topics]]
+id = "agent-teams"
+title = "Agent Teams"
+body = "docs/agents/openrig.md"
+keywords = ["openrig", "team", "herdr", "rig", "seat", "queue", "triad", "pair"]
+
+[[topics]]
+id = "agent"
+title = "Agent Harness"
+body = "docs/help/agent.md"
+order = 145
+keywords = ["agent", "pi", "litellm", "model-scout", "openrouter", "budget", "escalation", "expert", "sandbox", "openrig"]
+
+[[topics]]
+id = "agent-security"
+title = "Agent Security"
+body = "docs/help/agent-security.md"
+order = 146
+keywords = ["sandbox", "worktree", "unsafe-host", "mcp trust", "network policy", "agent-sandbox"]
+
+[[topics]]
 id = "diagnostics"
 title = "Diagnostics"
 body = "docs/help/diagnostics.md"

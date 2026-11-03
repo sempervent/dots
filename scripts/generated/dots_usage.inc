@@ -1,6 +1,6 @@
 # GENERATED — DO NOT EDIT. Source: configs/help/commands.toml
 # Generator: scripts/docs/generate_usage.py
-DOTS — machine environment manager  (v1.5.1)
+DOTS — machine environment manager  (v1.6.0)
 
 Usage:
   ./dots setup [options]            Interactive or noninteractive setup / reconfigure tow...
@@ -8,6 +8,7 @@ Usage:
   ./dots components [list|active|show ID] Inspect optional components and --with selectors.
   ./dots lsp [status|check|install|list] Language-server install, status, and checks.
   ./dots ai [status|doctor|up|down|…] AI inference server (Compose + Open WebUI) control pl...
+  ./dots agent [status|doctor|sandbox|models|scout|eval|team|run|…] Local-first agent harness (Pi, OpenRig, evals, guarde...
   ./dots packages [groups|group|plan|status|explain|outdated|upgrade|adopt] Package ownership, drift, groups, and upgrades.
   ./dots backup [--name N]          Snapshot managed targets under ~/.local/state/dots/ba...
   ./dots backups                    List recoverable DOTS snapshots.

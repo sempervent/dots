@@ -1,0 +1,30 @@
+# DOTS pair team — lead + builder (Pi default).
+# Rendered into a staging dir before `rig up`; agent_ref paths are relative to that dir.
+version: "0.2"
+name: dots-pair
+summary: Cheap default DOTS pair — lead plans, builder implements.
+
+startup:
+  files: []
+  actions: []
+
+pods:
+  - id: team
+    label: Pair
+    members:
+      - id: lead
+        agent_ref: "local:agents/lead"
+        profile: default
+        runtime: pi
+        cwd: "."
+      - id: builder
+        agent_ref: "local:agents/builder"
+        profile: default
+        runtime: pi
+        cwd: "."
+    edges:
+      - from: lead
+        to: builder
+        kind: delegates_to
+
+edges: []

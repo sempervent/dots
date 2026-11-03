@@ -196,6 +196,29 @@ apply_optional_brewfiles() {
 			_dots_optional_apply_registry_brewfile "fluidvoice" || true
 		fi
 	fi
+	if has_component pi; then
+		# npm-based; Brewfile.pi is intentionally empty
+		if declare -F dots_pi_install >/dev/null 2>&1; then
+			dots_pi_install || dots_optional_record_failure "pi" "Pi install failed"
+		fi
+	fi
+	if has_component litellm; then
+		if declare -F dots_litellm_setup >/dev/null 2>&1; then
+			dots_litellm_setup || dots_optional_record_failure "litellm" "LiteLLM setup failed"
+		fi
+	fi
+	if has_component agent-sandbox; then
+		# Requires Pi at runtime; leaf install explains if Pi missing.
+		if declare -F dots_agent_sandbox_install >/dev/null 2>&1; then
+			dots_agent_sandbox_install || dots_optional_record_failure "agent-sandbox" "Agent sandbox install failed"
+		fi
+	fi
+	if has_component openrig; then
+		# npm-based; Brewfile.openrig is intentionally empty. Does not run rig setup.
+		if declare -F dots_openrig_install >/dev/null 2>&1; then
+			dots_openrig_install || dots_optional_record_failure "openrig" "OpenRig install failed"
+		fi
+	fi
 	if has_component mactools; then
 		# Darwin-only (registry platforms); explicit --with on Linux errors before here.
 		_dots_optional_apply_registry_brewfile "mactools" || true

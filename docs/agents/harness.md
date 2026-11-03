@@ -23,9 +23,17 @@ Consent: configure AI only when the profile / `--with` lists the component.
 | `skills` / `ai-skills` | Curated skill packs | darwin, linux |
 | `fluidvoice` | Voice dictation (macOS 15+) | darwin |
 | `images` | Deterministic image toolkit (Magick, etc.) | darwin, linux |
+| `pi` | Local-first coding-agent runtime (npm; Node ≥22.19) | darwin, linux |
+| `litellm` | Localhost model gateway (Compose → `127.0.0.1:4000`) | darwin, linux |
+| `agent-sandbox` | Sandbox policy + OS backends (provider: pi-sandbox) | darwin, linux |
 
 Supergroup `ai` expands to the AI application ids listed in
 [generated supergroups](../reference/generated/supergroups.md).
+
+Orchestration docs: [architecture](architecture.md),
+[security](security.md), [model-scout](model-scout.md), [litellm](litellm.md),
+[evals](evals.md), [openrig](openrig.md), [autonomy](autonomy.md),
+[v1.6 roadmap](v1.6-roadmap.md).
 
 ## Herdr
 

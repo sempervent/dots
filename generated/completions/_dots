@@ -8,7 +8,7 @@ _dots() {
   typeset -A opt_args
   local -a commands topics selectors groups profiles providers tiers
   local -a lsp_subs model_subs shell_subs completion_subs pkg_subs
-  local -a component_subs ai_subs lsp_ids
+  local -a component_subs ai_subs agent_subs lsp_ids
 
   commands=(
     'setup:Interactive or noninteractive setup / reconfigure towar…'
@@ -16,6 +16,7 @@ _dots() {
     'components:Inspect optional components and --with selectors.'
     'lsp:Language-server install, status, and checks.'
     'ai:AI inference server (Compose + Open WebUI) control plan…'
+    'agent:Local-first agent harness (Pi, OpenRig, evals, guarded…'
     'packages:Package ownership, drift, groups, and upgrades.'
     'backup:Snapshot managed targets under ~/.local/state/dots/back…'
     'backups:List recoverable DOTS snapshots.'
@@ -43,10 +44,15 @@ _dots() {
     'lsp:Language Servers'
     'skills:Skills'
     'backup:Backup & Restore'
+    'agent:Agent Harness'
+    'agent-security:Agent Security'
     'diagnostics:Diagnostics'
     'update:Update / Maintenance'
     'commands:Commands'
     'files:Files & Configuration'
+    'agent-evals:Agent Evaluations'
+    'agent-routing:Model Routing'
+    'agent-teams:Agent Teams'
   )
   selectors=(
     'ai:AI applications'
@@ -67,6 +73,10 @@ _dots() {
     'mactools:macOS tools'
     'lsp:Language servers'
     'ai-server:AI inference server'
+    'pi:Pi Coding Agent'
+    'litellm:LiteLLM Gateway'
+    'agent-sandbox:Agent Sandbox'
+    'openrig:OpenRig'
   )
   groups=(
     'core:Portable essentials'
@@ -92,6 +102,7 @@ _dots() {
   pkg_subs=('groups' 'group' 'plan' 'status' 'explain' 'outdated' 'upgrade' 'adopt' 'help')
   component_subs=('list' 'active' 'show' 'help')
   ai_subs=('status' 'doctor' 'up' 'down' 'help')
+  agent_subs=('status' 'doctor' 'sandbox' 'models' 'scout' 'route' 'eval' 'team' 'run' 'worktrees' 'diff' 'apply' 'discard' 'mcp' 'costs' 'gateway')
   lsp_ids=('rust-analyzer' 'basedpyright' 'gopls' 'bash-language-server' 'yaml-language-server' 'vscode-json-language-server' 'lua-language-server' 'markdown-oxide' 'taplo' 'terraform-ls' 'dockerfile-language-server' 'r-languageserver')
 
   _arguments -C \
@@ -167,6 +178,21 @@ _dots() {
       ;;
     ai)
       _values 'ai' ${ai_subs[@]}
+      ;;
+    agent)
+      if (( CURRENT == 3 )) && [[ ${words[2]} == eval ]]; then
+        _values 'eval' list run results compare regressions baseline calibrate import-openrouter
+      elif (( CURRENT >= 3 )) && [[ ${words[2]} == eval && ${words[3]} == run ]]; then
+        _values 'eval-run' --local --remote --suite --model --budget --runs --task-class --help
+      elif (( CURRENT == 3 )) && [[ ${words[2]} == team ]]; then
+        _values 'team' status list doctor up down open tasks messages restore-check reconcile run diff
+      elif (( CURRENT >= 3 )) && [[ ${words[2]} == team && ${words[3]} == up ]]; then
+        _values 'team-up' dots-pair dots-triad dots-investigate --project --dry-run --help
+      elif (( CURRENT == 3 )) && [[ ${words[2]} == route ]]; then
+        _values 'route' --task --language --context --output --quality --max-cost --simulate --local --json --help
+      else
+        _values 'agent' ${agent_subs[@]}
+      fi
       ;;
     shell)
       _values 'shell' ${shell_subs[@]}

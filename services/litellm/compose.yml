@@ -1,0 +1,44 @@
+# DOTS LiteLLM gateway — localhost only (Phase 1).
+# Host bind is 127.0.0.1; do not publish to 0.0.0.0 without explicit opt-in.
+#
+# Inside the container LiteLLM may listen on 0.0.0.0:4000 (Docker bridge).
+# Docker publishes ONLY 127.0.0.1:4000 on the host — that is the exposure boundary.
+#
+# LITELLM_MASTER_KEY must be provided by the environment (DOTS setup writes
+# ~/.config/dots/secrets/litellm-master-key and helpers/litellm.sh exports it).
+# There is intentionally NO predictable default key in this file.
+name: dots-litellm
+
+services:
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:4000:4000"
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+    environment:
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?Set LITELLM_MASTER_KEY or run ./dots setup --with litellm}
+      # Optional local OpenAI-compatible endpoints
+      DOTS_LOCAL_API_BASE: ${DOTS_LOCAL_API_BASE:-http://host.docker.internal:8080/v1}
+      DOTS_LOCAL_API_KEY: ${DOTS_LOCAL_API_KEY:-local-dots}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command:
+      - "--config"
+      - "/app/config.yaml"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "4000"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:4000/health')\" || exit 1",
+        ]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 40s

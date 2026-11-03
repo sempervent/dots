@@ -12,7 +12,7 @@ Registry-driven reference for optional components and supergroups. Do not invent
 
 | id | label | members | description |
 | --- | --- | --- | --- |
-| `ai` | AI applications | `hermes`, `ollama`, `llamacpp`, `drawthings`, `opencode`, `codex`, `cursor`, `fluidvoice`, `lsp` | Local runtimes, coding agents, and the LSP toolchain for this platform |
+| `ai` | AI applications | `hermes`, `ollama`, `llamacpp`, `drawthings`, `opencode`, `codex`, `cursor`, `fluidvoice`, `lsp`, `pi`, `litellm`, `agent-sandbox`, `openrig` | Local runtimes, coding agents, and the LSP toolchain for this platform |
 
 ## Components
 
@@ -208,4 +208,45 @@ Server stack: llama.cpp (llama-server) + Open WebUI via Docker Compose (opt-in m
 - **omit_from_all:** yes
 - **formulae:** `docker`, `docker-compose`
 - **activate:** `./dots setup --with ai-server`
+
+### `pi`
+
+Programmable coding-agent runtime for DOTS local-first agent orchestration (npm; Node ≥22.19)
+
+- **label:** Pi Coding Agent
+- **category:** ai_client
+- **platforms:** darwin, linux
+- **brewfile:** `brew/Brewfile.pi`
+- **activate:** `./dots setup --with pi`
+
+### `litellm`
+
+Unified model gateway for local and remote agent inference (localhost Compose; OpenRouter via env)
+
+- **label:** LiteLLM Gateway
+- **category:** ai_gateway
+- **platforms:** darwin, linux
+- **brewfile:** `brew/Brewfile.litellm`
+- **activate:** `./dots setup --with litellm`
+
+### `agent-sandbox`
+
+Filesystem/network policy and OS-level command sandbox for DOTS agents (provider: pi-sandbox)
+
+- **label:** Agent Sandbox
+- **category:** agent_security
+- **platforms:** darwin, linux
+- **brewfile:** `brew/Brewfile.agent-sandbox`
+- **formulae:** `ripgrep`
+- **activate:** `./dots setup --with agent-sandbox`
+
+### `openrig`
+
+Persistent multi-agent orchestration for Pi, Codex and other coding runtimes (npm @openrig/cli; Node ≥22)
+
+- **label:** OpenRig
+- **category:** agent_orchestration
+- **platforms:** darwin, linux
+- **brewfile:** `brew/Brewfile.openrig`
+- **activate:** `./dots setup --with openrig`
 

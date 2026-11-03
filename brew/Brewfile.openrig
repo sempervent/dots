@@ -1,0 +1,4 @@
+# Optional: ./setup.sh --with openrig
+# OpenRig is installed via npm (@openrig/cli), not Homebrew.
+# Ensure Node ≥22 and tmux are available (fnm / modern package group / herdr).
+# Intentionally empty Brewfile — side effects live in helpers/openrig.sh.
