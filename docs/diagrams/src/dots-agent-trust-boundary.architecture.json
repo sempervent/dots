@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "DOTS Agent Trust Boundary",
+    "output": "docs/diagrams/dots-agent-trust-boundary.html",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "safe-path",
+        "label": "Safe default path",
+        "focus": ["cli", "worktree", "sandbox", "pi", "mcp"],
+        "note": "Default runs isolate the checkout, scrub secrets, and allowlist MCP."
+      },
+      {
+        "id": "secrets",
+        "label": "Credential isolation",
+        "focus": ["sandbox", "envscrub", "secrets", "pi"],
+        "note": "Sensitive paths and env stay outside the agent tool surface."
+      },
+      {
+        "id": "bypass",
+        "label": "Explicit bypass",
+        "focus": ["cli", "unsafe", "primary"],
+        "note": "Unsafe-host is opt-in only; there is no automatic fallback."
+      }
+    ]
+  },
+  "components": [
+    { "id": "cli", "type": "frontend", "label": "dots agent run", "sublabel": "--safe", "pos": [40, 250], "size": [140, 56] },
+    { "id": "worktree", "type": "backend", "label": "Git Worktree", "sublabel": "isolated", "pos": [240, 140], "size": [130, 56], "tag": "default" },
+    { "id": "sandbox", "type": "security", "label": "pi-sandbox", "sublabel": "OS policy", "pos": [430, 250], "size": [130, 56], "tag": "TCB" },
+    { "id": "envscrub", "type": "security", "label": "Env Scrub", "sublabel": "allowlist", "pos": [430, 110], "size": [130, 56] },
+    { "id": "mcp", "type": "backend", "label": "MCP Allowlist", "sublabel": "trusted", "pos": [620, 140], "size": [130, 56] },
+    { "id": "pi", "type": "backend", "label": "Pi Runtime", "sublabel": "tools", "pos": [620, 300], "size": [130, 56] },
+    { "id": "secrets", "type": "database", "label": "Secrets", "sublabel": "deny paths", "pos": [240, 380], "size": [130, 56] },
+    { "id": "primary", "type": "database", "label": "Primary Tree", "sublabel": "protected", "pos": [820, 140], "size": [130, 56] },
+    { "id": "unsafe", "type": "external", "label": "--unsafe-host", "sublabel": "opt-in", "pos": [240, 40], "size": [130, 56], "tag": "no auto" }
+  ],
+  "boundaries": [
+    { "kind": "security-group", "label": "sandboxed execution", "wraps": ["worktree", "sandbox", "envscrub", "mcp", "pi"], "pad": 18 },
+    { "kind": "region", "label": "host (outside sandbox)", "wraps": ["secrets", "primary", "unsafe"], "pad": 16 }
+  ],
+  "connections": [
+    { "id": "cli-worktree", "from": "cli", "to": "worktree", "label": "isolate", "variant": "emphasis", "fromSide": "top", "toSide": "left" },
+    { "id": "worktree-sandbox", "from": "worktree", "to": "sandbox" },
+    { "id": "cli-sandbox", "from": "cli", "to": "sandbox", "label": "fail closed", "variant": "security" },
+    { "id": "sandbox-env", "from": "sandbox", "to": "envscrub", "label": "scrub", "fromSide": "top", "toSide": "bottom", "labelDy": -24 },
+    { "id": "sandbox-mcp", "from": "sandbox", "to": "mcp", "label": "allow" },
+    { "id": "sandbox-pi", "from": "sandbox", "to": "pi", "label": "tools" },
+    { "id": "mcp-pi", "from": "mcp", "to": "pi", "fromSide": "bottom", "toSide": "top" },
+    { "id": "secrets-denied", "from": "secrets", "to": "sandbox", "label": "deny", "variant": "security", "fromSide": "top", "toSide": "bottom", "labelDy": -28 },
+    { "id": "primary-blocked", "from": "pi", "to": "primary", "label": "no write", "variant": "dashed", "fromSide": "top", "toSide": "bottom", "labelDy": -24 },
+    { "id": "cli-unsafe", "from": "cli", "to": "unsafe", "label": "explicit", "variant": "dashed", "fromSide": "top", "toSide": "left" }
+  ],
+  "cards": [
+    {
+      "dot": "rose",
+      "title": "Fail closed",
+      "items": [
+        "Safe and in-place modes never fall back to unrestricted host execution",
+        "Sandbox init failure stops the run"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Isolation layers",
+      "items": [
+        "Worktree keeps the primary checkout intact by default",
+        "Env scrub and path denies keep secrets out of tools"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "MCP trust",
+      "items": [
+        "Only allowlisted MCP servers attach",
+        "Scout and expert remain filesystem-free"
+      ]
+    }
+  ]
+}

@@ -31,9 +31,9 @@ Supergroup `ai` expands to the AI application ids listed in
 [generated supergroups](../reference/generated/supergroups.md).
 
 Orchestration docs: [architecture](architecture.md),
-[security](security.md), [model-scout](model-scout.md), [litellm](litellm.md),
-[evals](evals.md), [openrig](openrig.md), [autonomy](autonomy.md),
-[v1.6 roadmap](v1.6-roadmap.md).
+[diagrams](diagrams.md), [security](security.md),
+[model-scout](model-scout.md), [litellm](litellm.md), [evals](evals.md),
+[openrig](openrig.md), [autonomy](autonomy.md), [roadmap](v1.6-roadmap.md).
 
 ## Herdr
 

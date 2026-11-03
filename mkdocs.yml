@@ -101,15 +101,16 @@ nav:
       - mactools: macos/mactools.md
   - Agents and AI:
       - Agent harness: agents/harness.md
-      - Architecture (v1.6): agents/architecture.md
-      - Security (Phase 2): agents/security.md
+      - Architecture: agents/architecture.md
+      - Architecture diagrams: agents/diagrams.md
+      - Security: agents/security.md
       - Model Scout: agents/model-scout.md
       - Evaluations: agents/evals.md
       - OpenRig teams: agents/openrig.md
       - Autonomy / recovery: agents/autonomy.md
       - LiteLLM: agents/litellm.md
       - Models: agents/models.md
-      - v1.6 roadmap: agents/v1.6-roadmap.md
+      - Roadmap: agents/v1.6-roadmap.md
   - Reference:
       - CLI: reference/cli.md
       - Generated:
