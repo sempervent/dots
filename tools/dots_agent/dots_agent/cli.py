@@ -116,8 +116,15 @@ def cmd_doctor(_: argparse.Namespace) -> int:
     for k, v in doctor_sandbox_checks():
         print(f"{k:28} {v}")
     print()
+    print("OpenRig / teams")
+    from dots_agent.openrig.status import doctor_checks as openrig_doctor
+
+    for k, v in openrig_doctor(cfg):
+        print(f"{k:28} {v}")
+    print()
     print("Credentials shown as SET/UNSET only — values never printed.")
     print("MCP Inspector: dots agent mcp inspect <dots-model-scout|dots-expert>")
+    print("Team doctor: dots agent team doctor")
     return 0
 
 
@@ -910,6 +917,42 @@ def build_parser() -> argparse.ArgumentParser:
     rt.add_argument("--local", action="store_true", help="Cache-only catalog")
     rt.add_argument("--json", action="store_true")
 
+    tm = sub.add_parser("team", help="OpenRig persistent agent teams")
+    tm_sub = tm.add_subparsers(dest="team_cmd", required=True)
+    tm_st = tm_sub.add_parser("status", help="OpenRig + team policy status")
+    tm_st.add_argument("--team", default=None, help="Team run id for budget snapshot")
+    tm_st.add_argument("--json", action="store_true")
+    tm_st.add_argument("--routing", action="store_true", help="Show stored routing evidence")
+    tm_st.add_argument("--refresh", action="store_true")
+    tm_sub.add_parser("list", help="List DOTS team templates")
+    tm_sub.add_parser("doctor", help="OpenRig / seat / terminal diagnostics")
+    tm_up = tm_sub.add_parser("up", help="Render policy, provision seats, start rig")
+    tm_up.add_argument("template", choices=["dots-pair", "dots-triad", "dots-investigate"])
+    tm_up.add_argument("--project", required=True)
+    tm_up.add_argument("--dry-run", action="store_true")
+    tm_dn = tm_sub.add_parser("down", help="Stop team (preserve state)")
+    tm_dn.add_argument("template")
+    tm_op = tm_sub.add_parser("open", help="Open Herdr/tmux OpenRig view")
+    tm_op.add_argument("--rig", default=None)
+    tm_op.add_argument("--target", default="saved:kernel")
+    tm_op.add_argument("--window", action="store_true")
+    tm_op.add_argument("--dry-run", action="store_true")
+    tm_tasks = tm_sub.add_parser("tasks", help="Summarize OpenRig queue")
+    tm_tasks.add_argument("--destination", default=None)
+    tm_sub.add_parser("messages", help="Summarize OpenRig messages/stream")
+    tm_rc = tm_sub.add_parser("restore-check", help="OpenRig restore-check")
+    tm_rc.add_argument("target", nargs="?", default=None)
+    tm_rec = tm_sub.add_parser("reconcile", help="Compare desired seat policy vs projection")
+    tm_rec.add_argument("template", choices=["dots-pair", "dots-triad", "dots-investigate"])
+    tm_rec.add_argument("--apply", action="store_true")
+    tm_run = tm_sub.add_parser("run", help="Queue work to a team via OpenRig")
+    tm_run.add_argument("--team", default="dots-triad")
+    tm_run.add_argument("task", nargs="+")
+    tm_run.add_argument("--detach", action="store_true", default=True)
+    tm_run.add_argument("--follow", action="store_true")
+    tm_diff = tm_sub.add_parser("diff", help="Show isolated team worktree diffs")
+    tm_diff.add_argument("rig")
+
     return p
 
 
@@ -935,6 +978,26 @@ def cmd_route(args: argparse.Namespace) -> int:
     return _route(args)
 
 
+def cmd_team(args: argparse.Namespace) -> int:
+    from dots_agent.openrig import cli_team as T
+
+    dispatch = {
+        "status": T.cmd_team_status,
+        "list": T.cmd_team_list,
+        "doctor": T.cmd_team_doctor,
+        "up": T.cmd_team_up,
+        "down": T.cmd_team_down,
+        "open": T.cmd_team_open,
+        "tasks": T.cmd_team_tasks,
+        "messages": T.cmd_team_messages,
+        "restore-check": T.cmd_team_restore_check,
+        "reconcile": T.cmd_team_reconcile,
+        "run": T.cmd_team_run,
+        "diff": T.cmd_team_diff,
+    }
+    return dispatch[args.team_cmd](args)
+
+
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     parser = build_parser()
@@ -955,6 +1018,7 @@ def main(argv: list[str] | None = None) -> int:
         "mcp": cmd_mcp,
         "eval": cmd_eval,
         "route": cmd_route,
+        "team": cmd_team,
     }
     return dispatch[args.cmd](args)
 

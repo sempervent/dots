@@ -10,8 +10,8 @@ _dots_complete() {
   local sub="${COMP_WORDS[2]:-}"
 
   local commands='setup status components lsp ai agent packages backup backups restore profile models check update help shell completion'
-  local topics='overview getting-started shell completion keybindings profiles components supergroups packages ai models lsp skills backup agent agent-security diagnostics update commands files agent-evals agent-routing'
-  local selectors='ai herdr hermes ollama llamacpp archify skills ai-skills drawthings opencode codex cursor fluidvoice images tex mactools lsp ai-server pi litellm agent-sandbox'
+  local topics='overview getting-started shell completion keybindings profiles components supergroups packages ai models lsp skills backup agent agent-security diagnostics update commands files agent-evals agent-routing agent-teams'
+  local selectors='ai herdr hermes ollama llamacpp archify skills ai-skills drawthings opencode codex cursor fluidvoice images tex mactools lsp ai-server pi litellm agent-sandbox openrig'
   local groups='core modern workstation infra media gui server dev security network data geo'
   local profiles='base home work server all'
   local providers='ollama llamacpp drawthings fluidvoice all'
@@ -24,7 +24,7 @@ _dots_complete() {
   local pkg_subs='groups group plan status explain outdated upgrade adopt help'
   local component_subs='list active show help'
   local ai_subs='status doctor up down help'
-  local agent_subs='status doctor sandbox models scout route eval run worktrees diff apply discard mcp costs gateway'
+  local agent_subs='status doctor sandbox models scout route eval team run worktrees diff apply discard mcp costs gateway'
 
   _dots_custom_profiles() {
     local d="${HOME}/.config/dots/profiles" f

@@ -68,9 +68,9 @@ description = "Show AI server stack status."
 
 [[commands]]
 name = "agent"
-usage = "dots agent [status|doctor|sandbox|models|scout|route|eval|run|worktrees|mcp|costs]"
+usage = "dots agent [status|doctor|sandbox|models|scout|route|eval|team|run|worktrees|mcp|costs]"
 category = "ai"
-description = "Local-first agent harness (sandboxed Pi + eval-driven scout + budgeted LiteLLM experts)."
+description = "Local-first agent harness (sandboxed Pi + OpenRig teams + eval-driven scout + budgeted experts)."
 mutating = true
 related = ["ai", "models", "setup", "help"]
 [[commands.examples]]
@@ -97,6 +97,12 @@ description = "Run smoke evals against the configured local model (oracle/mock i
 [[commands.examples]]
 command = "dots agent eval results"
 description = "Summarize empirical pass rates with Wilson lower bounds."
+[[commands.examples]]
+command = "dots agent team up dots-triad --project . --dry-run"
+description = "Plan an OpenRig triad (no mutation)."
+[[commands.examples]]
+command = "dots agent team status"
+description = "OpenRig daemon/terminal/budget/policy status."
 [[commands.examples]]
 command = "dots agent run --task-class debugging \"Diagnose and fix the failing test.\""
 description = "Safe sandboxed run (default); use --unsafe-host to bypass."
