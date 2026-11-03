@@ -8,7 +8,8 @@ work Mac, and headless Linux — not identical software everywhere.
 
 Bash remains fully supported. Zsh + Oh My Zsh is the primary rich interactive
 shell. Shared logic lives in `shell/`; shell-specific behavior in `bash/` and
-`zsh/`.
+`zsh/`. Zsh Tab completion is fuzzy via fzf-tab (see
+[docs/using/fuzzy-completion.md](docs/using/fuzzy-completion.md)).
 
 ## First run (happy path)
 
