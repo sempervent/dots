@@ -347,6 +347,23 @@ else
   info "shell: zsh not installed"
 fi
 
+echo -e "\n${BLUE}DOTS Help${NC}"
+if command -v dots-help >/dev/null 2>&1 || [[ -x ${DOTS_DIR}/scripts/dots-help ]]; then
+  ok "dots-help launcher available"
+else
+  warn "dots-help missing — re-run ./setup.sh (installs tools/dots_help via uv)"
+fi
+if [[ -f ${HOME}/.local/share/man/man1/dots.1 ]] || [[ -f ${DOTS_DIR}/docs/man/man1/dots.1 ]]; then
+  ok "man dots page present"
+else
+  warn "man dots missing — regenerate with python3 scripts/docs/generate_manpages.py"
+fi
+if [[ -f ${DOTS_DIR}/configs/help/commands.toml ]]; then
+  ok "help command metadata present"
+else
+  fail "configs/help/commands.toml missing"
+fi
+
 echo -e "\n${BLUE}Fuzzy completion${NC}"
 if command -v fzf >/dev/null 2>&1; then
   ok "fzf $(fzf --version 2>/dev/null | head -1)"
@@ -376,7 +393,9 @@ if command -v zsh >/dev/null 2>&1; then
 bindkey "^R" 2>/dev/null | head -1
 bindkey "^T" 2>/dev/null | head -1
 bindkey -M viins "^I" 2>/dev/null | head -1
+bindkey -M viins "^]" 2>/dev/null | head -1
 bindkey "^ " 2>/dev/null | head -1
+bindkey "^@" 2>/dev/null | head -1
 typeset -f fzf-file-widget >/dev/null && echo FZF_FILE_OK
 typeset -f _fzf_compgen_path >/dev/null && echo FZF_COMPGEN_OK
 ' 2>/dev/null)"
@@ -401,10 +420,15 @@ typeset -f _fzf_compgen_path >/dev/null && echo FZF_COMPGEN_OK
   else
     warn "Zsh fuzzy Tab completion unavailable — normal completion remains functional"
   fi
-  if echo "${_fzf_bind_probe}" | rg -q 'autosuggest-accept'; then
-    ok "Ctrl-Space autosuggest-accept"
+  if echo "${_fzf_bind_probe}" | rg -q '\^\].*autosuggest-accept'; then
+    ok "Ctrl-] autosuggest-accept"
   else
-    info "Ctrl-Space autosuggest-accept not bound (plugin absent?)"
+    info "Ctrl-] autosuggest-accept not bound (plugin absent?)"
+  fi
+  if echo "${_fzf_bind_probe}" | rg -q '(\^ |\^@).*autosuggest-accept'; then
+    fail "Ctrl-Space still bound to autosuggest-accept (conflicts with tmux prefix)"
+  else
+    ok "Ctrl-Space not claimed by Zsh autosuggest (reserved for tmux)"
   fi
   if [[ "${_fzf_fd_ok}" -eq 1 ]]; then
     if echo "${_fzf_bind_probe}" | rg -q 'FZF_COMPGEN_OK'; then

@@ -533,10 +533,9 @@ def generate_cli_help(check: bool) -> bool:
     src = "dots + bootstrap.sh + setup.sh + configure.sh (safe --help)"
     sections: list[tuple[str, str]] = []
 
-    # Invoke via relative argv so $0 in Usage lines stays portable (cwd=ROOT).
-    help_out = _safe_help(["./dots", "help"])
-    if help_out is None:
-        help_out = _safe_help(["./dots", "--help"])
+    # Prefer ./dots --help (fast Bash synopsis). `./dots help` launches dots-help
+    # (Textual / plain machine state) and is not a portable CLI usage capture.
+    help_out = _safe_help(["./dots", "--help"])
     if help_out is None:
         help_out = _extract_usage_from_source(ROOT / "dots") or "(unavailable)"
     sections.append(("`./dots`", help_out))

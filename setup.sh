@@ -70,6 +70,10 @@ source "${DIR}/helpers/path_hygiene.sh"
 source "${DIR}/helpers/telemetry.sh"
 # shellcheck source=helpers/launchers.sh
 source "${DIR}/helpers/launchers.sh"
+# shellcheck source=helpers/dots_help.sh
+source "${DIR}/helpers/dots_help.sh"
+# shellcheck source=helpers/shell_diag.sh
+source "${DIR}/helpers/shell_diag.sh"
 # shellcheck source=helpers/leaf.sh
 source "${DIR}/helpers/leaf.sh"
 # shellcheck source=helpers/rsync.sh
@@ -569,6 +573,14 @@ dots_setup_agent_router || exit 1
 # Re-link DOTS launchers (img, notify, agent-stats, …) every run so new
 # scripts land on PATH without requiring another --with pass.
 dots_ensure_launchers
+# Interactive help TUI + man pages (core UX; not an optional --with)
+if declare -F dots_help_install >/dev/null 2>&1; then
+	dots_help_install
+fi
+# Generated dots CLI completions (Zsh compsys + Bash)
+if declare -F dots_completion_install >/dev/null 2>&1; then
+	dots_completion_install
+fi
 
 # leaf markdown viewer + shell completions (zsh/bash/fish; any host)
 dots_setup_leaf || echo "Warn: leaf setup reported errors (optional)"
@@ -643,6 +655,12 @@ Notify: ~/.local/bin/notify  (smoke: ./scripts/notify-smoke.sh)
 Leaf:   leaf (markdown viewer) + completions in ~/.local/share/leaf/completions
 Ranger: ~/.config/ranger/{rc.conf,rifle.conf,scope.sh,colorschemes/catppuccin.py}
 Fuzzy:  fzf + fzf-tab (Zsh Tab); Ctrl-R/T/Alt-C; ** recursive completion
+Help:   dots-help   man dots
+
+Useful next steps:
+  dots-help          explore this environment
+  dots check         verify configuration
+  dots shell status  inspect shell bindings
 
 Optional --with: ${DOTS_WITH_COMPONENTS[*]:-none}
 

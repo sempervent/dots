@@ -1,0 +1,197 @@
+# configs/help/commands.toml — authoritative DOTS CLI command metadata
+#
+# Drives: ./dots --help synopsis, dots-help TUI, man pages, docs generation.
+# Keep in sync with the `dots` dispatcher (scripts/tests enforce drift).
+
+version = 1
+
+[[commands]]
+name = "setup"
+usage = "dots setup [options]"
+category = "lifecycle"
+description = "Interactive or noninteractive setup / reconfigure toward desired state."
+mutating = true
+related = ["status", "check", "update", "help"]
+[[commands.examples]]
+command = "dots setup"
+description = "Interactive wizard."
+[[commands.examples]]
+command = "dots setup --dry-run"
+description = "Preview without mutating."
+
+[[commands]]
+name = "status"
+usage = "dots status"
+category = "diagnostics"
+description = "Show current DOTS state (profile, packages summary, components)."
+mutating = false
+related = ["check", "packages", "components", "help"]
+[[commands.examples]]
+command = "dots status"
+description = "Read-only machine dashboard."
+
+[[commands]]
+name = "components"
+usage = "dots components [list|active|show ID]"
+category = "components"
+description = "Inspect optional components and --with selectors."
+mutating = false
+related = ["setup", "packages", "help"]
+[[commands.examples]]
+command = "dots components list"
+description = "Registry + host compatibility."
+[[commands.examples]]
+command = "dots components active"
+description = "Last-selected components (informational)."
+
+[[commands]]
+name = "lsp"
+usage = "dots lsp [status|check|install|list]"
+category = "developer_tooling"
+description = "Language-server install, status, and checks."
+mutating = false
+related = ["setup", "check", "help"]
+[[commands.examples]]
+command = "dots lsp status"
+description = "Show selected/installed language servers."
+
+[[commands]]
+name = "ai"
+usage = "dots ai [status|doctor|up|down|…]"
+category = "ai"
+description = "AI inference server (Compose + Open WebUI) control plane."
+mutating = true
+related = ["models", "setup", "help"]
+[[commands.examples]]
+command = "dots ai status"
+description = "Show AI server stack status."
+
+[[commands]]
+name = "packages"
+usage = "dots packages [groups|group|plan|status|explain|outdated|upgrade|adopt]"
+category = "packages"
+description = "Package ownership, drift, groups, and upgrades."
+mutating = false
+related = ["status", "check", "setup", "help"]
+[[commands.examples]]
+command = "dots packages groups"
+description = "List capability groups."
+[[commands.examples]]
+command = "dots packages status"
+description = "Full package ownership audit."
+[[commands.examples]]
+command = "dots packages explain bat"
+description = "Explain one package's ownership state."
+
+[[commands]]
+name = "backup"
+usage = "dots backup [--name N]"
+category = "recovery"
+description = "Snapshot managed targets under ~/.local/state/dots/backups/."
+mutating = true
+related = ["backups", "restore", "help"]
+[[commands.examples]]
+command = "dots backup --name before-change"
+description = "Named pre-change snapshot."
+
+[[commands]]
+name = "backups"
+usage = "dots backups"
+category = "recovery"
+description = "List recoverable DOTS snapshots."
+mutating = false
+related = ["backup", "restore", "help"]
+
+[[commands]]
+name = "restore"
+usage = "dots restore [ID]"
+category = "recovery"
+description = "Restore a snapshot (creates a safety snapshot first)."
+mutating = true
+related = ["backup", "backups", "help"]
+
+[[commands]]
+name = "profile"
+usage = "dots profile …"
+category = "lifecycle"
+description = "Create, preview, or switch machine profiles."
+mutating = true
+related = ["setup", "status", "help"]
+
+[[commands]]
+name = "models"
+usage = "dots models [discover|pull|…]"
+category = "ai"
+description = "Local model plan, discovery, and pull workflows."
+mutating = false
+related = ["ai", "setup", "help"]
+[[commands.examples]]
+command = "dots models discover"
+description = "Read-only inventory (no downloads)."
+
+[[commands]]
+name = "check"
+usage = "dots check [--profile NAME]"
+category = "diagnostics"
+description = "Verify machine health against the active/selected profile."
+mutating = false
+related = ["status", "update", "help"]
+
+[[commands]]
+name = "update"
+usage = "dots update"
+category = "lifecycle"
+description = "git pull the DOTS repo and optionally reapply setup."
+mutating = true
+related = ["setup", "check", "help"]
+
+[[commands]]
+name = "help"
+usage = "dots help [topic] [--plain] [--search QUERY] [--cheatsheet]"
+category = "discovery"
+description = "Interactive Textual help (dots-help) for this machine."
+mutating = false
+related = ["status", "check", "shell", "completion"]
+[[commands.examples]]
+command = "dots help"
+description = "Open the interactive help TUI."
+[[commands.examples]]
+command = "dots help completion"
+description = "Jump to fuzzy completion topic."
+[[commands.examples]]
+command = "dots help --plain packages"
+description = "Plain-text packages topic."
+[[commands.examples]]
+command = "dots help --cheatsheet"
+description = "Machine-specific cheat sheet."
+
+[[commands]]
+name = "shell"
+usage = "dots shell [status|keys|startup]"
+category = "diagnostics"
+description = "Inspect shell, prompt, and keybinding ownership."
+mutating = false
+related = ["completion", "status", "help", "check"]
+[[commands.examples]]
+command = "dots shell status"
+description = "Who owns Tab / Ctrl-R / prompt."
+[[commands.examples]]
+command = "dots shell keys"
+description = "Concise keybinding table for this machine."
+[[commands.examples]]
+command = "dots shell startup"
+description = "Timed interactive shell startup samples."
+
+[[commands]]
+name = "completion"
+usage = "dots completion [status|paths]"
+category = "diagnostics"
+description = "DOTS CLI completion and fzf-tab diagnostics."
+mutating = false
+related = ["shell", "help"]
+[[commands.examples]]
+command = "dots completion status"
+description = "Show completion engine and binding owners."
+[[commands.examples]]
+command = "dots completion paths"
+description = "Show installed completion script paths."

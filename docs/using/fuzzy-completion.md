@@ -7,7 +7,7 @@ These are three different layers:
 
 | Layer | Role |
 |-------|------|
-| **Autosuggestion** | Ghost text from history (`zsh-autosuggestions`; accept with Ctrl-Space) |
+| **Autosuggestion** | Ghost text from history (`zsh-autosuggestions`; accept with **Ctrl-]** ) |
 | **Completion** | Valid candidates at the cursor (Zsh compsys + command-specific scripts) |
 | **Fuzzy selection** | Interactive filtering of those candidates (fzf-tab on Tab) |
 
@@ -20,8 +20,9 @@ These are three different layers:
 | **Alt-C** | Fuzzy directory jump via fzf (when the terminal delivers Meta-c) |
 | **Tab** | Contextual fuzzy completion (fzf-tab over Zsh candidates) |
 | **\*\*\<Tab\>** | Explicit recursive fzf filesystem completion |
-| **Ctrl-Space** | Accept autosuggestion (not fzf-tab multi-select) |
+| **Ctrl-]** | Accept autosuggestion (Zsh vi insert; ASCII `^]`) |
 | **Ctrl-Y** | Toggle multi-select inside the fzf-tab UI |
+| **Ctrl-Space** | **tmux prefix only** (never shell / fzf-tab) |
 
 ## Examples
 
@@ -45,6 +46,18 @@ Bash does not use fzf-tab. It keeps the official fzf integration:
 
 - Ctrl-R / Ctrl-T / Alt-C
 - `**<Tab>` path completion (fd-backed when `fd` is available)
+
+## Discoverability
+
+```bash
+dots-help                 # interactive help for this machine
+dots-help completion      # this cheat-sheet, live capability state
+man dots
+```
+
+| Discover | Search args | History | Files | Docs | Diagnose |
+|----------|-------------|---------|-------|------|----------|
+| `dots-help` | Tab / `dots <Tab>` | Ctrl-R | Ctrl-T | `man dots` | `dots shell status` |
 
 ## Install / health
 

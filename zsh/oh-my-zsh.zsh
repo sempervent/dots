@@ -70,8 +70,10 @@ else
   print -u2 "Oh My Zsh not found at ${ZSH}. Run ./setup.sh to install."
 fi
 
-if typeset -f dots_bind_history_substring >/dev/null 2>&1; then
+# Key policy lives in zsh/keybindings.zsh (dots_bind_keybindings) — applied
+# again after fzf-tab in zshrc so final ownership wins.
+if typeset -f dots_bind_keybindings >/dev/null 2>&1; then
+  dots_bind_keybindings
+elif typeset -f dots_bind_history_substring >/dev/null 2>&1; then
   dots_bind_history_substring
 fi
-
-bindkey '^ ' autosuggest-accept 2>/dev/null || true

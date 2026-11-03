@@ -78,6 +78,9 @@ authorize configuration.
 ./dots status
 ./dots check
 ./dots packages status    # Homebrew ownership / drift (read-only)
+dots-help                 # interactive reference for this machine
+man dots
 ```
 
 Open a new shell (or `source` as appropriate) so linked configs take effect.
+See [dots-help](../using/dots-help.md) and [fuzzy completion](../using/fuzzy-completion.md).

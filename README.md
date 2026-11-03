@@ -17,11 +17,14 @@ shell. Shared logic lives in `shell/`; shell-specific behavior in `bash/` and
 git clone https://github.com/sempervent/dots.git ~/dots
 cd ~/dots
 ./dots
+dots-help
+man dots
 ```
 
 `./dots` is the primary human interface: machine role → profile → components →
-runtime → models → review → bootstrap → verify. Expert scripts remain available
-underneath for automation.
+runtime → models → review → bootstrap → verify. After setup, `dots-help` opens
+an interactive reference for **this** machine; `man dots` covers the same
+ground traditionally. Expert scripts remain available underneath for automation.
 
 ```bash
 ./dots                     # interactive setup (same as ./dots setup)

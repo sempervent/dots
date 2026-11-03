@@ -13,6 +13,15 @@ command -v rg >/dev/null 2>&1 || {
 	exit 1
 }
 
+# Pinned uv for dots-help (scripts/dots-help + ./dots help)
+# shellcheck source=ensure_uv.sh
+source "${ROOT}/scripts/ci/ensure_uv.sh"
+dots_ensure_uv
+command -v uv >/dev/null 2>&1 || {
+	echo "Error: uv required for macOS smoke (dots-help)" >&2
+	exit 1
+}
+
 /bin/bash ./bootstrap.sh --profile work --show
 /bin/bash ./bootstrap.sh --profile home --show
 /bin/bash ./bootstrap.sh --profile server --show

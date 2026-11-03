@@ -62,6 +62,9 @@ run scripts/tests/idempotence_test.sh
 run scripts/tests/check_contract_test.sh
 run scripts/tests/shell_startup_test.sh
 run scripts/tests/fuzzy_completion_test.sh
+run scripts/tests/keybinding_collision_test.sh
+run scripts/tests/dots_help_test.sh
+run scripts/tests/dots_ux_v15_test.sh
 run scripts/tests/python_runtime_test.sh
 
 echo "=== Model policy (mocked; no downloads) ==="

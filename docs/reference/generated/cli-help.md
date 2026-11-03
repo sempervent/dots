@@ -11,36 +11,30 @@ Captured from safe `--help` / `help` invocations. If a binary is missing or help
 ## `./dots`
 
 ```text
-DOTS — machine environment manager  (v1.5.0)
+DOTS — machine environment manager  (v1.5.1)
 
 Usage:
-  ./dots                     interactive setup
-  ./dots setup               setup / reconfigure
-  ./dots status              current state (read-only)
-  ./dots components          optional components / --with selectors
-  ./dots components list     registry + host compatibility
-  ./dots components active   last-selected components (informational)
-  ./dots lsp                 language-server install / status / checks
-  ./dots ai                  AI inference server (Compose + Open WebUI)
-  ./dots packages            package ownership / drift
-  ./dots packages groups     capability groups (read-only)
-  ./dots packages group ID   inspect one package group
-  ./dots packages plan […]   resolved package plan (read-only)
-  ./dots packages status     full package audit
-  ./dots packages explain N  explain one package's ownership state
-  ./dots packages outdated   outdated managed packages
-  ./dots packages upgrade    upgrade DOTS-managed packages
-  ./dots packages adopt …    suggest Brewfile declaration (no auto-edit)
-  ./dots backup [--name N]   snapshot managed targets
-  ./dots backups             list snapshots
-  ./dots restore [ID]        restore a snapshot
-  ./dots profile             profile management
-  ./dots models              local model management (discover / pull)
-  ./dots models discover     read-only inventory (no ai-server required)
-  ./dots check               verify machine
-  ./dots update              update DOTS repo + reapply
-  ./dots help                this help
-  ./dots --version
+  ./dots setup [options]            Interactive or noninteractive setup / reconfigure tow...
+  ./dots status                     Show current DOTS state (profile, packages summary, c...
+  ./dots components [list|active|show ID] Inspect optional components and --with selectors.
+  ./dots lsp [status|check|install|list] Language-server install, status, and checks.
+  ./dots ai [status|doctor|up|down|…] AI inference server (Compose + Open WebUI) control pl...
+  ./dots packages [groups|group|plan|status|explain|outdated|upgrade|adopt] Package ownership, drift, groups, and upgrades.
+  ./dots backup [--name N]          Snapshot managed targets under ~/.local/state/dots/ba...
+  ./dots backups                    List recoverable DOTS snapshots.
+  ./dots restore [ID]               Restore a snapshot (creates a safety snapshot first).
+  ./dots profile …                  Create, preview, or switch machine profiles.
+  ./dots models [discover|pull|…]   Local model plan, discovery, and pull workflows.
+  ./dots check [--profile NAME]     Verify machine health against the active/selected pro...
+  ./dots update                     git pull the DOTS repo and optionally reapply setup.
+  ./dots help [topic] [--plain] [--search QUERY] [--cheatsheet] Interactive Textual help (dots-help) for this machine.
+  ./dots shell [status|keys|startup] Inspect shell, prompt, and keybinding ownership.
+  ./dots completion [status|paths]  DOTS CLI completion and fzf-tab diagnostics.
+
+Interactive help:
+  ./dots help              Textual TUI (dots-help)
+  dots-help                same launcher
+  man dots                 Unix manual
 
 Optional components use profile with= or ./setup.sh --with <ids>
 (see ./dots components list). Docs:
@@ -95,6 +89,7 @@ Selectors (--with / --without):
   Supergroups:
     ai           AI applications — Local runtimes, coding agents, and the LSP toolchain for this platform
   List: ./dots components list
+  Run:  dots-help components
 
 Happy paths:
   ./bootstrap.sh --profile home      # personal Mac (auto-provisions brew/python)
@@ -149,6 +144,7 @@ Options:
                     Supergroups:
                       ai           AI applications — Local runtimes, coding agents, and the LSP toolchain for this platform
                     List: ./dots components list
+                    Run:  dots-help components
   --with=<list>     Same as --with <list>
   --without <list>  Exclude selectors after expansion (profile without / CLI)
   --without=<list>  Same as --without <list>
@@ -323,15 +319,6 @@ Optional components are selected via profile with= or:
 
 Active inventory is INFORMATIONAL only — not AI consent.
 Docs: https://sempervent.github.io/dots/using/components/
-```
-
-## `./dots profile`
-
-```text
-Usage:
-  ./dots profile             profile management
-
-(Interactive entrypoint; see `./dots help` and expert scripts such as `./scripts/pull_models.sh` / `./bootstrap.sh`.)
 ```
 
 ## `./dots models`
