@@ -1,17 +1,38 @@
 # shellcheck shell=bash
 # helpers/suggest.sh — lightweight typo suggestions (no Python, no network)
 
-# Damerau-lite / Levenshtein distance for short tokens (commands, component ids).
+# Levenshtein distance for short tokens. Prefer Python (available after Stage 0);
+# pure-Bash fallback stays usable when python3 is absent.
 dots_edit_distance() {
 	local a="$1" b="$2"
+	if command -v python3 >/dev/null 2>&1; then
+		A="$a" B="$b" python3 - <<'PY'
+import os
+a, b = os.environ["A"], os.environ["B"]
+n, m = len(a), len(b)
+dp = list(range(m + 1))
+for i, ca in enumerate(a, 1):
+    prev, dp[0] = dp[0], i
+    for j, cb in enumerate(b, 1):
+        cur = dp[j]
+        dp[j] = prev if ca == cb else 1 + min(prev, dp[j], dp[j - 1])
+        prev = cur
+print(dp[m])
+PY
+		return 0
+	fi
+	# Bash fallback (Bash only — not Zsh-safe)
+	[[ -n ${BASH_VERSION:-} ]] || {
+		printf '%s\n' 99
+		return 0
+	}
 	local -i n=${#a} m=${#b} i j cost
-	local -a d
-	# Flattened (n+1)*(m+1) matrix in d[]
+	local -a d=()
 	for ((i = 0; i <= n; i++)); do
-		d[i * (m + 1)]=$i
+		d[$((i * (m + 1)))]=$i
 	done
 	for ((j = 0; j <= m; j++)); do
-		d[j]=$j
+		d[$j]=$j
 	done
 	for ((i = 1; i <= n; i++)); do
 		for ((j = 1; j <= m; j++)); do
@@ -20,16 +41,16 @@ dots_edit_distance() {
 			else
 				cost=1
 			fi
-			local -i del=$((d[(i - 1) * (m + 1) + j] + 1))
-			local -i ins=$((d[i * (m + 1) + (j - 1)] + 1))
-			local -i sub=$((d[(i - 1) * (m + 1) + (j - 1)] + cost))
+			local -i del=$((d[$(((i - 1) * (m + 1) + j))] + 1))
+			local -i ins=$((d[$((i * (m + 1) + (j - 1)))] + 1))
+			local -i sub=$((d[$(((i - 1) * (m + 1) + (j - 1)))] + cost))
 			local -i best=$del
 			((ins < best)) && best=$ins
 			((sub < best)) && best=$sub
-			d[i * (m + 1) + j]=$best
+			d[$((i * (m + 1) + j))]=$best
 		done
 	done
-	printf '%s\n' "${d[n * (m + 1) + m]}"
+	printf '%s\n' "${d[$((n * (m + 1) + m))]}"
 }
 
 # Print best matches for needle among candidates (space/newline separated).
