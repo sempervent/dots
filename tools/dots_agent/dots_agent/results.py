@@ -1,8 +1,9 @@
-"""Canonical Phase 1 agent run result states."""
+"""Canonical agent run result states (Phases 1–5)."""
 
 from __future__ import annotations
 
 # Only VERIFIED means an explicit verification proof succeeded.
+# COMPLETED means the harness finished without that proof.
 COMPLETED = "COMPLETED"
 VERIFIED = "VERIFIED"
 FAILED = "FAILED"
@@ -10,5 +11,21 @@ BUDGET_BLOCKED = "BUDGET_BLOCKED"
 TIMED_OUT = "TIMED_OUT"
 CANCELLED = "CANCELLED"
 DRY_RUN = "DRY_RUN"
+NEEDS_ATTENTION = "NEEDS_ATTENTION"
+RECONCILIATION_REQUIRED = "RECONCILIATION_REQUIRED"
+SANDBOX_BLOCKED = "SANDBOX_BLOCKED"
+POLICY_BLOCKED = "POLICY_BLOCKED"
 
-ALL = (COMPLETED, VERIFIED, FAILED, BUDGET_BLOCKED, TIMED_OUT, CANCELLED, DRY_RUN)
+ALL = (
+    COMPLETED,
+    VERIFIED,
+    FAILED,
+    BUDGET_BLOCKED,
+    TIMED_OUT,
+    CANCELLED,
+    DRY_RUN,
+    NEEDS_ATTENTION,
+    RECONCILIATION_REQUIRED,
+    SANDBOX_BLOCKED,
+    POLICY_BLOCKED,
+)

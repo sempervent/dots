@@ -103,6 +103,17 @@ def cmd_status(_: argparse.Namespace) -> int:
     print(f"  worktree         {'enabled' if sb['worktree_enabled'] else 'disabled'}")
     print(f"  unsafe fallback  {sb['unsafe_fallback']}")
     print()
+    from dots_agent.autonomy.policy import load_autonomy_policy
+
+    ap = load_autonomy_policy()
+    print("Autonomy")
+    print(f"  mode             {ap.mode.value} (default)")
+    print(f"  policy version   {ap.policy_version}")
+    print(
+        "  ladder           "
+        + " → ".join(a.value for a in ap.ladder)
+    )
+    print()
     print("Default runs use sandboxed safe mode. Bypass only with --unsafe-host.")
     return 0
 
@@ -122,9 +133,22 @@ def cmd_doctor(_: argparse.Namespace) -> int:
     for k, v in openrig_doctor(cfg):
         print(f"{k:28} {v}")
     print()
+    print()
+    print("Autonomy / recovery")
+    from dots_agent.autonomy.policy import load_autonomy_policy
+
+    ap = load_autonomy_policy()
+    print(f"{'autonomy_mode':28} {ap.mode.value}")
+    print(f"{'policy_version':28} {ap.policy_version}")
+    print(f"{'max_transient_retries':28} {ap.bounds.max_transient_retries}")
+    print(f"{'max_local_replans':28} {ap.bounds.max_local_replans}")
+    print(f"{'max_expert_escalations':28} {ap.bounds.max_expert_escalations}")
+    print(f"{'forbidden_ops':28} {len(ap.forbidden)} gated")
+    print()
     print("Credentials shown as SET/UNSET only — values never printed.")
     print("MCP Inspector: dots agent mcp inspect <dots-model-scout|dots-expert>")
     print("Team doctor: dots agent team doctor")
+    print("Observability: dots agent inspect|timeline|failures|attention|metrics|replay")
     return 0
 
 
@@ -596,6 +620,33 @@ def cmd_run(args: argparse.Namespace) -> int:
 
     snap = budget.snapshot()
     finish_session(session)
+
+    from dots_agent.autonomy.checkpoint import save_checkpoint
+    from dots_agent.autonomy.events import emit_checkpoint
+    from dots_agent.autonomy.policy import RecoveryCounters, load_autonomy_policy
+    from dots_agent.autonomy.progress import ProgressState
+
+    autonomy_mode = getattr(args, "autonomy", None)
+    apolicy = load_autonomy_policy(mode_override=autonomy_mode)
+    counters = RecoveryCounters()
+    progress = ProgressState()
+    ckpt_path = save_checkpoint(
+        ledger.dir,
+        autonomy_mode=apolicy.mode,
+        policy_version=apolicy.policy_version,
+        budget_spent_usd=float(snap["spent_usd"]),
+        budget_reserved_usd=float(snap["reserved_usd"]),
+        budget_remaining_usd=float(snap["remaining_usd"]),
+        session_budget_usd=float(snap["session_budget_usd"]),
+        remote_call_count=int(snap["remote_call_count"]),
+        max_remote_calls=int(snap["max_remote_calls"]),
+        counters=counters,
+        progress=progress,
+        outcome=result_state,
+        worktree_path=str(session.worktree.path) if session.worktree else None,
+    )
+    emit_checkpoint(ledger, path=str(ckpt_path))
+
     print()
     print(f"Agent Run {ledger.run_id}")
     print("─" * 48)
@@ -605,6 +656,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     print(f"  via               {'pi-rpc' if used_pi else 'harness'}")
     print(f"  execution         {execution_mode}")
     print(f"  sandbox           {'yes' if session.sandbox_enabled else 'no'}")
+    print(f"  autonomy          {apolicy.mode.value}")
     if used_pi and sel.get("provider"):
         print(f"  Pi provider       {sel['provider']}")
         print(f"  endpoint          {sel.get('endpoint')}")
@@ -639,6 +691,8 @@ def cmd_run(args: argparse.Namespace) -> int:
         result_state=result_state,
         execution_mode=execution_mode,
         sandbox_enabled=session.sandbox_enabled,
+        autonomy_mode=apolicy.mode.value,
+        policy_version=apolicy.policy_version,
     )
     return 0 if result_state in (R.COMPLETED, R.VERIFIED, R.DRY_RUN) else 1
 
@@ -846,6 +900,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Allow longer sandbox permission prompts",
     )
+    rn.add_argument(
+        "--autonomy",
+        choices=["manual", "guarded", "auto"],
+        default=None,
+        help="Autonomy mode override (default: guarded from autonomy.toml)",
+    )
 
     sb = sub.add_parser("sandbox", help="Sandbox status / policy")
     sb_sub = sb.add_subparsers(dest="sandbox_cmd", required=True)
@@ -953,6 +1013,36 @@ def build_parser() -> argparse.ArgumentParser:
     tm_diff = tm_sub.add_parser("diff", help="Show isolated team worktree diffs")
     tm_diff.add_argument("rig")
 
+    # Phase 5 — observability / resume / replay
+    insp = sub.add_parser("inspect", help="Inspect a run ledger + checkpoint")
+    insp.add_argument("run_id")
+    insp.add_argument("--json", action="store_true")
+
+    tl = sub.add_parser("timeline", help="Show structured run timeline")
+    tl.add_argument("run_id")
+    tl.add_argument("--json", action="store_true")
+
+    fl = sub.add_parser("failures", help="List recorded structural failures")
+    fl.add_argument("--limit", type=int, default=50)
+    fl.add_argument("--json", action="store_true")
+
+    att = sub.add_parser("attention", help="List human-attention events")
+    att.add_argument("--limit", type=int, default=50)
+    att.add_argument("--json", action="store_true")
+
+    sub.add_parser("metrics", help="Aggregate local run metrics")
+
+    cn = sub.add_parser("cancel", help="Cancel a run (marker + ledger)")
+    cn.add_argument("run_id")
+
+    rp = sub.add_parser("replay", help="Offline policy replay (zero network/mutations)")
+    rp.add_argument("run_id")
+    rp.add_argument("--json", action="store_true")
+
+    rs = sub.add_parser("resume", help="Resume a run without refreshing allowances")
+    rs.add_argument("run_id")
+    rs.add_argument("--json", action="store_true")
+
     return p
 
 
@@ -1002,6 +1092,8 @@ def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     parser = build_parser()
     args = parser.parse_args(argv)
+    from dots_agent.autonomy import cli_obs as O
+
     dispatch = {
         "status": cmd_status,
         "doctor": cmd_doctor,
@@ -1019,6 +1111,14 @@ def main(argv: list[str] | None = None) -> int:
         "eval": cmd_eval,
         "route": cmd_route,
         "team": cmd_team,
+        "inspect": O.cmd_inspect,
+        "timeline": O.cmd_timeline,
+        "failures": O.cmd_failures,
+        "attention": O.cmd_attention,
+        "metrics": O.cmd_metrics,
+        "cancel": O.cmd_cancel,
+        "replay": O.cmd_replay,
+        "resume": O.cmd_resume,
     }
     return dispatch[args.cmd](args)
 

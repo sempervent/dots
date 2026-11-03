@@ -33,6 +33,10 @@ rg -q 'LITELLM_MASTER_KEY' "${ROOT}/services/litellm/compose.yml" && ok "master 
 rg -q -- '--frozen' "${ROOT}/scripts/dots-agent" && rg -q -- '--no-sync' "${ROOT}/scripts/dots-agent" && ok "runtime frozen/no-sync" || bad "runtime sync"
 ! rg -q 'uv sync' "${ROOT}/scripts/dots-agent" && ok "no runtime uv sync" || bad "runtime uv sync"
 [[ -f ${ROOT}/docs/agents/v1.6-roadmap.md ]] && ok "v1.6 roadmap" || bad "roadmap"
+[[ -f ${ROOT}/configs/agents/autonomy.toml ]] && ok "autonomy.toml" || bad "autonomy.toml"
+[[ -f ${ROOT}/docs/agents/autonomy.md ]] && ok "autonomy.md" || bad "autonomy.md"
+[[ -d ${ROOT}/tools/dots_agent/dots_agent/autonomy ]] && ok "autonomy package" || bad "autonomy pkg"
+[[ -f ${ROOT}/tools/dots_agent/tests/test_autonomy.py ]] && ok "autonomy tests" || bad "autonomy tests"
 
 echo "=== CLI dispatch ==="
 "${ROOT}/dots" agent 2>&1 | grep -q 'Agent Harness' && ok "dots agent menu" || bad "menu"
@@ -63,10 +67,18 @@ else
 	ok "uv missing (skip package tests)"
 fi
 
+echo "=== Phase 5 observability CLI ==="
+if command -v uv >/dev/null 2>&1; then
+	DOTS_DIR="${ROOT}" "${ROOT}/scripts/dots-agent" metrics >/dev/null 2>&1 && ok "agent metrics" || bad "agent metrics"
+	DOTS_DIR="${ROOT}" "${ROOT}/scripts/dots-agent" failures --limit 5 >/dev/null 2>&1 && ok "agent failures" || bad "agent failures"
+	DOTS_DIR="${ROOT}" "${ROOT}/scripts/dots-agent" attention --limit 5 >/dev/null 2>&1 && ok "agent attention" || bad "agent attention"
+fi
+
 echo "=== docs present ==="
 [[ -f ${ROOT}/docs/agents/architecture.md ]] && ok "architecture.md" || bad "arch"
 [[ -f ${ROOT}/docs/agents/model-scout.md ]] && ok "model-scout.md" || bad "scout doc"
 [[ -f ${ROOT}/docs/agents/litellm.md ]] && ok "litellm.md" || bad "litellm doc"
+[[ -f ${ROOT}/docs/agents/autonomy.md ]] && ok "autonomy doc" || bad "autonomy doc"
 
 echo "Passed: ${pass}  Failed: ${fail}"
 [[ ${fail} -eq 0 ]]
