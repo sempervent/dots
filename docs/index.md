@@ -22,6 +22,7 @@ Live docs: [https://sempervent.github.io/dots/](https://sempervent.github.io/dot
 | Use Linux or Raspberry Pi | [Linux](platforms/linux.md) · [Raspberry Pi](platforms/raspberry-pi.md) |
 | macOS workstation apps (Vorssaint, Raycast, …) | [mactools](macos/mactools.md) |
 | Agents, models, routing | [Agent harness](agents/harness.md) · [Models](agents/models.md) |
+| Fuzzy Tab / Ctrl-R / Ctrl-T | [Fuzzy completion](using/fuzzy-completion.md) |
 | Fix something that broke | [Troubleshooting](troubleshooting/index.md) |
 | Extend the repo safely | [Extending](using/extending.md) |
 | CLI flags (generated) | [CLI reference](reference/cli.md) |

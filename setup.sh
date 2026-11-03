@@ -502,6 +502,7 @@ install_zsh_plugin() {
 	local repo="$1" name="$2"
 	clone_if_missing "https://github.com/${repo}.git" "${ZSH_CUSTOM}/plugins/${name}" "${name}"
 }
+install_zsh_plugin "Aloxaf/fzf-tab" "fzf-tab"
 install_zsh_plugin "zsh-users/zsh-autosuggestions" "zsh-autosuggestions"
 install_zsh_plugin "zsh-users/zsh-syntax-highlighting" "zsh-syntax-highlighting"
 install_zsh_plugin "zsh-users/zsh-history-substring-search" "zsh-history-substring-search"
@@ -641,6 +642,7 @@ Node: fnm + configs/node/default.toml (not nvm)
 Notify: ~/.local/bin/notify  (smoke: ./scripts/notify-smoke.sh)
 Leaf:   leaf (markdown viewer) + completions in ~/.local/share/leaf/completions
 Ranger: ~/.config/ranger/{rc.conf,rifle.conf,scope.sh,colorschemes/catppuccin.py}
+Fuzzy:  fzf + fzf-tab (Zsh Tab); Ctrl-R/T/Alt-C; ** recursive completion
 
 Optional --with: ${DOTS_WITH_COMPONENTS[*]:-none}
 

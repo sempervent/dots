@@ -44,7 +44,8 @@ are documentation only; CI does **not** fetch them.
 | lazygit | TUI for git | modern group / mactools notes | darwin, linux | https://github.com/jesseduffield/lazygit |
 | atuin | Shell history sync | modern group | darwin, linux | https://atuin.sh |
 | direnv | Per-directory env | modern group | darwin, linux | https://direnv.net |
-| fzf | Fuzzy finder | core group | darwin, linux | https://github.com/junegunn/fzf |
+| fzf | Fuzzy finder (Ctrl-R/T, Alt-C, `**<Tab>`) | core group | darwin, linux | https://github.com/junegunn/fzf |
+| fzf-tab | Zsh Tab fuzzy selector over compsys | `./setup.sh` Oh My Zsh plugin | darwin, linux | https://github.com/Aloxaf/fzf-tab |
 | ripgrep | Fast search | core group | darwin, linux | https://github.com/BurntSushi/ripgrep |
 | bat | Syntax-aware `cat` | modern group | darwin, linux | https://github.com/sharkdp/bat |
 | zoxide | Smarter `cd` | modern group | darwin, linux | https://github.com/ajeetdsouza/zoxide |

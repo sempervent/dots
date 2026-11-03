@@ -78,21 +78,14 @@ esac
 [ -f "${DOTS_DIR}/bash/prompt.sh" ] && . "${DOTS_DIR}/bash/prompt.sh"
 # 1}}}
 
+# fzf BEFORE tools so Atuin can own Ctrl-R afterward {{{1
+# shellcheck disable=SC1091
+[ -f "${DOTS_DIR}/bash/fzf.sh" ] && . "${DOTS_DIR}/bash/fzf.sh"
+# 1}}}
+
 # Modern tools {{{1
 # shellcheck disable=SC1091
 [ -f "${DOTS_DIR}/shell/tools.sh" ] && . "${DOTS_DIR}/shell/tools.sh"
-# 1}}}
-
-# fzf — prefer official bash integration {{{1
-if command -v fzf >/dev/null 2>&1; then
-  if fzf --bash >/dev/null 2>&1; then
-    # shellcheck disable=SC1090
-    eval "$(fzf --bash)"
-  elif [ -f "${HOME}/.fzf.bash" ]; then
-    # shellcheck disable=SC1091
-    . "${HOME}/.fzf.bash"
-  fi
-fi
 # 1}}}
 
 # Platform hooks {{{1
