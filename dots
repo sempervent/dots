@@ -986,14 +986,17 @@ dots_cmd_agent() {
 		cat <<'EOF'
 DOTS Agent Harness
 
-  ./dots agent status     Local executor / gateway / policy
-  ./dots agent doctor     Read-only diagnostics (SET/UNSET only)
-  ./dots agent models     Local + remote routing summary
-  ./dots agent scout …    Cheapest qualifying OpenRouter model
-  ./dots agent run …      Local-first task (budgeted escalation)
-  ./dots agent costs      DOTS-recorded spend
+  ./dots agent status          Local executor / gateway / sandbox policy
+  ./dots agent doctor          Diagnostics (SET/UNSET; sandbox FAIL/WARN/OK)
+  ./dots agent sandbox status  Sandbox provider / backends / MCP allowlist
+  ./dots agent models          Local + remote routing summary
+  ./dots agent scout …         Cheapest qualifying OpenRouter model
+  ./dots agent run …           Safe sandboxed task (default); --unsafe-host to bypass
+  ./dots agent worktrees       List isolated agent worktrees
+  ./dots agent mcp status      Trusted MCP allowlist
+  ./dots agent costs           DOTS-recorded spend
 
-WARNING: Agent runs with your user permissions. OS sandboxing is not implemented yet.
+Default runs are sandboxed (fail-closed). Explicit bypass: --unsafe-host
 EOF
 		return 0
 	fi

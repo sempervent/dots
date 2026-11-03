@@ -76,6 +76,8 @@ source "${DIR}/helpers/dots_help.sh"
 source "${DIR}/helpers/pi.sh"
 # shellcheck source=helpers/litellm.sh
 source "${DIR}/helpers/litellm.sh"
+# shellcheck source=helpers/agent_sandbox.sh
+source "${DIR}/helpers/agent_sandbox.sh"
 # shellcheck source=helpers/shell_diag.sh
 source "${DIR}/helpers/shell_diag.sh"
 # shellcheck source=helpers/leaf.sh

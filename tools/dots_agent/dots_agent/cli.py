@@ -16,13 +16,33 @@ from dots_agent.expert.consult import consult_expert
 from dots_agent.health import build_status_report, doctor_checks, which
 from dots_agent.ledger import RunLedger, summarize_costs
 from dots_agent.limits import RunLimits
+from dots_agent.mcp_trust import inspector_cli_cmd, load_mcp_trust, safe_server_ids
 from dots_agent.pi_models import merge_local_provider, resolve_pi_selection
 from dots_agent.pi_rpc import PiRpcClient
 from dots_agent.providers import detect_local
 from dots_agent import results as R
+from dots_agent.run_session import (
+    IN_PLACE,
+    SAFE,
+    UNSAFE_HOST,
+    UNSAFE_WARNING,
+    finish_session,
+    prepare_run_session,
+    resolve_execution_mode,
+)
+from dots_agent.sandbox.policy import global_sandbox_path, merge_global_sandbox_policy
+from dots_agent.sandbox.status import doctor_sandbox_checks, sandbox_status_report
 from dots_agent.scout.catalog import fetch_catalog
 from dots_agent.scout.select import Requirements, select_model
 from dots_agent.secrets import litellm_master_key_status
+from dots_agent.worktree import (
+    apply_to_primary,
+    diff_text,
+    discard_worktree,
+    files_changed,
+    list_worktrees,
+    load_meta,
+)
 
 
 def _cred(name: str) -> str:
@@ -69,14 +89,21 @@ def cmd_status(_: argparse.Namespace) -> int:
     print("Expert")
     print(f"  executable       {rep['expert_executable']}")
     print()
+    sb = sandbox_status_report()
     print("Policy")
     print("  mode             local-first")
+    print(f"  execution        {sb['execution_mode_default']} (default)")
     print(f"  session budget   ${cfg.session_budget_usd:.2f}")
     print(f"  max remote calls {cfg.max_remote_calls}")
     print(f"  agent venv       {'OK' if rep['venv'] else 'MISSING'}")
     print()
-    print("WARNING: DOTS agent runs with the permissions of the current user.")
-    print("         OS-level sandboxing is not yet implemented (Phase 2).")
+    print("Sandbox")
+    print(f"  provider         {sb['provider']}")
+    print(f"  installed        {'yes' if sb['installed'] else 'no'}")
+    print(f"  worktree         {'enabled' if sb['worktree_enabled'] else 'disabled'}")
+    print(f"  unsafe fallback  {sb['unsafe_fallback']}")
+    print()
+    print("Default runs use sandboxed safe mode. Bypass only with --unsafe-host.")
     return 0
 
 
@@ -85,9 +112,12 @@ def cmd_doctor(_: argparse.Namespace) -> int:
     for k, v in doctor_checks(cfg):
         print(f"{k:28} {v}")
     print()
+    print("Sandbox / trust")
+    for k, v in doctor_sandbox_checks():
+        print(f"{k:28} {v}")
+    print()
     print("Credentials shown as SET/UNSET only — values never printed.")
-    print("MCP Inspector (optional, developer): npx @modelcontextprotocol/inspector --cli \\")
-    print("  <dots-model-scout|dots-expert> --method tools/list")
+    print("MCP Inspector: dots agent mcp inspect <dots-model-scout|dots-expert>")
     return 0
 
 
@@ -219,6 +249,14 @@ def cmd_run(args: argparse.Namespace) -> int:
         else cfg.max_remote_calls
     )
     local_only = bool(args.local) or args.mode == "local"
+    execution_mode = resolve_execution_mode(
+        None,
+        unsafe=bool(getattr(args, "unsafe_host", False)),
+        in_place=bool(getattr(args, "in_place", False)),
+    )
+    # --safe is default; explicit flag wins only if set without conflict
+    if getattr(args, "safe", False) and not args.unsafe_host and not args.in_place:
+        execution_mode = SAFE
     limits = RunLimits(
         max_iterations=cfg.max_iterations,
         max_remote_calls=max_remote,
@@ -229,46 +267,79 @@ def cmd_run(args: argparse.Namespace) -> int:
     os.environ["DOTS_AGENT_RUN_ID"] = ledger.run_id
     os.environ["DOTS_AGENT_BUDGET"] = str(budget_usd)
     os.environ["DOTS_AGENT_MAX_REMOTE"] = str(max_remote)
+    os.environ["DOTS_AGENT_EXECUTION_MODE"] = execution_mode
     if local_only:
         os.environ["DOTS_AGENT_LOCAL"] = "1"
-        # Local-only: block harness-initiated remote catalog/inference
         os.environ.pop("OPENROUTER_API_KEY", None)
     if args.approve_expensive:
         os.environ["DOTS_AGENT_APPROVE_EXPENSIVE"] = "1"
 
+    primary_cwd = Path(args.cwd).resolve() if args.cwd else Path.cwd()
     local = detect_local(cfg)
     sel = resolve_pi_selection(local)
+
+    if args.dry_run:
+        print("Agent dry-run")
+        print(f"  run id           {ledger.run_id}")
+        print(f"  execution mode   {execution_mode}")
+        print(f"  sandbox          {'enabled' if execution_mode != UNSAFE_HOST else 'DISABLED'}")
+        print(f"  worktree         {'yes (git repos)' if execution_mode == SAFE else 'no'}")
+        print(f"  cwd              {primary_cwd}")
+        print(f"  local provider   {local.name}")
+        print(f"  local model      {local.model or '(none)'}")
+        print(f"  MCP              {', '.join(safe_server_ids(cfg))}")
+        if execution_mode == UNSAFE_HOST:
+            print("  bash network     unrestricted (host)")
+            print(f"  ! {UNSAFE_WARNING}")
+        else:
+            print("  bash network     localhost/127.0.0.1 only (safe)")
+        ledger.update(
+            task_summary=task[:200],
+            execution_mode=execution_mode,
+            sandbox_enabled=execution_mode != UNSAFE_HOST,
+        )
+        ledger.finish(R.DRY_RUN.lower())
+        return 0
+
+    try:
+        session = prepare_run_session(
+            run_id=ledger.run_id,
+            primary_cwd=primary_cwd,
+            execution_mode=execution_mode,
+            cfg=cfg,
+            interactive=bool(getattr(args, "interactive", False)),
+            harness_only=bool(args.harness_only),
+        )
+    except RuntimeError as exc:
+        print(str(exc), file=sys.stderr)
+        ledger.finish(R.FAILED.lower(), error=str(exc), execution_mode=execution_mode)
+        return 1
+
     ledger.update(
         task_summary=task[:200],
         local_provider=local.name,
         local_model=local.model,
         mode="local" if local_only else "auto",
         budget_usd=budget_usd,
-        # Never store full prompt / env dumps
+        execution_mode=execution_mode,
+        sandbox_provider="pi-sandbox" if session.sandbox_enabled else "none",
+        sandbox_enabled=session.sandbox_enabled,
+        worktree_path=str(session.worktree.path) if session.worktree else None,
+        base_commit=session.worktree.base_commit if session.worktree else None,
+        network_policy=session.network_policy,
+        mcp_servers=session.mcp_servers,
     )
-
-    if args.dry_run:
-        print("Agent dry-run")
-        print(f"  run id           {ledger.run_id}")
-        print(f"  local provider   {local.name}")
-        print(f"  local model      {local.model or '(none)'}")
-        print(f"  Pi provider      {sel.get('provider') or '(n/a)'}")
-        print(f"  LiteLLM          {cfg.gateway_base_url}")
-        print(f"  session budget   ${budget_usd:.2f}")
-        print(f"  max remote calls {max_remote}")
-        print(f"  max iterations   {cfg.max_iterations}")
-        print(f"  timeout_seconds  {cfg.timeout_seconds}")
-        print(f"  MCP              dots-model-scout, dots-expert")
-        print(f"  network remote   {'disabled' if local_only else 'enabled'}")
-        print("  WARNING: host permissions; no OS sandbox")
-        ledger.finish(R.DRY_RUN.lower())
-        return 0
 
     print(f"Agent Run {ledger.run_id}")
     print("─" * 48)
     print()
-    print("WARNING: DOTS agent runs with the permissions of the current user.")
-    print("         OS-level sandboxing is not yet implemented (Phase 2).")
+    print(f"Execution mode: {execution_mode}")
+    if execution_mode == UNSAFE_HOST:
+        print(UNSAFE_WARNING)
+    else:
+        print("Sandbox: enabled (fail-closed)")
+    for w in session.warnings:
+        print(f"Note: {w}")
     print()
 
     budget = Budget(session_budget_usd=budget_usd, max_remote_calls=max_remote)
@@ -288,7 +359,6 @@ def cmd_run(args: argparse.Namespace) -> int:
     pi_path = which("pi")
     used_pi = False
     if pi_path and not args.harness_only:
-        # Ensure models.json can resolve the local provider before RPC
         if local.healthy and local.name in ("ollama", "llamacpp"):
             merge_local_provider(local)
         if not sel.get("provider") or not sel.get("model"):
@@ -296,10 +366,12 @@ def cmd_run(args: argparse.Namespace) -> int:
             ledger.event("pi_rpc_skip", reason="unresolvable local model")
         else:
             client = PiRpcClient(
-                cwd=str(Path(args.cwd).resolve()) if args.cwd else os.getcwd(),
+                cwd=str(session.cwd),
                 provider=str(sel["provider"]),
                 model=str(sel["model"]),
                 timeout_seconds=cfg.timeout_seconds,
+                env=session.pi_env,
+                extra_args=list(session.pi_extra_args),
             )
             try:
                 client.start()
@@ -323,6 +395,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                     provider=sel["provider"],
                     model=sel["model"],
                     settled=bool(outcome.get("settled")),
+                    execution_mode=execution_mode,
                 )
                 if not outcome.get("ok"):
                     err = str(outcome.get("error") or "pi failed")
@@ -330,9 +403,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                     ledger.finish(state.lower(), error=err)
                     print(f"Result\n  {state} ({err})")
                     return 1
-                # Summaries only — never persist full prompt/events in ledger
                 outcome_text = str(outcome.get("assistant_text") or "")[:2000]
-                # agent_settled alone is NEVER enough for VERIFIED
                 verification, result_state = _verify_local_task(
                     task, outcome_text, expect_token=(getattr(args, "expect", None) or None)
                 )
@@ -448,6 +519,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                 return 1
 
     snap = budget.snapshot()
+    finish_session(session)
     print()
     print(f"Agent Run {ledger.run_id}")
     print("─" * 48)
@@ -455,9 +527,19 @@ def cmd_run(args: argparse.Namespace) -> int:
     print("Local")
     print(f"  model             {local.model or '(none)'}")
     print(f"  via               {'pi-rpc' if used_pi else 'harness'}")
+    print(f"  execution         {execution_mode}")
+    print(f"  sandbox           {'yes' if session.sandbox_enabled else 'no'}")
     if used_pi and sel.get("provider"):
         print(f"  Pi provider       {sel['provider']}")
         print(f"  endpoint          {sel.get('endpoint')}")
+    if session.worktree:
+        changed = files_changed(session.worktree)
+        print()
+        print("Worktree")
+        print(f"  path              {session.worktree.path}")
+        print(f"  base commit       {session.worktree.base_commit[:12]}")
+        print(f"  files changed     {len(changed)}")
+        print("  (primary checkout untouched — use: dots agent apply/diff/discard)")
     print()
     print("Remote")
     print(f"  consultations     {remote_calls}")
@@ -479,6 +561,8 @@ def cmd_run(args: argparse.Namespace) -> int:
         verification=verification,
         remote_calls=remote_calls,
         result_state=result_state,
+        execution_mode=execution_mode,
+        sandbox_enabled=session.sandbox_enabled,
     )
     return 0 if result_state in (R.COMPLETED, R.VERIFIED, R.DRY_RUN) else 1
 
@@ -490,6 +574,138 @@ def cmd_gateway(args: argparse.Namespace) -> int:
         print("Binds 127.0.0.1:4000 only. Requires OPENROUTER_API_KEY in env for remote.")
         print("LITELLM_MASTER_KEY must be SET (setup generates ~/.config/dots/secrets/...).")
     return 0
+
+
+def cmd_sandbox(args: argparse.Namespace) -> int:
+    action = args.sandbox_cmd
+    if action == "status":
+        sb = sandbox_status_report()
+        print("Agent Sandbox")
+        print("─" * 32)
+        print()
+        print("Provider")
+        print(f"  pi-sandbox          {'installed' if sb['installed'] else 'missing'}")
+        print(f"  detail              {sb['install_detail']}")
+        print(f"  enabled             yes (safe default)")
+        print()
+        print("Execution")
+        print(f"  default mode        {sb['execution_mode_default']}")
+        print(f"  worktree            {'enabled' if sb['worktree_enabled'] else 'disabled'}")
+        print(f"  shell network       {', '.join(sb['bash_allowed_domains'])} only")
+        print(f"  unsafe fallback     {sb['unsafe_fallback']}")
+        print()
+        print("OS backend")
+        for k, v in (sb.get("os_backend") or {}).items():
+            print(f"  {k:18}  {v}")
+        print()
+        print("Filesystem (policy intent)")
+        print("  project read        yes")
+        print("  project write       yes")
+        print("  home read           no (default deny)")
+        print("  secret paths        denied")
+        print()
+        print("MCP")
+        print(f"  allowed             {', '.join(sb['mcp_safe_servers'])}")
+        print()
+        print(f"Config               {sb['config']}")
+        return 0 if sb["installed"] else 1
+    if action == "policy":
+        path = global_sandbox_path()
+        if not path.is_file():
+            print(f"No global policy at {path}")
+            print("Run: ./dots setup --with agent-sandbox")
+            return 1
+        print(path.read_text(encoding="utf-8"))
+        return 0
+    if action == "doctor":
+        for k, v in doctor_sandbox_checks():
+            print(f"{k:28} {v}")
+        return 0
+    if action == "merge-policy":
+        result = merge_global_sandbox_policy()
+        print(json.dumps(result, indent=2))
+        return 0 if result.get("ok") else 1
+    return 2
+
+
+def cmd_worktrees(_: argparse.Namespace) -> int:
+    items = list_worktrees()
+    if not items:
+        print("No agent worktrees.")
+        return 0
+    for info in items:
+        print(f"{info.run_id}  {info.status:10}  {info.path}")
+    return 0
+
+
+def cmd_diff(args: argparse.Namespace) -> int:
+    info = load_meta(args.run_id)
+    if not info:
+        print(f"Unknown run: {args.run_id}", file=sys.stderr)
+        return 1
+    sys.stdout.write(diff_text(info))
+    return 0
+
+
+def cmd_apply(args: argparse.Namespace) -> int:
+    info = load_meta(args.run_id)
+    if not info:
+        print(f"Unknown run: {args.run_id}", file=sys.stderr)
+        return 1
+    result = apply_to_primary(info)
+    print(json.dumps(result, indent=2))
+    return 0 if result.get("ok") else 1
+
+
+def cmd_discard(args: argparse.Namespace) -> int:
+    info = load_meta(args.run_id)
+    if not info:
+        print(f"Unknown run: {args.run_id}", file=sys.stderr)
+        return 1
+    result = discard_worktree(info)
+    print(json.dumps(result, indent=2))
+    return 0 if result.get("ok") else 1
+
+
+def cmd_mcp(args: argparse.Namespace) -> int:
+    action = args.mcp_cmd
+    if action == "status":
+        print("Trusted MCP (safe harness allowlist)")
+        print("─" * 40)
+        for row in load_mcp_trust():
+            print(f"  {row.get('id')}")
+            print(f"    trust       {row.get('trust')}")
+            print(f"    filesystem  {row.get('filesystem')}")
+            print(f"    shell       {row.get('shell')}")
+            print(f"    billable    {row.get('billable')}")
+        print()
+        print(f"Allowlist: {', '.join(safe_server_ids())}")
+        print("Interactive `pi` keeps the user's full MCP configuration.")
+        return 0
+    if action == "inspect":
+        import subprocess
+
+        name = args.server
+        root = Path(os.environ.get("DOTS_DIR") or load_config().root)
+        if name == "dots-model-scout":
+            cmd_path = which("dots-model-scout") or str(root / "scripts" / "dots-model-scout")
+        elif name == "dots-expert":
+            cmd_path = which("dots-expert") or str(root / "scripts" / "dots-expert")
+        else:
+            print(f"Unknown server (safe allowlist only): {name}", file=sys.stderr)
+            return 2
+        cmd = inspector_cli_cmd(cmd_path)
+        print("Running:", " ".join(cmd))
+        try:
+            proc = subprocess.run(cmd, timeout=120)
+            return proc.returncode
+        except FileNotFoundError:
+            print("npx not found — install Node to use MCP Inspector", file=sys.stderr)
+            return 1
+        except subprocess.TimeoutExpired:
+            print("Inspector timed out", file=sys.stderr)
+            return 1
+    return 2
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -514,7 +730,7 @@ def build_parser() -> argparse.ArgumentParser:
     sc.add_argument("--live", action="store_true")
     sc.add_argument("--local", action="store_true", help="Use cache only")
 
-    rn = sub.add_parser("run", help="Run local-first agent task")
+    rn = sub.add_parser("run", help="Run local-first agent task (default: safe)")
     rn.add_argument("task", nargs="+")
     rn.add_argument("--auto", action="store_true", default=True)
     rn.add_argument("--local", action="store_true")
@@ -532,6 +748,43 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Harness-only: treat explicit proof hook as VERIFIED (tests)",
     )
+    rn.add_argument("--safe", action="store_true", help="Sandboxed safe mode (default)")
+    rn.add_argument(
+        "--in-place",
+        action="store_true",
+        help="Sandbox enabled; write to current checkout (no worktree)",
+    )
+    rn.add_argument(
+        "--unsafe-host",
+        action="store_true",
+        help="Explicit unrestricted host execution (consent flag)",
+    )
+    rn.add_argument(
+        "--interactive",
+        action="store_true",
+        help="Allow longer sandbox permission prompts",
+    )
+
+    sb = sub.add_parser("sandbox", help="Sandbox status / policy")
+    sb_sub = sb.add_subparsers(dest="sandbox_cmd", required=True)
+    sb_sub.add_parser("status", help="Show sandbox status")
+    sb_sub.add_parser("policy", help="Print global sandbox.json")
+    sb_sub.add_parser("doctor", help="Sandbox-focused diagnostics")
+    sb_sub.add_parser("merge-policy", help="Merge DOTS global sandbox policy")
+
+    sub.add_parser("worktrees", help="List agent worktrees")
+    df = sub.add_parser("diff", help="Show worktree diff for a run")
+    df.add_argument("run_id")
+    ap = sub.add_parser("apply", help="Cherry-pick worktree commits onto primary")
+    ap.add_argument("run_id")
+    dc = sub.add_parser("discard", help="Remove worktree and agent branch")
+    dc.add_argument("run_id")
+
+    mcp = sub.add_parser("mcp", help="Trusted MCP status / Inspector")
+    mcp_sub = mcp.add_subparsers(dest="mcp_cmd", required=True)
+    mcp_sub.add_parser("status", help="Show MCP trust allowlist")
+    insp = mcp_sub.add_parser("inspect", help="Inspector tools/list (CLI; no browser)")
+    insp.add_argument("server", choices=["dots-model-scout", "dots-expert"])
 
     gw = sub.add_parser("gateway", help="LiteLLM gateway hints")
     gw.add_argument("action", choices=["up", "down", "health"])
@@ -551,6 +804,12 @@ def main(argv: list[str] | None = None) -> int:
         "costs": cmd_costs,
         "run": cmd_run,
         "gateway": cmd_gateway,
+        "sandbox": cmd_sandbox,
+        "worktrees": cmd_worktrees,
+        "diff": cmd_diff,
+        "apply": cmd_apply,
+        "discard": cmd_discard,
+        "mcp": cmd_mcp,
     }
     return dispatch[args.cmd](args)
 

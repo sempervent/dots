@@ -10,6 +10,7 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Callable
 
 
@@ -20,6 +21,8 @@ class PiRpcClient:
     model: str | None = None
     pi_bin: str = "pi"
     timeout_seconds: int = 1800
+    env: dict[str, str] | None = None
+    extra_args: list[str] = field(default_factory=list)
     process: subprocess.Popen[bytes] | None = None
     events: list[dict[str, Any]] = field(default_factory=list)
     _reader: threading.Thread | None = None
@@ -34,7 +37,14 @@ class PiRpcClient:
             cmd.extend(["--provider", self.provider])
         if self.model:
             cmd.extend(["--model", self.model])
-        env = os.environ.copy()
+        cmd.extend(self.extra_args)
+        # Never default to full parent env — caller must pass an allowlisted env.
+        env = dict(self.env) if self.env is not None else {
+            "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+            "HOME": os.environ.get("HOME", str(Path.home())),
+            "LANG": os.environ.get("LANG", "C"),
+            "TERM": os.environ.get("TERM", "dumb"),
+        }
         self.process = subprocess.Popen(
             cmd,
             stdin=subprocess.PIPE,

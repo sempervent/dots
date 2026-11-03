@@ -202,6 +202,16 @@ platforms = ["darwin", "linux"]
 brewfile = "brew/Brewfile.litellm"
 description = "Unified model gateway for local and remote agent inference (localhost Compose; OpenRouter via env)"
 
+[[components]]
+id = "agent-sandbox"
+label = "Agent Sandbox"
+category = "agent_security"
+cloud = false
+local_ai = false
+platforms = ["darwin", "linux"]
+brewfile = "brew/Brewfile.agent-sandbox"
+description = "Filesystem/network policy and OS-level command sandbox for DOTS agents (provider: pi-sandbox)"
+
 # Declarative selector aggregates. Expand to member component ids before install.
 # Nested groups are not supported in v1.0.1.
 [[supergroups]]
@@ -220,4 +230,5 @@ members = [
   "lsp",
   "pi",
   "litellm",
+  "agent-sandbox",
 ]

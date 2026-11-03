@@ -1,0 +1,29 @@
+# Provenance for the current agent-sandbox provider (pi-sandbox).
+# Installing a Pi package/extension is privileged code execution — the
+# extension itself is part of the trusted computing base and cannot sandbox itself.
+#
+# Reviewed by: DOTS Phase 2 (local)
+# Source of truth: https://www.npmjs.com/package/pi-sandbox
+# Docs: https://pi.dev/packages/pi-sandbox
+# Repo: https://github.com/carderne/pi-sandbox
+
+version = 1
+
+[provider]
+id = "pi-sandbox"
+npm_package = "pi-sandbox"
+reviewed_version = "0.7.3"
+reviewed_date = "2026-11-03"
+license = "MIT"
+repository = "https://github.com/carderne/pi-sandbox"
+install = "pi install npm:pi-sandbox"
+runtime_dep = "@carderne/sandbox-runtime"
+macos_backend = "sandbox-exec"
+linux_backend = "bubblewrap"
+linux_extra = ["socat", "ripgrep"]
+notes = """
+No install/postinstall scripts in package.json.
+Extension runs with user privileges; OS sandbox covers bash subprocesses;
+Pi read/write/edit tools are policy-intercepted in-process.
+MCP servers and the extension code itself are outside the bash sandbox.
+"""

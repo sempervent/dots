@@ -207,6 +207,12 @@ apply_optional_brewfiles() {
 			dots_litellm_setup || dots_optional_record_failure "litellm" "LiteLLM setup failed"
 		fi
 	fi
+	if has_component agent-sandbox; then
+		# Requires Pi at runtime; leaf install explains if Pi missing.
+		if declare -F dots_agent_sandbox_install >/dev/null 2>&1; then
+			dots_agent_sandbox_install || dots_optional_record_failure "agent-sandbox" "Agent sandbox install failed"
+		fi
+	fi
 	if has_component mactools; then
 		# Darwin-only (registry platforms); explicit --with on Linux errors before here.
 		_dots_optional_apply_registry_brewfile "mactools" || true

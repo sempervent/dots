@@ -1,14 +1,17 @@
-# DOTS agent harness defaults (v1.6 Phase 1).
+# DOTS agent harness defaults (v1.6 Phase 2).
 # Live override (optional): ~/.config/dots/agents.toml
 # Repo template: configs/agents/defaults.toml
 #
 # Selecting `pi` alone does NOT authorize OpenRouter.
 # Selecting `litellm` alone does NOT modify Pi.
+# Selecting `agent-sandbox` configures the security boundary (provider: pi-sandbox).
 
 version = 1
 
 [agent]
 mode = "auto"
+# Execution: safe (default) | in_place | unsafe_host
+execution_mode = "safe"
 session_budget_usd = 1.00
 max_remote_calls = 3
 max_iterations = 25
@@ -17,6 +20,8 @@ timeout_seconds = 1800
 approval_threshold_usd = 0.50
 # Live smoke hard cap (DOTS_AGENT_LIVE_TEST=1)
 live_test_max_usd = 0.05
+# Noninteractive permission prompts: fail closed quickly (seconds). 0 = Pi default.
+permission_prompt_timeout_seconds = 5
 
 [local]
 provider = "auto" # auto | llamacpp | ollama
@@ -48,14 +53,29 @@ max_context_chars = 24000
 [mcp]
 model_scout_name = "dots-model-scout"
 expert_name = "dots-expert"
+# Safe harness allowlist only — interactive `pi` keeps the user's full MCP config.
+safe_servers = ["dots-model-scout", "dots-expert"]
+
+[sandbox]
+provider = "pi-sandbox"
+# Fail closed when safe/in_place cannot initialize the sandbox.
+fail_closed = true
+worktree_enabled = true
+# Bash external network: only localhost by default (model/MCP network is separate).
+bash_allowed_domains = ["localhost", "127.0.0.1"]
+# Noninteractive: never enable agent access-request tools that could escalate.
+enable_access_request_tool = false
 
 [paths]
 # Relative to XDG; expanded at runtime
 cache_dir = "dots/agents"
 state_dir = "dots/agents"
+worktrees_dir = "dots/agents/worktrees"
+runtime_dir = "dots/agents/runtime"
 # Pi MCP merge targets (user-level; never wholesale overwrite)
 pi_mcp_json = "~/.pi/agent/mcp.json"
 pi_settings_json = "~/.pi/agent/settings.json"
+pi_sandbox_json = "~/.pi/agent/sandbox.json"
 
 [policy]
 # Shown to the local Pi foreman
