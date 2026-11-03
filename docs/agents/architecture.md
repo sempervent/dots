@@ -51,17 +51,21 @@ local Pi applies advice + verifies
 
 See [v1.6-roadmap.md](v1.6-roadmap.md).
 
-## Threat model (acknowledged, not fully solved)
+## Threat model
 
-| Risk | Mitigation in Phase 1 |
-|------|------------------------|
-| Prompt injection in repo content | Compact explicit context packet; local review of advice |
-| Secret exfiltration | Redaction/reject heuristics; never log keys |
+See [security.md](security.md) for the Phase 2 trust boundary (sandbox,
+worktrees, env isolation, MCP allowlist). Summary:
+
+| Risk | Mitigation |
+|------|------------|
+| Prompt injection in repo content | Compact context packet; sandboxed tools |
+| Secret exfiltration | Env scrub; deny paths; bash network deny; redaction |
 | Budget runaway | DOTS-side reserve/settle before each call |
-| Malicious MCP output | Separate scout vs expert; local agent applies changes |
-| Pi host permissions | Explicit warning; recommend worktree/container |
+| Malicious MCP output | Allowlist; scout vs expert; no FS on MCP |
+| Pi host permissions | Safe mode default; `--unsafe-host` explicit only |
 | LiteLLM exposure | Bind `127.0.0.1` only by default |
-| Catalog staleness | TTL cache + age reporting; refuse ancient cache |
+| Catalog staleness | TTL cache + age reporting |
+| Primary checkout corruption | Git worktree isolation; explicit apply |
 
 ## Privacy
 

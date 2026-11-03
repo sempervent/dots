@@ -3,24 +3,33 @@
 .
 .TH DOTS\-AGENT 1 "2026-11-02" "DOTS 1.5.1" "User Commands"
 .SH NAME
-dots\-agent \- Local\-first agent harness (Pi + model\-scout + budgeted LiteLLM experts).
+dots\-agent \- Local\-first agent harness (sandboxed Pi + model\-scout + budgeted LiteLLM experts).
 .SH SYNOPSIS
-.B dots agent [status|doctor|models|scout|run|costs]
+.B dots agent [status|doctor|sandbox|models|scout|run|worktrees|mcp|costs]
 .SH DESCRIPTION
-Local\-first agent harness (Pi + model\-scout + budgeted LiteLLM experts).
+Local\-first agent harness (sandboxed Pi + model\-scout + budgeted LiteLLM experts).
 .SH EXAMPLES
 .TP
 .B dots agent status
-Show local executor, gateway, and budget policy.
+Show local executor, gateway, sandbox, and budget policy.
 .TP
 .B dots agent doctor
-Read\-only harness diagnostics (credentials SET/UNSET only).
+Read\-only harness diagnostics including sandbox FAIL/WARN/OK.
+.TP
+.B dots agent sandbox status
+Sandbox provider, OS backends, and MCP allowlist.
 .TP
 .B dots agent scout \-\-task debugging \-\-language rust \-\-tools \-\-quality strong
 Select cheapest qualifying OpenRouter model (metadata only).
 .TP
-.B dots agent run \-\-auto \-\-budget 1.00 "Diagnose and fix the failing test."
-Local\-first run with budgeted remote escalation.
+.B dots agent run "Diagnose and fix the failing test."
+Safe sandboxed run (default); use \-\-unsafe\-host to bypass.
+.TP
+.B dots agent worktrees
+List isolated agent worktrees.
+.TP
+.B dots agent mcp status
+Trusted MCP allowlist for safe runs.
 .TP
 .B dots agent costs
 Show DOTS\-recorded spend from the local ledger.

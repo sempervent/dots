@@ -108,7 +108,14 @@ id = "agent"
 title = "Agent Harness"
 body = "docs/help/agent.md"
 order = 145
-keywords = ["agent", "pi", "litellm", "model-scout", "openrouter", "budget", "escalation", "expert"]
+keywords = ["agent", "pi", "litellm", "model-scout", "openrouter", "budget", "escalation", "expert", "sandbox"]
+
+[[topics]]
+id = "agent-security"
+title = "Agent Security"
+body = "docs/help/agent-security.md"
+order = 146
+keywords = ["sandbox", "worktree", "unsafe-host", "mcp trust", "network policy", "agent-sandbox"]
 
 [[topics]]
 id = "diagnostics"

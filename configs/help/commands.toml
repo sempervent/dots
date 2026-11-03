@@ -68,23 +68,32 @@ description = "Show AI server stack status."
 
 [[commands]]
 name = "agent"
-usage = "dots agent [status|doctor|models|scout|run|costs]"
+usage = "dots agent [status|doctor|sandbox|models|scout|run|worktrees|mcp|costs]"
 category = "ai"
-description = "Local-first agent harness (Pi + model-scout + budgeted LiteLLM experts)."
+description = "Local-first agent harness (sandboxed Pi + model-scout + budgeted LiteLLM experts)."
 mutating = true
 related = ["ai", "models", "setup", "help"]
 [[commands.examples]]
 command = "dots agent status"
-description = "Show local executor, gateway, and budget policy."
+description = "Show local executor, gateway, sandbox, and budget policy."
 [[commands.examples]]
 command = "dots agent doctor"
-description = "Read-only harness diagnostics (credentials SET/UNSET only)."
+description = "Read-only harness diagnostics including sandbox FAIL/WARN/OK."
+[[commands.examples]]
+command = "dots agent sandbox status"
+description = "Sandbox provider, OS backends, and MCP allowlist."
 [[commands.examples]]
 command = "dots agent scout --task debugging --language rust --tools --quality strong"
 description = "Select cheapest qualifying OpenRouter model (metadata only)."
 [[commands.examples]]
-command = "dots agent run --auto --budget 1.00 \"Diagnose and fix the failing test.\""
-description = "Local-first run with budgeted remote escalation."
+command = "dots agent run \"Diagnose and fix the failing test.\""
+description = "Safe sandboxed run (default); use --unsafe-host to bypass."
+[[commands.examples]]
+command = "dots agent worktrees"
+description = "List isolated agent worktrees."
+[[commands.examples]]
+command = "dots agent mcp status"
+description = "Trusted MCP allowlist for safe runs."
 [[commands.examples]]
 command = "dots agent costs"
 description = "Show DOTS-recorded spend from the local ledger."

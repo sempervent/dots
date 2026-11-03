@@ -12,7 +12,7 @@ Registry-driven reference for optional components and supergroups. Do not invent
 
 | id | label | members | description |
 | --- | --- | --- | --- |
-| `ai` | AI applications | `hermes`, `ollama`, `llamacpp`, `drawthings`, `opencode`, `codex`, `cursor`, `fluidvoice`, `lsp`, `pi`, `litellm` | Local runtimes, coding agents, and the LSP toolchain for this platform |
+| `ai` | AI applications | `hermes`, `ollama`, `llamacpp`, `drawthings`, `opencode`, `codex`, `cursor`, `fluidvoice`, `lsp`, `pi`, `litellm`, `agent-sandbox` | Local runtimes, coding agents, and the LSP toolchain for this platform |
 
 ## Components
 
@@ -228,4 +228,15 @@ Unified model gateway for local and remote agent inference (localhost Compose; O
 - **platforms:** darwin, linux
 - **brewfile:** `brew/Brewfile.litellm`
 - **activate:** `./dots setup --with litellm`
+
+### `agent-sandbox`
+
+Filesystem/network policy and OS-level command sandbox for DOTS agents (provider: pi-sandbox)
+
+- **label:** Agent Sandbox
+- **category:** agent_security
+- **platforms:** darwin, linux
+- **brewfile:** `brew/Brewfile.agent-sandbox`
+- **formulae:** `ripgrep`
+- **activate:** `./dots setup --with agent-sandbox`
 

@@ -19,7 +19,7 @@ Usage:
   ./dots components [list|active|show ID] Inspect optional components and --with selectors.
   ./dots lsp [status|check|install|list] Language-server install, status, and checks.
   ./dots ai [status|doctor|up|down|…] AI inference server (Compose + Open WebUI) control pl...
-  ./dots agent [status|doctor|models|scout|run|costs] Local-first agent harness (Pi + model-scout + budgete...
+  ./dots agent [status|doctor|sandbox|models|scout|run|worktrees|mcp|costs] Local-first agent harness (sandboxed Pi + model-scout...
   ./dots packages [groups|group|plan|status|explain|outdated|upgrade|adopt] Package ownership, drift, groups, and upgrades.
   ./dots backup [--name N]          Snapshot managed targets under ~/.local/state/dots/ba...
   ./dots backups                    List recoverable DOTS snapshots.
@@ -89,6 +89,7 @@ Selectors (--with / --without):
     ai-server    Server stack: llama.cpp (llama-server) + Open WebUI via Docker Compose (opt-in models)
     pi           Programmable coding-agent runtime for DOTS local-first agent orchestration (npm; Node ≥22.19)
     litellm      Unified model gateway for local and remote agent inference (localhost Compose; OpenRouter via env)
+    agent-sandbox Filesystem/network policy and OS-level command sandbox for DOTS agents (provider: pi-sandbox)
   Supergroups:
     ai           AI applications — Local runtimes, coding agents, and the LSP toolchain for this platform
   List: ./dots components list
@@ -146,6 +147,7 @@ Options:
                       ai-server    Server stack: llama.cpp (llama-server) + Open WebUI via Docker Compose (opt-in models)
                       pi           Programmable coding-agent runtime for DOTS local-first agent orchestration (npm; Node ≥22.19)
                       litellm      Unified model gateway for local and remote agent inference (localhost Compose; OpenRouter via env)
+                      agent-sandbox Filesystem/network policy and OS-level command sandbox for DOTS agents (provider: pi-sandbox)
                     Supergroups:
                       ai           AI applications — Local runtimes, coding agents, and the LSP toolchain for this platform
                     List: ./dots components list

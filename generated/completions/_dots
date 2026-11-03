@@ -8,7 +8,7 @@ _dots() {
   typeset -A opt_args
   local -a commands topics selectors groups profiles providers tiers
   local -a lsp_subs model_subs shell_subs completion_subs pkg_subs
-  local -a component_subs ai_subs lsp_ids
+  local -a component_subs ai_subs agent_subs lsp_ids
 
   commands=(
     'setup:Interactive or noninteractive setup / reconfigure towar…'
@@ -16,7 +16,7 @@ _dots() {
     'components:Inspect optional components and --with selectors.'
     'lsp:Language-server install, status, and checks.'
     'ai:AI inference server (Compose + Open WebUI) control plan…'
-    'agent:Local-first agent harness (Pi + model-scout + budgeted…'
+    'agent:Local-first agent harness (sandboxed Pi + model-scout +…'
     'packages:Package ownership, drift, groups, and upgrades.'
     'backup:Snapshot managed targets under ~/.local/state/dots/back…'
     'backups:List recoverable DOTS snapshots.'
@@ -45,6 +45,7 @@ _dots() {
     'skills:Skills'
     'backup:Backup & Restore'
     'agent:Agent Harness'
+    'agent-security:Agent Security'
     'diagnostics:Diagnostics'
     'update:Update / Maintenance'
     'commands:Commands'
@@ -71,6 +72,7 @@ _dots() {
     'ai-server:AI inference server'
     'pi:Pi Coding Agent'
     'litellm:LiteLLM Gateway'
+    'agent-sandbox:Agent Sandbox'
   )
   groups=(
     'core:Portable essentials'
@@ -96,6 +98,7 @@ _dots() {
   pkg_subs=('groups' 'group' 'plan' 'status' 'explain' 'outdated' 'upgrade' 'adopt' 'help')
   component_subs=('list' 'active' 'show' 'help')
   ai_subs=('status' 'doctor' 'up' 'down' 'help')
+  agent_subs=('status' 'doctor' 'sandbox' 'models' 'scout' 'run' 'worktrees' 'diff' 'apply' 'discard' 'mcp' 'costs' 'gateway')
   lsp_ids=('rust-analyzer' 'basedpyright' 'gopls' 'bash-language-server' 'yaml-language-server' 'vscode-json-language-server' 'lua-language-server' 'markdown-oxide' 'taplo' 'terraform-ls' 'dockerfile-language-server' 'r-languageserver')
 
   _arguments -C \
@@ -171,6 +174,9 @@ _dots() {
       ;;
     ai)
       _values 'ai' ${ai_subs[@]}
+      ;;
+    agent)
+      _values 'agent' ${agent_subs[@]}
       ;;
     shell)
       _values 'shell' ${shell_subs[@]}

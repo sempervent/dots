@@ -25,14 +25,15 @@ Consent: configure AI only when the profile / `--with` lists the component.
 | `images` | Deterministic image toolkit (Magick, etc.) | darwin, linux |
 | `pi` | Local-first coding-agent runtime (npm; Node ≥22.19) | darwin, linux |
 | `litellm` | Localhost model gateway (Compose → `127.0.0.1:4000`) | darwin, linux |
+| `agent-sandbox` | Sandbox policy + OS backends (provider: pi-sandbox) | darwin, linux |
 
 Supergroup `ai` expands to the AI application ids listed in
 [generated supergroups](../reference/generated/supergroups.md).
 
-Phase 1 orchestration docs: [architecture](architecture.md),
-[model-scout](model-scout.md), [litellm](litellm.md),
+Orchestration docs: [architecture](architecture.md),
+[security](security.md), [model-scout](model-scout.md), [litellm](litellm.md),
 [v1.6 roadmap](v1.6-roadmap.md).
-OpenRig / OS sandbox / evals are **DEFERRED** (Phases 2–4).
+OpenRig / evals remain **DEFERRED** (Phases 3–4).
 
 ## Herdr
 
