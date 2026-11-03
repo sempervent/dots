@@ -27,7 +27,9 @@ Usage:
   ./dots models [discover|pull|…]   Local model plan, discovery, and pull workflows.
   ./dots check [--profile NAME]     Verify machine health against the active/selected pro...
   ./dots update                     git pull the DOTS repo and optionally reapply setup.
-  ./dots help [topic] [--plain] [--search QUERY] Interactive Textual help (dots-help) for this machine.
+  ./dots help [topic] [--plain] [--search QUERY] [--cheatsheet] Interactive Textual help (dots-help) for this machine.
+  ./dots shell [status|keys|startup] Inspect shell, prompt, and keybinding ownership.
+  ./dots completion [status|paths]  DOTS CLI completion and fzf-tab diagnostics.
 
 Interactive help:
   ./dots help              Textual TUI (dots-help)

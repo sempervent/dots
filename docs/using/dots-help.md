@@ -6,9 +6,12 @@ After setup, DOTS is self-documenting for **this** machine:
 dots-help                 # Textual TUI
 ./dots help               # same
 ./dots help completion    # jump to a topic
+dots-help --cheatsheet    # machine-specific one-pager
 dots-help --plain lsp     # noninteractive / pipes / CI
 man dots
 man dots-help
+./dots shell status       # who owns Tab / Ctrl-R / prompt
+./dots completion status  # compsys + fzf-tab + _dots
 ```
 
 `./dots --help` stays a **fast Bash synopsis** (no Python/Textual). Use it when you

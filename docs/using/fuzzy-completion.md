@@ -54,9 +54,9 @@ dots-help completion      # this cheat-sheet, live capability state
 man dots
 ```
 
-| Discover | Search args | History | Files | Docs |
-|----------|-------------|---------|-------|------|
-| `dots-help` | Tab | Ctrl-R | Ctrl-T | `man dots` |
+| Discover | Search args | History | Files | Docs | Diagnose |
+|----------|-------------|---------|-------|------|----------|
+| `dots-help` | Tab / `dots <Tab>` | Ctrl-R | Ctrl-T | `man dots` | `dots shell status` |
 
 ## Install / health
 

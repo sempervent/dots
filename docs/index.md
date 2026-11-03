@@ -23,7 +23,8 @@ Live docs: [https://sempervent.github.io/dots/](https://sempervent.github.io/dot
 | macOS workstation apps (Vorssaint, Raycast, …) | [mactools](macos/mactools.md) |
 | Agents, models, routing | [Agent harness](agents/harness.md) · [Models](agents/models.md) |
 | Fuzzy Tab / Ctrl-R / Ctrl-T | [Fuzzy completion](using/fuzzy-completion.md) |
-| Interactive help / man pages | [dots-help](using/dots-help.md) |
+| Interactive help / man pages / cheat sheet | [dots-help](using/dots-help.md) |
+| Shell bindings / completion diagnostics | `dots shell status` · `dots completion status` |
 | Fix something that broke | [Troubleshooting](troubleshooting/index.md) |
 | Extend the repo safely | [Extending](using/extending.md) |
 | CLI flags (generated) | [CLI reference](reference/cli.md) |
