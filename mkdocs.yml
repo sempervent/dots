@@ -91,6 +91,7 @@ nav:
       - AI inference server: using/ai-server.md
       - Skills: using/skills.md
       - Tools catalog: using/tools.md
+      - Fuzzy completion: using/fuzzy-completion.md
       - Extending: using/extending.md
   - Platforms:
       - Linux: platforms/linux.md

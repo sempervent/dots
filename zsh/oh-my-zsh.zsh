@@ -39,8 +39,14 @@ if [[ "$(uname -s)" == "Darwin" ]]; then
   _dots_omz_plugins_candidate+=(macos)
 fi
 
-# Third-party clones under $ZSH_CUSTOM/plugins (syntax-highlighting last)
+# Third-party clones under $ZSH_CUSTOM/plugins.
+# Order matters:
+#   fzf (above) provides keybindings + ** completion widget
+#   fzf-tab must load after compsys/fzf and BEFORE widget wrappers
+#   zsh-autosuggestions / history-substring / syntax-highlighting wrap ZLE last
+# fzf-tab becomes the final owner of ^I / Tab for ordinary completion.
 _dots_omz_plugins_candidate+=(
+  fzf-tab
   zsh-autosuggestions
   zsh-history-substring-search
   zsh-syntax-highlighting

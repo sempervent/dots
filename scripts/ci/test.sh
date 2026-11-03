@@ -61,6 +61,7 @@ run scripts/tests/profile_transition_test.sh
 run scripts/tests/idempotence_test.sh
 run scripts/tests/check_contract_test.sh
 run scripts/tests/shell_startup_test.sh
+run scripts/tests/fuzzy_completion_test.sh
 run scripts/tests/python_runtime_test.sh
 
 echo "=== Model policy (mocked; no downloads) ==="
