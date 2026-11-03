@@ -1,0 +1,490 @@
+# DOTS agent evaluation registry (Phase 3).
+# Deterministic scorers only — no LLM-as-judge primary path.
+version = 1
+schema_version = 1
+
+# ── coding ──────────────────────────────────────────────────────────────
+
+[[tasks]]
+id = "python-add-function"
+class = "coding"
+language = "python"
+difficulty = "basic"
+timeout_seconds = 60
+max_output_tokens = 1500
+sandbox = true
+suite = ["smoke", "standard", "full"]
+fixture = "coding/python-add-function"
+prompt = """
+Implement add(a, b) in solution.py so the tests pass. Do not modify the tests.
+"""
+prerequisites = ["python3"]
+[tasks.scorer]
+type = "command"
+command = ["python3", "-m", "pytest", "-q", "tests"]
+[tasks.expected]
+exit_code = 0
+
+[[tasks]]
+id = "python-clamp"
+class = "coding"
+language = "python"
+difficulty = "basic"
+timeout_seconds = 60
+max_output_tokens = 1500
+sandbox = true
+suite = ["standard", "full"]
+fixture = "coding/python-clamp"
+prompt = """
+Implement clamp(x, lo, hi) in solution.py. Do not modify tests.
+"""
+prerequisites = ["python3"]
+[tasks.scorer]
+type = "command"
+command = ["python3", "-m", "pytest", "-q", "tests"]
+[tasks.expected]
+exit_code = 0
+
+[[tasks]]
+id = "bash-join-lines"
+class = "coding"
+language = "bash"
+difficulty = "basic"
+timeout_seconds = 30
+max_output_tokens = 800
+sandbox = true
+suite = ["standard", "full"]
+fixture = "coding/bash-join-lines"
+prompt = """
+Edit join.sh so it prints stdin lines joined by commas with no trailing comma.
+"""
+prerequisites = ["bash"]
+[tasks.scorer]
+type = "command"
+command = ["bash", "verify.sh"]
+[tasks.expected]
+exit_code = 0
+
+[[tasks]]
+id = "python-parse-kv"
+class = "coding"
+language = "python"
+difficulty = "capable"
+timeout_seconds = 60
+max_output_tokens = 2000
+sandbox = true
+suite = ["standard", "full"]
+fixture = "coding/python-parse-kv"
+prompt = """
+Implement parse_kv(text) returning a dict of KEY=VALUE pairs (one per line).
+Ignore blank lines and comments starting with #. Do not modify tests.
+"""
+prerequisites = ["python3"]
+[tasks.scorer]
+type = "command"
+command = ["python3", "-m", "pytest", "-q", "tests"]
+[tasks.expected]
+exit_code = 0
+
+# ── debugging ───────────────────────────────────────────────────────────
+
+[[tasks]]
+id = "python-off-by-one"
+class = "debugging"
+language = "python"
+difficulty = "basic"
+timeout_seconds = 60
+max_output_tokens = 1500
+sandbox = true
+suite = ["smoke", "standard", "full"]
+fixture = "debugging/python-off-by-one"
+prompt = """
+Fix the failing tests. Do not change the tests.
+"""
+prerequisites = ["python3"]
+[tasks.scorer]
+type = "command"
+command = ["python3", "-m", "pytest", "-q", "tests"]
+[tasks.expected]
+exit_code = 0
+
+[[tasks]]
+id = "python-none-guard"
+class = "debugging"
+language = "python"
+difficulty = "basic"
+timeout_seconds = 60
+max_output_tokens = 1500
+sandbox = true
+suite = ["standard", "full"]
+fixture = "debugging/python-none-guard"
+prompt = """
+Fix solution.py so tests pass. Do not change the tests.
+"""
+prerequisites = ["python3"]
+[tasks.scorer]
+type = "command"
+command = ["python3", "-m", "pytest", "-q", "tests"]
+[tasks.expected]
+exit_code = 0
+
+[[tasks]]
+id = "bash-quoting"
+class = "debugging"
+language = "bash"
+difficulty = "capable"
+timeout_seconds = 30
+max_output_tokens = 800
+sandbox = true
+suite = ["standard", "full"]
+fixture = "debugging/bash-quoting"
+prompt = """
+Fix run.sh so verify.sh passes. Do not change verify.sh.
+"""
+prerequisites = ["bash"]
+[tasks.scorer]
+type = "command"
+command = ["bash", "verify.sh"]
+[tasks.expected]
+exit_code = 0
+
+[[tasks]]
+id = "python-sort-stable"
+class = "debugging"
+language = "python"
+difficulty = "capable"
+timeout_seconds = 60
+max_output_tokens = 1500
+sandbox = true
+suite = ["full"]
+fixture = "debugging/python-sort-stable"
+prompt = """
+Fix ranking.py so tests pass without changing the tests.
+"""
+prerequisites = ["python3"]
+[tasks.scorer]
+type = "command"
+command = ["python3", "-m", "pytest", "-q", "tests"]
+[tasks.expected]
+exit_code = 0
+
+# ── reasoning ───────────────────────────────────────────────────────────
+
+[[tasks]]
+id = "dependency-order"
+class = "reasoning"
+language = ""
+difficulty = "basic"
+timeout_seconds = 30
+max_output_tokens = 400
+sandbox = false
+suite = ["smoke", "standard", "full"]
+fixture = "reasoning/dependency-order"
+prompt = """
+Packages: A depends on B; B depends on C; D depends on A.
+Return the unique install order as a JSON array of package names (deps first).
+Write ONLY the JSON array to answer.json.
+"""
+[tasks.scorer]
+type = "json_exact"
+path = "answer.json"
+[tasks.expected]
+equals = ["C", "B", "A", "D"]
+
+[[tasks]]
+id = "config-precedence"
+class = "reasoning"
+language = ""
+difficulty = "basic"
+timeout_seconds = 30
+max_output_tokens = 400
+sandbox = false
+suite = ["standard", "full"]
+fixture = "reasoning/config-precedence"
+prompt = """
+Defaults: mode=safe. User override: mode=in_place. CLI: mode=unsafe_host.
+CLI wins over user over defaults. Write the effective mode as JSON string to answer.json.
+"""
+[tasks.scorer]
+type = "json_exact"
+path = "answer.json"
+[tasks.expected]
+equals = "unsafe_host"
+
+[[tasks]]
+id = "state-machine"
+class = "reasoning"
+language = ""
+difficulty = "capable"
+timeout_seconds = 30
+max_output_tokens = 400
+sandbox = false
+suite = ["standard", "full"]
+fixture = "reasoning/state-machine"
+prompt = """
+States: idle -> running on start; running -> idle on stop; running -> failed on error;
+failed -> idle on reset. Start in idle. Events: start, error, reset.
+Write final state as JSON string to answer.json.
+"""
+[tasks.scorer]
+type = "json_exact"
+path = "answer.json"
+[tasks.expected]
+equals = "idle"
+
+[[tasks]]
+id = "topo-layers"
+class = "reasoning"
+language = ""
+difficulty = "capable"
+timeout_seconds = 30
+max_output_tokens = 500
+sandbox = false
+suite = ["full"]
+fixture = "reasoning/topo-layers"
+prompt = """
+Edges: 1->2, 1->3, 2->4, 3->4. Return JSON object {"layers": [[...], ...]}
+where each layer is a sorted list of nodes that can run in parallel (Kahn layers).
+Write to answer.json.
+"""
+[tasks.scorer]
+type = "json_exact"
+path = "answer.json"
+[tasks.expected]
+equals = { layers = [["1"], ["2", "3"], ["4"]] }
+
+# ── tool_use ────────────────────────────────────────────────────────────
+
+[[tasks]]
+id = "edit-target-file"
+class = "tool_use"
+language = "python"
+difficulty = "basic"
+timeout_seconds = 60
+max_output_tokens = 1000
+sandbox = true
+suite = ["smoke", "standard", "full"]
+fixture = "tool_use/edit-target-file"
+prompt = """
+Change ONLY src/value.txt so it contains the single line READY.
+Do not modify other files.
+"""
+[tasks.scorer]
+type = "filesystem"
+[tasks.expected]
+file_equals = { path = "src/value.txt", text = "READY\n" }
+
+[[tasks]]
+id = "create-marker"
+class = "tool_use"
+language = ""
+difficulty = "basic"
+timeout_seconds = 60
+max_output_tokens = 800
+sandbox = true
+suite = ["standard", "full"]
+fixture = "tool_use/create-marker"
+prompt = """
+Create out/done.flag containing exactly OK.
+"""
+[tasks.scorer]
+type = "filesystem"
+[tasks.expected]
+file_equals = { path = "out/done.flag", text = "OK\n" }
+
+[[tasks]]
+id = "rename-config"
+class = "tool_use"
+language = ""
+difficulty = "capable"
+timeout_seconds = 60
+max_output_tokens = 1000
+sandbox = true
+suite = ["standard", "full"]
+fixture = "tool_use/rename-config"
+prompt = """
+Rename config.old.toml to config.toml without changing contents.
+"""
+[tasks.scorer]
+type = "filesystem"
+[tasks.expected]
+exists = ["config.toml"]
+missing = ["config.old.toml"]
+file_equals = { path = "config.toml", text = "mode = \"safe\"\n" }
+
+[[tasks]]
+id = "append-log-line"
+class = "tool_use"
+language = ""
+difficulty = "basic"
+timeout_seconds = 60
+max_output_tokens = 800
+sandbox = true
+suite = ["full"]
+fixture = "tool_use/append-log-line"
+prompt = """
+Append a line DONE to log.txt (keep existing content).
+"""
+[tasks.scorer]
+type = "filesystem"
+[tasks.expected]
+file_contains = { path = "log.txt", text = "DONE" }
+
+# ── structured_output ───────────────────────────────────────────────────
+
+[[tasks]]
+id = "json-person"
+class = "structured_output"
+language = ""
+difficulty = "basic"
+timeout_seconds = 30
+max_output_tokens = 400
+sandbox = false
+suite = ["smoke", "standard", "full"]
+fixture = "structured_output/json-person"
+prompt = """
+Write answer.json with object {"name":"Ada","age":36} exactly.
+"""
+[tasks.scorer]
+type = "json_schema"
+path = "answer.json"
+schema = { type = "object", required = ["name", "age"], properties = { name = { type = "string" }, age = { type = "integer" } }, additionalProperties = false }
+[tasks.expected]
+equals = { name = "Ada", age = 36 }
+
+[[tasks]]
+id = "json-route-plan"
+class = "structured_output"
+language = ""
+difficulty = "capable"
+timeout_seconds = 30
+max_output_tokens = 600
+sandbox = false
+suite = ["standard", "full"]
+fixture = "structured_output/json-route-plan"
+prompt = """
+Write answer.json: {"task_class":"debugging","quality_floor":"strong","max_cost_usd":0.5}
+"""
+[tasks.scorer]
+type = "json_schema"
+path = "answer.json"
+schema = { type = "object", required = ["task_class", "quality_floor", "max_cost_usd"], properties = { task_class = { type = "string" }, quality_floor = { type = "string" }, max_cost_usd = { type = "number" } }, additionalProperties = false }
+[tasks.expected]
+equals = { task_class = "debugging", quality_floor = "strong", max_cost_usd = 0.5 }
+
+[[tasks]]
+id = "json-list-ids"
+class = "structured_output"
+language = ""
+difficulty = "basic"
+timeout_seconds = 30
+max_output_tokens = 400
+sandbox = false
+suite = ["standard", "full"]
+fixture = "structured_output/json-list-ids"
+prompt = """
+Write answer.json as JSON array ["a","b","c"].
+"""
+[tasks.scorer]
+type = "json_exact"
+path = "answer.json"
+[tasks.expected]
+equals = ["a", "b", "c"]
+
+[[tasks]]
+id = "json-nested-ok"
+class = "structured_output"
+language = ""
+difficulty = "capable"
+timeout_seconds = 30
+max_output_tokens = 500
+sandbox = false
+suite = ["full"]
+fixture = "structured_output/json-nested-ok"
+prompt = """
+Write answer.json: {"ok":true,"errors":[]}
+"""
+[tasks.scorer]
+type = "json_exact"
+path = "answer.json"
+[tasks.expected]
+equals = { ok = true, errors = [] }
+
+# ── repo_navigation ─────────────────────────────────────────────────────
+
+[[tasks]]
+id = "find-dispatch"
+class = "repo_navigation"
+language = "python"
+difficulty = "basic"
+timeout_seconds = 30
+max_output_tokens = 400
+sandbox = false
+suite = ["smoke", "standard", "full"]
+fixture = "repo_navigation/find-dispatch"
+prompt = """
+Identify where command 'setup' is dispatched. Write answer.json:
+{"file":"...","function":"..."} with paths relative to fixture root.
+"""
+[tasks.scorer]
+type = "json_exact"
+path = "answer.json"
+[tasks.expected]
+equals = { file = "cli.py", function = "dispatch" }
+
+[[tasks]]
+id = "find-constant"
+class = "repo_navigation"
+language = "python"
+difficulty = "basic"
+timeout_seconds = 30
+max_output_tokens = 400
+sandbox = false
+suite = ["standard", "full"]
+fixture = "repo_navigation/find-constant"
+prompt = """
+Where is DEFAULT_BUDGET defined? Write answer.json {"file":"...","symbol":"DEFAULT_BUDGET"}.
+"""
+[tasks.scorer]
+type = "json_exact"
+path = "answer.json"
+[tasks.expected]
+equals = { file = "config.py", symbol = "DEFAULT_BUDGET" }
+
+[[tasks]]
+id = "find-entrypoint"
+class = "repo_navigation"
+language = "bash"
+difficulty = "capable"
+timeout_seconds = 30
+max_output_tokens = 400
+sandbox = false
+suite = ["standard", "full"]
+fixture = "repo_navigation/find-entrypoint"
+prompt = """
+Which script is the CLI entrypoint? Write answer.json {"file":"bin/run.sh"}.
+"""
+[tasks.scorer]
+type = "json_exact"
+path = "answer.json"
+[tasks.expected]
+equals = { file = "bin/run.sh" }
+
+[[tasks]]
+id = "find-owner"
+class = "repo_navigation"
+language = ""
+difficulty = "capable"
+timeout_seconds = 30
+max_output_tokens = 400
+sandbox = false
+suite = ["full"]
+fixture = "repo_navigation/find-owner"
+prompt = """
+Which service owns the users table per OWNERS.toml? Write answer.json {"service":"..."}.
+"""
+[tasks.scorer]
+type = "json_exact"
+path = "answer.json"
+[tasks.expected]
+equals = { service = "identity" }

@@ -1,4 +1,4 @@
-# DOTS agent harness defaults (v1.6 Phase 2).
+# DOTS agent harness defaults (v1.6 Phase 3).
 # Live override (optional): ~/.config/dots/agents.toml
 # Repo template: configs/agents/defaults.toml
 #
@@ -76,6 +76,34 @@ runtime_dir = "dots/agents/runtime"
 pi_mcp_json = "~/.pi/agent/mcp.json"
 pi_settings_json = "~/.pi/agent/settings.json"
 pi_sandbox_json = "~/.pi/agent/sandbox.json"
+
+[routing]
+# Policy version recorded with every auto-route decision
+policy_version = 1
+# Preference: economy (expected-cost primary) | balanced (slight latency weight)
+preference = "economy"
+
+[routing.quality]
+# Minimum conservative success probability by qualitative floor
+basic = 0.40
+capable = 0.60
+strong = 0.80
+frontier = 0.90
+
+[routing.evidence]
+minimum_attempts = 5
+max_age_days = 90
+# Wilson score interval z for ~95% confidence
+wilson_z = 1.96
+
+[evals]
+schema_version = 1
+registry = "configs/agents/evals/registry.toml"
+default_suite = "standard"
+default_local_runs = 3
+default_remote_runs = 1
+# Smoke suites keep wall time low
+smoke_tasks_per_class = 1
 
 [policy]
 # Shown to the local Pi foreman
