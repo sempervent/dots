@@ -36,7 +36,7 @@ echo "=== metadata files ==="
 [[ -x ${ROOT}/scripts/dots-help ]] && ok "scripts/dots-help executable" || bad "launcher"
 
 echo "=== CLI dispatcher ↔ commands.toml drift ==="
-cli_cmds=(setup status components lsp ai packages backup backups restore profile models check update help shell completion)
+cli_cmds=(setup status components lsp ai agent packages backup backups restore profile models check update help shell completion)
 mapfile -t meta_cmds < <(
 	cd "${ROOT}" && "${PY}" - <<'PY'
 import tomllib
