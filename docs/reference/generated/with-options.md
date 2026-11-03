@@ -248,5 +248,6 @@ Persistent multi-agent orchestration for Pi, Codex and other coding runtimes (np
 - **category:** agent_orchestration
 - **platforms:** darwin, linux
 - **brewfile:** `brew/Brewfile.openrig`
+- **formulae:** `fnm`, `tmux`
 - **activate:** `./dots setup --with openrig`
 
