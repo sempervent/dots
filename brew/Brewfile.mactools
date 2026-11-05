@@ -64,3 +64,7 @@ cask "midi-monitor"
 
 # --- Secure Enclave SSH agent (install-only; never rewrite ~/.ssh/config) ---
 cask "secretive"
+
+# --- API / HTTP inspection GUIs (install-only; never launch or trust CAs) ---
+cask "bruno"
+cask "proxyman"
