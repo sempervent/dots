@@ -7,7 +7,6 @@
 # Do NOT run bare `leaf --auto-complete` — it appends to ~/.zshrc / ~/.bashrc.
 
 DOTS_LEAF_COMPLETIONS_DIR="${DOTS_LEAF_COMPLETIONS_DIR:-${HOME}/.local/share/leaf/completions}"
-DOTS_LEAF_INSTALL_URL="${DOTS_LEAF_INSTALL_URL:-https://raw.githubusercontent.com/RivoLink/leaf/main/scripts/install.sh}"
 
 _dots_leaf_is_markdown_viewer() {
   local bin="$1"
@@ -62,16 +61,6 @@ _dots_leaf_install_brew() {
   brew install leaf-markdown-viewer
 }
 
-_dots_leaf_install_curl() {
-  if [[ "${DRY_RUN}" -eq 1 ]]; then
-    echo "[dry-run] curl install leaf → ${HOME}/.local/bin"
-    return 0
-  fi
-  ensure_dir "${HOME}/.local/bin"
-  # Official installer; installs into first arg (default ~/.local/bin)
-  curl -fsSL "${DOTS_LEAF_INSTALL_URL}" | sh -s -- "${HOME}/.local/bin"
-}
-
 dots_install_leaf() {
   echo "=== leaf (markdown viewer) ==="
   if _dots_leaf_resolve_bin >/dev/null 2>&1; then
@@ -86,14 +75,14 @@ dots_install_leaf() {
       if _dots_leaf_resolve_bin >/dev/null 2>&1 || [[ "${DRY_RUN}" -eq 1 ]]; then
         return 0
       fi
-      echo "Warn: brew leaf-markdown-viewer did not yield leaf binary — trying curl installer"
+      echo "Warn: brew leaf-markdown-viewer did not yield leaf binary" >&2
     fi
   fi
 
-  _dots_leaf_install_curl || {
-    echo "Error: failed to install leaf markdown viewer" >&2
-    return 1
-  }
+  # No curl|sh fallback (supply-chain policy). Homebrew is the install path.
+  echo "Error: leaf markdown viewer not available. Install via Homebrew:" >&2
+  echo "  brew install leaf-markdown-viewer" >&2
+  return 1
 }
 
 dots_install_leaf_completions() {

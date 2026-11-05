@@ -566,6 +566,10 @@ dots_provision_packages() {
 			echo "Error: one or more Homebrew package groups failed" >&2
 			return 1
 		fi
+		# npm-only geo tools (mapshaper) — after brew; never blocks brew success
+		if declare -F dots_geo_npm_tools_install >/dev/null 2>&1; then
+			dots_geo_npm_tools_install || true
+		fi
 		return 0
 	fi
 
@@ -576,6 +580,9 @@ dots_provision_packages() {
 
 	# Linux without brew → native package manager
 	dots_linux_install_packages || return 1
+	if declare -F dots_geo_npm_tools_install >/dev/null 2>&1; then
+		dots_geo_npm_tools_install || true
+	fi
 }
 
 # ---------------------------------------------------------------------------

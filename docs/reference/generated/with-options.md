@@ -183,8 +183,44 @@ Optional macOS workstation layer (Vorssaint + automation/audio/CLI; Brewfile.mac
 - **brewfile:** `brew/Brewfile.mactools`
 - **omit_from_all:** yes
 - **formulae:** `mise`, `yazi`, `watchexec`, `hyperfine`, `mprocs`, `xh`, `dust`, `duf`, `diskbloom`
-- **casks:** `vorssaint`, `raycast`, `keyboard-maestro`, `hazel`, `little-snitch`, `orbstack`, `hookmark`, `devonthink`, `ghostty`, `zed`, `loopback`, `audio-hijack`, `blackhole-2ch`, `vcv-rack`, `obs`, `touchdesigner`, `processing`, `sonic-pi`, `supercollider`, `qgis`, `grandperspective`, `midi-monitor`
+- **casks:** `vorssaint`, `raycast`, `keyboard-maestro`, `hazel`, `rectangle`, `little-snitch`, `hookmark`, `devonthink`, `ghostty`, `zed`, `loopback`, `audio-hijack`, `blackhole-2ch`, `vcv-rack`, `obs`, `touchdesigner`, `processing`, `sonic-pi`, `supercollider`, `qgis`, `grandperspective`, `midi-monitor`, `secretive`, `bruno`, `proxyman`, `localsend`, `tableplus`
 - **activate:** `./dots setup --with mactools`
+
+### `orbstack`
+
+Optional Darwin Docker-compatible runtime (install-only; never auto-start or remove Docker Desktop)
+
+- **label:** OrbStack
+- **category:** containers
+- **platforms:** darwin
+- **brewfile:** `brew/Brewfile.orbstack`
+- **omit_from_all:** yes
+- **casks:** `orbstack`
+- **activate:** `./dots setup --with orbstack`
+
+### `mitmproxy`
+
+Opt-in HTTP interception CLIs (install-only; never start proxy, trust CA, or change system proxy)
+
+- **label:** mitmproxy
+- **category:** network
+- **platforms:** darwin
+- **brewfile:** `brew/Brewfile.mitmproxy`
+- **omit_from_all:** yes
+- **casks:** `mitmproxy`
+- **activate:** `./dots setup --with mitmproxy`
+
+### `syncthing`
+
+Opt-in peer sync client (install-only; never start daemon, pair devices, or create folders)
+
+- **label:** Syncthing
+- **category:** backup
+- **platforms:** darwin, linux
+- **brewfile:** `brew/Brewfile.syncthing`
+- **omit_from_all:** yes
+- **formulae:** `syncthing`
+- **activate:** `./dots setup --with syncthing`
 
 ### `lsp`
 

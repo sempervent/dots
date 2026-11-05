@@ -50,10 +50,10 @@ Builtin profiles declare membership in TOML (SoT):
 | Profile | Groups (summary) |
 |---------|------------------|
 | `base` | `core` `modern` |
-| `work` | + `workstation` `dev` `data` `geo` `security` `gui` |
-| `home` | + `infra` `media` `gui` + `dev` `network` `data` `geo` `security` |
-| `server` | `core` `modern` `server` |
-| `all` | workstation set + `dev` `security` `network` `data` `geo` |
+| `work` | + `workstation` `dev` `docs` `data` `geo` `security` `gui` |
+| `home` | + `infra` `media` `gui` + `dev` `docs` `network` `data` `geo` `security` `backup` `hardware` (+ containers/k8s when present) |
+| `server` | `core` `modern` `server` (add `backup`/`network`/`hardware` selectively; see examples) |
+| `all` | workstation set + `dev` `docs` `security` `network` `data` `geo` `backup` `hardware` (Syncthing remains `omit_from_all`) |
 
 Custom profiles extend and adjust:
 

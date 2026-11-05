@@ -1,0 +1,12 @@
+# brew/Brewfile.syncthing — opt-in peer-to-peer sync client
+#
+# Install: ./setup.sh --with syncthing
+# omit_from_all. Syncthing is NOT a backup by itself.
+#
+# Install-only. DOTS never:
+#   - starts syncthing
+#   - enables launchd/systemd/login items
+#   - opens the web UI
+#   - pairs devices or creates shared folders
+
+brew "syncthing"

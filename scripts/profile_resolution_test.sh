@@ -171,7 +171,13 @@ fi
 resolve_named server
 if [[ "${EFFECTIVE_WITH[*]}" == "herdr" ]]; then ok "server → [herdr]"; else bad "server expected [herdr] got ${EFFECTIVE_WITH[*]:-}"
 fi
-if [[ "${PROFILE_PACKAGES[*]}" == "core modern server" ]]; then ok "server packages"; else bad "server packages=${PROFILE_PACKAGES[*]}"; fi
+# v1.7 Phase 11: server gains CLI ops groups (no GUI/media/AI)
+expected_server="core modern server security network backup hardware containers"
+if [[ "${PROFILE_PACKAGES[*]}" == "${expected_server}" ]]; then
+	ok "server packages"
+else
+	bad "server packages=${PROFILE_PACKAGES[*]}"
+fi
 if [[ "${PROFILE_RUNTIME_MULTIPLEXER}" == "tmux" ]]; then ok "server multiplexer=tmux"; else bad "server mux=${PROFILE_RUNTIME_MULTIPLEXER}"; fi
 
 # HOME packages + runtime
@@ -186,20 +192,21 @@ for g in dev network data geo security; do
 done
 if [[ "${PROFILE_RUNTIME_MULTIPLEXER}" == "herdr" ]]; then ok "home multiplexer=herdr"; else bad "home mux=${PROFILE_RUNTIME_MULTIPLEXER}"; fi
 
-# WORK has no AI; workstation tool groups + geo/gui; network still off by default
+# WORK has no AI; v1.7 Phase 11 adds infra/containers/k8s/network CLIs
 resolve_named work
 if [[ ${#EFFECTIVE_WITH[@]} -eq 0 ]]; then ok "work AI empty"; else bad "work leaked AI"; fi
-for g in dev data geo security gui; do
+for g in dev data geo security gui infra containers k8s network; do
   if dots_array_contains "${g}" "${PROFILE_PACKAGES[@]+"${PROFILE_PACKAGES[@]}"}"; then
     ok "work has ${g} group"
   else
     bad "work missing ${g}"
   fi
 done
-if dots_array_contains network "${PROFILE_PACKAGES[@]+"${PROFILE_PACKAGES[@]}"}"; then
-  bad "work should omit network"
+# Heavy GUIs / omit_from_all components stay out of work packages
+if dots_array_contains media "${PROFILE_PACKAGES[@]+"${PROFILE_PACKAGES[@]}"}"; then
+  bad "work should omit media"
 else
-  ok "work omits network"
+  ok "work omits media"
 fi
 
 # BASE stays lean (no new workstation tool groups)
@@ -210,7 +217,7 @@ else
   ok "base omits new tool groups"
 fi
 
-# ALL includes new groups; SERVER stays lean
+# ALL includes new groups; SERVER includes ops CLIs but not GUI/media
 resolve_named all
 for g in dev security network data geo; do
   if dots_array_contains "${g}" "${PROFILE_PACKAGES[@]+"${PROFILE_PACKAGES[@]}"}"; then
@@ -221,9 +228,15 @@ for g in dev security network data geo; do
 done
 resolve_named server
 if dots_array_contains security "${PROFILE_PACKAGES[@]+"${PROFILE_PACKAGES[@]}"}"; then
-  bad "server should omit security"
+  ok "server has security"
 else
-  ok "server omits workstation tool groups"
+  bad "server missing security"
+fi
+if dots_array_contains media "${PROFILE_PACKAGES[@]+"${PROFILE_PACKAGES[@]}"}" ||
+	dots_array_contains gui "${PROFILE_PACKAGES[@]+"${PROFILE_PACKAGES[@]}"}"; then
+	bad "server should omit media/gui"
+else
+	ok "server omits media/gui"
 fi
 
 # Unknown package group

@@ -1,17 +1,106 @@
 .\" GENERATED — DO NOT EDIT.
 .\" Source: configs/help/commands.toml + scripts/docs/generate_manpages.py
 .
-.TH DOTS\-CHECK 1 "2026-11-02" "DOTS 1.6.2" "User Commands"
+.TH DOTS\-CHECK 1 "2026-11-02" "DOTS 1.7.0" "User Commands"
 .SH NAME
-dots\-check \- Verify machine health against the active/selected profile.
+dots\-check \- Machine health plus local CI, docs, security, containers, k8s
 .SH SYNOPSIS
-.B dots check [\-\-profile NAME]
+.B dots check [\-\-profile NAME] | dots check fast|workflows|docs|all\-local|act|release\-notes|security|containers|k8s|dev|data|geo|media|backup|network|hardware|infra
 .SH DESCRIPTION
-Verify machine health against the active/selected profile.
+Machine health plus local CI, docs, security, containers, k8s, data, geo,
+media, backup, network, hardware, and infra checks.
 .SH EXAMPLES
-See
-.BR dots\-help (1)
-.
+.TP
+.B dots check
+Profile\-aware machine health.
+.TP
+.B dots check fast
+Cheap local CI validators (requires package group dev).
+.TP
+.B dots check workflows
+actionlint + zizmor on GitHub Actions.
+.TP
+.B dots check docs \-\-offline
+Docs lint + Vale + links + diagrams without external HTTP.
+.TP
+.B dots check docs status
+Documentation tooling inventory (Graphviz/Pandoc/Vale/Mermaid/Typst).
+.TP
+.B dots check docs render
+Non\-mutating diagram/doc previews to a temp directory.
+.TP
+.B dots check release\-notes
+Preview git\-cliff notes since previous tag (stdout).
+.TP
+.B dots check security
+Secrets/source/deps/SBOM gate (requires package group security).
+.TP
+.B dots check security status
+SOPS/age/YubiKey/osquery/step capability report (non\-mutating).
+.TP
+.B dots check containers
+OCI CLIs + static Dockerfile/Compose checks (no runtime start).
+.TP
+.B dots check k8s status
+Kubernetes tooling vs cluster connectivity (cluster optional).
+.TP
+.B dots check dev
+Developer tooling presence (jj/git\-town/ast\-grep/lnav/API tools).
+.TP
+.B dots check dev repo
+Optional read\-only git\-sizer report for this repository.
+.TP
+.B dots check data
+PostgreSQL/tabular tooling presence (no DB connections or dataset reads).
+.TP
+.B dots check data examples
+Print data\-tool example commands (stdout only; not executed).
+.TP
+.B dots check geo
+Geospatial tooling presence (no OSM download, DB connect, or QGIS launch).
+.TP
+.B dots check geo gate
+Local geospatial fixture gate (no network / no database).
+.TP
+.B dots check geo examples
+Print geo\-tool example commands (stdout only; not executed).
+.TP
+.B dots check media
+Media CLI presence + Darwin app inventory (no capture, download, or GUI
+launch).
+.TP
+.B dots check media gate
+Synthetic media fixtures only (no devices / no network).
+.TP
+.B dots check media examples
+Print media\-tool example commands (stdout only; not executed).
+.TP
+.B dots check backup
+Backup/sync tooling presence (no repo init, remotes, or Syncthing start).
+.TP
+.B dots check backup examples
+Print recovery\-oriented example commands (stdout only; not executed).
+.TP
+.B dots check network
+Network tooling presence (no scans, captures, or Tailscale up).
+.TP
+.B dots check network examples
+Print network\-tool example commands (stdout only; not executed).
+.TP
+.B dots check hardware
+Hardware tooling presence (no SMART tests, fio workloads, or serial I/O).
+.TP
+.B dots check hardware examples
+Print hardware\-tool example commands (stdout only; not executed).
+.TP
+.B dots check infra
+Infrastructure tooling presence (no apply/login/build).
+.TP
+.B dots check infra gate
+Static IaC format/lint on fixtures (no init/backends/network APIs).
+.TP
+.B dots check infra examples
+Print infra\-tool example commands (stdout only; not executed).
 .SH SEE ALSO
 .BR dots (1),
 .BR dots\-help (1)

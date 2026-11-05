@@ -25,6 +25,9 @@ Authoritative registry: `configs/components.toml`.
 | images | Images toolkit | media | darwin, linux | brew/Brewfile.images | no | Deterministic image toolkit (Magick, etc.) |
 | tex | TeX | docs | darwin, linux | brew/Brewfile.tex | no | Homebrew TeX Live (CLI) |
 | mactools | macOS tools | workstation | darwin | brew/Brewfile.mactools | yes | Optional macOS workstation layer (Vorssaint + automation/audio/CLI; Brewfile.mactools) |
+| orbstack | OrbStack | containers | darwin | brew/Brewfile.orbstack | yes | Optional Darwin Docker-compatible runtime (install-only; never auto-start or remove Docker Desktop) |
+| mitmproxy | mitmproxy | network | darwin | brew/Brewfile.mitmproxy | yes | Opt-in HTTP interception CLIs (install-only; never start proxy, trust CA, or change system proxy) |
+| syncthing | Syncthing | backup | darwin, linux | brew/Brewfile.syncthing | yes | Opt-in peer sync client (install-only; never start daemon, pair devices, or create folders) |
 | lsp | Language servers | developer_tooling | darwin, linux | brew/Brewfile.lsp | no | Language servers for DOTS development/editor workflows |
 | ai-server | AI inference server | ai_runtime | darwin, linux | brew/Brewfile.ai-server | yes | Server stack: llama.cpp (llama-server) + Open WebUI via Docker Compose (opt-in models) |
 | pi | Pi Coding Agent | ai_client | darwin, linux | brew/Brewfile.pi | no | Programmable coding-agent runtime for DOTS local-first agent orchestration (npm; Node ≥22.19) |

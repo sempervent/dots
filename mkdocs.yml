@@ -85,6 +85,7 @@ nav:
   - Using DOTS:
       - Recipes: using/recipes.md
       - Package groups: using/package-groups.md
+      - Documentation tooling: using/docs-tooling.md
       - Components and --with: using/components.md
       - Language servers: using/language-servers.md
       - Local models: using/local-models.md

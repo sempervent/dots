@@ -1,0 +1,9 @@
+---
+- name: Fixture playbook (never executed by DOTS)
+  hosts: localhost
+  gather_facts: false
+  connection: local
+  tasks:
+    - name: No-op
+      ansible.builtin.debug:
+        msg: fixture

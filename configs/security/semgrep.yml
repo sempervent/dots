@@ -1,0 +1,27 @@
+# DOTS local Semgrep rules — never use `--config auto` from DOTS (privacy + network).
+# Metrics are disabled by the security_validate wrapper (`--metrics=off`).
+
+rules:
+  - id: dots.security.no-curl-pipe-shell
+    # Match executable curl|sh lines; comments documenting the ban are OK.
+    pattern-regex: '^\s*(curl|wget)[^\n]*\|\s*(ba)?sh\b'
+    message: >-
+      Avoid curl|sh bootstrap patterns in DOTS-maintained scripts. Prefer
+      package managers or verified checksum installs.
+    languages: [bash]
+    severity: ERROR
+    paths:
+      include:
+        - "*.sh"
+        - scripts
+        - helpers
+
+  - id: dots.security.no-hardcoded-aws-key-shape
+    pattern-regex: 'AKIA[0-9A-Z]{16}'
+    message: Possible AWS access key ID shape detected.
+    languages: [generic]
+    severity: ERROR
+    paths:
+      exclude:
+        - scripts/tests/fixtures
+        - "*.md"

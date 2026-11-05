@@ -1,0 +1,14 @@
+# DOTS terminology substitutions — keep small and high-value.
+extends: substitution
+message: "Prefer '%s' over '%s'."
+level: error
+ignorecase: false
+swap:
+  Github: GitHub
+  github actions: GitHub Actions
+  Mac OS: macOS
+  OS X: macOS
+  Javascript: JavaScript
+  typescript: TypeScript
+  k8's: Kubernetes
+  K8's: Kubernetes

@@ -1,0 +1,32 @@
+{
+  // Minimal DOTS Markdown policy — correctness over aesthetic churn.
+  // Scope: maintainer-facing docs and top-level project Markdown only.
+  "globs": [
+    "README.md",
+    "AGENTS.md",
+    "SKILL.md",
+    "CONTRIBUTING.md",
+    "CHANGELOG.md",
+    "docs/**/*.md",
+    "!site/**",
+    "!**/node_modules/**",
+    "!.tools/**",
+    "!generated/**",
+    "!docs/archive/**",
+    "!docs/reference/generated/**",
+    "!docs/maintainers/skill.md"
+  ],
+  "config": {
+    "default": true,
+    "MD013": false,
+    "MD024": false,
+    "MD033": false,
+    "MD041": false,
+    "MD034": false,
+    "MD060": false,
+    "MD036": false,
+    "MD040": false,
+    "MD046": false,
+    "MD012": false
+  }
+}

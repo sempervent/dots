@@ -62,10 +62,26 @@ are documentation only; CI does **not** fetch them.
 | tailscale | Mesh VPN CLI (install-only; no `up`) | `network` group | darwin, linux | https://tailscale.com |
 | mosh | Roaming remote shell | `network` group | darwin, linux | https://mosh.org |
 | rclone | Cloud storage sync | `network` group | darwin, linux | https://rclone.org |
+| mtr | Path + loss/latency | `network` group | darwin, linux | https://www.bitwizard.nl/mtr/ |
+| nmap | Host/service discovery | `network` group | darwin, linux | https://nmap.org |
+| iperf3 | Throughput measurement | `network` group | darwin, linux | https://iperf.fr |
+| gping | Latency visualization | `network` group | darwin, linux | https://github.com/orf/gping |
+| bandwhich | Per-process bandwidth | `network` group | darwin, linux | https://github.com/imsnif/bandwhich |
+| mosh | Resilient remote shell | `network` group | darwin, linux | https://mosh.org |
+| tailscale | Overlay VPN client (install-only; no `up`) | `network` group | darwin, linux | https://tailscale.com |
 | doggo | Human-friendly DNS client | `network` group | darwin, linux | https://github.com/mr-karan/doggo |
-| duckdb | In-process analytical SQL | `data` group | darwin, linux | https://duckdb.org |
+| smartctl | Storage health CLI | `hardware` / smartmontools | darwin, linux | https://www.smartmontools.org |
+| fio | Storage benchmarking | `hardware` group | darwin, linux | https://fio.readthedocs.io |
+| picocom | Serial terminal | `hardware` group | darwin, linux | https://github.com/npat-efault/picocom |
+| duckdb | In-process analytical SQL CLI | `data` group | darwin, linux | https://duckdb.org |
+| qsv | CSV toolkit | `data` group | darwin (+ partial linux) | https://github.com/jqnatividad/qsv |
 | miller | Name-indexed CSV/TSV/JSON CLI | `data` group | darwin, linux | https://miller.readthedocs.io |
 | visidata | Terminal spreadsheet multitool | `data` group | darwin, linux | https://www.visidata.org |
+| jless | JSON pager | `data` group | darwin (+ partial linux) | https://github.com/PaulJuliusMartinez/jless |
+| pgcli | Enhanced PostgreSQL interactive client | `data` group | darwin (+ partial linux) | https://www.pgcli.com |
+| pg_activity | PostgreSQL activity monitor | `data` group | darwin (+ partial linux) | https://github.com/dalibo/pg_activity |
+| restic | Encrypted snapshot backup | `backup` group | darwin, linux | https://restic.net |
+| Syncthing | Peer sync (opt-in; not a backup) | `--with syncthing` | darwin, linux | https://syncthing.net |
 | gdal | Geospatial data library / CLIs | `geo` group | darwin, linux | https://gdal.org |
 | tippecanoe | Vector tile builder | `geo` group | darwin, linux | https://github.com/felt/tippecanoe |
 | pmtiles | PMTiles archive CLI | `geo` group | darwin, linux | https://github.com/protomaps/go-pmtiles |
@@ -73,7 +89,7 @@ are documentation only; CI does **not** fetch them.
 | GrandPerspective | Disk usage treemap | `--with mactools` | darwin | https://grandperspectiv.sourceforge.net |
 | MIDI Monitor | MIDI signal inspector | `--with mactools` | darwin | https://www.snoize.com/MIDIMonitor/ |
 
-### Opt-in notes (not configured by DOTS)
+## Opt-in notes (not configured by DOTS)
 
 ```bash
 # difftastic as Git external diff (per-repo)
@@ -99,3 +115,41 @@ pmtiles show map.pmtiles
 Ownership paths: [Architecture](../concepts/architecture.md). How to extend:
 [Extending](extending.md). macOS layer detail: [mactools](../macos/mactools.md).
 Agent stack: [Agent harness](../agents/harness.md).
+
+## Local CI validation
+
+See [Local CI feedback loop](local-ci.md) (`./dots check fast`).
+
+## Local security gate
+
+See [Local security and supply-chain tooling](security.md) (`./dots check security`).
+
+## Containers / Kubernetes
+
+See [Containers](containers.md) and [Kubernetes](k8s.md).
+
+## Developer workflow
+
+See [Developer workflow and inspection](developer-workflow.md).
+
+## Data / backup tooling
+
+See [Data tooling](data-tooling.md) and [Backup tooling](backup-tooling.md)
+(`./dots check data`, `./dots check backup`).
+
+## Network / hardware tooling
+
+See [Network tooling](network-tooling.md) and [Hardware tooling](hardware-tooling.md)
+(`./dots check network`, `./dots check hardware`).
+
+## Infrastructure tooling
+
+See [Infrastructure engineering](infra-tooling.md) (`./dots check infra`).
+
+## Geospatial tooling
+
+See [Geospatial workstation tooling](geo-tooling.md) (`./dots check geo`).
+
+## Media tooling
+
+See [Media tooling](media-tooling.md) (`./dots check media`).

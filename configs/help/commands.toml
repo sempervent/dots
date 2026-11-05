@@ -190,11 +190,101 @@ description = "Read-only inventory (no downloads)."
 
 [[commands]]
 name = "check"
-usage = "dots check [--profile NAME]"
+usage = "dots check [--profile NAME] | dots check fast|workflows|docs|all-local|act|release-notes|security|containers|k8s|dev|data|geo|media|backup|network|hardware|infra"
 category = "diagnostics"
-description = "Verify machine health against the active/selected profile."
+description = "Machine health plus local CI, docs, security, containers, k8s, data, geo, media, backup, network, hardware, and infra checks."
 mutating = false
-related = ["status", "update", "help"]
+related = ["status", "update", "help", "packages"]
+[[commands.examples]]
+command = "dots check"
+description = "Profile-aware machine health."
+[[commands.examples]]
+command = "dots check fast"
+description = "Cheap local CI validators (requires package group dev)."
+[[commands.examples]]
+command = "dots check workflows"
+description = "actionlint + zizmor on GitHub Actions."
+[[commands.examples]]
+command = "dots check docs --offline"
+description = "Docs lint + Vale + links + diagrams without external HTTP."
+[[commands.examples]]
+command = "dots check docs status"
+description = "Documentation tooling inventory (Graphviz/Pandoc/Vale/Mermaid/Typst)."
+[[commands.examples]]
+command = "dots check docs render"
+description = "Non-mutating diagram/doc previews to a temp directory."
+[[commands.examples]]
+command = "dots check release-notes"
+description = "Preview git-cliff notes since previous tag (stdout)."
+[[commands.examples]]
+command = "dots check security"
+description = "Secrets/source/deps/SBOM gate (requires package group security)."
+[[commands.examples]]
+command = "dots check security status"
+description = "SOPS/age/YubiKey/osquery/step capability report (non-mutating)."
+[[commands.examples]]
+command = "dots check containers"
+description = "OCI CLIs + static Dockerfile/Compose checks (no runtime start)."
+[[commands.examples]]
+command = "dots check k8s status"
+description = "Kubernetes tooling vs cluster connectivity (cluster optional)."
+[[commands.examples]]
+command = "dots check dev"
+description = "Developer tooling presence (jj/git-town/ast-grep/lnav/API tools)."
+[[commands.examples]]
+command = "dots check dev repo"
+description = "Optional read-only git-sizer report for this repository."
+[[commands.examples]]
+command = "dots check data"
+description = "PostgreSQL/tabular tooling presence (no DB connections or dataset reads)."
+[[commands.examples]]
+command = "dots check data examples"
+description = "Print data-tool example commands (stdout only; not executed)."
+[[commands.examples]]
+command = "dots check geo"
+description = "Geospatial tooling presence (no OSM download, DB connect, or QGIS launch)."
+[[commands.examples]]
+command = "dots check geo gate"
+description = "Local geospatial fixture gate (no network / no database)."
+[[commands.examples]]
+command = "dots check geo examples"
+description = "Print geo-tool example commands (stdout only; not executed)."
+[[commands.examples]]
+command = "dots check media"
+description = "Media CLI presence + Darwin app inventory (no capture, download, or GUI launch)."
+[[commands.examples]]
+command = "dots check media gate"
+description = "Synthetic media fixtures only (no devices / no network)."
+[[commands.examples]]
+command = "dots check media examples"
+description = "Print media-tool example commands (stdout only; not executed)."
+[[commands.examples]]
+command = "dots check backup"
+description = "Backup/sync tooling presence (no repo init, remotes, or Syncthing start)."
+[[commands.examples]]
+command = "dots check backup examples"
+description = "Print recovery-oriented example commands (stdout only; not executed)."
+[[commands.examples]]
+command = "dots check network"
+description = "Network tooling presence (no scans, captures, or Tailscale up)."
+[[commands.examples]]
+command = "dots check network examples"
+description = "Print network-tool example commands (stdout only; not executed)."
+[[commands.examples]]
+command = "dots check hardware"
+description = "Hardware tooling presence (no SMART tests, fio workloads, or serial I/O)."
+[[commands.examples]]
+command = "dots check hardware examples"
+description = "Print hardware-tool example commands (stdout only; not executed)."
+[[commands.examples]]
+command = "dots check infra"
+description = "Infrastructure tooling presence (no apply/login/build)."
+[[commands.examples]]
+command = "dots check infra gate"
+description = "Static IaC format/lint on fixtures (no init/backends/network APIs)."
+[[commands.examples]]
+command = "dots check infra examples"
+description = "Print infra-tool example commands (stdout only; not executed)."
 
 [[commands]]
 name = "update"

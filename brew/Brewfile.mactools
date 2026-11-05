@@ -15,15 +15,21 @@
 cask "vorssaint"
 
 # --- launcher / automation / filesystem ---
+# Raycast: install-only; never launch, never configure hotkeys/extensions/accounts.
 cask "raycast"
 cask "keyboard-maestro"
 cask "hazel"
+# Rectangle: keyboard window management; never launch or request Accessibility.
+# (No other window manager is DOTS-managed — complementary if user also uses
+# yabai/Amethyst/AeroSpace/Magnet; DOTS does not remove or disable them.)
+cask "rectangle"
 
 # --- network visibility ---
 cask "little-snitch"
 
-# --- containers / VMs (additive; does not remove Docker Desktop) ---
-cask "orbstack"
+# --- containers / VMs ---
+# OrbStack moved to dedicated component: ./setup.sh --with orbstack
+# (omit_from_all; install-only; never auto-start or remove Docker Desktop)
 
 # --- knowledge / linking ---
 cask "hookmark"
@@ -57,6 +63,21 @@ tap "Zingzy/tap"
 brew "diskbloom"
 
 # --- disk / GIS / MIDI (install-only; no config / permissions / kills) ---
+# QGIS: heavy GUI; omit_from_all via mactools. Never auto-launch, never manage
+# plugins/profiles/projects. Not part of package group `geo` / profile `all`.
 cask "qgis"
 cask "grandperspective"
 cask "midi-monitor"
+
+# --- Secure Enclave SSH agent (install-only; never rewrite ~/.ssh/config) ---
+cask "secretive"
+
+# --- API / HTTP inspection GUIs (install-only; never launch or trust CAs) ---
+cask "bruno"
+cask "proxyman"
+
+# --- desktop productivity (install-only; omit_from_all via mactools) ---
+# LocalSend: never launch, never start listeners / peer discovery / transfers.
+cask "localsend"
+# TablePlus: optional DB GUI complementary to psql/pgcli; never launch or connect.
+cask "tableplus"

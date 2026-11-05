@@ -14,7 +14,7 @@ ALL optional DOTS components (lab convenience — may include cloud AI)
 
 - **Source:** `configs/bootstrap/profiles/all.toml`
 - **include_all_optional:** yes
-- **packages:** `core`, `modern`, `workstation`, `infra`, `media`, `gui`, `dev`, `security`, `network`, `data`, `geo`
+- **packages:** `core`, `modern`, `workstation`, `infra`, `media`, `gui`, `dev`, `docs`, `security`, `network`, `data`, `geo`, `containers`, `k8s`, `backup`, `hardware`
 - **with:** (none)
 - **runtime.multiplexer:** `tmux`
 
@@ -32,7 +32,7 @@ Core shell UX only — safe on any machine
 Personal workstation — edit before relying on it
 
 - **Source:** `configs/bootstrap/profiles/home.toml`
-- **packages:** `core`, `modern`, `workstation`, `infra`, `media`, `gui`, `dev`, `network`, `data`, `geo`, `security`
+- **packages:** `core`, `modern`, `workstation`, `infra`, `media`, `gui`, `dev`, `docs`, `network`, `data`, `geo`, `security`, `containers`, `k8s`, `backup`, `hardware`
 - **with:** `ai`, `herdr`, `skills`, `ai-skills`, `images`, `tex`
 - **without:** `fluidvoice`
 - **runtime.multiplexer:** `herdr`
@@ -42,7 +42,7 @@ Personal workstation — edit before relying on it
 Headless server — tmux + Herdr available, no GUI/AI providers by default
 
 - **Source:** `configs/bootstrap/profiles/server.toml`
-- **packages:** `core`, `modern`, `server`
+- **packages:** `core`, `modern`, `server`, `security`, `network`, `backup`, `hardware`, `containers`
 - **with:** `herdr`
 - **runtime.multiplexer:** `tmux`
 
@@ -51,7 +51,7 @@ Headless server — tmux + Herdr available, no GUI/AI providers by default
 Conservative allowlist — no AI clients by default
 
 - **Source:** `configs/bootstrap/profiles/work.toml`
-- **packages:** `core`, `modern`, `workstation`, `dev`, `data`, `geo`, `security`, `gui`
+- **packages:** `core`, `modern`, `workstation`, `dev`, `docs`, `data`, `geo`, `security`, `gui`, `infra`, `containers`, `k8s`, `network`
 - **with:** (none)
 - **runtime.multiplexer:** `tmux`
 
@@ -65,5 +65,8 @@ Not applied automatically. Copy from `examples/profiles/`:
 | data-geo.toml | data-geo | base | Tabular + geospatial CLI workstation (no AI) |
 | developer.toml | developer | base | Dev + security CLIs on a lean base (no AI) |
 | home-studio.toml | home-studio | home | Home workstation without Cursor Agent CLI |
+| server-backup.toml | server-backup | server | Headless server with backup CLI tooling |
+| server-hardware.toml | server-hardware | server | Server with network diagnostics and hardware inspection CLIs |
+| work-containers-k8s.toml | work-containers-k8s | work | Work profile + containers/k8s CLIs (no OrbStack, no cluster create) |
 | work-custom.toml | corp-work | work | Work machine with infra tools + images toolkit (no AI) |
 | work-network.toml | work-network | work | Work allowlist + network CLIs (still no AI) |

@@ -11,22 +11,22 @@ Captured from safe `--help` / `help` invocations. If a binary is missing or help
 ## `./dots`
 
 ```text
-DOTS — machine environment manager  (v1.6.2)
+DOTS — machine environment manager  (v1.7.0)
 
 Usage:
-  ./dots setup [options]            Interactive or noninteractive setup / reconfigure tow...
-  ./dots status                     Show current DOTS state (profile, packages summary, c...
+  ./dots setup [options]            Interactive or noninteractive setup / reconfigure...
+  ./dots status                     Show current DOTS state (profile, packages summary...
   ./dots components [list|active|show ID] Inspect optional components and --with selectors.
   ./dots lsp [status|check|install|list] Language-server install, status, and checks.
-  ./dots ai [status|doctor|up|down|…] AI inference server (Compose + Open WebUI) control pl...
-  ./dots agent [status|doctor|sandbox|models|scout|eval|team|run|…] Local-first agent harness (Pi, OpenRig, evals, guarde...
+  ./dots ai [status|doctor|up|down|…] AI inference server (Compose + Open WebUI) control...
+  ./dots agent [status|doctor|sandbox|models|scout|eval|team|run|…] Local-first agent harness (Pi, OpenRig, evals...
   ./dots packages [groups|group|plan|status|explain|outdated|upgrade|adopt] Package ownership, drift, groups, and upgrades.
-  ./dots backup [--name N]          Snapshot managed targets under ~/.local/state/dots/ba...
+  ./dots backup [--name N]          Snapshot managed targets under...
   ./dots backups                    List recoverable DOTS snapshots.
   ./dots restore [ID]               Restore a snapshot (creates a safety snapshot first).
   ./dots profile …                  Create, preview, or switch machine profiles.
   ./dots models [discover|pull|…]   Local model plan, discovery, and pull workflows.
-  ./dots check [--profile NAME]     Verify machine health against the active/selected pro...
+  ./dots check [--profile NAME] | dots check fast|workflows|docs|all-local|act|release-notes|security|containers|k8s|dev|data|geo|media|backup|network|hardware|infra Machine health plus local CI, docs, security...
   ./dots update                     git pull the DOTS repo and optionally reapply setup.
   ./dots help [topic] [--plain] [--search QUERY] [--cheatsheet] Interactive Textual help (dots-help) for this machine.
   ./dots shell [status|keys|startup] Inspect shell, prompt, and keybinding ownership.
@@ -85,6 +85,9 @@ Selectors (--with / --without):
     images       Deterministic image toolkit (Magick, etc.)
     tex          Homebrew TeX Live (CLI)
     mactools     Optional macOS workstation layer (Vorssaint + automation/audio/CLI; Brewfile.mactools)
+    orbstack     Optional Darwin Docker-compatible runtime (install-only; never auto-start or remove Docker Desktop)
+    mitmproxy    Opt-in HTTP interception CLIs (install-only; never start proxy, trust CA, or change system proxy)
+    syncthing    Opt-in peer sync client (install-only; never start daemon, pair devices, or create folders)
     lsp          Language servers for DOTS development/editor workflows
     ai-server    Server stack: llama.cpp (llama-server) + Open WebUI via Docker Compose (opt-in models)
     pi           Programmable coding-agent runtime for DOTS local-first agent orchestration (npm; Node ≥22.19)
@@ -144,6 +147,9 @@ Options:
                       images       Deterministic image toolkit (Magick, etc.)
                       tex          Homebrew TeX Live (CLI)
                       mactools     Optional macOS workstation layer (Vorssaint + automation/audio/CLI; Brewfile.mactools)
+                      orbstack     Optional Darwin Docker-compatible runtime (install-only; never auto-start or remove Docker Desktop)
+                      mitmproxy    Opt-in HTTP interception CLIs (install-only; never start proxy, trust CA, or change system proxy)
+                      syncthing    Opt-in peer sync client (install-only; never start daemon, pair devices, or create folders)
                       lsp          Language servers for DOTS development/editor workflows
                       ai-server    Server stack: llama.cpp (llama-server) + Open WebUI via Docker Compose (opt-in models)
                       pi           Programmable coding-agent runtime for DOTS local-first agent orchestration (npm; Node ≥22.19)

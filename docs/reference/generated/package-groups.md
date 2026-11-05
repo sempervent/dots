@@ -18,11 +18,11 @@ Portable essentials
 
 ## `modern`
 
-Shared ergonomic CLI
+Shared ergonomic CLI + Git evolution / structural search / log inspection
 
 **Required:** `bat`, `zoxide`, `direnv`, `htop`, `tree`
 
-**Optional:** `eza`, `atuin`, `lazygit`, `btop`, `yq`, `uv`, `gh`, `just`, `git-delta`, `leaf`
+**Optional:** `eza`, `atuin`, `lazygit`, `btop`, `yq`, `uv`, `gh`, `just`, `git-delta`, `leaf`, `jj`, `git-town`, `git-filter-repo`, `git-sizer`, `ast-grep`, `lnav`
 
 ## `workstation`
 
@@ -34,19 +34,19 @@ Desktop-user tools (not headless)
 
 ## `infra`
 
-Containers / k8s / terraform
+Docker/Helm/Terraform + IaC engineering CLIs (install-only; no apply/login/build)
 
 **Required:** (none)
 
-**Optional:** `docker`, `docker-compose`, `helm`, `k9s`, `terraform`
+**Optional:** `docker`, `docker-compose`, `helm`, `terraform`, `terraform-docs`, `tflint`, `checkov`, `infracost`, `terragrunt`, `ansible`, `ansible-lint`, `vault`, `packer`
 
 ## `media`
 
-Image / video processing
+Image / audio / video / retrieval CLIs (install-only; no capture, playback, or downloads)
 
 **Required:** (none)
 
-**Optional:** `ffmpeg`, `imagemagick`, `exiftool`
+**Optional:** `ffmpeg`, `imagemagick`, `exiftool`, `sox`, `yt-dlp`
 
 ## `gui`
 
@@ -66,41 +66,81 @@ Headless extras
 
 ## `dev`
 
-Local CI / lint / Rust ergonomics (install-only; no shell aliases)
+Local CI / lint / docs validation / Rust ergonomics (install-only; no shell aliases)
 
 **Required:** (none)
 
-**Optional:** `act`, `difftastic`, `mergiraf`, `actionlint`, `cargo-nextest`, `bacon`, `pre-commit`, `hadolint`, `taplo`, `mkcert`, `kondo`
+**Optional:** `act`, `difftastic`, `mergiraf`, `actionlint`, `cargo-nextest`, `bacon`, `pre-commit`, `hadolint`, `taplo`, `mkcert`, `kondo`, `zizmor`, `git-cliff`, `lychee`, `markdownlint-cli2`, `cspell`
 
 ## `security`
 
-Secrets scanning / SBOM / signing CLIs (install-only; no auth)
+Secrets / SBOM / signing / YubiKey / host-inspection CLIs (install-only; no auth or enrollment)
 
 **Required:** (none)
 
-**Optional:** `gitleaks`, `trivy`, `sops`, `age`, `syft`, `grype`, `cosign`, `osv-scanner`, `semgrep`
+**Optional:** `gitleaks`, `trivy`, `sops`, `age`, `syft`, `grype`, `cosign`, `osv-scanner`, `semgrep`, `ykman`, `age-plugin-yubikey`, `step`, `osquery`
 
 ## `network`
 
-Network / remote / k8s context CLIs (install-only; no Tailscale up)
+Network / remote CLIs (install-only; no scans, captures, iperf, or Tailscale up)
 
 **Required:** (none)
 
-**Optional:** `tailscale`, `mosh`, `rclone`, `bandwhich`, `gping`, `doggo`, `stern`, `kubectx`, `grpcurl`, `websocat`
+**Optional:** `tailscale`, `mosh`, `rclone`, `bandwhich`, `gping`, `doggo`, `grpcurl`, `websocat`, `mtr`, `nmap`, `iperf3`, `termshark`, `tshark`
+
+## `hardware`
+
+Storage / bus / serial diagnostics (install-only; no SMART tests, fio workloads, or serial I/O)
+
+**Required:** (none)
+
+**Optional:** `smartmontools`, `fio`, `picocom`, `usbutils`, `pciutils`
 
 ## `data`
 
-Tabular / analytical CLIs
+PostgreSQL inspection + tabular / analytical CLIs (install-only; no DB connections)
 
 **Required:** (none)
 
-**Optional:** `duckdb`, `qsv`, `visidata`, `miller`, `jless`
+**Optional:** `duckdb`, `qsv`, `visidata`, `miller`, `jless`, `pgcli`, `pg_activity`
+
+## `backup`
+
+Backup / recovery CLIs (install-only; no repo init, backup, restore, or sync daemon)
+
+**Required:** (none)
+
+**Optional:** `restic`
 
 ## `geo`
 
-Geospatial CLI tooling
+Geospatial CLI tooling (OSM / tiles / geometry; install-only; no data download or DB import)
 
 **Required:** (none)
 
-**Optional:** `gdal`, `tippecanoe`, `pmtiles`
+**Optional:** `gdal`, `tippecanoe`, `pmtiles`, `osmium-tool`, `osm2pgsql`, `mapshaper`
+
+## `containers`
+
+OCI / container operator CLIs (install-only; no runtime start, pull, or compose up)
+
+**Required:** (none)
+
+**Optional:** `lazydocker`, `dive`, `skopeo`, `crane`, `oras`, `devcontainer`, `dagger`
+
+## `k8s`
+
+Kubernetes / GitOps operator CLIs (install-only; no cluster create, context switch, or deploy)
+
+**Required:** (none)
+
+**Optional:** `kubernetes-cli`, `k9s`, `kubectx`, `stern`, `krew`, `kubeconform`, `kubescape`, `popeye`, `helmfile`, `argocd`
+
+## `docs`
+
+Technical documentation / publishing CLIs (install-only; no rewrite, publish, or browser download)
+
+**Required:** (none)
+
+**Optional:** `graphviz`, `pandoc`, `vale`, `mermaid-cli`, `typst`
 

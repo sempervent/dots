@@ -4,6 +4,7 @@ on:
   push:
     branches: [master, main]
   pull_request:
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -17,7 +18,9 @@ jobs:
     name: Ubuntu test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
       - name: Prepare runner
         run: ./scripts/ci/prepare_runner.sh
       - name: Lint
@@ -51,7 +54,9 @@ jobs:
             image: ghcr.io/void-linux/void-glibc:latest
             family: xbps
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
       - name: Distro smoke (${{ matrix.name }})
         run: ./scripts/ci/distro_smoke.sh "${{ matrix.image }}" --name "${{ matrix.name }}" --family "${{ matrix.family }}"
 
@@ -61,7 +66,9 @@ jobs:
     name: ARM64 smoke (Debian 13)
     runs-on: ubuntu-24.04-arm
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
       - name: ARM64 Debian-family smoke
         run: ./scripts/ci/distro_smoke.sh debian:13-slim --name "Debian 13 arm64" --family apt
 
@@ -69,6 +76,8 @@ jobs:
     name: macOS smoke
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
       - name: macOS smoke
         run: ./scripts/ci/macos_smoke.sh

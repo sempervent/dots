@@ -29,14 +29,19 @@ Declared in `brew/Brewfile.mactools` (verified Homebrew names; no duplicates of
 | Area | Packages |
 |------|----------|
 | Control plane | `vorssaint` |
-| Launcher / automation | `raycast`, `keyboard-maestro`, `hazel` |
+| Launcher / automation | `raycast`, `keyboard-maestro`, `hazel` (install-only; never launch or configure hotkeys/extensions) |
+| Window management | `rectangle` (install-only; never request Accessibility; does not remove yabai/Amethyst/etc.) |
 | Network | `little-snitch` |
-| Containers | `orbstack` (additive; does not remove Docker Desktop) |
 | Knowledge | `hookmark`, `devonthink` |
 | Terminal / editor | `ghostty`, `zed` (iTerm + Neovim stay primary) |
 | Audio / PFL | `loopback`, `audio-hijack`, `blackhole-2ch`, `vcv-rack`, `obs`, `touchdesigner`, `processing`, `sonic-pi`, `supercollider` |
 | CLI | `mise`, `yazi`, `watchexec`, `hyperfine`, `mprocs`, `xh`, `dust`, `duf`, `diskbloom` |
-| Disk / GIS / MIDI | `qgis`, `grandperspective`, `midi-monitor` (install-only) |
+| Disk / GIS / MIDI | `qgis`, `grandperspective`, `midi-monitor` (install-only; QGIS never auto-launched — see [geo tooling](../using/geo-tooling.md)) |
+| Security / API GUIs | `secretive`, `bruno`, `proxyman` (install-only) |
+| Productivity | `localsend`, `tableplus` (install-only; never peer discovery / DB connect) |
+
+**OrbStack** is a separate `--with orbstack` component (not this Brewfile). See
+[OrbStack migration](../migration/orbstack.md).
 
 Omitted on purpose (already owned elsewhere): `just`, `lazygit`, Docker CLI formulae, Ranger.
 

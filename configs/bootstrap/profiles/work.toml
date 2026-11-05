@@ -7,14 +7,20 @@
 # IMPORTANT: Do NOT infer employer AI policy. Start with NO AI clients.
 # Cursor MUST NOT be included without approval.
 #
-# Package groups: +dev +data +geo +security +gui (font). Network omitted by default
-# — add via custom profile or --packages if needed.
+# Package groups (v1.7 Phase 11 convergence):
+#   +dev +docs +data +geo +security +gui (font)
+#   +infra +containers +k8s +network  (CLI tooling; no OrbStack / VPN enrollment)
+# Media / backup / hardware remain opt-in via custom profile or --packages.
+# mactools / OrbStack / Syncthing / mitmproxy stay omit_from_all (never via work).
 
 [profile]
 name = "work"
 description = "Conservative allowlist — no AI clients by default"
 with = []
-packages = ["core", "modern", "workstation", "dev", "data", "geo", "security", "gui"]
+packages = [
+  "core", "modern", "workstation", "dev", "docs", "data", "geo", "security", "gui",
+  "infra", "containers", "k8s", "network",
+]
 open_apps = ["iTerm"]
 
 [runtime]

@@ -101,7 +101,56 @@ id = "backup"
 title = "Backup & Restore"
 body = "docs/help/backup.md"
 order = 140
-keywords = ["backup", "restore", "snapshot", "old_dots", "recovery"]
+keywords = ["backup", "restore", "snapshot", "old_dots", "recovery", "restic", "rclone", "syncthing"]
+
+[[topics]]
+id = "data"
+title = "Data tooling"
+body = "docs/help/data.md"
+order = 145
+keywords = ["data", "pgcli", "pg_activity", "duckdb", "qsv", "miller", "visidata", "jless", "postgres"]
+
+[[topics]]
+id = "network"
+title = "Network tooling"
+body = "docs/help/network.md"
+order = 146
+keywords = ["network", "mtr", "nmap", "iperf", "gping", "bandwhich", "termshark", "mosh", "tailscale", "rclone"]
+
+[[topics]]
+id = "hardware"
+title = "Hardware tooling"
+body = "docs/help/hardware.md"
+order = 147
+keywords = ["hardware", "smartctl", "smartmontools", "fio", "lsusb", "lspci", "picocom", "serial"]
+
+[[topics]]
+id = "infra"
+title = "Infrastructure tooling"
+body = "docs/help/infra.md"
+order = 148
+keywords = ["infra", "terraform", "tofu", "opentofu", "tflint", "checkov", "terragrunt", "ansible", "vault", "packer", "infracost"]
+
+[[topics]]
+id = "docs-tooling"
+title = "Documentation tooling"
+body = "docs/help/docs-tooling.md"
+order = 149
+keywords = ["docs", "vale", "pandoc", "graphviz", "mermaid", "mmdc", "typst", "markdownlint", "cspell", "lychee", "mkdocs"]
+
+[[topics]]
+id = "geo"
+title = "Geospatial tooling"
+body = "docs/help/geo.md"
+order = 150
+keywords = ["geo", "gdal", "ogr", "osmium", "osm2pgsql", "mapshaper", "tippecanoe", "pmtiles", "qgis", "postgis", "osm"]
+
+[[topics]]
+id = "media"
+title = "Media tooling"
+body = "docs/help/media.md"
+order = 151
+keywords = ["media", "ffmpeg", "ffprobe", "sox", "yt-dlp", "imagemagick", "exiftool", "raycast", "rectangle", "localsend", "tableplus"]
 
 [[topics]]
 id = "agent-evals"

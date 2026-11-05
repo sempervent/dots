@@ -1,0 +1,24 @@
+# DOTS gitleaks — repository-scoped secret scanning
+# Allowlists are narrow and documented. Prefer fixing leaks over suppression.
+
+title = "DOTS"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "dots-synthetic-test-secret"
+description = "DOTS synthetic test credential marker (fixtures only)"
+regex = '''DOTS_FAKE_SECRET=[A-Za-z0-9_\-]{20,}'''
+keywords = ["DOTS_FAKE_SECRET"]
+
+[allowlist]
+description = "Synthetic fixtures and documented examples only"
+paths = [
+  '''scripts/tests/fixtures/security/''',
+  '''.*/fixtures/security/.*''',
+]
+regexes = [
+  # Documented placeholder in security docs / help examples
+  '''EXAMPLE_SECRET_DO_NOT_USE_[A-Z0-9]+''',
+]

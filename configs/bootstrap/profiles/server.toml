@@ -5,6 +5,9 @@
 # set runtime.multiplexer = "herdr" in a custom profile to auto-start Herdr.
 # Herdr availability does NOT authorize Hermes/Codex/Cursor/Ollama/etc.
 #
+# v1.7 Phase 11: CLI ops groups (security/network/backup/hardware/containers).
+# Never includes gui/media/mactools/geo desktop stacks or AI providers by default.
+#
 # Use: ./bootstrap.sh --profile server
 # Example: ./bootstrap.sh --profile server --with hermes,ollama
 
@@ -12,7 +15,10 @@
 name = "server"
 description = "Headless server — tmux + Herdr available, no GUI/AI providers by default"
 with = ["herdr"]
-packages = ["core", "modern", "server"]
+packages = [
+  "core", "modern", "server",
+  "security", "network", "backup", "hardware", "containers",
+]
 open_apps = []
 
 [runtime]

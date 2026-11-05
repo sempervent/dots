@@ -19,13 +19,15 @@ optional = [
 
 [[groups]]
 name = "modern"
-description = "Shared ergonomic CLI"
+description = "Shared ergonomic CLI + Git evolution / structural search / log inspection"
 required = [
   "bat", "zoxide", "direnv", "htop", "tree",
 ]
 optional = [
   "eza", "atuin", "lazygit", "btop", "yq", "uv", "gh", "just",
   "git-delta", "leaf",
+  # v1.7 Phase 4 — Git evolution / search / logs (install-only; no Git takeover)
+  "jj", "git-town", "git-filter-repo", "git-sizer", "ast-grep", "lnav",
 ]
 
 [[groups]]
@@ -40,18 +42,24 @@ optional = [
 
 [[groups]]
 name = "infra"
-description = "Containers / k8s / terraform"
+description = "Docker/Helm/Terraform + IaC engineering CLIs (install-only; no apply/login/build)"
 required = []
 optional = [
-  "docker", "docker-compose", "helm", "k9s", "terraform",
+  "docker", "docker-compose", "helm", "terraform",
+  # v1.7 Phase 7 — IaC / config mgmt / images / cost (no remote backends, no apply)
+  "terraform-docs", "tflint", "checkov", "infracost", "terragrunt",
+  "ansible", "ansible-lint", "vault", "packer",
+  # OpenTofu not auto-installed; if present, check infra may use tofu fmt -check
 ]
 
 [[groups]]
 name = "media"
-description = "Image / video processing"
+description = "Image / audio / video / retrieval CLIs (install-only; no capture, playback, or downloads)"
 required = []
 optional = [
   "ffmpeg", "imagemagick", "exiftool",
+  # v1.7 Phase 10 — audio processing + explicit media retrieval
+  "sox", "yt-dlp",
 ]
 
 [[groups]]
@@ -72,43 +80,111 @@ optional = []
 
 [[groups]]
 name = "dev"
-description = "Local CI / lint / Rust ergonomics (install-only; no shell aliases)"
+description = "Local CI / lint / docs validation / Rust ergonomics (install-only; no shell aliases)"
 required = []
 optional = [
   "act", "difftastic", "mergiraf", "actionlint", "cargo-nextest", "bacon",
   "pre-commit", "hadolint", "taplo", "mkcert", "kondo",
+  # v1.7 Phase 1 — local workflow / docs / release-note validators
+  "zizmor", "git-cliff", "lychee", "markdownlint-cli2", "cspell",
 ]
 
 [[groups]]
 name = "security"
-description = "Secrets scanning / SBOM / signing CLIs (install-only; no auth)"
+description = "Secrets / SBOM / signing / YubiKey / host-inspection CLIs (install-only; no auth or enrollment)"
 required = []
 optional = [
   "gitleaks", "trivy", "sops", "age", "syft", "grype", "cosign",
   "osv-scanner", "semgrep",
+  # v1.7 Phase 2 — YubiKey / PKI / host inventory (install-only; no key gen or enrollment)
+  "ykman", "age-plugin-yubikey", "step", "osquery",
 ]
 
 [[groups]]
 name = "network"
-description = "Network / remote / k8s context CLIs (install-only; no Tailscale up)"
+description = "Network / remote CLIs (install-only; no scans, captures, iperf, or Tailscale up)"
 required = []
 optional = [
   "tailscale", "mosh", "rclone", "bandwhich", "gping", "doggo",
-  "stern", "kubectx", "grpcurl", "websocat",
+  "grpcurl", "websocat",
+  # v1.7 Phase 6 — diagnostics / remote (install-only; no probes)
+  "mtr", "nmap", "iperf3",
+  # termshark: Homebrew formula disabled 2026-01-03 — Linux maps may provide; needs tshark
+  "termshark", "tshark",
+]
+
+[[groups]]
+name = "hardware"
+description = "Storage / bus / serial diagnostics (install-only; no SMART tests, fio workloads, or serial I/O)"
+required = []
+optional = [
+  "smartmontools", "fio", "picocom",
+  # Linux-strong; Darwin may SKIP or limited brew formulae
+  "usbutils", "pciutils",
 ]
 
 [[groups]]
 name = "data"
-description = "Tabular / analytical CLIs"
+description = "PostgreSQL inspection + tabular / analytical CLIs (install-only; no DB connections)"
 required = []
 optional = [
   "duckdb", "qsv", "visidata", "miller", "jless",
+  # v1.7 Phase 5 — PostgreSQL inspection (no credentials / no connections)
+  "pgcli", "pg_activity",
+]
+
+[[groups]]
+name = "backup"
+description = "Backup / recovery CLIs (install-only; no repo init, backup, restore, or sync daemon)"
+required = []
+optional = [
+  "restic",
+  # rclone remains owned by network; Syncthing is --with syncthing (omit_from_all)
 ]
 
 [[groups]]
 name = "geo"
-description = "Geospatial CLI tooling"
+description = "Geospatial CLI tooling (OSM / tiles / geometry; install-only; no data download or DB import)"
 required = []
 optional = [
-  "gdal", "tippecanoe", "pmtiles",
+  # Foundations (GDAL provides ogr*/gdal*; PROJ/GEOS arrive as formula deps — do not duplicate)
+  "gdal",
+  # Vector tiles / archives (Phase 0 ALREADY; keep single ownership in geo)
+  "tippecanoe", "pmtiles",
+  # v1.7 Phase 9 — OSM processing + geometry CLI
+  "osmium-tool", "osm2pgsql",
+  # mapshaper: npm-only (no Homebrew formula); installed via helpers/mapshaper.sh when geo is selected
+  "mapshaper",
+]
+
+[[groups]]
+name = "containers"
+description = "OCI / container operator CLIs (install-only; no runtime start, pull, or compose up)"
+required = []
+optional = [
+  "lazydocker", "dive", "skopeo", "crane", "oras", "devcontainer", "dagger",
+]
+
+[[groups]]
+name = "k8s"
+description = "Kubernetes / GitOps operator CLIs (install-only; no cluster create, context switch, or deploy)"
+required = []
+optional = [
+  # foundation
+  "kubernetes-cli", "k9s", "kubectx", "stern",
+  # schema / security / plugins
+  "krew", "kubeconform", "kubescape", "popeye",
+  # GitOps
+  "helmfile", "argocd",
+]
+
+[[groups]]
+name = "docs"
+description = "Technical documentation / publishing CLIs (install-only; no rewrite, publish, or browser download)"
+required = []
+optional = [
+  # v1.7 Phase 8 — diagrams / conversion / prose / typography
+  # Lychee, markdownlint-cli2, cspell remain owned by `dev` (do not duplicate).
+  # MkDocs remains Python/site tooling; `tex` remains --with tex (TeXlive).
+  "graphviz", "pandoc", "vale", "mermaid-cli", "typst",
 ]

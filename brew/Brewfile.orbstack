@@ -1,0 +1,14 @@
+# brew/Brewfile.orbstack — optional Darwin container/VM runtime
+#
+# Install: ./setup.sh --with orbstack
+# Platforms: darwin only (component gate).
+#
+# Install-only. DOTS never:
+#   - launches OrbStack
+#   - changes Docker context
+#   - migrates images
+#   - removes Docker Desktop
+#
+# Coexists with Docker Desktop / docker CLI (infra group).
+
+cask "orbstack"

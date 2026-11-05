@@ -1,0 +1,11 @@
+# brew/Brewfile.mitmproxy — opt-in HTTP interception CLIs
+#
+# Install: ./setup.sh --with mitmproxy
+# Consent surface: TLS interception tooling is NEVER in default profiles.
+#
+# Install-only. DOTS never:
+#   - starts mitmproxy / mitmdump / mitmweb
+#   - generates or trusts a mitmproxy CA
+#   - modifies system / browser proxy settings
+
+cask "mitmproxy"
