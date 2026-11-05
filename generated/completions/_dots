@@ -79,6 +79,7 @@ _dots() {
     'tex:TeX'
     'mactools:macOS tools'
     'orbstack:OrbStack'
+    'davinci-resolve:DaVinci Resolve'
     'mitmproxy:mitmproxy'
     'syncthing:Syncthing'
     'lsp:Language servers'

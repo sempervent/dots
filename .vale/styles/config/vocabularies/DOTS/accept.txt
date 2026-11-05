@@ -64,3 +64,11 @@ checkov
 ansible-lint
 mermaid-cli
 markdownlint-cli2
+Vorssaint
+flux-app
+f.lux
+DaVinci
+davinci-resolve
+Blackmagic
+Fairlight
+OpenFX

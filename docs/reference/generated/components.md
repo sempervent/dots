@@ -24,8 +24,9 @@ Authoritative registry: `configs/components.toml`.
 | fluidvoice | FluidVoice | voice_ai | darwin | brew/Brewfile.fluidvoice | no | Local voice-to-text dictation app with optional AI enhancement |
 | images | Images toolkit | media | darwin, linux | brew/Brewfile.images | no | Deterministic image toolkit (Magick, etc.) |
 | tex | TeX | docs | darwin, linux | brew/Brewfile.tex | no | Homebrew TeX Live (CLI) |
-| mactools | macOS tools | workstation | darwin | brew/Brewfile.mactools | yes | Optional macOS workstation layer (Vorssaint + automation/audio/CLI; Brewfile.mactools) |
+| mactools | macOS tools | workstation | darwin | brew/Brewfile.mactools | yes | Optional macOS workstation layer (Vorssaint, f.lux, automation/audio/CLI; Brewfile.mactools) |
 | orbstack | OrbStack | containers | darwin | brew/Brewfile.orbstack | yes | Optional Darwin Docker-compatible runtime (install-only; never auto-start or remove Docker Desktop) |
+| davinci-resolve | DaVinci Resolve | media | darwin | brew/Brewfile.davinci-resolve | yes | Optional professional NLE via Mac App Store (mas; install-only; never launch, scan media, or require App Store auth globally) |
 | mitmproxy | mitmproxy | network | darwin | brew/Brewfile.mitmproxy | yes | Opt-in HTTP interception CLIs (install-only; never start proxy, trust CA, or change system proxy) |
 | syncthing | Syncthing | backup | darwin, linux | brew/Brewfile.syncthing | yes | Opt-in peer sync client (install-only; never start daemon, pair devices, or create folders) |
 | lsp | Language servers | developer_tooling | darwin, linux | brew/Brewfile.lsp | no | Language servers for DOTS development/editor workflows |

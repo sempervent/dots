@@ -19,7 +19,7 @@ Raycast / Rectangle / system utilities is intentional coexistence — DOTS
 never removes or disables either side.
 
 f.lux (cask flux-app): install-only. DOTS never sets location, wake schedule,
-colour temperature, launch-at-login, or Night Shift / True Tone settings.
+color temperature, launch-at-login, or Night Shift / True Tone settings.
 
 DaVinci Resolve is NOT part of mactools — use explicit:
   ./setup.sh --with davinci-resolve

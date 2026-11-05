@@ -33,7 +33,7 @@ dots_davinci_resolve_mas_authenticated() {
 
 # Non-launching status string for diagnostics / check media.
 dots_davinci_resolve_status() {
-	if [[ "$(uname -s)" != "Darwin" ]] && [[ "${DOTS_FORCE_OS:-}" != "darwin" ]]; then
+	if [[ "$(uname -s)" != "Darwin" ]] && [[ ${DOTS_FORCE_OS:-} != "darwin" ]]; then
 		echo "PLATFORM_UNSUPPORTED"
 		return 0
 	fi

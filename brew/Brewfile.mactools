@@ -20,7 +20,7 @@ cask "vorssaint"
 
 # --- display comfort ---
 # f.lux (Homebrew cask token: flux-app). Install-only. Never launch, never set
-# location/wake schedule/colour temperature, never enable launch-at-login, never
+# location/wake schedule/color temperature, never enable launch-at-login, never
 # disable Night Shift / True Tone / display profiles.
 cask "flux-app"
 
