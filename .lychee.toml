@@ -1,0 +1,21 @@
+# Lychee — documentation link checker for DOTS
+# Internal/broken links fail. Transient external failures can be excluded narrowly.
+
+verbose = "warning"
+no_progress = true
+max_concurrency = 8
+timeout = 20
+accept = ["200", "204", "206", "429"]
+
+# Never follow these (auth walls / rate-limit hostile).
+exclude = [
+  '^https://twitter\.com/',
+  '^https://x\.com/',
+  '^https://www\.linkedin\.com/',
+]
+
+include_verbatim = false
+cache = true
+max_cache_age = "2d"
+
+# Prefer repo-local Markdown / docs; callers pass explicit paths.

@@ -73,7 +73,7 @@ are documentation only; CI does **not** fetch them.
 | GrandPerspective | Disk usage treemap | `--with mactools` | darwin | https://grandperspectiv.sourceforge.net |
 | MIDI Monitor | MIDI signal inspector | `--with mactools` | darwin | https://www.snoize.com/MIDIMonitor/ |
 
-### Opt-in notes (not configured by DOTS)
+## Opt-in notes (not configured by DOTS)
 
 ```bash
 # difftastic as Git external diff (per-repo)
@@ -99,3 +99,7 @@ pmtiles show map.pmtiles
 Ownership paths: [Architecture](../concepts/architecture.md). How to extend:
 [Extending](extending.md). macOS layer detail: [mactools](../macos/mactools.md).
 Agent stack: [Agent harness](../agents/harness.md).
+
+## Local CI validation
+
+See [Local CI feedback loop](local-ci.md) (`./dots check fast`).

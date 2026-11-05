@@ -54,3 +54,6 @@ configs/mactools/hazel/**
 !configs/mactools/hazel/README.md
 configs/mactools/vorssaint/settings.plist
 
+
+# Lychee / local CI caches
+.lycheecache
