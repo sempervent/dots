@@ -40,10 +40,10 @@ optional = [
 
 [[groups]]
 name = "infra"
-description = "Containers / k8s / terraform"
+description = "Docker CLI / Helm / Terraform (k8s operator CLIs live in group k8s)"
 required = []
 optional = [
-  "docker", "docker-compose", "helm", "k9s", "terraform",
+  "docker", "docker-compose", "helm", "terraform",
 ]
 
 [[groups]]
@@ -94,11 +94,11 @@ optional = [
 
 [[groups]]
 name = "network"
-description = "Network / remote / k8s context CLIs (install-only; no Tailscale up)"
+description = "Network / remote CLIs (install-only; no Tailscale up; k8s context CLIs live in group k8s)"
 required = []
 optional = [
   "tailscale", "mosh", "rclone", "bandwhich", "gping", "doggo",
-  "stern", "kubectx", "grpcurl", "websocat",
+  "grpcurl", "websocat",
 ]
 
 [[groups]]
@@ -115,4 +115,25 @@ description = "Geospatial CLI tooling"
 required = []
 optional = [
   "gdal", "tippecanoe", "pmtiles",
+]
+
+[[groups]]
+name = "containers"
+description = "OCI / container operator CLIs (install-only; no runtime start, pull, or compose up)"
+required = []
+optional = [
+  "lazydocker", "dive", "skopeo", "crane", "oras", "devcontainer", "dagger",
+]
+
+[[groups]]
+name = "k8s"
+description = "Kubernetes / GitOps operator CLIs (install-only; no cluster create, context switch, or deploy)"
+required = []
+optional = [
+  # foundation
+  "kubernetes-cli", "k9s", "kubectx", "stern",
+  # schema / security / plugins
+  "krew", "kubeconform", "kubescape", "popeye",
+  # GitOps
+  "helmfile", "argocd",
 ]
