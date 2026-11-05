@@ -12,7 +12,17 @@
 # BlackHole may require a reboot — DOTS never reboots automatically.
 
 # --- macOS control plane ---
+# Vorssaint: install-only. Never launch, enable login items, configure modules,
+# modify clipboard/system settings, or request Accessibility / Screen Recording /
+# Full Disk Access / location. Overlaps functionally with Raycast/Rectangle/
+# system utilities — DOTS does not remove, disable, or prefer either side.
 cask "vorssaint"
+
+# --- display comfort ---
+# f.lux (Homebrew cask token: flux-app). Install-only. Never launch, never set
+# location/wake schedule/colour temperature, never enable launch-at-login, never
+# disable Night Shift / True Tone / display profiles.
+cask "flux-app"
 
 # --- launcher / automation / filesystem ---
 # Raycast: install-only; never launch, never configure hotkeys/extensions/accounts.
