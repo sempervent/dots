@@ -44,9 +44,10 @@ def generate() -> str:
         else:
             left = f"  {usage}"
         desc = str(c.get("description") or "")
-        # shorten long descriptions for synopsis
+        # shorten long descriptions for synopsis (word-boundary; avoid "Kubern...")
         if len(desc) > 56:
-            desc = desc[:53] + "..."
+            cut = desc[:53].rsplit(" ", 1)[0].rstrip(",;:")
+            desc = (cut if cut else desc[:53]) + "..."
         pad = max(1, 36 - len(left))
         lines.append(f"{left}{' ' * pad}{desc}")
     lines.extend(

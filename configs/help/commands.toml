@@ -192,7 +192,7 @@ description = "Read-only inventory (no downloads)."
 name = "check"
 usage = "dots check [--profile NAME] | dots check fast|workflows|docs|all-local|act|release-notes|security|containers|k8s|dev|data|backup"
 category = "diagnostics"
-description = "Machine health, local CI, security, container, Kubernetes, developer, data, or backup tooling validation."
+description = "Machine health plus local CI, security, containers, k8s, dev, data, and backup checks."
 mutating = false
 related = ["status", "update", "help", "packages"]
 [[commands.examples]]
