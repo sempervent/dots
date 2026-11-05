@@ -5,10 +5,10 @@
 .SH NAME
 dots\-check \- Machine health plus local CI, docs, security, containers, k8s
 .SH SYNOPSIS
-.B dots check [\-\-profile NAME] | dots check fast|workflows|docs|all\-local|act|release\-notes|security|containers|k8s|dev|data|backup|network|hardware|infra
+.B dots check [\-\-profile NAME] | dots check fast|workflows|docs|all\-local|act|release\-notes|security|containers|k8s|dev|data|geo|backup|network|hardware|infra
 .SH DESCRIPTION
-Machine health plus local CI, docs, security, containers, k8s, data, backup,
-network, hardware, and infra checks.
+Machine health plus local CI, docs, security, containers, k8s, data, geo,
+backup, network, hardware, and infra checks.
 .SH EXAMPLES
 .TP
 .B dots check
@@ -55,6 +55,15 @@ PostgreSQL/tabular tooling presence (no DB connections or dataset reads).
 .TP
 .B dots check data examples
 Print data\-tool example commands (stdout only; not executed).
+.TP
+.B dots check geo
+Geospatial tooling presence (no OSM download, DB connect, or QGIS launch).
+.TP
+.B dots check geo gate
+Local geospatial fixture gate (no network / no database).
+.TP
+.B dots check geo examples
+Print geo\-tool example commands (stdout only; not executed).
 .TP
 .B dots check backup
 Backup/sync tooling presence (no repo init, remotes, or Syncthing start).

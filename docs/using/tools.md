@@ -145,3 +145,7 @@ See [Network tooling](network-tooling.md) and [Hardware tooling](hardware-toolin
 ## Infrastructure tooling
 
 See [Infrastructure engineering](infra-tooling.md) (`./dots check infra`).
+
+## Geospatial tooling
+
+See [Geospatial workstation tooling](geo-tooling.md) (`./dots check geo`).

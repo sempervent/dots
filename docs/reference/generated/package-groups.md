@@ -114,11 +114,11 @@ Backup / recovery CLIs (install-only; no repo init, backup, restore, or sync dae
 
 ## `geo`
 
-Geospatial CLI tooling
+Geospatial CLI tooling (OSM / tiles / geometry; install-only; no data download or DB import)
 
 **Required:** (none)
 
-**Optional:** `gdal`, `tippecanoe`, `pmtiles`
+**Optional:** `gdal`, `tippecanoe`, `pmtiles`, `osmium-tool`, `osm2pgsql`, `mapshaper`
 
 ## `containers`
 

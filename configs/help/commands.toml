@@ -190,9 +190,9 @@ description = "Read-only inventory (no downloads)."
 
 [[commands]]
 name = "check"
-usage = "dots check [--profile NAME] | dots check fast|workflows|docs|all-local|act|release-notes|security|containers|k8s|dev|data|backup|network|hardware|infra"
+usage = "dots check [--profile NAME] | dots check fast|workflows|docs|all-local|act|release-notes|security|containers|k8s|dev|data|geo|backup|network|hardware|infra"
 category = "diagnostics"
-description = "Machine health plus local CI, docs, security, containers, k8s, data, backup, network, hardware, and infra checks."
+description = "Machine health plus local CI, docs, security, containers, k8s, data, geo, backup, network, hardware, and infra checks."
 mutating = false
 related = ["status", "update", "help", "packages"]
 [[commands.examples]]
@@ -240,6 +240,15 @@ description = "PostgreSQL/tabular tooling presence (no DB connections or dataset
 [[commands.examples]]
 command = "dots check data examples"
 description = "Print data-tool example commands (stdout only; not executed)."
+[[commands.examples]]
+command = "dots check geo"
+description = "Geospatial tooling presence (no OSM download, DB connect, or QGIS launch)."
+[[commands.examples]]
+command = "dots check geo gate"
+description = "Local geospatial fixture gate (no network / no database)."
+[[commands.examples]]
+command = "dots check geo examples"
+description = "Print geo-tool example commands (stdout only; not executed)."
 [[commands.examples]]
 command = "dots check backup"
 description = "Backup/sync tooling presence (no repo init, remotes, or Syncthing start)."

@@ -4,6 +4,7 @@
 ./dots status
 ./dots check
 ./dots check data
+./dots check geo
 ./dots check backup
 ./dots check network
 ./dots check hardware

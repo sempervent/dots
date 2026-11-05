@@ -139,6 +139,13 @@ order = 149
 keywords = ["docs", "vale", "pandoc", "graphviz", "mermaid", "mmdc", "typst", "markdownlint", "cspell", "lychee", "mkdocs"]
 
 [[topics]]
+id = "geo"
+title = "Geospatial tooling"
+body = "docs/help/geo.md"
+order = 150
+keywords = ["geo", "gdal", "ogr", "osmium", "osm2pgsql", "mapshaper", "tippecanoe", "pmtiles", "qgis", "postgis", "osm"]
+
+[[topics]]
 id = "agent-evals"
 title = "Agent Evaluations"
 body = "docs/agents/evals.md"
