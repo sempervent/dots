@@ -15,9 +15,14 @@
 cask "vorssaint"
 
 # --- launcher / automation / filesystem ---
+# Raycast: install-only; never launch, never configure hotkeys/extensions/accounts.
 cask "raycast"
 cask "keyboard-maestro"
 cask "hazel"
+# Rectangle: keyboard window management; never launch or request Accessibility.
+# (No other window manager is DOTS-managed — complementary if user also uses
+# yabai/Amethyst/AeroSpace/Magnet; DOTS does not remove or disable them.)
+cask "rectangle"
 
 # --- network visibility ---
 cask "little-snitch"
@@ -70,3 +75,9 @@ cask "secretive"
 # --- API / HTTP inspection GUIs (install-only; never launch or trust CAs) ---
 cask "bruno"
 cask "proxyman"
+
+# --- desktop productivity (install-only; omit_from_all via mactools) ---
+# LocalSend: never launch, never start listeners / peer discovery / transfers.
+cask "localsend"
+# TablePlus: optional DB GUI complementary to psql/pgcli; never launch or connect.
+cask "tableplus"
