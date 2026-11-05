@@ -111,3 +111,7 @@ See [Local security and supply-chain tooling](security.md) (`./dots check securi
 ## Containers / Kubernetes
 
 See [Containers](containers.md) and [Kubernetes](k8s.md).
+
+## Developer workflow
+
+See [Developer workflow and inspection](developer-workflow.md).
