@@ -96,11 +96,25 @@ optional = [
 
 [[groups]]
 name = "network"
-description = "Network / remote CLIs (install-only; no Tailscale up; k8s context CLIs live in group k8s)"
+description = "Network / remote CLIs (install-only; no scans, captures, iperf, or Tailscale up)"
 required = []
 optional = [
   "tailscale", "mosh", "rclone", "bandwhich", "gping", "doggo",
   "grpcurl", "websocat",
+  # v1.7 Phase 6 — diagnostics / remote (install-only; no probes)
+  "mtr", "nmap", "iperf3",
+  # termshark: Homebrew formula disabled 2026-01-03 — Linux maps may provide; needs tshark
+  "termshark", "tshark",
+]
+
+[[groups]]
+name = "hardware"
+description = "Storage / bus / serial diagnostics (install-only; no SMART tests, fio workloads, or serial I/O)"
+required = []
+optional = [
+  "smartmontools", "fio", "picocom",
+  # Linux-strong; Darwin may SKIP or limited brew formulae
+  "usbutils", "pciutils",
 ]
 
 [[groups]]
