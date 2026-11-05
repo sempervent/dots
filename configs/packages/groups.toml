@@ -19,13 +19,15 @@ optional = [
 
 [[groups]]
 name = "modern"
-description = "Shared ergonomic CLI"
+description = "Shared ergonomic CLI + Git evolution / structural search / log inspection"
 required = [
   "bat", "zoxide", "direnv", "htop", "tree",
 ]
 optional = [
   "eza", "atuin", "lazygit", "btop", "yq", "uv", "gh", "just",
   "git-delta", "leaf",
+  # v1.7 Phase 4 — Git evolution / search / logs (install-only; no Git takeover)
+  "jj", "git-town", "git-filter-repo", "git-sizer", "ast-grep", "lnav",
 ]
 
 [[groups]]

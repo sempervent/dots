@@ -19,3 +19,12 @@ brew "tree"
 brew "vim"
 # Terminal Markdown previewer (binary: leaf)
 brew "leaf-markdown-viewer"
+# v1.7 Phase 4 — Git evolution / structural search / logs (install-only)
+# Git remains authoritative; jj/git-town never auto-configure repos.
+# git-filter-repo is destructive — never invoked by DOTS setup/check.
+brew "jj"
+brew "git-town"
+brew "git-filter-repo"
+brew "git-sizer"
+brew "ast-grep"
+brew "lnav"
