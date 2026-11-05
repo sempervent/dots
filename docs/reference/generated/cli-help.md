@@ -26,7 +26,7 @@ Usage:
   ./dots restore [ID]               Restore a snapshot (creates a safety snapshot first).
   ./dots profile …                  Create, preview, or switch machine profiles.
   ./dots models [discover|pull|…]   Local model plan, discovery, and pull workflows.
-  ./dots check [--profile NAME]     Verify machine health against the active/selected pro...
+  ./dots check [--profile NAME] | dots check fast|workflows|docs|all-local|act|release-notes|security|containers|k8s|dev|data|backup Machine health, local CI, security, container, Kubern...
   ./dots update                     git pull the DOTS repo and optionally reapply setup.
   ./dots help [topic] [--plain] [--search QUERY] [--cheatsheet] Interactive Textual help (dots-help) for this machine.
   ./dots shell [status|keys|startup] Inspect shell, prompt, and keybinding ownership.
@@ -85,6 +85,9 @@ Selectors (--with / --without):
     images       Deterministic image toolkit (Magick, etc.)
     tex          Homebrew TeX Live (CLI)
     mactools     Optional macOS workstation layer (Vorssaint + automation/audio/CLI; Brewfile.mactools)
+    orbstack     Optional Darwin Docker-compatible runtime (install-only; never auto-start or remove Docker Desktop)
+    mitmproxy    Opt-in HTTP interception CLIs (install-only; never start proxy, trust CA, or change system proxy)
+    syncthing    Opt-in peer sync client (install-only; never start daemon, pair devices, or create folders)
     lsp          Language servers for DOTS development/editor workflows
     ai-server    Server stack: llama.cpp (llama-server) + Open WebUI via Docker Compose (opt-in models)
     pi           Programmable coding-agent runtime for DOTS local-first agent orchestration (npm; Node ≥22.19)
@@ -144,6 +147,9 @@ Options:
                       images       Deterministic image toolkit (Magick, etc.)
                       tex          Homebrew TeX Live (CLI)
                       mactools     Optional macOS workstation layer (Vorssaint + automation/audio/CLI; Brewfile.mactools)
+                      orbstack     Optional Darwin Docker-compatible runtime (install-only; never auto-start or remove Docker Desktop)
+                      mitmproxy    Opt-in HTTP interception CLIs (install-only; never start proxy, trust CA, or change system proxy)
+                      syncthing    Opt-in peer sync client (install-only; never start daemon, pair devices, or create folders)
                       lsp          Language servers for DOTS development/editor workflows
                       ai-server    Server stack: llama.cpp (llama-server) + Open WebUI via Docker Compose (opt-in models)
                       pi           Programmable coding-agent runtime for DOTS local-first agent orchestration (npm; Node ≥22.19)

@@ -3,6 +3,8 @@
 ```bash
 ./dots status
 ./dots check
+./dots check data
+./dots check backup
 ./dots components active
 ./dots packages status
 ./dots lsp status

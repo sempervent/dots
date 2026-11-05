@@ -1,5 +1,9 @@
 # Backup and recovery
 
+> **Scope:** This page is about **DOTS config snapshots** (`./dots backup`).
+> For restic / rclone / Syncthing package tooling, see
+> [Backup tooling](../using/backup-tooling.md).
+
 Before DOTS replaces unmanaged targets, it creates one coherent snapshot.
 
 ## Execution invariant

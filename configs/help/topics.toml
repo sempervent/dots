@@ -101,7 +101,14 @@ id = "backup"
 title = "Backup & Restore"
 body = "docs/help/backup.md"
 order = 140
-keywords = ["backup", "restore", "snapshot", "old_dots", "recovery"]
+keywords = ["backup", "restore", "snapshot", "old_dots", "recovery", "restic", "rclone", "syncthing"]
+
+[[topics]]
+id = "data"
+title = "Data tooling"
+body = "docs/help/data.md"
+order = 145
+keywords = ["data", "pgcli", "pg_activity", "duckdb", "qsv", "miller", "visidata", "jless", "postgres"]
 
 [[topics]]
 id = "agent-evals"

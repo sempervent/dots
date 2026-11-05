@@ -63,9 +63,15 @@ are documentation only; CI does **not** fetch them.
 | mosh | Roaming remote shell | `network` group | darwin, linux | https://mosh.org |
 | rclone | Cloud storage sync | `network` group | darwin, linux | https://rclone.org |
 | doggo | Human-friendly DNS client | `network` group | darwin, linux | https://github.com/mr-karan/doggo |
-| duckdb | In-process analytical SQL | `data` group | darwin, linux | https://duckdb.org |
+| duckdb | In-process analytical SQL CLI | `data` group | darwin, linux | https://duckdb.org |
+| qsv | CSV toolkit | `data` group | darwin (+ partial linux) | https://github.com/jqnatividad/qsv |
 | miller | Name-indexed CSV/TSV/JSON CLI | `data` group | darwin, linux | https://miller.readthedocs.io |
 | visidata | Terminal spreadsheet multitool | `data` group | darwin, linux | https://www.visidata.org |
+| jless | JSON pager | `data` group | darwin (+ partial linux) | https://github.com/PaulJuliusMartinez/jless |
+| pgcli | Enhanced PostgreSQL interactive client | `data` group | darwin (+ partial linux) | https://www.pgcli.com |
+| pg_activity | PostgreSQL activity monitor | `data` group | darwin (+ partial linux) | https://github.com/dalibo/pg_activity |
+| restic | Encrypted snapshot backup | `backup` group | darwin, linux | https://restic.net |
+| Syncthing | Peer sync (opt-in; not a backup) | `--with syncthing` | darwin, linux | https://syncthing.net |
 | gdal | Geospatial data library / CLIs | `geo` group | darwin, linux | https://gdal.org |
 | tippecanoe | Vector tile builder | `geo` group | darwin, linux | https://github.com/felt/tippecanoe |
 | pmtiles | PMTiles archive CLI | `geo` group | darwin, linux | https://github.com/protomaps/go-pmtiles |
@@ -115,3 +121,8 @@ See [Containers](containers.md) and [Kubernetes](k8s.md).
 ## Developer workflow
 
 See [Developer workflow and inspection](developer-workflow.md).
+
+## Data / backup tooling
+
+See [Data tooling](data-tooling.md) and [Backup tooling](backup-tooling.md)
+(`./dots check data`, `./dots check backup`).
