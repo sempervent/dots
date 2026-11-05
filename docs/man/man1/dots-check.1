@@ -3,11 +3,11 @@
 .
 .TH DOTS\-CHECK 1 "2026-11-02" "DOTS 1.6.2" "User Commands"
 .SH NAME
-dots\-check \- Machine health plus local CI, security, containers, k8s, data
+dots\-check \- Machine health plus local CI, docs, security, containers, k8s
 .SH SYNOPSIS
 .B dots check [\-\-profile NAME] | dots check fast|workflows|docs|all\-local|act|release\-notes|security|containers|k8s|dev|data|backup|network|hardware|infra
 .SH DESCRIPTION
-Machine health plus local CI, security, containers, k8s, data, backup,
+Machine health plus local CI, docs, security, containers, k8s, data, backup,
 network, hardware, and infra checks.
 .SH EXAMPLES
 .TP
@@ -21,7 +21,13 @@ Cheap local CI validators (requires package group dev).
 actionlint + zizmor on GitHub Actions.
 .TP
 .B dots check docs \-\-offline
-Markdown/spell/link checks without external HTTP.
+Docs lint + Vale + links + diagrams without external HTTP.
+.TP
+.B dots check docs status
+Documentation tooling inventory (Graphviz/Pandoc/Vale/Mermaid/Typst).
+.TP
+.B dots check docs render
+Non\-mutating diagram/doc previews to a temp directory.
 .TP
 .B dots check release\-notes
 Preview git\-cliff notes since previous tag (stdout).

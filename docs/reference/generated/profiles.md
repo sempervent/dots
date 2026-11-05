@@ -14,7 +14,7 @@ ALL optional DOTS components (lab convenience — may include cloud AI)
 
 - **Source:** `configs/bootstrap/profiles/all.toml`
 - **include_all_optional:** yes
-- **packages:** `core`, `modern`, `workstation`, `infra`, `media`, `gui`, `dev`, `security`, `network`, `data`, `geo`, `containers`, `k8s`, `backup`, `hardware`
+- **packages:** `core`, `modern`, `workstation`, `infra`, `media`, `gui`, `dev`, `docs`, `security`, `network`, `data`, `geo`, `containers`, `k8s`, `backup`, `hardware`
 - **with:** (none)
 - **runtime.multiplexer:** `tmux`
 
@@ -32,7 +32,7 @@ Core shell UX only — safe on any machine
 Personal workstation — edit before relying on it
 
 - **Source:** `configs/bootstrap/profiles/home.toml`
-- **packages:** `core`, `modern`, `workstation`, `infra`, `media`, `gui`, `dev`, `network`, `data`, `geo`, `security`, `containers`, `k8s`, `backup`, `hardware`
+- **packages:** `core`, `modern`, `workstation`, `infra`, `media`, `gui`, `dev`, `docs`, `network`, `data`, `geo`, `security`, `containers`, `k8s`, `backup`, `hardware`
 - **with:** `ai`, `herdr`, `skills`, `ai-skills`, `images`, `tex`
 - **without:** `fluidvoice`
 - **runtime.multiplexer:** `herdr`
@@ -51,7 +51,7 @@ Headless server — tmux + Herdr available, no GUI/AI providers by default
 Conservative allowlist — no AI clients by default
 
 - **Source:** `configs/bootstrap/profiles/work.toml`
-- **packages:** `core`, `modern`, `workstation`, `dev`, `data`, `geo`, `security`, `gui`
+- **packages:** `core`, `modern`, `workstation`, `dev`, `docs`, `data`, `geo`, `security`, `gui`
 - **with:** (none)
 - **runtime.multiplexer:** `tmux`
 

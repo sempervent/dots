@@ -192,7 +192,7 @@ description = "Read-only inventory (no downloads)."
 name = "check"
 usage = "dots check [--profile NAME] | dots check fast|workflows|docs|all-local|act|release-notes|security|containers|k8s|dev|data|backup|network|hardware|infra"
 category = "diagnostics"
-description = "Machine health plus local CI, security, containers, k8s, data, backup, network, hardware, and infra checks."
+description = "Machine health plus local CI, docs, security, containers, k8s, data, backup, network, hardware, and infra checks."
 mutating = false
 related = ["status", "update", "help", "packages"]
 [[commands.examples]]
@@ -206,7 +206,13 @@ command = "dots check workflows"
 description = "actionlint + zizmor on GitHub Actions."
 [[commands.examples]]
 command = "dots check docs --offline"
-description = "Markdown/spell/link checks without external HTTP."
+description = "Docs lint + Vale + links + diagrams without external HTTP."
+[[commands.examples]]
+command = "dots check docs status"
+description = "Documentation tooling inventory (Graphviz/Pandoc/Vale/Mermaid/Typst)."
+[[commands.examples]]
+command = "dots check docs render"
+description = "Non-mutating diagram/doc previews to a temp directory."
 [[commands.examples]]
 command = "dots check release-notes"
 description = "Preview git-cliff notes since previous tag (stdout)."

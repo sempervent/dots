@@ -12,15 +12,17 @@ still owns final multi-platform / integration validation (Phase 11 and ongoing).
 
 ./dots check fast          # cheap deterministic validators
 ./dots check workflows     # actionlint + zizmor
-./dots check docs          # markdownlint + cspell + lychee (HTTP)
+./dots check docs          # markdownlint + cspell + Vale + lychee + diagrams
 ./dots check docs --offline
+./dots check docs status   # publishing toolchain inventory
 ./dots check all-local     # fast + full links + pre-commit
 ./dots check act list      # list jobs act can see (needs container runtime)
 ./dots check release-notes # git-cliff preview to stdout (never writes CHANGELOG)
 ```
 
 Validation is **read-only**: it never installs packages, never rewrites profiles,
-and never starts Docker Desktop / OrbStack.
+never starts Docker Desktop / OrbStack, never downloads browsers during docs
+checks, and never publishes documentation.
 
 ## What `fast` runs
 
@@ -58,11 +60,17 @@ Policy config: `.github/zizmor.yml`. Prefer fixing workflows over broad ignores.
 ## Documentation validation
 
 ```bash
-./dots check docs --offline   # internal references only
+./dots check docs --offline   # internal references + Vale + local diagrams
 ./dots check docs             # includes external HTTP (transient 429 accepted)
+./dots check docs status      # Graphviz / Pandoc / Vale / Mermaid / Typst inventory
+./dots check docs render      # non-mutating previews (temp / explicit --output)
 ```
 
-Configs: `.markdownlint-cli2.jsonc`, `cspell.json`, `.lychee.toml`.
+Configs: `.markdownlint-cli2.jsonc`, `cspell.json`, `.lychee.toml`, `.vale.ini`.
+
+`check fast` keeps markdownlint + cspell + offline lychee only (no Vale/diagrams).
+Full publishing toolchain docs: `docs/using/docs-tooling.md`. Requires package
+groups `dev` + `docs`.
 
 ## Dockerfiles and pre-commit
 

@@ -132,6 +132,13 @@ order = 148
 keywords = ["infra", "terraform", "tofu", "opentofu", "tflint", "checkov", "terragrunt", "ansible", "vault", "packer", "infracost"]
 
 [[topics]]
+id = "docs-tooling"
+title = "Documentation tooling"
+body = "docs/help/docs-tooling.md"
+order = 149
+keywords = ["docs", "vale", "pandoc", "graphviz", "mermaid", "mmdc", "typst", "markdownlint", "cspell", "lychee", "mkdocs"]
+
+[[topics]]
 id = "agent-evals"
 title = "Agent Evaluations"
 body = "docs/agents/evals.md"

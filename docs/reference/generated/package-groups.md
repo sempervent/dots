@@ -136,3 +136,11 @@ Kubernetes / GitOps operator CLIs (install-only; no cluster create, context swit
 
 **Optional:** `kubernetes-cli`, `k9s`, `kubectx`, `stern`, `krew`, `kubeconform`, `kubescape`, `popeye`, `helmfile`, `argocd`
 
+## `docs`
+
+Technical documentation / publishing CLIs (install-only; no rewrite, publish, or browser download)
+
+**Required:** (none)
+
+**Optional:** `graphviz`, `pandoc`, `vale`, `mermaid-cli`, `typst`
+
