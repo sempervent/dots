@@ -5,6 +5,7 @@
 ./dots check
 ./dots check data
 ./dots check geo
+./dots check media
 ./dots check backup
 ./dots check network
 ./dots check hardware

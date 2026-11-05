@@ -183,7 +183,7 @@ Optional macOS workstation layer (Vorssaint + automation/audio/CLI; Brewfile.mac
 - **brewfile:** `brew/Brewfile.mactools`
 - **omit_from_all:** yes
 - **formulae:** `mise`, `yazi`, `watchexec`, `hyperfine`, `mprocs`, `xh`, `dust`, `duf`, `diskbloom`
-- **casks:** `vorssaint`, `raycast`, `keyboard-maestro`, `hazel`, `little-snitch`, `hookmark`, `devonthink`, `ghostty`, `zed`, `loopback`, `audio-hijack`, `blackhole-2ch`, `vcv-rack`, `obs`, `touchdesigner`, `processing`, `sonic-pi`, `supercollider`, `qgis`, `grandperspective`, `midi-monitor`, `secretive`, `bruno`, `proxyman`
+- **casks:** `vorssaint`, `raycast`, `keyboard-maestro`, `hazel`, `rectangle`, `little-snitch`, `hookmark`, `devonthink`, `ghostty`, `zed`, `loopback`, `audio-hijack`, `blackhole-2ch`, `vcv-rack`, `obs`, `touchdesigner`, `processing`, `sonic-pi`, `supercollider`, `qgis`, `grandperspective`, `midi-monitor`, `secretive`, `bruno`, `proxyman`, `localsend`, `tableplus`
 - **activate:** `./dots setup --with mactools`
 
 ### `orbstack`

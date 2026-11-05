@@ -42,11 +42,11 @@ Docker/Helm/Terraform + IaC engineering CLIs (install-only; no apply/login/build
 
 ## `media`
 
-Image / video processing
+Image / audio / video / retrieval CLIs (install-only; no capture, playback, or downloads)
 
 **Required:** (none)
 
-**Optional:** `ffmpeg`, `imagemagick`, `exiftool`
+**Optional:** `ffmpeg`, `imagemagick`, `exiftool`, `sox`, `yt-dlp`
 
 ## `gui`
 

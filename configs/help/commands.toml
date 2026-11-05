@@ -190,9 +190,9 @@ description = "Read-only inventory (no downloads)."
 
 [[commands]]
 name = "check"
-usage = "dots check [--profile NAME] | dots check fast|workflows|docs|all-local|act|release-notes|security|containers|k8s|dev|data|geo|backup|network|hardware|infra"
+usage = "dots check [--profile NAME] | dots check fast|workflows|docs|all-local|act|release-notes|security|containers|k8s|dev|data|geo|media|backup|network|hardware|infra"
 category = "diagnostics"
-description = "Machine health plus local CI, docs, security, containers, k8s, data, geo, backup, network, hardware, and infra checks."
+description = "Machine health plus local CI, docs, security, containers, k8s, data, geo, media, backup, network, hardware, and infra checks."
 mutating = false
 related = ["status", "update", "help", "packages"]
 [[commands.examples]]
@@ -249,6 +249,15 @@ description = "Local geospatial fixture gate (no network / no database)."
 [[commands.examples]]
 command = "dots check geo examples"
 description = "Print geo-tool example commands (stdout only; not executed)."
+[[commands.examples]]
+command = "dots check media"
+description = "Media CLI presence + Darwin app inventory (no capture, download, or GUI launch)."
+[[commands.examples]]
+command = "dots check media gate"
+description = "Synthetic media fixtures only (no devices / no network)."
+[[commands.examples]]
+command = "dots check media examples"
+description = "Print media-tool example commands (stdout only; not executed)."
 [[commands.examples]]
 command = "dots check backup"
 description = "Backup/sync tooling presence (no repo init, remotes, or Syncthing start)."

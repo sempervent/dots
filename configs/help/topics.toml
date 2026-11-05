@@ -146,6 +146,13 @@ order = 150
 keywords = ["geo", "gdal", "ogr", "osmium", "osm2pgsql", "mapshaper", "tippecanoe", "pmtiles", "qgis", "postgis", "osm"]
 
 [[topics]]
+id = "media"
+title = "Media tooling"
+body = "docs/help/media.md"
+order = 151
+keywords = ["media", "ffmpeg", "ffprobe", "sox", "yt-dlp", "imagemagick", "exiftool", "raycast", "rectangle", "localsend", "tableplus"]
+
+[[topics]]
 id = "agent-evals"
 title = "Agent Evaluations"
 body = "docs/agents/evals.md"

@@ -26,7 +26,7 @@ Usage:
   ./dots restore [ID]               Restore a snapshot (creates a safety snapshot first).
   ./dots profile …                  Create, preview, or switch machine profiles.
   ./dots models [discover|pull|…]   Local model plan, discovery, and pull workflows.
-  ./dots check [--profile NAME] | dots check fast|workflows|docs|all-local|act|release-notes|security|containers|k8s|dev|data|geo|backup|network|hardware|infra Machine health plus local CI, docs, security...
+  ./dots check [--profile NAME] | dots check fast|workflows|docs|all-local|act|release-notes|security|containers|k8s|dev|data|geo|media|backup|network|hardware|infra Machine health plus local CI, docs, security...
   ./dots update                     git pull the DOTS repo and optionally reapply setup.
   ./dots help [topic] [--plain] [--search QUERY] [--cheatsheet] Interactive Textual help (dots-help) for this machine.
   ./dots shell [status|keys|startup] Inspect shell, prompt, and keybinding ownership.

@@ -149,3 +149,7 @@ See [Infrastructure engineering](infra-tooling.md) (`./dots check infra`).
 ## Geospatial tooling
 
 See [Geospatial workstation tooling](geo-tooling.md) (`./dots check geo`).
+
+## Media tooling
+
+See [Media tooling](media-tooling.md) (`./dots check media`).

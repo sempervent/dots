@@ -5,10 +5,10 @@
 .SH NAME
 dots\-check \- Machine health plus local CI, docs, security, containers, k8s
 .SH SYNOPSIS
-.B dots check [\-\-profile NAME] | dots check fast|workflows|docs|all\-local|act|release\-notes|security|containers|k8s|dev|data|geo|backup|network|hardware|infra
+.B dots check [\-\-profile NAME] | dots check fast|workflows|docs|all\-local|act|release\-notes|security|containers|k8s|dev|data|geo|media|backup|network|hardware|infra
 .SH DESCRIPTION
 Machine health plus local CI, docs, security, containers, k8s, data, geo,
-backup, network, hardware, and infra checks.
+media, backup, network, hardware, and infra checks.
 .SH EXAMPLES
 .TP
 .B dots check
@@ -64,6 +64,16 @@ Local geospatial fixture gate (no network / no database).
 .TP
 .B dots check geo examples
 Print geo\-tool example commands (stdout only; not executed).
+.TP
+.B dots check media
+Media CLI presence + Darwin app inventory (no capture, download, or GUI
+launch).
+.TP
+.B dots check media gate
+Synthetic media fixtures only (no devices / no network).
+.TP
+.B dots check media examples
+Print media\-tool example commands (stdout only; not executed).
 .TP
 .B dots check backup
 Backup/sync tooling presence (no repo init, remotes, or Syncthing start).
