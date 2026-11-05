@@ -54,10 +54,12 @@ optional = [
 
 [[groups]]
 name = "media"
-description = "Image / video processing"
+description = "Image / audio / video / retrieval CLIs (install-only; no capture, playback, or downloads)"
 required = []
 optional = [
   "ffmpeg", "imagemagick", "exiftool",
+  # v1.7 Phase 10 — audio processing + explicit media retrieval
+  "sox", "yt-dlp",
 ]
 
 [[groups]]
