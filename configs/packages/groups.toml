@@ -72,11 +72,13 @@ optional = []
 
 [[groups]]
 name = "dev"
-description = "Local CI / lint / Rust ergonomics (install-only; no shell aliases)"
+description = "Local CI / lint / docs validation / Rust ergonomics (install-only; no shell aliases)"
 required = []
 optional = [
   "act", "difftastic", "mergiraf", "actionlint", "cargo-nextest", "bacon",
   "pre-commit", "hadolint", "taplo", "mkcert", "kondo",
+  # v1.7 Phase 1 — local workflow / docs / release-note validators
+  "zizmor", "git-cliff", "lychee", "markdownlint-cli2", "cspell",
 ]
 
 [[groups]]
