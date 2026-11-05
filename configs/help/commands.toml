@@ -190,11 +190,26 @@ description = "Read-only inventory (no downloads)."
 
 [[commands]]
 name = "check"
-usage = "dots check [--profile NAME]"
+usage = "dots check [--profile NAME] | dots check fast|workflows|docs|all-local|act|release-notes"
 category = "diagnostics"
-description = "Verify machine health against the active/selected profile."
+description = "Machine health check, or local CI validation (workflows/docs/Docker/release-notes)."
 mutating = false
-related = ["status", "update", "help"]
+related = ["status", "update", "help", "packages"]
+[[commands.examples]]
+command = "dots check"
+description = "Profile-aware machine health."
+[[commands.examples]]
+command = "dots check fast"
+description = "Cheap local CI validators (requires package group dev)."
+[[commands.examples]]
+command = "dots check workflows"
+description = "actionlint + zizmor on GitHub Actions."
+[[commands.examples]]
+command = "dots check docs --offline"
+description = "Markdown/spell/link checks without external HTTP."
+[[commands.examples]]
+command = "dots check release-notes"
+description = "Preview git-cliff notes since previous tag (stdout)."
 
 [[commands]]
 name = "update"

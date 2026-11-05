@@ -3,15 +3,28 @@
 .
 .TH DOTS\-CHECK 1 "2026-11-02" "DOTS 1.6.2" "User Commands"
 .SH NAME
-dots\-check \- Verify machine health against the active/selected profile.
+dots\-check \- Machine health check, or local CI validation
 .SH SYNOPSIS
-.B dots check [\-\-profile NAME]
+.B dots check [\-\-profile NAME] | dots check fast|workflows|docs|all\-local|act|release\-notes
 .SH DESCRIPTION
-Verify machine health against the active/selected profile.
+Machine health check, or local CI validation
+(workflows/docs/Docker/release\-notes).
 .SH EXAMPLES
-See
-.BR dots\-help (1)
-.
+.TP
+.B dots check
+Profile\-aware machine health.
+.TP
+.B dots check fast
+Cheap local CI validators (requires package group dev).
+.TP
+.B dots check workflows
+actionlint + zizmor on GitHub Actions.
+.TP
+.B dots check docs \-\-offline
+Markdown/spell/link checks without external HTTP.
+.TP
+.B dots check release\-notes
+Preview git\-cliff notes since previous tag (stdout).
 .SH SEE ALSO
 .BR dots (1),
 .BR dots\-help (1)

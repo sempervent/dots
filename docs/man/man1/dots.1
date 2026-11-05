@@ -51,8 +51,9 @@ Create, preview, or switch machine profiles.
 .B dots models [discover|pull|…]
 Local model plan, discovery, and pull workflows.
 .TP
-.B dots check [\-\-profile NAME]
-Verify machine health against the active/selected profile.
+.B dots check [\-\-profile NAME] | dots check fast|workflows|docs|all\-local|act|release\-notes
+Machine health check, or local CI validation
+(workflows/docs/Docker/release\-notes).
 .TP
 .B dots update
 git pull the DOTS repo and optionally reapply setup.
