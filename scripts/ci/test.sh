@@ -91,6 +91,8 @@ run scripts/tests/backup_test.sh
 run scripts/tests/skills_location_test.sh
 run scripts/tests/skills_desired_state_test.sh
 run scripts/tests/mactools_test.sh
+run scripts/tests/v171_creative_desktop_test.sh
+run scripts/tests/media_mactools_validate_test.sh
 run scripts/tests/backup_gate_test.sh
 run scripts/tests/package_state_test.sh
 run scripts/tests/component_discovery_test.sh

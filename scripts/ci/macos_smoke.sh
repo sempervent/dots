@@ -58,6 +58,8 @@ bash scripts/tests/backup_test.sh
 bash scripts/tests/skills_location_test.sh
 bash scripts/tests/skills_desired_state_test.sh
 bash scripts/tests/mactools_test.sh
+bash scripts/tests/v171_creative_desktop_test.sh
+bash scripts/tests/media_mactools_validate_test.sh
 bash scripts/tests/backup_gate_test.sh
 bash scripts/tests/lsp_toolchain_test.sh
 

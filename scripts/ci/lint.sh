@@ -76,7 +76,11 @@ SCRIPTS=(
 	scripts/tests/skills_location_test.sh
 	scripts/tests/skills_desired_state_test.sh
 	scripts/tests/mactools_test.sh
+	scripts/tests/v171_creative_desktop_test.sh
+	scripts/tests/media_mactools_validate_test.sh
 	scripts/tests/backup_gate_test.sh
+	helpers/davinci_resolve.sh
+	scripts/ci/media_validate.sh
 	scripts/tests/package_state_test.sh
 	scripts/tests/linux_distro_test.sh
 	scripts/mactools/export-configs.sh
@@ -108,8 +112,11 @@ shfmt -d -s \
 	helpers/ui.sh helpers/state.sh helpers/wizard.sh helpers/cask_apps.sh \
 	helpers/lsp.sh \
 	helpers/backup.sh helpers/package_state.sh helpers/linux_distro.sh \
-	helpers/fnm.sh helpers/openrig.sh \
+	helpers/fnm.sh helpers/openrig.sh helpers/davinci_resolve.sh \
+	helpers/mactools.sh helpers/optional_components.sh \
 	shell/runtime.sh shell/fnm.sh \
+	scripts/ci/media_validate.sh \
+	scripts/tests/v171_creative_desktop_test.sh \
 	scripts/pull_models.sh \
 	scripts/ci/prepare_runner.sh \
 	scripts/ci/ensure_lint_tools.sh \
