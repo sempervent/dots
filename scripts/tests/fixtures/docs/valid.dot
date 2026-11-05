@@ -1,0 +1,13 @@
+digraph dots_docs {
+  docs -> validate;
+  docs -> render;
+  docs -> convert;
+  validate -> markdownlint;
+  validate -> cspell;
+  validate -> Vale;
+  validate -> Lychee;
+  render -> Graphviz;
+  render -> Mermaid;
+  convert -> Pandoc;
+  convert -> Typst;
+}

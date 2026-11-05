@@ -7,7 +7,7 @@
 # Usage:
 #   ./scripts/ci/local_validate.sh fast
 #   ./scripts/ci/local_validate.sh workflows
-#   ./scripts/ci/local_validate.sh docs [--offline]
+#   ./scripts/ci/local_validate.sh docs [--offline|status|render|gate|…]
 #   ./scripts/ci/local_validate.sh all-local
 #   ./scripts/ci/local_validate.sh act [list|JOB]
 #   ./scripts/ci/local_validate.sh release-notes
@@ -32,8 +32,8 @@ Usage: ./scripts/ci/local_validate.sh <mode> [args]
 Modes:
   fast           Cheap deterministic checks (workflows + Dockerfiles + docs lint/spell)
   workflows      actionlint + zizmor on .github/workflows
-  docs           markdownlint-cli2 + cspell + lychee
-                 (add --offline to skip external HTTP link checks)
+  docs           markdownlint + cspell + Vale + lychee + diagram/publish stages
+                 (add --offline to skip external HTTP; submodes: status|render|gate)
   all-local      fast + full docs links + pre-commit (when configured)
   act            List or run a Linux-compatible GitHub Actions job via act
                  (act list | act <job>)
@@ -213,17 +213,37 @@ run_workflows() {
 run_docs() {
 	local rc=0
 	local offline=0
+	local sub=""
 	local arg
+	local rest=()
 	for arg in "$@"; do
-		[[ ${arg} == --offline ]] && offline=1
+		case "${arg}" in
+		--offline) offline=1 ;;
+		status | render | gate | examples | vale | diagrams)
+			sub="${arg}"
+			;;
+		*)
+			rest+=("${arg}")
+			;;
+		esac
 	done
+	# Submodes for publishing diagnostics / previews (Phase 8).
+	case "${sub}" in
+	status | render | gate | examples | vale | diagrams)
+		exec "${ROOT}/scripts/ci/docs_validate.sh" "${sub}" "${rest[@]+"${rest[@]}"}"
+		;;
+	esac
+
+	# Default docs pipeline — keep `check fast` cheap (no Vale/diagrams there).
 	run_step "markdownlint-cli2" run_markdownlint || rc=1
 	run_step "cspell" run_cspell || rc=1
+	run_step "vale" "${ROOT}/scripts/ci/docs_validate.sh" vale || rc=1
 	if [[ ${offline} -eq 1 ]]; then
 		run_step "lychee-offline" run_lychee --offline || rc=1
 	else
 		run_step "lychee" run_lychee || rc=1
 	fi
+	run_step "docs-diagrams" "${ROOT}/scripts/ci/docs_validate.sh" diagrams || rc=1
 	return "${rc}"
 }
 

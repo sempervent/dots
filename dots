@@ -477,8 +477,12 @@ EOF
 dots_cmd_check() {
 	# Local CI modes (Phase 1) — distinct from machine health check below.
 	case "${1:-}" in
-	fast | workflows | docs | all-local | act | release-notes)
+	fast | workflows | all-local | act | release-notes)
 		exec "${DIR}/scripts/ci/local_validate.sh" "$@"
+		;;
+	docs)
+		shift
+		exec "${DIR}/scripts/ci/local_validate.sh" docs "$@"
 		;;
 	security)
 		shift
@@ -535,7 +539,8 @@ Usage:
   ./dots check [--profile NAME|path]   Machine health (profile contract)
   ./dots check fast                    Local CI validators (workflows/docs/Docker)
   ./dots check workflows               actionlint + zizmor
-  ./dots check docs [--offline]        markdownlint + cspell + lychee
+  ./dots check docs [--offline|status|render|gate]
+                                       Docs lint + Vale + links + diagram/publish stages
   ./dots check all-local               fast + full docs links + pre-commit
   ./dots check act [list|JOB]          Local GitHub Actions via act (no secrets)
   ./dots check release-notes           git-cliff preview (stdout only)
@@ -556,11 +561,12 @@ Usage:
                                        IaC tooling (no init/apply/login/build/API)
 
 Local validators require package group `dev` (e.g. ./setup.sh --profile work).
-Domain checks require their package groups. They never install packages, start
-runtimes, create clusters, open databases, initialize backup repositories, contact
-remotes, start Syncthing, scan networks, capture packets, join Tailscale, benchmark
-disks, open serial devices, apply/destroy infrastructure, login to Vault, build
-images, call Infracost APIs, or require a YubiKey.
+Docs publishing CLIs require package group `docs`. Domain checks require their
+package groups. They never install packages, start runtimes, create clusters, open
+databases, initialize backup repositories, contact remotes, start Syncthing, scan
+networks, capture packets, join Tailscale, benchmark disks, open serial devices,
+apply/destroy infrastructure, login to Vault, build images, call Infracost APIs,
+download browsers during docs checks, publish documentation, or require a YubiKey.
 EOF
 		return 0
 		;;
