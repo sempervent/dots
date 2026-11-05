@@ -112,28 +112,18 @@ export DRY_RUN=0
 st="$(dots_davinci_resolve_status)"
 echo "${st}" | grep -qi 'AUTH REQUIRED\|NOT INSTALLED' && ok "status auth/not-installed" || bad "status: ${st}"
 
-out="$(dots_davinci_resolve_install 2>&1)" || {
-	# On non-Darwin the helper hard-fails — acceptable in Linux CI
-	if [[ "$(uname -s)" != "Darwin" ]]; then
-		ok "non-Darwin install rejected"
-		out=""
-	else
-		bad "install failed unexpectedly"
-	fi
-}
-if [[ "$(uname -s)" == "Darwin" ]]; then
-	echo "${out}" | grep -qi 'AUTH REQUIRED\|NOT CONFIGURED' && ok "install soft-skips without auth" || bad "no auth message: ${out}"
-	echo "${out}" | grep -qi 'FORBIDDEN_MAS_INSTALL' && bad "mas install invoked without auth" || ok "mas install not called"
-fi
+# Force Darwin for install-path exercises (real uname may be Linux in CI).
+export DOTS_FORCE_OS=darwin DOTS_FORCE_DARWIN_MAJOR=15
+out="$(dots_davinci_resolve_install 2>&1)" || bad "install failed unexpectedly"
+echo "${out}" | grep -qi 'AUTH REQUIRED\|NOT CONFIGURED' && ok "install soft-skips without auth" || bad "no auth message: ${out}"
+echo "${out}" | grep -qi 'FORBIDDEN_MAS_INSTALL' && bad "mas install invoked without auth" || ok "mas install not called"
 echo "${out}" | grep -qi 'FORBIDDEN_OPEN\|FORBIDDEN_OSASCRIPT' && bad "Resolve launched" || ok "no GUI launch"
 
 # Already installed path
 mkdir -p "${DOTS_DAVINCI_RESOLVE_APP_PATH}"
-if [[ "$(uname -s)" == "Darwin" ]]; then
-	out2="$(dots_davinci_resolve_install 2>&1)" || bad "installed path failed"
-	echo "${out2}" | grep -qi 'already present' && ok "idempotent when installed" || bad "no already-present: ${out2}"
-	echo "${out2}" | grep -qi 'FORBIDDEN_MAS_INSTALL' && bad "reinstall attempted" || ok "no reinstall when present"
-fi
+out2="$(dots_davinci_resolve_install 2>&1)" || bad "installed path failed"
+echo "${out2}" | grep -qi 'already present' && ok "idempotent when installed" || bad "no already-present: ${out2}"
+echo "${out2}" | grep -qi 'FORBIDDEN_MAS_INSTALL' && bad "reinstall attempted" || ok "no reinstall when present"
 st2="$(dots_davinci_resolve_status)"
 echo "${st2}" | grep -qi 'INSTALLED' && ok "status installed" || bad "status not installed: ${st2}"
 
@@ -148,12 +138,20 @@ install) echo "FORBIDDEN_MAS_INSTALL:$*" >&2; exit 99 ;;
 esac
 EOF
 export DRY_RUN=1
-if [[ "$(uname -s)" == "Darwin" ]]; then
-	dout="$(dots_davinci_resolve_install 2>&1)" || bad "dry-run failed"
-	echo "${dout}" | grep -qi 'dry-run' && ok "dry-run announce" || bad "dry-run silent"
-	echo "${dout}" | grep -qi 'FORBIDDEN_MAS_INSTALL' && bad "dry-run called mas install" || ok "dry-run no mas install"
-fi
+dout="$(dots_davinci_resolve_install 2>&1)" || bad "dry-run failed"
+echo "${dout}" | grep -qi 'dry-run' && ok "dry-run announce" || bad "dry-run silent"
+echo "${dout}" | grep -qi 'FORBIDDEN_MAS_INSTALL' && bad "dry-run called mas install" || ok "dry-run no mas install"
 export DRY_RUN=0
+
+# Real Linux host without FORCE_OS must still reject install.
+if [[ "$(uname -s)" != "Darwin" ]]; then
+	unset DOTS_FORCE_OS DOTS_FORCE_DARWIN_MAJOR || true
+	if dots_davinci_resolve_install 2>/dev/null; then
+		bad "linux host should reject install without FORCE_OS"
+	else
+		ok "linux host install rejected"
+	fi
+fi
 
 echo "=== dry-run setup --with davinci-resolve (Darwin) ==="
 export DOTS_FORCE_OS=darwin DOTS_FORCE_DARWIN_MAJOR=15
@@ -163,6 +161,7 @@ dry="$("${ROOT}/setup.sh" --dry-run --with davinci-resolve 2>&1)" || {
 }
 echo "${dry}" | grep -qi 'davinci-resolve\|Brewfile.davinci-resolve\|mas' && ok "dry-run mentions resolve/mas" || bad "dry-run silent on resolve"
 echo "${dry}" | grep -qi 'FORBIDDEN_' && bad "dry-run forbidden" || ok "dry-run clean"
+echo "${dry}" | grep -qi 'optional components failed' && bad "dry-run recorded resolve failure" || ok "dry-run no resolve failure"
 
 echo "=== mactools dry-run includes flux, excludes Resolve install ==="
 mdry="$("${ROOT}/setup.sh" --dry-run --with mactools 2>&1)" || bad "mactools dry-run failed"

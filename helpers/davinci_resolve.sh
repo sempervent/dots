@@ -33,7 +33,7 @@ dots_davinci_resolve_mas_authenticated() {
 
 # Non-launching status string for diagnostics / check media.
 dots_davinci_resolve_status() {
-	if [[ "$(uname -s)" != "Darwin" ]] && [[ ${DOTS_FORCE_OS:-} != "darwin" ]]; then
+	if [[ "$(dots_davinci_resolve_os)" != "darwin" ]]; then
 		echo "PLATFORM_UNSUPPORTED"
 		return 0
 	fi
@@ -52,13 +52,26 @@ dots_davinci_resolve_status() {
 	echo "OPTIONAL / NOT INSTALLED"
 }
 
+# Effective OS for install gates (honors DOTS_FORCE_OS used by component tests/CI).
+dots_davinci_resolve_os() {
+	if [[ -n ${DOTS_FORCE_OS:-} ]]; then
+		printf '%s\n' "${DOTS_FORCE_OS}"
+		return 0
+	fi
+	case "$(uname -s)" in
+	Darwin) printf 'darwin\n' ;;
+	Linux) printf 'linux\n' ;;
+	*) printf 'unknown\n' ;;
+	esac
+}
+
 # Package + App Store install for explicit --with davinci-resolve.
 # Returns 0 on success, already-installed, dry-run, or auth-not-configured.
 # Hard-fails (nonzero) only when authenticated install actually fails.
 dots_davinci_resolve_install() {
 	local os
-	os="$(uname -s)"
-	if [[ ${os} != "Darwin" ]]; then
+	os="$(dots_davinci_resolve_os)"
+	if [[ ${os} != "darwin" ]]; then
 		echo "Error: davinci-resolve is supported only on macOS (Darwin)." >&2
 		return 1
 	fi
