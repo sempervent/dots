@@ -1,7 +1,7 @@
 # brew/groups/network.Brewfile — network / remote CLIs
 #
 # Install-only. DOTS never runs `tailscale up` / login / auth.
-# mitmproxy intentionally omitted from this group (opt-in later).
+# mitmproxy: opt-in component — ./setup.sh --with mitmproxy (never default profiles).
 # stern / kubectx live in brew/groups/k8s.Brewfile
 
 brew "tailscale"

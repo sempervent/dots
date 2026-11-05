@@ -173,6 +173,17 @@ brewfile = "brew/Brewfile.orbstack"
 description = "Optional Darwin Docker-compatible runtime (install-only; never auto-start or remove Docker Desktop)"
 
 [[components]]
+id = "mitmproxy"
+label = "mitmproxy"
+category = "network"
+cloud = false
+local_ai = false
+omit_from_all = true
+platforms = ["darwin"]
+brewfile = "brew/Brewfile.mitmproxy"
+description = "Opt-in HTTP interception CLIs (install-only; never start proxy, trust CA, or change system proxy)"
+
+[[components]]
 id = "lsp"
 label = "Language servers"
 category = "developer_tooling"
