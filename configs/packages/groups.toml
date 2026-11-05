@@ -42,10 +42,14 @@ optional = [
 
 [[groups]]
 name = "infra"
-description = "Docker CLI / Helm / Terraform (k8s operator CLIs live in group k8s)"
+description = "Docker/Helm/Terraform + IaC engineering CLIs (install-only; no apply/login/build)"
 required = []
 optional = [
   "docker", "docker-compose", "helm", "terraform",
+  # v1.7 Phase 7 — IaC / config mgmt / images / cost (no remote backends, no apply)
+  "terraform-docs", "tflint", "checkov", "infracost", "terragrunt",
+  "ansible", "ansible-lint", "vault", "packer",
+  # OpenTofu not auto-installed; if present, check infra may use tofu fmt -check
 ]
 
 [[groups]]
