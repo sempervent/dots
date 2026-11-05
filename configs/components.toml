@@ -184,6 +184,17 @@ brewfile = "brew/Brewfile.mitmproxy"
 description = "Opt-in HTTP interception CLIs (install-only; never start proxy, trust CA, or change system proxy)"
 
 [[components]]
+id = "syncthing"
+label = "Syncthing"
+category = "backup"
+cloud = false
+local_ai = false
+omit_from_all = true
+platforms = ["darwin", "linux"]
+brewfile = "brew/Brewfile.syncthing"
+description = "Opt-in peer sync client (install-only; never start daemon, pair devices, or create folders)"
+
+[[components]]
 id = "lsp"
 label = "Language servers"
 category = "developer_tooling"

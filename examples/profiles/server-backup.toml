@@ -1,0 +1,10 @@
+# examples/profiles/server-backup.toml — EXAMPLE ONLY
+# Selective server + restic CLI (no Syncthing auto-start).
+[profile]
+name = "server-backup"
+description = "Headless server with backup CLI tooling"
+extends = "server"
+packages = ["core", "modern", "server", "backup"]
+
+[runtime]
+multiplexer = "tmux"

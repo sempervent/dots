@@ -22,7 +22,7 @@ without = ["fluidvoice"]
 packages = [
   "core", "modern", "workstation", "infra", "media", "gui",
   "dev", "network", "data", "geo", "security",
-  "containers", "k8s",
+  "containers", "k8s", "backup",
 ]
 open_apps = ["iTerm", "Draw Things", "Cursor"]
 
