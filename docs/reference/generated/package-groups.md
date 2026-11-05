@@ -34,11 +34,11 @@ Desktop-user tools (not headless)
 
 ## `infra`
 
-Docker CLI / Helm / Terraform (k8s operator CLIs live in group k8s)
+Docker/Helm/Terraform + IaC engineering CLIs (install-only; no apply/login/build)
 
 **Required:** (none)
 
-**Optional:** `docker`, `docker-compose`, `helm`, `terraform`
+**Optional:** `docker`, `docker-compose`, `helm`, `terraform`, `terraform-docs`, `tflint`, `checkov`, `infracost`, `terragrunt`, `ansible`, `ansible-lint`, `vault`, `packer`
 
 ## `media`
 

@@ -125,6 +125,13 @@ order = 147
 keywords = ["hardware", "smartctl", "smartmontools", "fio", "lsusb", "lspci", "picocom", "serial"]
 
 [[topics]]
+id = "infra"
+title = "Infrastructure tooling"
+body = "docs/help/infra.md"
+order = 148
+keywords = ["infra", "terraform", "tofu", "opentofu", "tflint", "checkov", "terragrunt", "ansible", "vault", "packer", "infracost"]
+
+[[topics]]
 id = "agent-evals"
 title = "Agent Evaluations"
 body = "docs/agents/evals.md"

@@ -7,6 +7,7 @@
 ./dots check backup
 ./dots check network
 ./dots check hardware
+./dots check infra
 ./dots components active
 ./dots packages status
 ./dots lsp status

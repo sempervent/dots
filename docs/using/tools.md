@@ -141,3 +141,7 @@ See [Data tooling](data-tooling.md) and [Backup tooling](backup-tooling.md)
 
 See [Network tooling](network-tooling.md) and [Hardware tooling](hardware-tooling.md)
 (`./dots check network`, `./dots check hardware`).
+
+## Infrastructure tooling
+
+See [Infrastructure engineering](infra-tooling.md) (`./dots check infra`).

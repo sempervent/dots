@@ -5,10 +5,10 @@
 .SH NAME
 dots\-check \- Machine health plus local CI, security, containers, k8s, data
 .SH SYNOPSIS
-.B dots check [\-\-profile NAME] | dots check fast|workflows|docs|all\-local|act|release\-notes|security|containers|k8s|dev|data|backup|network|hardware
+.B dots check [\-\-profile NAME] | dots check fast|workflows|docs|all\-local|act|release\-notes|security|containers|k8s|dev|data|backup|network|hardware|infra
 .SH DESCRIPTION
 Machine health plus local CI, security, containers, k8s, data, backup,
-network, and hardware checks.
+network, hardware, and infra checks.
 .SH EXAMPLES
 .TP
 .B dots check
@@ -67,6 +67,15 @@ Hardware tooling presence (no SMART tests, fio workloads, or serial I/O).
 .TP
 .B dots check hardware examples
 Print hardware\-tool example commands (stdout only; not executed).
+.TP
+.B dots check infra
+Infrastructure tooling presence (no apply/login/build).
+.TP
+.B dots check infra gate
+Static IaC format/lint on fixtures (no init/backends/network APIs).
+.TP
+.B dots check infra examples
+Print infra\-tool example commands (stdout only; not executed).
 .SH SEE ALSO
 .BR dots (1),
 .BR dots\-help (1)
