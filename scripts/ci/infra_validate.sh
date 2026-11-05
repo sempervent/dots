@@ -98,28 +98,31 @@ count_tf_files() {
 	local dir="${1:-.}"
 	find "${dir}" \( -name '*.tf' -o -name '*.tf.json' \) \
 		! -path '*/.terraform/*' ! -path '*/vendor/*' ! -path '*/.git/*' \
+		! -path '*/scripts/tests/fixtures/*' \
 		2>/dev/null | wc -l | tr -d ' '
 }
 
 count_tg_files() {
 	local dir="${1:-.}"
 	find "${dir}" \( -name 'terragrunt.hcl' -o -name 'root.hcl' \) \
-		! -path '*/.terraform/*' ! -path '*/.git/*' 2>/dev/null | wc -l | tr -d ' '
+		! -path '*/.terraform/*' ! -path '*/.git/*' ! -path '*/scripts/tests/fixtures/*' \
+		2>/dev/null | wc -l | tr -d ' '
 }
 
 count_packer_files() {
 	local dir="${1:-.}"
 	find "${dir}" \( -name '*.pkr.hcl' -o -name '*.pkr.json' \) \
-		! -path '*/.git/*' 2>/dev/null | wc -l | tr -d ' '
+		! -path '*/.git/*' ! -path '*/scripts/tests/fixtures/*' \
+		2>/dev/null | wc -l | tr -d ' '
 }
 
 has_ansible_content() {
 	local dir="${1:-.}"
-	if [[ -f ${dir}/ansible.cfg ]] || [[ -d ${dir}/roles ]] || [[ -d ${dir}/playbooks ]]; then
+	# Ignore Phase 7 test fixtures when reporting repo inventory.
+	if find "${dir}" \( -name 'ansible.cfg' -o -path '*/roles/*' -o -path '*/playbooks/*' -o -name 'site.yml' \) \
+		! -path '*/scripts/tests/fixtures/*' ! -path '*/.git/*' 2>/dev/null | grep -q .; then
 		return 0
 	fi
-	find "${dir}" \( -name '*.yml' -o -name '*.yaml' \) -path '*/playbooks/*' 2>/dev/null | grep -q . && return 0
-	find "${dir}" -name 'site.yml' 2>/dev/null | grep -q . && return 0
 	return 1
 }
 
