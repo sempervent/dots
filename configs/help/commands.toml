@@ -190,9 +190,9 @@ description = "Read-only inventory (no downloads)."
 
 [[commands]]
 name = "check"
-usage = "dots check [--profile NAME] | dots check fast|workflows|docs|all-local|act|release-notes"
+usage = "dots check [--profile NAME] | dots check fast|workflows|docs|all-local|act|release-notes|security"
 category = "diagnostics"
-description = "Machine health check, or local CI validation (workflows/docs/Docker/release-notes)."
+description = "Machine health, local CI validation, or supply-chain/security gate."
 mutating = false
 related = ["status", "update", "help", "packages"]
 [[commands.examples]]
@@ -210,6 +210,12 @@ description = "Markdown/spell/link checks without external HTTP."
 [[commands.examples]]
 command = "dots check release-notes"
 description = "Preview git-cliff notes since previous tag (stdout)."
+[[commands.examples]]
+command = "dots check security"
+description = "Secrets/source/deps/SBOM gate (requires package group security)."
+[[commands.examples]]
+command = "dots check security status"
+description = "SOPS/age/YubiKey/osquery/step capability report (non-mutating)."
 
 [[commands]]
 name = "update"

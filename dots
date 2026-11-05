@@ -480,6 +480,12 @@ dots_cmd_check() {
 	fast | workflows | docs | all-local | act | release-notes)
 		exec "${DIR}/scripts/ci/local_validate.sh" "$@"
 		;;
+	security)
+		shift
+		sub="${1:-gate}"
+		shift || true
+		exec "${DIR}/scripts/ci/security_validate.sh" "${sub}" "$@"
+		;;
 	-h | --help)
 		cat <<'EOF'
 Usage:
@@ -490,9 +496,12 @@ Usage:
   ./dots check all-local               fast + full docs links + pre-commit
   ./dots check act [list|JOB]          Local GitHub Actions via act (no secrets)
   ./dots check release-notes           git-cliff preview (stdout only)
+  ./dots check security [gate|status|secrets|sbom|verify…]
+                                       Local supply-chain / secrets gate
 
 Local validators require package group `dev` (e.g. ./setup.sh --profile work).
-They never install packages or start container runtimes.
+Security checks require package group `security`.
+They never install packages, provision keys, or start container runtimes.
 EOF
 		return 0
 		;;

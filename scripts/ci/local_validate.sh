@@ -38,6 +38,7 @@ Modes:
   act            List or run a Linux-compatible GitHub Actions job via act
                  (act list | act <job>)
   release-notes  Preview git-cliff notes since previous tag (stdout only)
+  security       Delegates to scripts/ci/security_validate.sh (supply-chain gate)
 
 Does not install tools. Select package group `dev`, e.g.:
   ./setup.sh --profile work
@@ -293,6 +294,10 @@ act)
 release-notes)
 	run_release_notes
 	exit $?
+	;;
+security)
+	# Deeper security / supply-chain gate — not part of `fast`.
+	exec "${ROOT}/scripts/ci/security_validate.sh" "$@"
 	;;
 *)
 	echo "Unknown mode: ${MODE}" >&2

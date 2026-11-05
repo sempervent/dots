@@ -3,12 +3,11 @@
 .
 .TH DOTS\-CHECK 1 "2026-11-02" "DOTS 1.6.2" "User Commands"
 .SH NAME
-dots\-check \- Machine health check, or local CI validation
+dots\-check \- Machine health, local CI validation, or supply\-chain/security
 .SH SYNOPSIS
-.B dots check [\-\-profile NAME] | dots check fast|workflows|docs|all\-local|act|release\-notes
+.B dots check [\-\-profile NAME] | dots check fast|workflows|docs|all\-local|act|release\-notes|security
 .SH DESCRIPTION
-Machine health check, or local CI validation
-(workflows/docs/Docker/release\-notes).
+Machine health, local CI validation, or supply\-chain/security gate.
 .SH EXAMPLES
 .TP
 .B dots check
@@ -25,6 +24,12 @@ Markdown/spell/link checks without external HTTP.
 .TP
 .B dots check release\-notes
 Preview git\-cliff notes since previous tag (stdout).
+.TP
+.B dots check security
+Secrets/source/deps/SBOM gate (requires package group security).
+.TP
+.B dots check security status
+SOPS/age/YubiKey/osquery/step capability report (non\-mutating).
 .SH SEE ALSO
 .BR dots (1),
 .BR dots\-help (1)
