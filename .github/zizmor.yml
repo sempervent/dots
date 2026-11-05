@@ -1,0 +1,9 @@
+# zizmor configuration for DOTS
+# Policy: pin third-party Actions to commit SHAs; disable credential persistence on checkout.
+# See docs/using/local-ci.md
+
+rules:
+  superfluous-actions:
+    # softprops/action-gh-release remains the supported release publisher for tag workflows.
+    ignore:
+      - .github/workflows/release.yml
