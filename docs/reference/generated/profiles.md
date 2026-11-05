@@ -42,7 +42,7 @@ Personal workstation — edit before relying on it
 Headless server — tmux + Herdr available, no GUI/AI providers by default
 
 - **Source:** `configs/bootstrap/profiles/server.toml`
-- **packages:** `core`, `modern`, `server`
+- **packages:** `core`, `modern`, `server`, `security`, `network`, `backup`, `hardware`, `containers`
 - **with:** `herdr`
 - **runtime.multiplexer:** `tmux`
 
@@ -51,7 +51,7 @@ Headless server — tmux + Herdr available, no GUI/AI providers by default
 Conservative allowlist — no AI clients by default
 
 - **Source:** `configs/bootstrap/profiles/work.toml`
-- **packages:** `core`, `modern`, `workstation`, `dev`, `docs`, `data`, `geo`, `security`, `gui`
+- **packages:** `core`, `modern`, `workstation`, `dev`, `docs`, `data`, `geo`, `security`, `gui`, `infra`, `containers`, `k8s`, `network`
 - **with:** (none)
 - **runtime.multiplexer:** `tmux`
 
