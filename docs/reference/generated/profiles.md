@@ -14,7 +14,7 @@ ALL optional DOTS components (lab convenience — may include cloud AI)
 
 - **Source:** `configs/bootstrap/profiles/all.toml`
 - **include_all_optional:** yes
-- **packages:** `core`, `modern`, `workstation`, `infra`, `media`, `gui`, `dev`, `security`, `network`, `data`, `geo`, `containers`, `k8s`, `backup`
+- **packages:** `core`, `modern`, `workstation`, `infra`, `media`, `gui`, `dev`, `security`, `network`, `data`, `geo`, `containers`, `k8s`, `backup`, `hardware`
 - **with:** (none)
 - **runtime.multiplexer:** `tmux`
 
@@ -32,7 +32,7 @@ Core shell UX only — safe on any machine
 Personal workstation — edit before relying on it
 
 - **Source:** `configs/bootstrap/profiles/home.toml`
-- **packages:** `core`, `modern`, `workstation`, `infra`, `media`, `gui`, `dev`, `network`, `data`, `geo`, `security`, `containers`, `k8s`, `backup`
+- **packages:** `core`, `modern`, `workstation`, `infra`, `media`, `gui`, `dev`, `network`, `data`, `geo`, `security`, `containers`, `k8s`, `backup`, `hardware`
 - **with:** `ai`, `herdr`, `skills`, `ai-skills`, `images`, `tex`
 - **without:** `fluidvoice`
 - **runtime.multiplexer:** `herdr`
@@ -66,6 +66,7 @@ Not applied automatically. Copy from `examples/profiles/`:
 | developer.toml | developer | base | Dev + security CLIs on a lean base (no AI) |
 | home-studio.toml | home-studio | home | Home workstation without Cursor Agent CLI |
 | server-backup.toml | server-backup | server | Headless server with backup CLI tooling |
+| server-hardware.toml | server-hardware | server | Server with network diagnostics and hardware inspection CLIs |
 | work-containers-k8s.toml | work-containers-k8s | work | Work profile + containers/k8s CLIs (no OrbStack, no cluster create) |
 | work-custom.toml | corp-work | work | Work machine with infra tools + images toolkit (no AI) |
 | work-network.toml | work-network | work | Work allowlist + network CLIs (still no AI) |

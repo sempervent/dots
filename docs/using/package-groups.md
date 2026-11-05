@@ -51,9 +51,9 @@ Builtin profiles declare membership in TOML (SoT):
 |---------|------------------|
 | `base` | `core` `modern` |
 | `work` | + `workstation` `dev` `data` `geo` `security` `gui` |
-| `home` | + `infra` `media` `gui` + `dev` `network` `data` `geo` `security` `backup` (+ containers/k8s when present) |
-| `server` | `core` `modern` `server` (add `backup` selectively; see `examples/profiles/server-backup.toml`) |
-| `all` | workstation set + `dev` `security` `network` `data` `geo` `backup` (Syncthing remains `omit_from_all`) |
+| `home` | + `infra` `media` `gui` + `dev` `network` `data` `geo` `security` `backup` `hardware` (+ containers/k8s when present) |
+| `server` | `core` `modern` `server` (add `backup`/`network`/`hardware` selectively; see examples) |
+| `all` | workstation set + `dev` `security` `network` `data` `geo` `backup` `hardware` (Syncthing remains `omit_from_all`) |
 
 Custom profiles extend and adjust:
 

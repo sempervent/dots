@@ -111,6 +111,20 @@ order = 145
 keywords = ["data", "pgcli", "pg_activity", "duckdb", "qsv", "miller", "visidata", "jless", "postgres"]
 
 [[topics]]
+id = "network"
+title = "Network tooling"
+body = "docs/help/network.md"
+order = 146
+keywords = ["network", "mtr", "nmap", "iperf", "gping", "bandwhich", "termshark", "mosh", "tailscale", "rclone"]
+
+[[topics]]
+id = "hardware"
+title = "Hardware tooling"
+body = "docs/help/hardware.md"
+order = 147
+keywords = ["hardware", "smartctl", "smartmontools", "fio", "lsusb", "lspci", "picocom", "serial"]
+
+[[topics]]
 id = "agent-evals"
 title = "Agent Evaluations"
 body = "docs/agents/evals.md"

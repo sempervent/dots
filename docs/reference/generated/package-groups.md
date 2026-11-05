@@ -82,11 +82,19 @@ Secrets / SBOM / signing / YubiKey / host-inspection CLIs (install-only; no auth
 
 ## `network`
 
-Network / remote CLIs (install-only; no Tailscale up; k8s context CLIs live in group k8s)
+Network / remote CLIs (install-only; no scans, captures, iperf, or Tailscale up)
 
 **Required:** (none)
 
-**Optional:** `tailscale`, `mosh`, `rclone`, `bandwhich`, `gping`, `doggo`, `grpcurl`, `websocat`
+**Optional:** `tailscale`, `mosh`, `rclone`, `bandwhich`, `gping`, `doggo`, `grpcurl`, `websocat`, `mtr`, `nmap`, `iperf3`, `termshark`, `tshark`
+
+## `hardware`
+
+Storage / bus / serial diagnostics (install-only; no SMART tests, fio workloads, or serial I/O)
+
+**Required:** (none)
+
+**Optional:** `smartmontools`, `fio`, `picocom`, `usbutils`, `pciutils`
 
 ## `data`
 

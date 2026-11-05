@@ -62,7 +62,17 @@ are documentation only; CI does **not** fetch them.
 | tailscale | Mesh VPN CLI (install-only; no `up`) | `network` group | darwin, linux | https://tailscale.com |
 | mosh | Roaming remote shell | `network` group | darwin, linux | https://mosh.org |
 | rclone | Cloud storage sync | `network` group | darwin, linux | https://rclone.org |
+| mtr | Path + loss/latency | `network` group | darwin, linux | https://www.bitwizard.nl/mtr/ |
+| nmap | Host/service discovery | `network` group | darwin, linux | https://nmap.org |
+| iperf3 | Throughput measurement | `network` group | darwin, linux | https://iperf.fr |
+| gping | Latency visualization | `network` group | darwin, linux | https://github.com/orf/gping |
+| bandwhich | Per-process bandwidth | `network` group | darwin, linux | https://github.com/imsnif/bandwhich |
+| mosh | Resilient remote shell | `network` group | darwin, linux | https://mosh.org |
+| tailscale | Overlay VPN client (install-only; no `up`) | `network` group | darwin, linux | https://tailscale.com |
 | doggo | Human-friendly DNS client | `network` group | darwin, linux | https://github.com/mr-karan/doggo |
+| smartctl | Storage health CLI | `hardware` / smartmontools | darwin, linux | https://www.smartmontools.org |
+| fio | Storage benchmarking | `hardware` group | darwin, linux | https://fio.readthedocs.io |
+| picocom | Serial terminal | `hardware` group | darwin, linux | https://github.com/npat-efault/picocom |
 | duckdb | In-process analytical SQL CLI | `data` group | darwin, linux | https://duckdb.org |
 | qsv | CSV toolkit | `data` group | darwin (+ partial linux) | https://github.com/jqnatividad/qsv |
 | miller | Name-indexed CSV/TSV/JSON CLI | `data` group | darwin, linux | https://miller.readthedocs.io |
@@ -126,3 +136,8 @@ See [Developer workflow and inspection](developer-workflow.md).
 
 See [Data tooling](data-tooling.md) and [Backup tooling](backup-tooling.md)
 (`./dots check data`, `./dots check backup`).
+
+## Network / hardware tooling
+
+See [Network tooling](network-tooling.md) and [Hardware tooling](hardware-tooling.md)
+(`./dots check network`, `./dots check hardware`).

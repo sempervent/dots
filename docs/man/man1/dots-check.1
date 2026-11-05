@@ -3,12 +3,12 @@
 .
 .TH DOTS\-CHECK 1 "2026-11-02" "DOTS 1.6.2" "User Commands"
 .SH NAME
-dots\-check \- Machine health plus local CI, security, containers, k8s, dev
+dots\-check \- Machine health plus local CI, security, containers, k8s, data
 .SH SYNOPSIS
-.B dots check [\-\-profile NAME] | dots check fast|workflows|docs|all\-local|act|release\-notes|security|containers|k8s|dev|data|backup
+.B dots check [\-\-profile NAME] | dots check fast|workflows|docs|all\-local|act|release\-notes|security|containers|k8s|dev|data|backup|network|hardware
 .SH DESCRIPTION
-Machine health plus local CI, security, containers, k8s, dev, data, and backup
-checks.
+Machine health plus local CI, security, containers, k8s, data, backup,
+network, and hardware checks.
 .SH EXAMPLES
 .TP
 .B dots check
@@ -55,6 +55,18 @@ Backup/sync tooling presence (no repo init, remotes, or Syncthing start).
 .TP
 .B dots check backup examples
 Print recovery\-oriented example commands (stdout only; not executed).
+.TP
+.B dots check network
+Network tooling presence (no scans, captures, or Tailscale up).
+.TP
+.B dots check network examples
+Print network\-tool example commands (stdout only; not executed).
+.TP
+.B dots check hardware
+Hardware tooling presence (no SMART tests, fio workloads, or serial I/O).
+.TP
+.B dots check hardware examples
+Print hardware\-tool example commands (stdout only; not executed).
 .SH SEE ALSO
 .BR dots (1),
 .BR dots\-help (1)
