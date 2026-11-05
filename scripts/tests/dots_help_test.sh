@@ -98,18 +98,19 @@ echo 'packages = ["core"]' >"${HOME}/.config/dots/profiles/lab.toml"
 
 export NO_COLOR=1
 HELP="${ROOT}/scripts/dots-help"
+expected_ver="$(tr -d '[:space:]' <"${ROOT}/VERSION")"
 
 out="$("${HELP}" --version 2>&1)" || {
 	bad "--version failed"
 	out=""
 }
-echo "${out}" | grep -Fq "DOTS 1.6.2" && ok "--version reports DOTS version" || bad "--version: ${out}"
+echo "${out}" | grep -Fq "DOTS ${expected_ver}" && ok "--version reports DOTS version" || bad "--version: ${out}"
 
 plain="$("${HELP}" --plain 2>&1)" || {
 	bad "--plain failed"
 	plain=""
 }
-echo "${plain}" | grep -q 'DOTS 1.6.2\|Overview\|OVERVIEW' && ok "--plain overview" || bad "--plain overview"
+echo "${plain}" | grep -q "DOTS ${expected_ver}\\|Overview\\|OVERVIEW" && ok "--plain overview" || bad "--plain overview"
 echo "${plain}" | grep -qi 'home' && ok "--plain shows profile" || bad "--plain profile"
 printf '%s' "${plain}" | grep -q $'\x1b\[' && bad "--plain leaked ANSI under NO_COLOR" || ok "--plain no ANSI"
 
