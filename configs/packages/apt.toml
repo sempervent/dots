@@ -121,3 +121,7 @@ git-filter-repo = ""
 git-sizer = ""
 ast-grep = ""
 lnav = ""
+# v1.7 Phase 5
+pgcli = ""
+pg_activity = ""
+restic = "restic"

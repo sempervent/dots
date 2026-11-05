@@ -105,10 +105,21 @@ optional = [
 
 [[groups]]
 name = "data"
-description = "Tabular / analytical CLIs"
+description = "PostgreSQL inspection + tabular / analytical CLIs (install-only; no DB connections)"
 required = []
 optional = [
   "duckdb", "qsv", "visidata", "miller", "jless",
+  # v1.7 Phase 5 — PostgreSQL inspection (no credentials / no connections)
+  "pgcli", "pg_activity",
+]
+
+[[groups]]
+name = "backup"
+description = "Backup / recovery CLIs (install-only; no repo init, backup, restore, or sync daemon)"
+required = []
+optional = [
+  "restic",
+  # rclone remains owned by network; Syncthing is --with syncthing (omit_from_all)
 ]
 
 [[groups]]
