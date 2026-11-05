@@ -225,6 +225,16 @@ apply_optional_brewfiles() {
 		# Darwin-only (registry platforms); explicit --with on Linux errors before here.
 		_dots_optional_apply_registry_brewfile "mactools" || true
 	fi
+	if has_component davinci-resolve; then
+		# Brewfile installs `mas` only; App Store app via helpers/davinci_resolve.sh.
+		# Auth missing is a soft skip (NOT CONFIGURED / AUTH REQUIRED) — not brew_failed.
+		_dots_optional_apply_registry_brewfile "davinci-resolve" || true
+		if declare -F dots_davinci_resolve_install >/dev/null 2>&1; then
+			if ! dots_davinci_resolve_install; then
+				dots_optional_record_failure "davinci-resolve" "DaVinci Resolve install failed"
+			fi
+		fi
+	fi
 	if has_component lsp; then
 		_dots_optional_apply_registry_brewfile "lsp" || true
 	fi

@@ -1,0 +1,18 @@
+# brew/Brewfile.davinci-resolve — App Store CLI prerequisite for Resolve
+#
+# Install: ./setup.sh --with davinci-resolve
+# Platforms: darwin only (component gate).
+#
+# This Brewfile only installs `mas` (Mac App Store CLI). The Resolve app itself
+# is installed by helpers/davinci_resolve.sh via `mas install` when the user is
+# signed into the App Store. There is no Homebrew cask for DaVinci Resolve.
+#
+# Install-only. DOTS never:
+#   - launches Resolve
+#   - creates project libraries / scans media
+#   - logs into Blackmagic Cloud
+#   - installs plugins or configures Fairlight/Fusion/control surfaces
+#   - requests camera / microphone / screen-recording permissions
+#   - requires an App Store account for any other DOTS profile or CI job
+
+brew "mas"

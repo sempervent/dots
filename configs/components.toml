@@ -173,6 +173,17 @@ brewfile = "brew/Brewfile.orbstack"
 description = "Optional Darwin Docker-compatible runtime (install-only; never auto-start or remove Docker Desktop)"
 
 [[components]]
+id = "davinci-resolve"
+label = "DaVinci Resolve"
+category = "media"
+cloud = false
+local_ai = false
+omit_from_all = true
+platforms = ["darwin"]
+brewfile = "brew/Brewfile.davinci-resolve"
+description = "Optional professional NLE via Mac App Store (mas; install-only; never launch, scan media, or require App Store auth globally)"
+
+[[components]]
 id = "mitmproxy"
 label = "mitmproxy"
 category = "network"
