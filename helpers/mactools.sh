@@ -20,13 +20,16 @@ Licenses (activate in-app; DOTS never stores licenses):
   Keyboard Maestro, Hazel, Little Snitch, Hookmark, DEVONthink,
   Loopback, Audio Hijack, TouchDesigner (as applicable)
 
-Likely macOS permissions (grant in System Settings → Privacy & Security):
-  Vorssaint / Raycast / Keyboard Maestro  Accessibility, Input Monitoring
+Likely macOS permissions (grant in System Settings → Privacy & Security when YOU
+use an app — DOTS never requests or changes these during setup/check):
+  Vorssaint / Raycast / Keyboard Maestro / Rectangle
+                                          Accessibility, Input Monitoring
   Vorssaint / OBS / Loopback / Audio Hijack  Screen Recording, Microphone,
                                               System Audio (where prompted)
   Hazel / DEVONthink / Hookmark           Full Disk Access (if you use those features)
   Little Snitch                           Network Extension / System Extension approval
-  OrbStack                                Virtualization entitlements (as prompted)
+  LocalSend                               Local Network (only if you launch it)
+  OrbStack (--with orbstack)              Virtualization entitlements (as prompted)
 
 Restart / reboot (DOTS does not do these automatically):
   Manual restart required: Raycast, Keyboard Maestro, Hazel, Little Snitch,

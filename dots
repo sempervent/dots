@@ -515,6 +515,12 @@ dots_cmd_check() {
 		shift || true
 		exec "${DIR}/scripts/ci/geo_validate.sh" "${sub}" "$@"
 		;;
+	media)
+		shift
+		sub="${1:-status}"
+		shift || true
+		exec "${DIR}/scripts/ci/media_validate.sh" "${sub}" "$@"
+		;;
 	backup)
 		shift
 		sub="${1:-status}"
@@ -559,6 +565,8 @@ Usage:
   ./dots check data [status|examples]  PostgreSQL / tabular tooling (no DB connections)
   ./dots check geo [status|gate|examples]
                                        Geospatial tooling (no OSM download / DB / QGIS launch)
+  ./dots check media [status|gate|examples]
+                                       Media CLIs + Darwin app inventory (no capture/download/launch)
   ./dots check backup [status|examples]
                                        Backup/sync tooling (no repo init / no remotes)
   ./dots check network [status|examples]
@@ -575,7 +583,8 @@ databases, initialize backup repositories, contact remotes, start Syncthing, sca
 networks, capture packets, join Tailscale, benchmark disks, open serial devices,
 apply/destroy infrastructure, login to Vault, build images, call Infracost APIs,
 download browsers during docs checks, publish documentation, download OSM data,
-run osm2pgsql imports, launch QGIS, serve PMTiles, or require a YubiKey.
+run osm2pgsql imports, launch QGIS, serve PMTiles, capture mic/camera/screen,
+download media via yt-dlp, launch desktop GUIs, or require a YubiKey.
 EOF
 		return 0
 		;;
