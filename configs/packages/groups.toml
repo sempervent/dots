@@ -142,10 +142,17 @@ optional = [
 
 [[groups]]
 name = "geo"
-description = "Geospatial CLI tooling"
+description = "Geospatial CLI tooling (OSM / tiles / geometry; install-only; no data download or DB import)"
 required = []
 optional = [
-  "gdal", "tippecanoe", "pmtiles",
+  # Foundations (GDAL provides ogr*/gdal*; PROJ/GEOS arrive as formula deps — do not duplicate)
+  "gdal",
+  # Vector tiles / archives (Phase 0 ALREADY; keep single ownership in geo)
+  "tippecanoe", "pmtiles",
+  # v1.7 Phase 9 — OSM processing + geometry CLI
+  "osmium-tool", "osm2pgsql",
+  # mapshaper: npm-only (no Homebrew formula); installed via helpers/mapshaper.sh when geo is selected
+  "mapshaper",
 ]
 
 [[groups]]

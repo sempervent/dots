@@ -58,6 +58,8 @@ tap "Zingzy/tap"
 brew "diskbloom"
 
 # --- disk / GIS / MIDI (install-only; no config / permissions / kills) ---
+# QGIS: heavy GUI; omit_from_all via mactools. Never auto-launch, never manage
+# plugins/profiles/projects. Not part of package group `geo` / profile `all`.
 cask "qgis"
 cask "grandperspective"
 cask "midi-monitor"

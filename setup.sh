@@ -88,6 +88,8 @@ source "${DIR}/helpers/leaf.sh"
 source "${DIR}/helpers/rsync.sh"
 # shellcheck source=helpers/packages.sh
 source "${DIR}/helpers/packages.sh"
+# shellcheck source=helpers/mapshaper.sh
+source "${DIR}/helpers/mapshaper.sh"
 # shellcheck source=helpers/package_state.sh
 source "${DIR}/helpers/package_state.sh"
 # shellcheck source=helpers/links.sh
