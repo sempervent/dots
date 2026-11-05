@@ -60,3 +60,6 @@ brew "diskbloom"
 cask "qgis"
 cask "grandperspective"
 cask "midi-monitor"
+
+# --- Secure Enclave SSH agent (install-only; never rewrite ~/.ssh/config) ---
+cask "secretive"

@@ -91,3 +91,8 @@ jless = ""
 gdal = "gdal"
 tippecanoe = ""
 pmtiles = ""
+# v1.7 Phase 2
+ykman = ""
+age-plugin-yubikey = ""
+step = ""
+osquery = ""

@@ -83,11 +83,13 @@ optional = [
 
 [[groups]]
 name = "security"
-description = "Secrets scanning / SBOM / signing CLIs (install-only; no auth)"
+description = "Secrets / SBOM / signing / YubiKey / host-inspection CLIs (install-only; no auth or enrollment)"
 required = []
 optional = [
   "gitleaks", "trivy", "sops", "age", "syft", "grype", "cosign",
   "osv-scanner", "semgrep",
+  # v1.7 Phase 2 — YubiKey / PKI / host inventory (install-only; no key gen or enrollment)
+  "ykman", "age-plugin-yubikey", "step", "osquery",
 ]
 
 [[groups]]
