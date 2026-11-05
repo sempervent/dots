@@ -80,11 +80,14 @@ if command -v gitleaks >/dev/null 2>&1; then
 	set -e
 	[[ ${gl_rc} -eq 0 ]] && ok "gitleaks allowlists fixture path" || bad "gitleaks failed on allowlisted fixtures"
 
-	# Direct scan of a non-allowlisted copy should find the fake secret.
+	# Direct scan of a non-allowlisted copy should find the synthetic marker.
+	# Use repo .gitleaks.toml (custom DOTS_FAKE_SECRET rule) — vendor-shaped
+	# prefixes are avoided so GitHub push protection is not tripped by fixtures.
 	mkdir -p "${TMP}/leaky"
 	cp "${FIX}/fake_secret.env" "${TMP}/leaky/"
 	set +e
-	gitleaks detect --source "${TMP}/leaky" --no-banner --redact --no-git >/dev/null 2>&1
+	gitleaks detect --source "${TMP}/leaky" --no-banner --redact --no-git \
+		-c "${ROOT}/.gitleaks.toml" >/dev/null 2>&1
 	leak_rc=$?
 	set -e
 	[[ ${leak_rc} -ne 0 ]] && ok "gitleaks detects fake secret" || bad "gitleaks missed fake secret"
