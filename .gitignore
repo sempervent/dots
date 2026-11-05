@@ -57,3 +57,6 @@ configs/mactools/vorssaint/settings.plist
 
 # Lychee / local CI caches
 .lycheecache
+
+# Local security / SBOM artifacts (never commit generated scans)
+artifacts/security/
