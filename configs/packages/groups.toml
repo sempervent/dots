@@ -168,3 +168,14 @@ optional = [
   # GitOps
   "helmfile", "argocd",
 ]
+
+[[groups]]
+name = "docs"
+description = "Technical documentation / publishing CLIs (install-only; no rewrite, publish, or browser download)"
+required = []
+optional = [
+  # v1.7 Phase 8 — diagrams / conversion / prose / typography
+  # Lychee, markdownlint-cli2, cspell remain owned by `dev` (do not duplicate).
+  # MkDocs remains Python/site tooling; `tex` remains --with tex (TeXlive).
+  "graphviz", "pandoc", "vale", "mermaid-cli", "typst",
+]
