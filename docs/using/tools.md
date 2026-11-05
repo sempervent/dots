@@ -107,3 +107,7 @@ See [Local CI feedback loop](local-ci.md) (`./dots check fast`).
 ## Local security gate
 
 See [Local security and supply-chain tooling](security.md) (`./dots check security`).
+
+## Containers / Kubernetes
+
+See [Containers](containers.md) and [Kubernetes](k8s.md).
