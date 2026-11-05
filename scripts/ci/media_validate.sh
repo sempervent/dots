@@ -192,8 +192,8 @@ stage_ffmpeg() {
 	# lavfi testsrc — no hardware devices
 	if ffmpeg -hide_banner -loglevel error -f lavfi -i "testsrc=duration=0.2:size=160x120:rate=10" \
 		-f lavfi -i "sine=frequency=440:duration=0.2" \
-		-c:v libx264 -pix_fmt yuv420p -c:a aac -shortest -y "${out}" >/dev/null 2>&1 \
-		&& [[ -s ${out} ]]; then
+		-c:v libx264 -pix_fmt yuv420p -c:a aac -shortest -y "${out}" >/dev/null 2>&1 &&
+		[[ -s ${out} ]]; then
 		if ffprobe -hide_banner -loglevel error -show_format -show_streams "${out}" >/dev/null 2>&1; then
 			pass "ffmpeg lavfi → tiny mp4 + ffprobe"
 			return 0
