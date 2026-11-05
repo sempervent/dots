@@ -1,0 +1,18 @@
+# examples/profiles/work-containers-k8s.toml — EXAMPLE ONLY (not applied automatically)
+#
+# Extends builtin work with OCI + Kubernetes operator CLIs.
+# Does NOT select OrbStack (use --with orbstack explicitly on Darwin).
+# Copy to ~/.config/dots/profiles/… then:
+#   ./bootstrap.sh --profile ~/.config/dots/profiles/work-containers-k8s.toml --show
+
+[profile]
+name = "work-containers-k8s"
+description = "Work profile + containers/k8s CLIs (no OrbStack, no cluster create)"
+extends = "work"
+packages = [
+  "core", "modern", "workstation", "dev", "data", "geo", "security", "gui",
+  "containers", "k8s",
+]
+
+[runtime]
+multiplexer = "tmux"

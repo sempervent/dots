@@ -22,8 +22,9 @@ cask "hazel"
 # --- network visibility ---
 cask "little-snitch"
 
-# --- containers / VMs (additive; does not remove Docker Desktop) ---
-cask "orbstack"
+# --- containers / VMs ---
+# OrbStack moved to dedicated component: ./setup.sh --with orbstack
+# (omit_from_all; install-only; never auto-start or remove Docker Desktop)
 
 # --- knowledge / linking ---
 cask "hookmark"

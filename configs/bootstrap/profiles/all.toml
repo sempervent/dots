@@ -9,6 +9,7 @@ with = []
 packages = [
   "core", "modern", "workstation", "infra", "media", "gui",
   "dev", "security", "network", "data", "geo",
+  "containers", "k8s",
 ]
 open_apps = ["iTerm"]
 

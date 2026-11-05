@@ -162,6 +162,17 @@ brewfile = "brew/Brewfile.mactools"
 description = "Optional macOS workstation layer (Vorssaint + automation/audio/CLI; Brewfile.mactools)"
 
 [[components]]
+id = "orbstack"
+label = "OrbStack"
+category = "containers"
+cloud = false
+local_ai = false
+omit_from_all = true
+platforms = ["darwin"]
+brewfile = "brew/Brewfile.orbstack"
+description = "Optional Darwin Docker-compatible runtime (install-only; never auto-start or remove Docker Desktop)"
+
+[[components]]
 id = "lsp"
 label = "Language servers"
 category = "developer_tooling"
