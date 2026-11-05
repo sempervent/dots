@@ -113,7 +113,7 @@ shfmt -d -s \
 	helpers/lsp.sh \
 	helpers/backup.sh helpers/package_state.sh helpers/linux_distro.sh \
 	helpers/fnm.sh helpers/openrig.sh helpers/davinci_resolve.sh \
-	helpers/mactools.sh helpers/optional_components.sh \
+	helpers/mactools.sh \
 	shell/runtime.sh shell/fnm.sh \
 	scripts/ci/media_validate.sh \
 	scripts/tests/v171_creative_desktop_test.sh \
