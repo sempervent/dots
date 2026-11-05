@@ -158,13 +158,20 @@ echo "${stat_out}" | grep -qi 'FORBIDDEN_' && bad "status triggered forbidden to
 echo "${stat_out}" | grep -qi 'super-secret-pg-password' && bad "status leaked PGPASSWORD" || ok "no PGPASSWORD leak"
 echo "${stat_out}" | grep -qi 'dots_test_user' && bad "status leaked PGUSER/URL" || ok "no credential values printed"
 echo "${stat_out}" | grep -qi 'PostgreSQL target.*YES' && ok "PG configured YES (metadata)" || bad "PG configured metadata"
-# Without env vars → NOT CONFIGURED
-(
-	unset PGHOST PGPORT PGDATABASE PGUSER PGPASSWORD DATABASE_URL
-	export PATH="${TMP}/bin:${PATH}"
-	nout="$("${SCRIPT}" status 2>&1)" || true
-	echo "${nout}" | grep -qi 'PostgreSQL target.*NOT CONFIGURED' && ok "PG NOT CONFIGURED when unset" || bad "PG unset status"
-)
+# Without env vars → NOT CONFIGURED (preserve PATH stubs; clear only DB env)
+_saved_pghost=${PGHOST-}
+_saved_pgport=${PGPORT-}
+_saved_pgdb=${PGDATABASE-}
+_saved_pguser=${PGUSER-}
+_saved_pgpass=${PGPASSWORD-}
+_saved_dburl=${DATABASE_URL-}
+unset PGHOST PGPORT PGDATABASE PGUSER PGPASSWORD DATABASE_URL
+nout="$("${SCRIPT}" status 2>&1)" || true
+echo "${nout}" | grep -qi 'PostgreSQL target.*NOT CONFIGURED' && ok "PG NOT CONFIGURED when unset" || bad "PG unset status"
+# Restore seeded secrets for later leak assertions / osm2pgsql section
+export PGHOST="${_saved_pghost}" PGPORT="${_saved_pgport}" PGDATABASE="${_saved_pgdb}"
+export PGUSER="${_saved_pguser}" PGPASSWORD="${_saved_pgpass}" DATABASE_URL="${_saved_dburl}"
+unset _saved_pghost _saved_pgport _saved_pgdb _saved_pguser _saved_pgpass _saved_dburl
 echo "${stat_out}" | grep -qi 'OSM extract.*NOT DOWNLOADED' && ok "OSM not downloaded" || bad "OSM download claim"
 echo "${stat_out}" | grep -qi 'YubiKey required:.*NO' && ok "YubiKey NO" || bad "YubiKey policy"
 echo "${stat_out}" | grep -qi 'sudo required:.*NO' && ok "sudo NO" || bad "sudo policy"
