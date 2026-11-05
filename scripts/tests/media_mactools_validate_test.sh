@@ -2,6 +2,8 @@
 # scripts/tests/media_mactools_validate_test.sh — Phase 10 media + desktop safety
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+DIR="${ROOT}"
+export DIR ROOT DOTS_DIR="${ROOT}"
 SCRIPT="${ROOT}/scripts/ci/media_validate.sh"
 pass=0
 fail=0
@@ -187,7 +189,7 @@ echo "${ex}" | grep -qi 'yt-dlp\|ffmpeg\|copyright\|terms' && ok "examples + pol
 echo "${ex}" | grep -qi 'FORBIDDEN_' && bad "examples executed tools" || ok "examples stdout only"
 
 echo "=== gate with real tools when available ==="
-REAL_PATH="$(echo "${PATH}" | sed "s|${TMP}/bin:||")"
+REAL_PATH="${PATH//${TMP}\/bin:/}"
 export PATH="${REAL_PATH}"
 export DOTS_MEDIA_ARTIFACT_DIR="${TMP}/artifacts"
 # Keep stub yt-dlp ahead if real missing — use real for ffmpeg/sox
