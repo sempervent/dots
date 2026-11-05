@@ -509,6 +509,12 @@ dots_cmd_check() {
 		shift || true
 		exec "${DIR}/scripts/ci/data_validate.sh" "${sub}" "$@"
 		;;
+	geo)
+		shift
+		sub="${1:-status}"
+		shift || true
+		exec "${DIR}/scripts/ci/geo_validate.sh" "${sub}" "$@"
+		;;
 	backup)
 		shift
 		sub="${1:-status}"
@@ -551,6 +557,8 @@ Usage:
   ./dots check k8s [gate|status]       Kubernetes CLIs + local manifest validation
   ./dots check dev [status|repo]       Developer tooling diagnostics (non-mutating)
   ./dots check data [status|examples]  PostgreSQL / tabular tooling (no DB connections)
+  ./dots check geo [status|gate|examples]
+                                       Geospatial tooling (no OSM download / DB / QGIS launch)
   ./dots check backup [status|examples]
                                        Backup/sync tooling (no repo init / no remotes)
   ./dots check network [status|examples]
@@ -566,7 +574,8 @@ package groups. They never install packages, start runtimes, create clusters, op
 databases, initialize backup repositories, contact remotes, start Syncthing, scan
 networks, capture packets, join Tailscale, benchmark disks, open serial devices,
 apply/destroy infrastructure, login to Vault, build images, call Infracost APIs,
-download browsers during docs checks, publish documentation, or require a YubiKey.
+download browsers during docs checks, publish documentation, download OSM data,
+run osm2pgsql imports, launch QGIS, serve PMTiles, or require a YubiKey.
 EOF
 		return 0
 		;;
