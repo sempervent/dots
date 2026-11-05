@@ -98,6 +98,8 @@ app_status() {
 	Secretive) cask_id=secretive ;;
 	QGIS) cask_id=qgis ;;
 	OrbStack) cask_id=orbstack ;;
+	Vorssaint) cask_id=vorssaint ;;
+	f.lux | Flux) cask_id=flux-app ;;
 	esac
 	if [[ -d /opt/homebrew/Caskroom/${cask_id} ]] || [[ -d /usr/local/Caskroom/${cask_id} ]]; then
 		echo "OPTIONAL / INSTALLED (cask present)"
@@ -138,6 +140,8 @@ run_status() {
 	if [[ "$(uname -s)" == "Darwin" ]]; then
 		echo ""
 		echo "macOS Applications (mactools / components — inventory only)"
+		printf '  %-14s %s\n' "Vorssaint" "$(app_status Vorssaint "/Applications/Vorssaint.app")"
+		printf '  %-14s %s\n' "f.lux" "$(app_status Flux "/Applications/Flux.app")"
 		printf '  %-14s %s\n' "Raycast" "$(app_status Raycast "/Applications/Raycast.app")"
 		printf '  %-14s %s\n' "Rectangle" "$(app_status Rectangle "/Applications/Rectangle.app")"
 		printf '  %-14s %s\n' "LocalSend" "$(app_status LocalSend "/Applications/LocalSend.app")"
@@ -147,7 +151,21 @@ run_status() {
 		printf '  %-14s %s\n' "Secretive" "$(app_status Secretive "/Applications/Secretive.app")"
 		printf '  %-14s %s\n' "QGIS" "$(app_status QGIS "/Applications/QGIS.app" "/Applications/QGIS-LTR.app")"
 		printf '  %-14s %s\n' "OrbStack" "$(app_status OrbStack "/Applications/OrbStack.app")"
-		echo "  (owner: mactools omit_from_all, except OrbStack = --with orbstack component)"
+		# Resolve: prefer helper status (App Store / auth aware) without launching.
+		if declare -F dots_davinci_resolve_status >/dev/null 2>&1; then
+			printf '  %-14s %s\n' "DaVinci Resolve" "$(dots_davinci_resolve_status)"
+		else
+			# shellcheck disable=SC1091
+			# Optional source when check media runs outside full setup context.
+			if [[ -f ${ROOT}/helpers/davinci_resolve.sh ]]; then
+				# shellcheck source=../../helpers/davinci_resolve.sh
+				source "${ROOT}/helpers/davinci_resolve.sh"
+				printf '  %-14s %s\n' "DaVinci Resolve" "$(dots_davinci_resolve_status)"
+			else
+				printf '  %-14s %s\n' "DaVinci Resolve" "$(app_status "DaVinci Resolve" "/Applications/DaVinci Resolve.app")"
+			fi
+		fi
+		echo "  (mactools omit_from_all · OrbStack=--with orbstack · Resolve=--with davinci-resolve)"
 	fi
 
 	echo ""
@@ -156,7 +174,8 @@ run_status() {
 	echo "  No yt-dlp network / cookies-from-browser / media downloads"
 	echo "  No GUI launches (open -a / osascript); no Accessibility or permission changes"
 	echo "  No LocalSend peer discovery / listeners; no TablePlus DB connections"
-	echo "  mactools included in all: NO · accounts required: NO"
+	echo "  No f.lux location/wake/display config; no Resolve project/media/Blackmagic login"
+	echo "  mactools / davinci-resolve included in all: NO · App Store auth global: NO"
 	echo "  sudo required: NO · YubiKey required: NO"
 	return 0
 }
@@ -173,8 +192,8 @@ stage_ffmpeg() {
 	# lavfi testsrc — no hardware devices
 	if ffmpeg -hide_banner -loglevel error -f lavfi -i "testsrc=duration=0.2:size=160x120:rate=10" \
 		-f lavfi -i "sine=frequency=440:duration=0.2" \
-		-c:v libx264 -pix_fmt yuv420p -c:a aac -shortest -y "${out}" >/dev/null 2>&1 \
-		&& [[ -s ${out} ]]; then
+		-c:v libx264 -pix_fmt yuv420p -c:a aac -shortest -y "${out}" >/dev/null 2>&1 &&
+		[[ -s ${out} ]]; then
 		if ffprobe -hide_banner -loglevel error -show_format -show_streams "${out}" >/dev/null 2>&1; then
 			pass "ffmpeg lavfi → tiny mp4 + ffprobe"
 			return 0
@@ -269,8 +288,11 @@ Media tooling examples (copy/paste — not executed by DOTS)
   exiftool photo.jpg
 
 macOS apps (./setup.sh --with mactools; omit_from_all):
-  Raycast, Rectangle, LocalSend, TablePlus, Bruno, Proxyman, Secretive, QGIS
+  Vorssaint, f.lux (flux-app), Raycast, Rectangle, LocalSend, TablePlus,
+  Bruno, Proxyman, Secretive, QGIS
   OrbStack: ./setup.sh --with orbstack (separate component)
+  DaVinci Resolve: ./setup.sh --with davinci-resolve (App Store via mas;
+    install-only; App Store auth required only for this explicit component)
 
 Users are responsible for service terms, copyright, and authorization when
 retrieving media. DOTS does not provide service-specific bypass behavior.

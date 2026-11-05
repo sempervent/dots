@@ -98,6 +98,8 @@ source "${DIR}/helpers/links.sh"
 source "${DIR}/helpers/backup.sh"
 # shellcheck source=helpers/mactools.sh
 source "${DIR}/helpers/mactools.sh"
+# shellcheck source=helpers/davinci_resolve.sh
+source "${DIR}/helpers/davinci_resolve.sh"
 # shellcheck source=helpers/git_config.sh
 source "${DIR}/helpers/git_config.sh"
 # shellcheck source=helpers/profiles.sh
@@ -728,13 +730,22 @@ if has_component tex; then
 fi
 if has_component mactools; then
 	cat <<'EOF'
-mactools: Vorssaint + Raycast/KM/Hazel/Little Snitch/OrbStack/Hookmark/DEVONthink/
+mactools: Vorssaint + f.lux + Raycast/KM/Hazel/Little Snitch/Hookmark/DEVONthink/
   Ghostty/Zed + audio/PFL tools + mise/yazi/CLI utilities (Brewfile.mactools).
   Portable configs: ~/.config/{ghostty,yazi,mise,lazygit}
   Manual: licenses, macOS permissions, BlackHole reboot — see docs/MACTOOLS.md
   Export helpers: ./scripts/mactools/export-configs.sh all
-  OrbStack playbook: docs/ORBSTACK_MIGRATION.md (no auto-migrate)
+  OrbStack: ./setup.sh --with orbstack (separate; docs/ORBSTACK_MIGRATION.md)
+  DaVinci Resolve: ./setup.sh --with davinci-resolve (NOT included in mactools)
   mise analysis: docs/MISE_MIGRATION.md (no cutover)
+EOF
+fi
+if has_component davinci-resolve; then
+	cat <<'EOF'
+davinci-resolve: Mac App Store edition via `mas` (install-only).
+  Requires a signed-in App Store account for this component only.
+  Never launches Resolve, scans media, or creates projects.
+  See docs/using/media-tooling.md for edition notes + Blackmagic direct alternative.
 EOF
 fi
 if agent_router_should_install 2>/dev/null; then

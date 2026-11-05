@@ -14,7 +14,15 @@ dots_mactools_postinstall_notes() {
 
 Vorssaint consolidates common Mac utility roles (clipboard, windowing,
 snippets, capture, per-app audio helpers). Do not expect CleanShot /
-Dropover / SoundSource / BTT / PopClip by default.
+Dropover / SoundSource / BTT / PopClip by default. Functional overlap with
+Raycast / Rectangle / system utilities is intentional coexistence — DOTS
+never removes or disables either side.
+
+f.lux (cask flux-app): install-only. DOTS never sets location, wake schedule,
+color temperature, launch-at-login, or Night Shift / True Tone settings.
+
+DaVinci Resolve is NOT part of mactools — use explicit:
+  ./setup.sh --with davinci-resolve
 
 Licenses (activate in-app; DOTS never stores licenses):
   Keyboard Maestro, Hazel, Little Snitch, Hookmark, DEVONthink,
@@ -26,6 +34,7 @@ use an app — DOTS never requests or changes these during setup/check):
                                           Accessibility, Input Monitoring
   Vorssaint / OBS / Loopback / Audio Hijack  Screen Recording, Microphone,
                                               System Audio (where prompted)
+  f.lux                                   Location (only if YOU enable it in-app)
   Hazel / DEVONthink / Hookmark           Full Disk Access (if you use those features)
   Little Snitch                           Network Extension / System Extension approval
   LocalSend                               Local Network (only if you launch it)

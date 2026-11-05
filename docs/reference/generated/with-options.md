@@ -175,7 +175,7 @@ Homebrew TeX Live (CLI)
 
 ### `mactools`
 
-Optional macOS workstation layer (Vorssaint + automation/audio/CLI; Brewfile.mactools)
+Optional macOS workstation layer (Vorssaint, f.lux, automation/audio/CLI; Brewfile.mactools)
 
 - **label:** macOS tools
 - **category:** workstation
@@ -183,7 +183,7 @@ Optional macOS workstation layer (Vorssaint + automation/audio/CLI; Brewfile.mac
 - **brewfile:** `brew/Brewfile.mactools`
 - **omit_from_all:** yes
 - **formulae:** `mise`, `yazi`, `watchexec`, `hyperfine`, `mprocs`, `xh`, `dust`, `duf`, `diskbloom`
-- **casks:** `vorssaint`, `raycast`, `keyboard-maestro`, `hazel`, `rectangle`, `little-snitch`, `hookmark`, `devonthink`, `ghostty`, `zed`, `loopback`, `audio-hijack`, `blackhole-2ch`, `vcv-rack`, `obs`, `touchdesigner`, `processing`, `sonic-pi`, `supercollider`, `qgis`, `grandperspective`, `midi-monitor`, `secretive`, `bruno`, `proxyman`, `localsend`, `tableplus`
+- **casks:** `vorssaint`, `flux-app`, `raycast`, `keyboard-maestro`, `hazel`, `rectangle`, `little-snitch`, `hookmark`, `devonthink`, `ghostty`, `zed`, `loopback`, `audio-hijack`, `blackhole-2ch`, `vcv-rack`, `obs`, `touchdesigner`, `processing`, `sonic-pi`, `supercollider`, `qgis`, `grandperspective`, `midi-monitor`, `secretive`, `bruno`, `proxyman`, `localsend`, `tableplus`
 - **activate:** `./dots setup --with mactools`
 
 ### `orbstack`
@@ -197,6 +197,18 @@ Optional Darwin Docker-compatible runtime (install-only; never auto-start or rem
 - **omit_from_all:** yes
 - **casks:** `orbstack`
 - **activate:** `./dots setup --with orbstack`
+
+### `davinci-resolve`
+
+Optional professional NLE via Mac App Store (mas; install-only; never launch, scan media, or require App Store auth globally)
+
+- **label:** DaVinci Resolve
+- **category:** media
+- **platforms:** darwin
+- **brewfile:** `brew/Brewfile.davinci-resolve`
+- **omit_from_all:** yes
+- **formulae:** `mas`
+- **activate:** `./dots setup --with davinci-resolve`
 
 ### `mitmproxy`
 

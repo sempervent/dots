@@ -2,6 +2,8 @@
 # scripts/tests/media_mactools_validate_test.sh — Phase 10 media + desktop safety
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+DIR="${ROOT}"
+export DIR ROOT DOTS_DIR="${ROOT}"
 SCRIPT="${ROOT}/scripts/ci/media_validate.sh"
 pass=0
 fail=0
@@ -49,20 +51,22 @@ done
 
 echo "=== mactools ownership / omit_from_all ==="
 BF="${ROOT}/brew/Brewfile.mactools"
-for c in raycast rectangle localsend tableplus bruno proxyman secretive qgis; do
+for c in vorssaint flux-app raycast rectangle localsend tableplus bruno proxyman secretive qgis; do
 	grep -qE "cask \"${c}\"" "${BF}" && ok "mactools cask ${c}" || bad "missing cask ${c}"
 done
-# OrbStack is separate component — not in mactools Brewfile
+# OrbStack / Resolve are separate components — not in mactools Brewfile
 if grep -qE 'cask "orbstack"' "${BF}"; then
 	bad "orbstack duplicated in mactools"
 else
 	ok "orbstack not in mactools Brewfile"
 fi
+grep -qiE 'davinci|571213070' "${BF}" && bad "Resolve leaked into mactools" || ok "Resolve not in mactools"
 grep -q 'cask "orbstack"' "${ROOT}/brew/Brewfile.orbstack" && ok "orbstack component brewfile" || bad "orbstack brewfile"
 grep -A12 'id = "mactools"' "${ROOT}/configs/components.toml" | grep -q 'omit_from_all = true' && ok "mactools omit_from_all" || bad "mactools omit"
 grep -A12 'id = "orbstack"' "${ROOT}/configs/components.toml" | grep -q 'omit_from_all = true' && ok "orbstack omit_from_all" || bad "orbstack omit"
+grep -A14 'id = "davinci-resolve"' "${ROOT}/configs/components.toml" | grep -q 'omit_from_all = true' && ok "resolve omit_from_all" || bad "resolve omit"
 # all profile must not pull mactools/GUIs
-if grep -qiE 'mactools|raycast|rectangle|localsend|tableplus|qgis|bruno|proxyman|secretive|orbstack' \
+if grep -qiE 'mactools|raycast|rectangle|localsend|tableplus|qgis|bruno|proxyman|secretive|orbstack|vorssaint|flux|davinci' \
 	"${ROOT}/configs/bootstrap/profiles/all.toml"; then
 	bad "all profile references GUI/mactools"
 else
@@ -70,7 +74,7 @@ else
 fi
 # Duplicate cask audit across brew/
 dup=0
-for c in raycast rectangle localsend tableplus bruno proxyman secretive qgis orbstack; do
+for c in vorssaint flux-app raycast rectangle localsend tableplus bruno proxyman secretive qgis orbstack; do
 	count="$(rg -l "cask \"${c}\"" "${ROOT}/brew" 2>/dev/null | wc -l | tr -d ' ')"
 	if [[ ${count} -gt 1 ]]; then
 		echo "DUP: ${c} in ${count} brewfiles" >&2
@@ -185,7 +189,7 @@ echo "${ex}" | grep -qi 'yt-dlp\|ffmpeg\|copyright\|terms' && ok "examples + pol
 echo "${ex}" | grep -qi 'FORBIDDEN_' && bad "examples executed tools" || ok "examples stdout only"
 
 echo "=== gate with real tools when available ==="
-REAL_PATH="$(echo "${PATH}" | sed "s|${TMP}/bin:||")"
+REAL_PATH="${PATH//${TMP}\/bin:/}"
 export PATH="${REAL_PATH}"
 export DOTS_MEDIA_ARTIFACT_DIR="${TMP}/artifacts"
 # Keep stub yt-dlp ahead if real missing — use real for ffmpeg/sox

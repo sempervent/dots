@@ -1,6 +1,6 @@
 [project]
 name = "dots-help"
-version = "1.7.0"
+version = "1.7.1"
 description = "Interactive DOTS help (Textual TUI) for the current machine"
 requires-python = ">=3.11"
 dependencies = [
