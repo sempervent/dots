@@ -493,6 +493,12 @@ dots_cmd_check() {
 		shift || true
 		exec "${DIR}/scripts/ci/containers_k8s_validate.sh" "${domain}" "${sub}" "$@"
 		;;
+	dev)
+		shift
+		sub="${1:-status}"
+		shift || true
+		exec "${DIR}/scripts/ci/dev_validate.sh" "${sub}" "$@"
+		;;
 	-h | --help)
 		cat <<'EOF'
 Usage:
@@ -508,6 +514,7 @@ Usage:
   ./dots check containers [gate|status]
                                        OCI/container CLIs + static Dockerfile/Compose
   ./dots check k8s [gate|status]       Kubernetes CLIs + local manifest validation
+  ./dots check dev [status|repo]       Developer tooling diagnostics (non-mutating)
 
 Local validators require package group `dev` (e.g. ./setup.sh --profile work).
 Security / containers / k8s checks require their package groups.

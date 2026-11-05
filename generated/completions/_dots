@@ -23,7 +23,7 @@ _dots() {
     'restore:Restore a snapshot (creates a safety snapshot first).'
     'profile:Create, preview, or switch machine profiles.'
     'models:Local model plan, discovery, and pull workflows.'
-    'check:Machine health, local CI, security, container, or Kuber…'
+    'check:Machine health, local CI, security, container, Kubernet…'
     'update:git pull the DOTS repo and optionally reapply setup.'
     'help:Interactive Textual help (dots-help) for this machine.'
     'shell:Inspect shell, prompt, and keybinding ownership.'
@@ -72,6 +72,7 @@ _dots() {
     'tex:TeX'
     'mactools:macOS tools'
     'orbstack:OrbStack'
+    'mitmproxy:mitmproxy'
     'lsp:Language servers'
     'ai-server:AI inference server'
     'pi:Pi Coding Agent'
@@ -81,7 +82,7 @@ _dots() {
   )
   groups=(
     'core:Portable essentials'
-    'modern:Shared ergonomic CLI'
+    'modern:Shared ergonomic CLI + Git evolution / structur…'
     'workstation:Desktop-user tools (not headless)'
     'infra:Docker CLI / Helm / Terraform (k8s operator CLI…'
     'media:Image / video processing'

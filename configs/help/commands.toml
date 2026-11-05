@@ -190,9 +190,9 @@ description = "Read-only inventory (no downloads)."
 
 [[commands]]
 name = "check"
-usage = "dots check [--profile NAME] | dots check fast|workflows|docs|all-local|act|release-notes|security|containers|k8s"
+usage = "dots check [--profile NAME] | dots check fast|workflows|docs|all-local|act|release-notes|security|containers|k8s|dev"
 category = "diagnostics"
-description = "Machine health, local CI, security, container, or Kubernetes validation."
+description = "Machine health, local CI, security, container, Kubernetes, or developer tooling validation."
 mutating = false
 related = ["status", "update", "help", "packages"]
 [[commands.examples]]
@@ -222,6 +222,12 @@ description = "OCI CLIs + static Dockerfile/Compose checks (no runtime start)."
 [[commands.examples]]
 command = "dots check k8s status"
 description = "Kubernetes tooling vs cluster connectivity (cluster optional)."
+[[commands.examples]]
+command = "dots check dev"
+description = "Developer tooling presence (jj/git-town/ast-grep/lnav/API tools)."
+[[commands.examples]]
+command = "dots check dev repo"
+description = "Optional read-only git-sizer report for this repository."
 
 [[commands]]
 name = "update"

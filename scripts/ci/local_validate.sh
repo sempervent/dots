@@ -41,6 +41,7 @@ Modes:
   security       Delegates to scripts/ci/security_validate.sh (supply-chain gate)
   containers     Delegates to scripts/ci/containers_k8s_validate.sh containers
   k8s            Delegates to scripts/ci/containers_k8s_validate.sh k8s
+  dev            Delegates to scripts/ci/dev_validate.sh (developer tooling)
 
 Does not install tools. Select package group `dev`, e.g.:
   ./setup.sh --profile work
@@ -303,6 +304,9 @@ security)
 	;;
 containers | k8s)
 	exec "${ROOT}/scripts/ci/containers_k8s_validate.sh" "${MODE}" "$@"
+	;;
+dev)
+	exec "${ROOT}/scripts/ci/dev_validate.sh" "$@"
 	;;
 *)
 	echo "Unknown mode: ${MODE}" >&2

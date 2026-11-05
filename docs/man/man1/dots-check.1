@@ -3,11 +3,12 @@
 .
 .TH DOTS\-CHECK 1 "2026-11-02" "DOTS 1.6.2" "User Commands"
 .SH NAME
-dots\-check \- Machine health, local CI, security, container, or Kubernetes
+dots\-check \- Machine health, local CI, security, container, Kubernetes, or
 .SH SYNOPSIS
-.B dots check [\-\-profile NAME] | dots check fast|workflows|docs|all\-local|act|release\-notes|security|containers|k8s
+.B dots check [\-\-profile NAME] | dots check fast|workflows|docs|all\-local|act|release\-notes|security|containers|k8s|dev
 .SH DESCRIPTION
-Machine health, local CI, security, container, or Kubernetes validation.
+Machine health, local CI, security, container, Kubernetes, or developer
+tooling validation.
 .SH EXAMPLES
 .TP
 .B dots check
@@ -36,6 +37,12 @@ OCI CLIs + static Dockerfile/Compose checks (no runtime start).
 .TP
 .B dots check k8s status
 Kubernetes tooling vs cluster connectivity (cluster optional).
+.TP
+.B dots check dev
+Developer tooling presence (jj/git\-town/ast\-grep/lnav/API tools).
+.TP
+.B dots check dev repo
+Optional read\-only git\-sizer report for this repository.
 .SH SEE ALSO
 .BR dots (1),
 .BR dots\-help (1)
