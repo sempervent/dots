@@ -190,9 +190,9 @@ description = "Read-only inventory (no downloads)."
 
 [[commands]]
 name = "check"
-usage = "dots check [--profile NAME] | dots check fast|workflows|docs|all-local|act|release-notes|security"
+usage = "dots check [--profile NAME] | dots check fast|workflows|docs|all-local|act|release-notes|security|containers|k8s"
 category = "diagnostics"
-description = "Machine health, local CI validation, or supply-chain/security gate."
+description = "Machine health, local CI, security, container, or Kubernetes validation."
 mutating = false
 related = ["status", "update", "help", "packages"]
 [[commands.examples]]
@@ -216,6 +216,12 @@ description = "Secrets/source/deps/SBOM gate (requires package group security)."
 [[commands.examples]]
 command = "dots check security status"
 description = "SOPS/age/YubiKey/osquery/step capability report (non-mutating)."
+[[commands.examples]]
+command = "dots check containers"
+description = "OCI CLIs + static Dockerfile/Compose checks (no runtime start)."
+[[commands.examples]]
+command = "dots check k8s status"
+description = "Kubernetes tooling vs cluster connectivity (cluster optional)."
 
 [[commands]]
 name = "update"

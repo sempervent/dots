@@ -39,6 +39,8 @@ Modes:
                  (act list | act <job>)
   release-notes  Preview git-cliff notes since previous tag (stdout only)
   security       Delegates to scripts/ci/security_validate.sh (supply-chain gate)
+  containers     Delegates to scripts/ci/containers_k8s_validate.sh containers
+  k8s            Delegates to scripts/ci/containers_k8s_validate.sh k8s
 
 Does not install tools. Select package group `dev`, e.g.:
   ./setup.sh --profile work
@@ -298,6 +300,9 @@ release-notes)
 security)
 	# Deeper security / supply-chain gate — not part of `fast`.
 	exec "${ROOT}/scripts/ci/security_validate.sh" "$@"
+	;;
+containers | k8s)
+	exec "${ROOT}/scripts/ci/containers_k8s_validate.sh" "${MODE}" "$@"
 	;;
 *)
 	echo "Unknown mode: ${MODE}" >&2

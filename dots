@@ -486,6 +486,13 @@ dots_cmd_check() {
 		shift || true
 		exec "${DIR}/scripts/ci/security_validate.sh" "${sub}" "$@"
 		;;
+	containers | k8s)
+		domain="$1"
+		shift
+		sub="${1:-gate}"
+		shift || true
+		exec "${DIR}/scripts/ci/containers_k8s_validate.sh" "${domain}" "${sub}" "$@"
+		;;
 	-h | --help)
 		cat <<'EOF'
 Usage:
@@ -498,10 +505,13 @@ Usage:
   ./dots check release-notes           git-cliff preview (stdout only)
   ./dots check security [gate|status|secrets|sbom|verify…]
                                        Local supply-chain / secrets gate
+  ./dots check containers [gate|status]
+                                       OCI/container CLIs + static Dockerfile/Compose
+  ./dots check k8s [gate|status]       Kubernetes CLIs + local manifest validation
 
 Local validators require package group `dev` (e.g. ./setup.sh --profile work).
-Security checks require package group `security`.
-They never install packages, provision keys, or start container runtimes.
+Security / containers / k8s checks require their package groups.
+They never install packages, start runtimes, create clusters, or require a YubiKey.
 EOF
 		return 0
 		;;
