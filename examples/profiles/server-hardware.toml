@@ -1,0 +1,10 @@
+# examples/profiles/server-hardware.toml — EXAMPLE ONLY
+# Headless server with selective network + hardware CLIs (no Tailscale up).
+[profile]
+name = "server-hardware"
+description = "Server with network diagnostics and hardware inspection CLIs"
+extends = "server"
+packages = ["core", "modern", "server", "network", "hardware", "backup"]
+
+[runtime]
+multiplexer = "tmux"
