@@ -103,3 +103,7 @@ Agent stack: [Agent harness](../agents/harness.md).
 ## Local CI validation
 
 See [Local CI feedback loop](local-ci.md) (`./dots check fast`).
+
+## Local security gate
+
+See [Local security and supply-chain tooling](security.md) (`./dots check security`).
