@@ -190,9 +190,9 @@ description = "Read-only inventory (no downloads)."
 
 [[commands]]
 name = "check"
-usage = "dots check [--profile NAME] | dots check fast|workflows|docs|all-local|act|release-notes|security|containers|k8s|dev"
+usage = "dots check [--profile NAME] | dots check fast|workflows|docs|all-local|act|release-notes|security|containers|k8s|dev|data|backup"
 category = "diagnostics"
-description = "Machine health, local CI, security, container, Kubernetes, or developer tooling validation."
+description = "Machine health, local CI, security, container, Kubernetes, developer, data, or backup tooling validation."
 mutating = false
 related = ["status", "update", "help", "packages"]
 [[commands.examples]]
@@ -228,6 +228,18 @@ description = "Developer tooling presence (jj/git-town/ast-grep/lnav/API tools).
 [[commands.examples]]
 command = "dots check dev repo"
 description = "Optional read-only git-sizer report for this repository."
+[[commands.examples]]
+command = "dots check data"
+description = "PostgreSQL/tabular tooling presence (no DB connections or dataset reads)."
+[[commands.examples]]
+command = "dots check data examples"
+description = "Print data-tool example commands (stdout only; not executed)."
+[[commands.examples]]
+command = "dots check backup"
+description = "Backup/sync tooling presence (no repo init, remotes, or Syncthing start)."
+[[commands.examples]]
+command = "dots check backup examples"
+description = "Print recovery-oriented example commands (stdout only; not executed)."
 
 [[commands]]
 name = "update"

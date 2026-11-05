@@ -499,6 +499,18 @@ dots_cmd_check() {
 		shift || true
 		exec "${DIR}/scripts/ci/dev_validate.sh" "${sub}" "$@"
 		;;
+	data)
+		shift
+		sub="${1:-status}"
+		shift || true
+		exec "${DIR}/scripts/ci/data_validate.sh" "${sub}" "$@"
+		;;
+	backup)
+		shift
+		sub="${1:-status}"
+		shift || true
+		exec "${DIR}/scripts/ci/backup_validate.sh" "${sub}" "$@"
+		;;
 	-h | --help)
 		cat <<'EOF'
 Usage:
@@ -515,10 +527,14 @@ Usage:
                                        OCI/container CLIs + static Dockerfile/Compose
   ./dots check k8s [gate|status]       Kubernetes CLIs + local manifest validation
   ./dots check dev [status|repo]       Developer tooling diagnostics (non-mutating)
+  ./dots check data [status|examples]  PostgreSQL / tabular tooling (no DB connections)
+  ./dots check backup [status|examples]
+                                       Backup/sync tooling (no repo init / no remotes)
 
 Local validators require package group `dev` (e.g. ./setup.sh --profile work).
-Security / containers / k8s checks require their package groups.
-They never install packages, start runtimes, create clusters, or require a YubiKey.
+Security / containers / k8s / data / backup checks require their package groups.
+They never install packages, start runtimes, create clusters, open databases,
+initialize backup repositories, contact remotes, start Syncthing, or require a YubiKey.
 EOF
 		return 0
 		;;
