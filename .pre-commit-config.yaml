@@ -1,0 +1,23 @@
+# DOTS pre-commit — install hooks explicitly (never auto-installed by setup):
+#   pre-commit install
+# Local validation runs: pre-commit run --all-files (via ./dots check all-local)
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: '^(site/|\.tools/)'
+      - id: end-of-file-fixer
+        exclude: '^(site/|\.tools/)'
+      - id: check-merge-conflict
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+        exclude: '^\.github/workflows/'
+  - repo: local
+    hooks:
+      - id: actionlint
+        name: actionlint
+        entry: actionlint
+        language: system
+        files: '^\.github/workflows/.*\.(yml|yaml)$'
+        pass_filenames: true
