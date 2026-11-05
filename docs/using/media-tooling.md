@@ -20,9 +20,49 @@ libraries, or process arbitrary user files during setup or `./dots check media`.
 | `sox` (`soxi`, optional `play`/`rec`) | Audio processing / synthetic signals |
 | `yt-dlp` | Explicit media retrieval frontend |
 | ImageMagick / `exiftool` | Image processing / metadata (pre-existing) |
+| DaVinci Resolve (optional GUI) | Explicit `--with davinci-resolve` — not part of group `media` |
 
 **yt-dlp** retrieves; **FFmpeg** decodes/transcodes/muxes. yt-dlp may invoke
 FFmpeg when **you** run it. DOTS does not combine them during validation.
+
+## Optional: DaVinci Resolve
+
+Professional NLE as an **explicit** Darwin component (omit_from_all). It is
+**not** installed by package group `media`, profile `home`/`all`, or
+`--with mactools`.
+
+```bash
+./setup.sh --with davinci-resolve
+./setup.sh --dry-run --with davinci-resolve
+```
+
+### Verified install mechanism
+
+| Item | Value |
+|------|-------|
+| Automated edition | Mac App Store |
+| App Store id | `571213070` (verified via iTunes lookup; bundle `com.blackmagic-design.DaVinciResolveLite`) |
+| Prerequisite | Homebrew formula `mas` (Brewfile.davinci-resolve) |
+| Homebrew cask | **none** (no `davinci-resolve` cask) |
+
+App Store sign-in is required **only** for this explicit component. If unsigned-in,
+setup reports `NOT CONFIGURED / AUTH REQUIRED` and continues — other profiles,
+CI, and checks do not require an App Store account.
+
+### Manual alternative (Blackmagic direct)
+
+The Blackmagic Design website offers a direct installer that some professional
+workflows prefer for OpenFX / VST / control-surface compatibility. DOTS does
+**not** automate that download (URLs are not reliably reproducible without
+brittle scraping). Install manually from Blackmagic if you need that edition;
+DOTS will still report the app as installed when
+`/Applications/DaVinci Resolve.app` exists.
+
+### Safety
+
+DOTS never launches Resolve, creates project libraries, scans media folders,
+connects Blackmagic Cloud, installs plugins, or requests camera / microphone /
+screen-recording permissions.
 
 ## Diagnostics
 

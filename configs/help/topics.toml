@@ -150,7 +150,7 @@ id = "media"
 title = "Media tooling"
 body = "docs/help/media.md"
 order = 151
-keywords = ["media", "ffmpeg", "ffprobe", "sox", "yt-dlp", "imagemagick", "exiftool", "raycast", "rectangle", "localsend", "tableplus"]
+keywords = ["media", "ffmpeg", "ffprobe", "sox", "yt-dlp", "imagemagick", "exiftool", "raycast", "rectangle", "localsend", "tableplus", "vorssaint", "flux", "davinci", "resolve"]
 
 [[topics]]
 id = "agent-evals"

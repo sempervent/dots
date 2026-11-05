@@ -159,7 +159,7 @@ local_ai = false
 omit_from_all = true
 platforms = ["darwin"]
 brewfile = "brew/Brewfile.mactools"
-description = "Optional macOS workstation layer (Vorssaint + automation/audio/CLI; Brewfile.mactools)"
+description = "Optional macOS workstation layer (Vorssaint, f.lux, automation/audio/CLI; Brewfile.mactools)"
 
 [[components]]
 id = "orbstack"

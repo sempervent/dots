@@ -28,7 +28,8 @@ Declared in `brew/Brewfile.mactools` (verified Homebrew names; no duplicates of
 
 | Area | Packages |
 |------|----------|
-| Control plane | `vorssaint` |
+| Control plane | `vorssaint` (install-only; overlaps Raycast/Rectangle functionally — DOTS does not pick a winner) |
+| Display comfort | `flux-app` (f.lux; install-only — never set location/wake/colour temp or alter Night Shift) |
 | Launcher / automation | `raycast`, `keyboard-maestro`, `hazel` (install-only; never launch or configure hotkeys/extensions) |
 | Window management | `rectangle` (install-only; never request Accessibility; does not remove yabai/Amethyst/etc.) |
 | Network | `little-snitch` |
@@ -42,6 +43,10 @@ Declared in `brew/Brewfile.mactools` (verified Homebrew names; no duplicates of
 
 **OrbStack** is a separate `--with orbstack` component (not this Brewfile). See
 [OrbStack migration](../migration/orbstack.md).
+
+**DaVinci Resolve** is a separate `--with davinci-resolve` component (not this
+Brewfile). See [media tooling](../using/media-tooling.md). Selecting mactools
+does **not** install Resolve.
 
 Omitted on purpose (already owned elsewhere): `just`, `lazygit`, Docker CLI formulae, Ranger.
 
