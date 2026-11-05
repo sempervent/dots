@@ -523,6 +523,12 @@ dots_cmd_check() {
 		shift || true
 		exec "${DIR}/scripts/ci/hardware_validate.sh" "${sub}" "$@"
 		;;
+	infra)
+		shift
+		sub="${1:-status}"
+		shift || true
+		exec "${DIR}/scripts/ci/infra_validate.sh" "${sub}" "$@"
+		;;
 	-h | --help)
 		cat <<'EOF'
 Usage:
@@ -546,13 +552,15 @@ Usage:
                                        Network tooling (no scans/captures/Tailscale up)
   ./dots check hardware [status|examples]
                                        Hardware tooling (no SMART/fio/serial I/O)
+  ./dots check infra [status|gate|examples]
+                                       IaC tooling (no init/apply/login/build/API)
 
 Local validators require package group `dev` (e.g. ./setup.sh --profile work).
-Security / containers / k8s / data / backup / network / hardware checks require
-their package groups. They never install packages, start runtimes, create clusters,
-open databases, initialize backup repositories, contact remotes, start Syncthing,
-scan networks, capture packets, join Tailscale, benchmark disks, open serial
-devices, or require a YubiKey.
+Domain checks require their package groups. They never install packages, start
+runtimes, create clusters, open databases, initialize backup repositories, contact
+remotes, start Syncthing, scan networks, capture packets, join Tailscale, benchmark
+disks, open serial devices, apply/destroy infrastructure, login to Vault, build
+images, call Infracost APIs, or require a YubiKey.
 EOF
 		return 0
 		;;

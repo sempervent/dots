@@ -190,9 +190,9 @@ description = "Read-only inventory (no downloads)."
 
 [[commands]]
 name = "check"
-usage = "dots check [--profile NAME] | dots check fast|workflows|docs|all-local|act|release-notes|security|containers|k8s|dev|data|backup|network|hardware"
+usage = "dots check [--profile NAME] | dots check fast|workflows|docs|all-local|act|release-notes|security|containers|k8s|dev|data|backup|network|hardware|infra"
 category = "diagnostics"
-description = "Machine health plus local CI, security, containers, k8s, data, backup, network, and hardware checks."
+description = "Machine health plus local CI, security, containers, k8s, data, backup, network, hardware, and infra checks."
 mutating = false
 related = ["status", "update", "help", "packages"]
 [[commands.examples]]
@@ -252,6 +252,15 @@ description = "Hardware tooling presence (no SMART tests, fio workloads, or seri
 [[commands.examples]]
 command = "dots check hardware examples"
 description = "Print hardware-tool example commands (stdout only; not executed)."
+[[commands.examples]]
+command = "dots check infra"
+description = "Infrastructure tooling presence (no apply/login/build)."
+[[commands.examples]]
+command = "dots check infra gate"
+description = "Static IaC format/lint on fixtures (no init/backends/network APIs)."
+[[commands.examples]]
+command = "dots check infra examples"
+description = "Print infra-tool example commands (stdout only; not executed)."
 
 [[commands]]
 name = "update"
