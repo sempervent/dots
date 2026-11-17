@@ -161,8 +161,10 @@ run_status() {
 	printf '  %-24s %s\n' "trivy" "$(have trivy && echo present || echo missing)"
 	printf '  %-24s %s\n' "syft" "$(have syft && echo present || echo missing)"
 	printf '  %-24s %s\n' "grype" "$(have grype && echo present || echo missing)"
+	printf '  %-24s %s\n' "ssh-audit" "$(have ssh-audit && echo present || echo missing)"
 	echo ""
 	echo "No keys generated. No YubiKey slots modified. No CA bootstrap."
+	echo "No remote SSH audits — run ssh-audit explicitly when you intend to scan."
 	return 0
 }
 
