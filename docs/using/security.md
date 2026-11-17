@@ -93,6 +93,24 @@ Queries live in `configs/security/osquery/`.
 
 Neither bootstraps a CA or trusts roots during DOTS setup.
 
+## ssh-audit
+
+`ssh-audit` (package group **`security`**) audits SSH server and client algorithm
+posture when **you** run it against a target. DOTS installs the CLI and reports
+presence in `./dots check security status` only.
+
+DOTS does **not**:
+
+- audit remote hosts during setup, gates, or CI
+- connect to port 22 for inventory
+- modify `sshd_config`, `ssh_config`, or cryptographic policy
+
+Manual example (fictional host):
+
+```bash
+ssh-audit bastion.example
+```
+
 ## Cosign future (Phase 11+)
 
 Preferred options to evaluate later:
