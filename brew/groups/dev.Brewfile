@@ -25,3 +25,11 @@ brew "git-cliff"
 brew "lychee"
 brew "markdownlint-cli2"
 brew "cspell"
+# v1.9 — promoted from mactools + new inspection CLIs
+brew "watchexec"
+brew "hyperfine"
+# Homebrew formula renamed mprocs → dekit (binary may be dekit)
+brew "dekit"
+brew "xh"
+brew "hexyl"
+brew "tokei"

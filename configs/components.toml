@@ -159,7 +159,18 @@ local_ai = false
 omit_from_all = true
 platforms = ["darwin"]
 brewfile = "brew/Brewfile.mactools"
-description = "Optional macOS workstation layer (Vorssaint, f.lux, automation/audio/CLI; Brewfile.mactools)"
+description = "Optional macOS workstation layer (Vorssaint, f.lux, automation/GUI apps; Brewfile.mactools)"
+
+[[components]]
+id = "karabiner-elements"
+label = "Karabiner-Elements"
+category = "workstation"
+cloud = false
+local_ai = false
+omit_from_all = true
+platforms = ["darwin"]
+brewfile = "brew/Brewfile.karabiner-elements"
+description = "Optional keyboard remapper (install-only; no mappings, no TCC/system-extension approval)"
 
 [[components]]
 id = "orbstack"

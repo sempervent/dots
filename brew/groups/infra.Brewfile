@@ -33,3 +33,5 @@ brew "infracost"
 brew "terragrunt"
 brew "ansible"
 brew "ansible-lint"
+# v1.9 — Rego policy over structured config (complements checkov)
+brew "conftest"

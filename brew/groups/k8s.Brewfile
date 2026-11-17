@@ -13,3 +13,6 @@ brew "kubescape"
 brew "popeye"
 brew "helmfile"
 brew "argocd"
+# v1.9 — local manifest tooling (no kubectl replacement; no apply)
+brew "kustomize"
+brew "kyverno"

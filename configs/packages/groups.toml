@@ -28,6 +28,8 @@ optional = [
   "git-delta", "leaf",
   # v1.7 Phase 4 — Git evolution / search / logs (install-only; no Git takeover)
   "jj", "git-town", "git-filter-repo", "git-sizer", "ast-grep", "lnav",
+  # v1.9 — ergonomic CLI (install-only; fnm remains DOTS Node authority)
+  "mise", "dust", "duf", "jc", "navi", "sd", "procs", "ouch",
 ]
 
 [[groups]]
@@ -38,6 +40,8 @@ required = [
 ]
 optional = [
   "terminal-notifier", "chafa", "poppler",
+  # v1.9 — terminal file manager (additive; ranger remains default)
+  "yazi",
 ]
 
 [[groups]]
@@ -49,6 +53,8 @@ optional = [
   # v1.7 Phase 7 — IaC / config mgmt / images / cost (no remote backends, no apply)
   "terraform-docs", "tflint", "checkov", "infracost", "terragrunt",
   "ansible", "ansible-lint", "vault", "packer",
+  # v1.9 — Rego policy assertions (local fixtures only; no remote bundles)
+  "conftest",
   # OpenTofu not auto-installed; if present, check infra may use tofu fmt -check
 ]
 
@@ -87,6 +93,8 @@ optional = [
   "pre-commit", "hadolint", "taplo", "mkcert", "kondo",
   # v1.7 Phase 1 — local workflow / docs / release-note validators
   "zizmor", "git-cliff", "lychee", "markdownlint-cli2", "cspell",
+  # v1.9 — watch/benchmark/process tooling (install-only)
+  "watchexec", "hyperfine", "mprocs", "xh", "hexyl", "tokei",
 ]
 
 [[groups]]
@@ -180,6 +188,8 @@ optional = [
   "krew", "kubeconform", "kubescape", "popeye",
   # GitOps
   "helmfile", "argocd",
+  # v1.9 — manifest tooling (local build/test only; no apply)
+  "kustomize", "kyverno",
 ]
 
 [[groups]]
