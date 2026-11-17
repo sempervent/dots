@@ -7,8 +7,8 @@ proxy certificates.
 ## Install
 
 ```bash
-# CLIs (jj, git-town, git-filter-repo, git-sizer, ast-grep, lnav):
-./setup.sh --packages core,modern
+# CLIs (jj, git-town, jc/navi/sd, watchexec, hexyl, …):
+./setup.sh --packages core,modern,dev
 
 # Opt-in HTTP interception (never in default profiles):
 ./setup.sh --with mitmproxy
@@ -47,11 +47,23 @@ is **explicit user invocation only**.
 `lnav` is interactive log exploration. DOTS never scrapes system/user logs
 during setup or `./dots check`.
 
+## Ergonomics (v1.9)
+
+| Tool | Notes |
+|------|--------|
+| **mise** | Installed via `modern`; **fnm** remains DOTS Node authority for Pi/OpenRig |
+| **navi** | Complements `fzf`; DOTS does not bind Tab/Ctrl-R or sync cheat repos |
+| **sd** | Install-only; does not alias `sed` |
+| **watchexec** / **hyperfine** / **mprocs** | Install-only; no watchers/benchmarks at check time |
+| **hexyl** / **tokei** | Version/presence only (fixtures in CI; no `$HOME` scans) |
+| **yazi** | Workstation group; additive to **ranger** |
+
 ## HTTP / API
 
 | Tool | Role |
 |------|------|
-| xh / curl | Direct request CLIs (already present) |
+| **curl** | Baseline HTTP client |
+| **xh** | Optional HTTP helper (`dev`); DOTS never issues requests during checks |
 | Bruno | Collections / API workspace GUI (mactools) |
 | mitmproxy | Terminal/scriptable interception (`--with mitmproxy`) |
 | Proxyman | Optional macOS GUI interception (mactools) |

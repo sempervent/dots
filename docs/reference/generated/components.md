@@ -24,7 +24,8 @@ Authoritative registry: `configs/components.toml`.
 | fluidvoice | FluidVoice | voice_ai | darwin | brew/Brewfile.fluidvoice | no | Local voice-to-text dictation app with optional AI enhancement |
 | images | Images toolkit | media | darwin, linux | brew/Brewfile.images | no | Deterministic image toolkit (Magick, etc.) |
 | tex | TeX | docs | darwin, linux | brew/Brewfile.tex | no | Homebrew TeX Live (CLI) |
-| mactools | macOS tools | workstation | darwin | brew/Brewfile.mactools | yes | Optional macOS workstation layer (Vorssaint, f.lux, automation/audio/CLI; Brewfile.mactools) |
+| mactools | macOS tools | workstation | darwin | brew/Brewfile.mactools | yes | Optional macOS workstation layer (Vorssaint, f.lux, automation/GUI apps; Brewfile.mactools) |
+| karabiner-elements | Karabiner-Elements | workstation | darwin | brew/Brewfile.karabiner-elements | yes | Optional keyboard remapper (install-only; no mappings, no TCC/system-extension approval) |
 | orbstack | OrbStack | containers | darwin | brew/Brewfile.orbstack | yes | Optional Darwin Docker-compatible runtime (install-only; never auto-start or remove Docker Desktop) |
 | davinci-resolve | DaVinci Resolve | media | darwin | brew/Brewfile.davinci-resolve | yes | Optional professional NLE via Mac App Store (mas; install-only; never launch, scan media, or require App Store auth globally) |
 | mitmproxy | mitmproxy | network | darwin | brew/Brewfile.mitmproxy | yes | Opt-in HTTP interception CLIs (install-only; never start proxy, trust CA, or change system proxy) |

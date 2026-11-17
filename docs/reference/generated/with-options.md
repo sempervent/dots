@@ -175,16 +175,28 @@ Homebrew TeX Live (CLI)
 
 ### `mactools`
 
-Optional macOS workstation layer (Vorssaint, f.lux, automation/audio/CLI; Brewfile.mactools)
+Optional macOS workstation layer (Vorssaint, f.lux, automation/GUI apps; Brewfile.mactools)
 
 - **label:** macOS tools
 - **category:** workstation
 - **platforms:** darwin
 - **brewfile:** `brew/Brewfile.mactools`
 - **omit_from_all:** yes
-- **formulae:** `mise`, `yazi`, `watchexec`, `hyperfine`, `mprocs`, `xh`, `dust`, `duf`, `diskbloom`
-- **casks:** `vorssaint`, `flux-app`, `raycast`, `keyboard-maestro`, `hazel`, `rectangle`, `little-snitch`, `hookmark`, `devonthink`, `ghostty`, `zed`, `loopback`, `audio-hijack`, `blackhole-2ch`, `vcv-rack`, `obs`, `touchdesigner`, `processing`, `sonic-pi`, `supercollider`, `qgis`, `grandperspective`, `midi-monitor`, `secretive`, `bruno`, `proxyman`, `localsend`, `tableplus`
+- **formulae:** `diskbloom`
+- **casks:** `vorssaint`, `flux-app`, `raycast`, `keyboard-maestro`, `hazel`, `rectangle`, `little-snitch`, `hookmark`, `devonthink`, `ghostty`, `zed`, `loopback`, `audio-hijack`, `blackhole-2ch`, `vcv-rack`, `obs`, `touchdesigner`, `processing`, `sonic-pi`, `supercollider`, `hammerspoon`, `swiftbar`, `betterdisplay`, `pearcleaner`, `keka`, `iina`, `qgis`, `grandperspective`, `midi-monitor`, `secretive`, `bruno`, `proxyman`, `localsend`, `tableplus`
 - **activate:** `./dots setup --with mactools`
+
+### `karabiner-elements`
+
+Optional keyboard remapper (install-only; no mappings, no TCC/system-extension approval)
+
+- **label:** Karabiner-Elements
+- **category:** workstation
+- **platforms:** darwin
+- **brewfile:** `brew/Brewfile.karabiner-elements`
+- **omit_from_all:** yes
+- **casks:** `karabiner-elements`
+- **activate:** `./dots setup --with karabiner-elements`
 
 ### `orbstack`
 

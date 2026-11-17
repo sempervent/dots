@@ -36,7 +36,9 @@ Declared in `brew/Brewfile.mactools` (verified Homebrew names; no duplicates of
 | Knowledge | `hookmark`, `devonthink` |
 | Terminal / editor | `ghostty`, `zed` (iTerm + Neovim stay primary) |
 | Audio / PFL | `loopback`, `audio-hijack`, `blackhole-2ch`, `vcv-rack`, `obs`, `touchdesigner`, `processing`, `sonic-pi`, `supercollider` |
-| CLI | `mise`, `yazi`, `watchexec`, `hyperfine`, `mprocs`, `xh`, `dust`, `duf`, `diskbloom` |
+| Automation / menu bar | `hammerspoon`, `swiftbar` (install-only; no Lua/plugins/widgets from DOTS) |
+| Display / cleanup / media | `betterdisplay`, `pearcleaner`, `keka`, `iina` (install-only; no display/cleanup/association changes) |
+| Disk CLI | `diskbloom` (Zingzy tap) |
 | Disk / GIS / MIDI | `qgis`, `grandperspective`, `midi-monitor` (install-only; QGIS never auto-launched — see [geo tooling](../using/geo-tooling.md)) |
 | Security / API GUIs | `secretive`, `bruno`, `proxyman` (install-only) |
 | Productivity | `localsend`, `tableplus` (install-only; never peer discovery / DB connect) |
@@ -48,7 +50,11 @@ Declared in `brew/Brewfile.mactools` (verified Homebrew names; no duplicates of
 Brewfile). See [media tooling](../using/media-tooling.md). Selecting mactools
 does **not** install Resolve.
 
-Omitted on purpose (already owned elsewhere): `just`, `lazygit`, Docker CLI formulae, Ranger.
+Omitted on purpose (already owned elsewhere): `just`, `lazygit`, Docker CLI
+formulae, Ranger. Portable CLIs (`mise`, `yazi`, `watchexec`, …) ship via
+`modern` / `workstation` / `dev` package groups (v1.9+) — not this Brewfile.
+
+**Karabiner-Elements** is `--with karabiner-elements` only (never in mactools or `all`).
 
 ## Setup ordering (safety)
 
@@ -139,13 +145,15 @@ DOTS does **not** reboot or force-quit creative apps.
 
 ## mise / runtimes
 
-`mise` is installed for future use. Existing **fnm** remains authoritative until a
-separate, intentional migration. Analysis only: [mise migration](../migration/mise.md).
+`mise` is owned by the **`modern`** group (v1.9+). DOTS still uses **fnm** for Pi,
+OpenRig, and managed Node. Installing `mise` does not activate shims or migrate
+runtimes. Analysis: [mise migration](../migration/mise.md).
 
-Optional (manual) shell hook — only if you choose to adopt mise:
+Optional configs under `configs/mise/` may still be linked when you use `--with mactools`
+(portable dotfiles only). Optional (manual) adoption:
 
 ```bash
-eval "$(mise activate zsh)"   # or bash
+eval "$(mise activate zsh)"   # or bash — not run by DOTS
 ```
 
 ## Ghostty + Herdr

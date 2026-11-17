@@ -38,7 +38,31 @@ are documentation only; CI does **not** fetch them.
 | Processing | Creative coding IDE | `--with mactools` | darwin | https://processing.org |
 | Sonic Pi | Live coding music | `--with mactools` | darwin | https://sonic-pi.net |
 | SuperCollider | Audio synthesis platform | `--with mactools` | darwin | https://supercollider.github.io |
-| Yazi | Terminal file manager (additive) | links + mactools tooling | darwin, linux | https://yazi-rs.github.io |
+| Yazi | Terminal file manager (additive) | `workstation` group | darwin, linux | https://yazi-rs.github.io |
+| mise | Polyglot runtime manager | `modern` group | darwin, linux | https://mise.jdx.dev |
+| dust | Intuitive du | `modern` group | darwin, linux | https://github.com/bootandy/dust |
+| duf | Disk free utility | `modern` group | darwin, linux | https://github.com/muesli/duf |
+| jc | JSON CLI converters | `modern` group | darwin, linux | https://github.com/kellyjonbrazil/jc |
+| navi | Interactive cheatsheet TUI | `modern` group | darwin, linux | https://github.com/denisidoro/navi |
+| sd | Find/replace CLI | `modern` group | darwin, linux | https://github.com/chmln/sd |
+| procs | Modern `ps` | `modern` group | darwin, linux | https://github.com/dalance/procs |
+| ouch | Archive CLI | `modern` group | darwin, linux | https://github.com/ouch-org/ouch |
+| watchexec | File watcher runner | `dev` group | darwin, linux | https://watchexec.github.io |
+| hyperfine | Benchmarking | `dev` group | darwin, linux | https://github.com/sharkdp/hyperfine |
+| mprocs | Dev process manager | `dev` group (`dekit` on Homebrew) | darwin, linux | https://github.com/pvolok/mprocs |
+| xh | Friendly HTTP client | `dev` group | darwin, linux | https://github.com/ducaale/xh |
+| hexyl | Hex viewer | `dev` group | darwin, linux | https://github.com/sharkdp/hexyl |
+| tokei | Code statistics | `dev` group | darwin, linux | https://github.com/XAMPPRocky/tokei |
+| kustomize | Manifest overlays | `k8s` group | darwin, linux | https://kustomize.io |
+| kyverno | Policy engine CLI | `k8s` group | darwin, linux | https://kyverno.io |
+| conftest | Rego policy on structured config | `infra` group | darwin, linux | https://www.conftest.dev |
+| Hammerspoon | macOS automation app | `--with mactools` | darwin | https://www.hammerspoon.org |
+| SwiftBar | Menu bar plugins | `--with mactools` | darwin | https://github.com/swiftbar/SwiftBar |
+| BetterDisplay | Display control | `--with mactools` | darwin | https://betterdisplay.app |
+| Pearcleaner | App uninstaller | `--with mactools` | darwin | https://github.com/alienator88/Pearcleaner |
+| Keka | Archive manager | `--with mactools` | darwin | https://www.keka.io |
+| IINA | Media player | `--with mactools` | darwin | https://iina.io |
+| Karabiner-Elements | Keyboard remapper | `--with karabiner-elements` | darwin | https://karabiner-elements.pqrs.org |
 | Ranger | Terminal file manager | workstation group | darwin, linux | https://ranger.github.io |
 | mise | Polyglot runtime manager (migration path) | linked config; see MISE migration | darwin, linux | https://mise.jdx.dev |
 | lazygit | TUI for git | modern group / mactools notes | darwin, linux | https://github.com/jesseduffield/lazygit |

@@ -11,7 +11,7 @@ Captured from safe `--help` / `help` invocations. If a binary is missing or help
 ## `./dots`
 
 ```text
-DOTS — machine environment manager  (v1.8.0)
+DOTS — machine environment manager  (v1.9.0)
 
 Usage:
   ./dots setup [options]            Interactive or noninteractive setup / reconfigure...
@@ -84,7 +84,8 @@ Selectors (--with / --without):
     fluidvoice   Local voice-to-text dictation app with optional AI enhancement
     images       Deterministic image toolkit (Magick, etc.)
     tex          Homebrew TeX Live (CLI)
-    mactools     Optional macOS workstation layer (Vorssaint, f.lux, automation/audio/CLI; Brewfile.mactools)
+    mactools     Optional macOS workstation layer (Vorssaint, f.lux, automation/GUI apps; Brewfile.mactools)
+    karabiner-elements Optional keyboard remapper (install-only; no mappings, no TCC/system-extension approval)
     orbstack     Optional Darwin Docker-compatible runtime (install-only; never auto-start or remove Docker Desktop)
     davinci-resolve Optional professional NLE via Mac App Store (mas; install-only; never launch, scan media, or require App Store auth globally)
     mitmproxy    Opt-in HTTP interception CLIs (install-only; never start proxy, trust CA, or change system proxy)
@@ -147,7 +148,8 @@ Options:
                       fluidvoice   Local voice-to-text dictation app with optional AI enhancement
                       images       Deterministic image toolkit (Magick, etc.)
                       tex          Homebrew TeX Live (CLI)
-                      mactools     Optional macOS workstation layer (Vorssaint, f.lux, automation/audio/CLI; Brewfile.mactools)
+                      mactools     Optional macOS workstation layer (Vorssaint, f.lux, automation/GUI apps; Brewfile.mactools)
+                      karabiner-elements Optional keyboard remapper (install-only; no mappings, no TCC/system-extension approval)
                       orbstack     Optional Darwin Docker-compatible runtime (install-only; never auto-start or remove Docker Desktop)
                       davinci-resolve Optional professional NLE via Mac App Store (mas; install-only; never launch, scan media, or require App Store auth globally)
                       mitmproxy    Opt-in HTTP interception CLIs (install-only; never start proxy, trust CA, or change system proxy)
