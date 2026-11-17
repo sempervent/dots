@@ -23,3 +23,7 @@ brew "websocat"
 brew "mtr"
 brew "nmap"
 brew "iperf3"
+# v1.8 — install-only; user-run tunnels/sessions (DOTS never starts sshuttle/autossh/sshs)
+brew "sshuttle"
+brew "autossh"
+brew "sshs"

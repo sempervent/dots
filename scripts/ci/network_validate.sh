@@ -48,6 +48,10 @@ tool_line() {
 		termshark) ver="$(termshark --version 2>/dev/null | head -n1 || true)" ;;
 		tshark) ver="$(tshark --version 2>/dev/null | head -n1 || true)" ;;
 		mosh) ver="$(mosh --version 2>/dev/null | head -n1 || true)" ;;
+		ssh) ver="$(ssh -V 2>&1 | head -n1 || true)" ;;
+		sshuttle) ver="$(sshuttle --version 2>/dev/null | head -n1 || true)" ;;
+		autossh) ver="$(autossh -V 2>&1 | head -n1 || true)" ;;
+		sshs) ver="$(sshs --version 2>/dev/null | head -n1 || true)" ;;
 		rclone) ver="$(rclone version 2>/dev/null | head -n1 || true)" ;;
 		*) ver="present" ;;
 		esac
@@ -128,16 +132,23 @@ run_status() {
 	tool_line "termshark" termshark "(Homebrew formula disabled; Linux/native may provide)"
 	tool_line "tshark" tshark
 	echo ""
-	echo "Remote / transfer"
+	echo "Remote / SSH"
+	tool_line "ssh" ssh "(system OpenSSH; DOTS does not install/replace)"
 	tool_line "mosh" mosh
-	tool_line "rclone" rclone "(owned by network)"
+	tool_line "sshs" sshs "(reads ~/.ssh/config when you run it)"
+	tool_line "autossh" autossh
+	tool_line "sshuttle" sshuttle
+	echo ""
+	echo "Transfer"
+	tool_line "rclone" rclone
 	echo ""
 	tailscale_block
 	echo ""
 	echo "Invariants"
 	echo "  No host/subnet scans; no iperf client/server; no packet capture"
-	echo "  No tailscale up/login/set; no mosh/ssh connections"
-	echo "  SSH remains the default remote shell (mosh is optional)"
+	echo "  No tailscale up/login/set; no ssh/mosh connections or tunnels"
+	echo "  No sshuttle routes, autossh forwards, or sshs TUI from DOTS"
+	echo "  SSH remains the default remote shell (mosh/sshs optional)"
 	echo "  Capture privileges / BPF / wireshark group never modified by this check"
 	return 0
 }
@@ -153,6 +164,9 @@ Network tooling examples (copy/paste — not executed by DOTS)
   bandwhich                      # often needs elevated privileges (user-run)
   termshark -i en0               # packet capture may expose sensitive traffic
   mosh user@host                 # resilient remote shell (SSH remains default)
+  sshs                           # interactive host picker (reads your SSH config)
+  autossh -M 0 -N -L 5432:db.internal:5432 user@bastion
+  sshuttle -r user@bastion 10.0.0.0/8
   tailscale status               # read-only
   # DOTS never runs: tailscale up | login | set
 
@@ -160,6 +174,10 @@ Warnings
   nmap / scanning may be unauthorized on networks you do not own.
   Packet capture (termshark/tshark/bandwhich) may expose credentials/traffic.
   Tailscale installation does not authenticate or join a tailnet.
+  sshuttle (when you run it) changes local routing/firewall state and often
+  requires sudo/root. Installation alone does not join a remote network.
+  autossh supervises tunnel restart; prefer OpenSSH ServerAlive* when enough.
+  sshs reads existing SSH configuration — DOTS does not populate SSH hosts.
 EOF
 }
 

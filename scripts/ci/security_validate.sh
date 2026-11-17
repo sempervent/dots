@@ -161,8 +161,10 @@ run_status() {
 	printf '  %-24s %s\n' "trivy" "$(have trivy && echo present || echo missing)"
 	printf '  %-24s %s\n' "syft" "$(have syft && echo present || echo missing)"
 	printf '  %-24s %s\n' "grype" "$(have grype && echo present || echo missing)"
+	printf '  %-24s %s\n' "ssh-audit" "$(have ssh-audit && echo present || echo missing)"
 	echo ""
 	echo "No keys generated. No YubiKey slots modified. No CA bootstrap."
+	echo "No remote SSH audits — run ssh-audit explicitly when you intend to scan."
 	return 0
 }
 
@@ -278,13 +280,13 @@ run_sbom() {
 }
 
 run_cosign_verify() {
-	require_cmd cosign
 	if [[ $# -lt 1 ]]; then
 		echo "Usage: ./dots check security verify <cosign-verify-args…>" >&2
 		echo "Example: ./dots check security verify --key cosign.pub artifact.tar" >&2
 		echo "Phase 2: verification only — signing keys are NOT generated." >&2
 		return 1
 	fi
+	require_cmd cosign
 	# Never log tokens; pass args through.
 	cosign verify "$@"
 }

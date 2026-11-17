@@ -98,6 +98,8 @@ optional = [
   "osv-scanner", "semgrep",
   # v1.7 Phase 2 — YubiKey / PKI / host inventory (install-only; no key gen or enrollment)
   "ykman", "age-plugin-yubikey", "step", "osquery",
+  # v1.8 — SSH security audit (install-only; no remote audits from DOTS)
+  "ssh-audit",
 ]
 
 [[groups]]
@@ -111,6 +113,8 @@ optional = [
   "mtr", "nmap", "iperf3",
   # termshark: Homebrew formula disabled 2026-01-03 — Linux maps may provide; needs tshark
   "termshark", "tshark",
+  # v1.8 — SSH remote access / tunneling (install-only; no connections or routes)
+  "sshuttle", "autossh", "sshs",
 ]
 
 [[groups]]

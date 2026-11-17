@@ -143,6 +143,12 @@ fio = "fio"
 picocom = "picocom"
 usbutils = "usbutils"
 pciutils = "pciutils"
+# v1.8 — SSH tooling ("" = SKIP via native mgr; Homebrew/Linuxbrew may still install)
+sshuttle = "sshuttle"
+autossh = "autossh"
+ssh-audit = "ssh-audit"
+# Debian/Ubuntu: no official .deb repo package; Homebrew/Arch may provide
+sshs = ""
 # v1.7 Phase 7 — infra engineering (empty = SKIP via native mgr; HashiCorp tap/brew-on-Linux may still install)
 terraform-docs = ""
 tflint = ""

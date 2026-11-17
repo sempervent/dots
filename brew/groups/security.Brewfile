@@ -16,3 +16,5 @@ brew "age-plugin-yubikey"
 brew "step"
 # Darwin: Homebrew ships osquery as a cask (CLI + optional agent bits). DOTS never starts osqueryd.
 cask "osquery"
+# v1.8 — explicit SSH audits only when user runs ssh-audit (DOTS never audits hosts)
+brew "ssh-audit"

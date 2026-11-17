@@ -62,6 +62,7 @@ bash scripts/tests/v171_creative_desktop_test.sh
 bash scripts/tests/media_mactools_validate_test.sh
 bash scripts/tests/backup_gate_test.sh
 bash scripts/tests/lsp_toolchain_test.sh
+bash scripts/tests/network_hardware_validate_test.sh
 
 /bin/bash ./dots --version
 /bin/bash ./dots help >/dev/null

@@ -78,7 +78,7 @@ Secrets / SBOM / signing / YubiKey / host-inspection CLIs (install-only; no auth
 
 **Required:** (none)
 
-**Optional:** `gitleaks`, `trivy`, `sops`, `age`, `syft`, `grype`, `cosign`, `osv-scanner`, `semgrep`, `ykman`, `age-plugin-yubikey`, `step`, `osquery`
+**Optional:** `gitleaks`, `trivy`, `sops`, `age`, `syft`, `grype`, `cosign`, `osv-scanner`, `semgrep`, `ykman`, `age-plugin-yubikey`, `step`, `osquery`, `ssh-audit`
 
 ## `network`
 
@@ -86,7 +86,7 @@ Network / remote CLIs (install-only; no scans, captures, iperf, or Tailscale up)
 
 **Required:** (none)
 
-**Optional:** `tailscale`, `mosh`, `rclone`, `bandwhich`, `gping`, `doggo`, `grpcurl`, `websocat`, `mtr`, `nmap`, `iperf3`, `termshark`, `tshark`
+**Optional:** `tailscale`, `mosh`, `rclone`, `bandwhich`, `gping`, `doggo`, `grpcurl`, `websocat`, `mtr`, `nmap`, `iperf3`, `termshark`, `tshark`, `sshuttle`, `autossh`, `sshs`
 
 ## `hardware`
 

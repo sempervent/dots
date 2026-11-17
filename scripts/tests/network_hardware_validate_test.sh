@@ -2,6 +2,8 @@
 # scripts/tests/network_hardware_validate_test.sh — Phase 6 (non-mutating)
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+DIR="${ROOT}"
+export DIR ROOT
 pass=0
 fail=0
 ok() { echo "OK: $1"; pass=$((pass + 1)); }
@@ -22,14 +24,24 @@ source "${ROOT}/helpers/toml.sh"
 source "${ROOT}/helpers/packages.sh"
 
 echo "=== network package ownership ==="
-for p in mtr nmap iperf3 gping bandwhich mosh rclone tailscale; do
+for p in mtr nmap iperf3 gping bandwhich mosh rclone tailscale sshuttle autossh sshs; do
 	found=0
 	while IFS= read -r id; do [[ ${id} == "${p}" ]] && found=1; done < <(dots_group_package_ids network optional)
 	[[ ${found} -eq 1 ]] && ok "network owns ${p}" || bad "network missing ${p}"
 done
+audit_net=0
+while IFS= read -r id; do [[ ${id} == ssh-audit ]] && audit_net=1; done < <(dots_group_package_ids network optional)
+[[ ${audit_net} -eq 0 ]] && ok "ssh-audit not in network" || bad "ssh-audit duplicated in network"
+audit_sec=0
+while IFS= read -r id; do [[ ${id} == ssh-audit ]] && audit_sec=1; done < <(dots_group_package_ids security optional)
+[[ ${audit_sec} -eq 1 ]] && ok "security owns ssh-audit" || bad "security missing ssh-audit"
 grep -q 'brew "mtr"' "${ROOT}/brew/groups/network.Brewfile" && ok "mtr Brewfile" || bad "mtr Brewfile"
 grep -q 'brew "nmap"' "${ROOT}/brew/groups/network.Brewfile" && ok "nmap Brewfile" || bad "nmap Brewfile"
 grep -q 'brew "iperf3"' "${ROOT}/brew/groups/network.Brewfile" && ok "iperf3 Brewfile" || bad "iperf3 Brewfile"
+grep -q 'brew "sshuttle"' "${ROOT}/brew/groups/network.Brewfile" && ok "sshuttle Brewfile" || bad "sshuttle Brewfile"
+grep -q 'brew "autossh"' "${ROOT}/brew/groups/network.Brewfile" && ok "autossh Brewfile" || bad "autossh Brewfile"
+grep -q 'brew "sshs"' "${ROOT}/brew/groups/network.Brewfile" && ok "sshs Brewfile" || bad "sshs Brewfile"
+grep -q 'brew "openssh"' "${ROOT}/brew/groups/network.Brewfile" && bad "Homebrew openssh must not shadow system ssh" || ok "no Homebrew openssh in network"
 # termshark not on Darwin brew (disabled)
 grep -q 'brew "termshark"' "${ROOT}/brew/groups/network.Brewfile" && bad "termshark must not be in Darwin Brewfile (disabled)" || ok "termshark omitted from Darwin Brewfile"
 # rclone not in backup
@@ -61,6 +73,38 @@ exit 99
 EOF
 	chmod +x "${TMP}/bin/${bin}"
 done
+cat >"${TMP}/bin/sshuttle" <<'EOF'
+#!/usr/bin/env bash
+case "${1:-}" in
+--version) echo "sshuttle stub 0"; exit 0 ;;
+esac
+echo "FORBIDDEN_sshuttle:$*" >&2
+exit 99
+EOF
+chmod +x "${TMP}/bin/sshuttle"
+cat >"${TMP}/bin/autossh" <<'EOF'
+#!/usr/bin/env bash
+case "${1:-}" in
+-V) echo "autossh stub 0"; exit 0 ;;
+esac
+for a in "$@"; do
+  case "$a" in
+  -L|-R|-D|-N|-f|-M) echo "FORBIDDEN_autossh:$*" >&2; exit 99 ;;
+  esac
+done
+[[ $# -gt 0 ]] && { echo "FORBIDDEN_autossh:$*" >&2; exit 99; }
+echo "autossh stub"; exit 0
+EOF
+chmod +x "${TMP}/bin/autossh"
+cat >"${TMP}/bin/sshs" <<'EOF'
+#!/usr/bin/env bash
+case "${1:-}" in
+--version) echo "sshs stub 0"; exit 0 ;;
+"") echo "FORBIDDEN_sshs:TUI" >&2; exit 99 ;;
+*) echo "FORBIDDEN_sshs:$*" >&2; exit 99 ;;
+esac
+EOF
+chmod +x "${TMP}/bin/sshs"
 cat >"${TMP}/bin/rclone" <<'EOF'
 #!/usr/bin/env bash
 case "${1:-}" in version) echo "rclone stub 0"; exit 0 ;; listremotes) exit 0 ;;
@@ -94,6 +138,9 @@ nout="$("${NET}" status 2>&1)" || {
 echo "${nout}" | grep -q 'FORBIDDEN_mtr\|FORBIDDEN_nmap\|FORBIDDEN_gping\|FORBIDDEN_iperf3' && bad "network probes invoked" || ok "no mtr/nmap/gping/iperf probes"
 echo "${nout}" | grep -q 'FORBIDDEN_bandwhich\|FORBIDDEN_termshark\|FORBIDDEN_tshark' && bad "packet capture invoked" || ok "no packet capture"
 echo "${nout}" | grep -q 'FORBIDDEN_mosh' && bad "mosh connection invoked" || ok "no mosh connection"
+echo "${nout}" | grep -q 'FORBIDDEN_sshuttle' && bad "sshuttle active ops invoked" || ok "no sshuttle tunnel"
+echo "${nout}" | grep -q 'FORBIDDEN_autossh' && bad "autossh tunnel invoked" || ok "no autossh tunnel"
+echo "${nout}" | grep -q 'FORBIDDEN_sshs' && bad "sshs launched" || ok "no sshs TUI"
 echo "${nout}" | grep -q 'FORBIDDEN_tailscale' && bad "tailscale up/login/set invoked" || ok "no tailscale up/login/set"
 echo "${nout}" | grep -qi 'NeedsLogin\|logged in' && ok "tailscale status reported" || ok "tailscale block present"
 echo "${nout}" | grep -qi 'No host/subnet scans\|No tailscale up' && ok "network invariants stated" || bad "network invariants"
@@ -162,12 +209,23 @@ else
 	ok "sudo not used as a command"
 fi
 
-echo "=== no ssh→mosh alias ==="
+echo "=== no ssh replacement / alias ==="
 if rg -n 'alias[[:space:]]+ssh=.*mosh' "${ROOT}" --glob '!vendor/**' --glob '!**/*.md' 2>/dev/null | grep -q .; then
 	bad "ssh aliased to mosh"
 else
 	ok "ssh not aliased to mosh"
 fi
+if rg -n 'alias[[:space:]]+ssh=.*sshs' "${ROOT}" --glob '!vendor/**' --glob '!**/*.md' 2>/dev/null | grep -q .; then
+	bad "ssh aliased to sshs"
+else
+	ok "ssh not aliased to sshs"
+fi
+if rg -n 'alias[[:space:]]+ssh=.*autossh|alias[[:space:]]+ssh=.*sshuttle' "${ROOT}" --glob '!vendor/**' --glob '!**/*.md' 2>/dev/null | grep -q .; then
+	bad "ssh aliased to autossh/sshuttle"
+else
+	ok "ssh not wrapped by autossh/sshuttle"
+fi
+grep -rq 'brew "openssh"' "${ROOT}/brew/groups" 2>/dev/null && bad "Homebrew openssh in group brewfiles" || ok "no Homebrew openssh group install"
 
 echo "=== CLI help ==="
 chk="$("${ROOT}/dots" check --help 2>&1)" || true

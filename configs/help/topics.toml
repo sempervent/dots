@@ -115,7 +115,7 @@ id = "network"
 title = "Network tooling"
 body = "docs/help/network.md"
 order = 146
-keywords = ["network", "mtr", "nmap", "iperf", "gping", "bandwhich", "termshark", "mosh", "tailscale", "rclone"]
+keywords = ["network", "mtr", "nmap", "iperf", "gping", "bandwhich", "termshark", "mosh", "sshs", "autossh", "sshuttle", "tailscale", "rclone"]
 
 [[topics]]
 id = "hardware"

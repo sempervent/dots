@@ -59,8 +59,12 @@ are documentation only; CI does **not** fetch them.
 | trivy | Vulnerability / misconfig scanner | `security` group | darwin, linux | https://trivy.dev |
 | age / sops | File encryption / secrets editor | `security` group | darwin, linux | https://age-encryption.org |
 | cosign | Sigstore signing / verify | `security` group | darwin, linux | https://github.com/sigstore/cosign |
+| ssh-audit | SSH server/client algorithm audit | `security` group | darwin, linux | https://github.com/jtesta/ssh-audit |
 | tailscale | Mesh VPN CLI (install-only; no `up`) | `network` group | darwin, linux | https://tailscale.com |
 | mosh | Roaming remote shell | `network` group | darwin, linux | https://mosh.org |
+| sshs | SSH config host picker TUI | `network` group | darwin (+ limited linux) | https://github.com/quantumsheep/sshs |
+| autossh | Supervised SSH tunnel restart | `network` group | darwin, linux | https://www.harding.motd.ca/autossh/ |
+| sshuttle | Subnet routing over SSH | `network` group | darwin, linux | https://github.com/sshuttle/sshuttle |
 | rclone | Cloud storage sync | `network` group | darwin, linux | https://rclone.org |
 | mtr | Path + loss/latency | `network` group | darwin, linux | https://www.bitwizard.nl/mtr/ |
 | nmap | Host/service discovery | `network` group | darwin, linux | https://nmap.org |
