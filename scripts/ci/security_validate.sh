@@ -280,13 +280,13 @@ run_sbom() {
 }
 
 run_cosign_verify() {
-	require_cmd cosign
 	if [[ $# -lt 1 ]]; then
 		echo "Usage: ./dots check security verify <cosign-verify-args…>" >&2
 		echo "Example: ./dots check security verify --key cosign.pub artifact.tar" >&2
 		echo "Phase 2: verification only — signing keys are NOT generated." >&2
 		return 1
 	fi
+	require_cmd cosign
 	# Never log tokens; pass args through.
 	cosign verify "$@"
 }
