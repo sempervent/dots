@@ -21,13 +21,17 @@ export DIR="${ROOT}"
 source "${ROOT}/helpers/toml.sh"
 # shellcheck disable=SC1091
 source "${ROOT}/helpers/packages.sh"
-for pkg in ykman age-plugin-yubikey step osquery; do
+for pkg in ykman age-plugin-yubikey step osquery ssh-audit; do
 	found=0
 	while IFS= read -r id; do
 		[[ ${id} == "${pkg}" ]] && found=1
 	done < <(dots_group_package_ids security optional)
 	[[ ${found} -eq 1 ]] && ok "security owns ${pkg}" || bad "security missing ${pkg}"
 done
+audit_net=0
+while IFS= read -r id; do [[ ${id} == ssh-audit ]] && audit_net=1; done < <(dots_group_package_ids network optional)
+[[ ${audit_net} -eq 0 ]] && ok "ssh-audit not duplicated in network" || bad "ssh-audit in network"
+grep -q 'brew "ssh-audit"' "${ROOT}/brew/groups/security.Brewfile" && ok "ssh-audit Brewfile" || bad "ssh-audit Brewfile"
 for pkg in gitleaks trivy sops age syft grype cosign osv-scanner semgrep; do
 	found=0
 	while IFS= read -r id; do
@@ -56,6 +60,30 @@ after="$(git -C "${ROOT}" status --porcelain)"
 echo "${st}" | grep -q 'sops' && ok "status lists sops" || bad "status sops"
 echo "${st}" | grep -qi 'YubiKey connected' && ok "status YubiKey line" || bad "status YubiKey"
 echo "${st}" | grep -qi 'No keys generated' && ok "status no side-effects note" || bad "status side-effects"
+echo "${st}" | grep -q 'ssh-audit' && ok "status lists ssh-audit" || bad "status ssh-audit"
+
+echo "=== ssh-audit stub (no remote audit) ==="
+mkdir -p "${TMP}/auditbin"
+for c in bash sh mkdir cat printf echo awk sed grep tr find ls head tail cut env true false mktemp sops age step cosign gitleaks; do
+	p=$(command -v "$c" 2>/dev/null || true)
+	[[ -n ${p} ]] && ln -sfn "${p}" "${TMP}/auditbin/${c}" 2>/dev/null || true
+done
+cat >"${TMP}/auditbin/ssh-audit" <<'EOF'
+#!/usr/bin/env bash
+case "${1:-}" in
+-h|--help) echo "ssh-audit stub help"; exit 0 ;;
+"") echo "FORBIDDEN_ssh-audit:no_target" >&2; exit 99 ;;
+-*);;
+*) echo "FORBIDDEN_ssh-audit:host" >&2; exit 99 ;;
+esac
+echo "ssh-audit stub"; exit 0
+EOF
+chmod +x "${TMP}/auditbin/ssh-audit"
+# shellcheck disable=SC1091
+set +e
+aust="$(PATH="${TMP}/auditbin:${PATH}" "${SCRIPT}" status 2>&1)"
+set -e
+echo "${aust}" | grep -q 'FORBIDDEN_ssh-audit' && bad "ssh-audit audit invoked from status" || ok "status does not audit hosts"
 
 echo "=== missing tool error ==="
 mkdir -p "${TMP}/emptybin"
