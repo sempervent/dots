@@ -76,7 +76,8 @@ install_prereqs() {
       fi
     fi
     # Do not install curl here: on Manjaro it can upgrade libcurl and break pacman -Si/-Qi.
-    pacman -Sy --noconfirm python bash ca-certificates >/dev/null
+    # archlinux:latest may need a full -Syu to resolve openssl ↔ openssl-3 file conflicts.
+    pacman -Syu --noconfirm python bash ca-certificates >/dev/null
   elif command -v dnf >/dev/null 2>&1; then
     dnf -y install python3 bash ca-certificates curl >/dev/null
   elif command -v xbps-install >/dev/null 2>&1; then
