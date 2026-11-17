@@ -6,7 +6,8 @@
 # Dedup notes:
 #   just, lazygit — already in brew/groups/modern.Brewfile (and Brewfile)
 #   docker CLI     — already in infra / Brewfile (OrbStack is additive; do not remove Docker Desktop)
-#   ranger         — remains in workstation; yazi is additive
+#   ranger / yazi  — workstation group (yazi is additive)
+#   mise, dust, …  — modern/dev groups (v1.9; no longer listed here)
 #
 # Commercial casks may require separate license activation after install.
 # BlackHole may require a reboot — DOTS never reboots automatically.
@@ -60,17 +61,20 @@ cask "processing"
 cask "sonic-pi"
 cask "supercollider"
 
-# --- terminal / CLI workflow (not already in core/modern) ---
-brew "mise"
-brew "yazi"
-brew "watchexec"
-brew "hyperfine"
-brew "mprocs"
-brew "xh"
-brew "dust"
-brew "duf"
+# --- disk CLI (Darwin tap; not in portable groups) ---
 tap "Zingzy/tap"
 brew "diskbloom"
+
+# --- macOS automation / menu bar (install-only; no launch/config) ---
+# Hammerspoon / SwiftBar: future DOTS automation may integrate; v1.9 installs only.
+cask "hammerspoon"
+cask "swiftbar"
+
+# --- display / cleanup / media / archives (install-only) ---
+cask "betterdisplay"
+cask "pearcleaner"
+cask "keka"
+cask "iina"
 
 # --- disk / GIS / MIDI (install-only; no config / permissions / kills) ---
 # QGIS: heavy GUI; omit_from_all via mactools. Never auto-launch, never manage

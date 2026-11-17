@@ -5,3 +5,5 @@ brew "ranger"
 brew "chafa"
 brew "media-info"
 brew "poppler"
+# v1.9 — additive terminal file manager (ranger remains default)
+brew "yazi"

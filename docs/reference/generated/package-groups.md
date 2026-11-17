@@ -22,7 +22,7 @@ Shared ergonomic CLI + Git evolution / structural search / log inspection
 
 **Required:** `bat`, `zoxide`, `direnv`, `htop`, `tree`
 
-**Optional:** `eza`, `atuin`, `lazygit`, `btop`, `yq`, `uv`, `gh`, `just`, `git-delta`, `leaf`, `jj`, `git-town`, `git-filter-repo`, `git-sizer`, `ast-grep`, `lnav`
+**Optional:** `eza`, `atuin`, `lazygit`, `btop`, `yq`, `uv`, `gh`, `just`, `git-delta`, `leaf`, `jj`, `git-town`, `git-filter-repo`, `git-sizer`, `ast-grep`, `lnav`, `mise`, `dust`, `duf`, `jc`, `navi`, `sd`, `procs`, `ouch`
 
 ## `workstation`
 
@@ -30,7 +30,7 @@ Desktop-user tools (not headless)
 
 **Required:** `ranger`
 
-**Optional:** `terminal-notifier`, `chafa`, `poppler`
+**Optional:** `terminal-notifier`, `chafa`, `poppler`, `yazi`
 
 ## `infra`
 
@@ -38,7 +38,7 @@ Docker/Helm/Terraform + IaC engineering CLIs (install-only; no apply/login/build
 
 **Required:** (none)
 
-**Optional:** `docker`, `docker-compose`, `helm`, `terraform`, `terraform-docs`, `tflint`, `checkov`, `infracost`, `terragrunt`, `ansible`, `ansible-lint`, `vault`, `packer`
+**Optional:** `docker`, `docker-compose`, `helm`, `terraform`, `terraform-docs`, `tflint`, `checkov`, `infracost`, `terragrunt`, `ansible`, `ansible-lint`, `vault`, `packer`, `conftest`
 
 ## `media`
 
@@ -70,7 +70,7 @@ Local CI / lint / docs validation / Rust ergonomics (install-only; no shell alia
 
 **Required:** (none)
 
-**Optional:** `act`, `difftastic`, `mergiraf`, `actionlint`, `cargo-nextest`, `bacon`, `pre-commit`, `hadolint`, `taplo`, `mkcert`, `kondo`, `zizmor`, `git-cliff`, `lychee`, `markdownlint-cli2`, `cspell`
+**Optional:** `act`, `difftastic`, `mergiraf`, `actionlint`, `cargo-nextest`, `bacon`, `pre-commit`, `hadolint`, `taplo`, `mkcert`, `kondo`, `zizmor`, `git-cliff`, `lychee`, `markdownlint-cli2`, `cspell`, `watchexec`, `hyperfine`, `mprocs`, `xh`, `hexyl`, `tokei`
 
 ## `security`
 
@@ -134,7 +134,7 @@ Kubernetes / GitOps operator CLIs (install-only; no cluster create, context swit
 
 **Required:** (none)
 
-**Optional:** `kubernetes-cli`, `k9s`, `kubectx`, `stern`, `krew`, `kubeconform`, `kubescape`, `popeye`, `helmfile`, `argocd`
+**Optional:** `kubernetes-cli`, `k9s`, `kubectx`, `stern`, `krew`, `kubeconform`, `kubescape`, `popeye`, `helmfile`, `argocd`, `kustomize`, `kyverno`
 
 ## `docs`
 

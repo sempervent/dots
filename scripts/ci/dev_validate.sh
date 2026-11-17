@@ -51,6 +51,24 @@ tool_line() {
 		mitmproxy) ver="$(mitmproxy --version 2>/dev/null | head -n1 || true)" ;;
 		git-sizer) ver="$(git-sizer --version 2>/dev/null | head -n1 || true)" ;;
 		git-filter-repo) ver="present" ;;
+		watchexec) ver="$(watchexec --version 2>/dev/null | head -n1 || true)" ;;
+		hyperfine) ver="$(hyperfine --version 2>/dev/null | head -n1 || true)" ;;
+		mprocs|dekit)
+			if have dekit; then ver="$(dekit --version 2>/dev/null | head -n1 || true)"
+			elif have mprocs; then ver="$(mprocs --version 2>/dev/null | head -n1 || true)"; fi
+			;;
+		xh) ver="$(xh --version 2>/dev/null | head -n1 || true)" ;;
+		hexyl) ver="$(hexyl --version 2>/dev/null | head -n1 || true)" ;;
+		tokei) ver="$(tokei --version 2>/dev/null | head -n1 || true)" ;;
+		jc) ver="$(jc --version 2>/dev/null | head -n1 || true)" ;;
+		navi) ver="$(navi --version 2>/dev/null | head -n1 || true)" ;;
+		sd) ver="$(sd --version 2>/dev/null | head -n1 || true)" ;;
+		procs) ver="$(procs --version 2>/dev/null | head -n1 || true)" ;;
+		ouch) ver="$(ouch --version 2>/dev/null | head -n1 || true)" ;;
+		mise) ver="$(mise --version 2>/dev/null | head -n1 || true)" ;;
+		dust) ver="$(dust --version 2>/dev/null | head -n1 || true)" ;;
+		duf) ver="$(duf --version 2>/dev/null | head -n1 || true)" ;;
+		yazi) ver="$(yazi --version 2>/dev/null | head -n1 || true)" ;;
 		*) ver="present" ;;
 		esac
 		printf '  %-20s %s%s\n' "${label}" "${GREEN}OK${NC}" "${ver:+ (${ver})}"
@@ -97,17 +115,39 @@ run_status() {
 	echo "Logs"
 	tool_line "lnav" lnav
 	echo ""
+	echo "Watch / benchmark / processes"
+	tool_line "watchexec" watchexec
+	tool_line "hyperfine" hyperfine
+	if have dekit; then tool_line "mprocs (dekit)" dekit
+	else tool_line "mprocs" mprocs; fi
+	tool_line "hexyl" hexyl
+	tool_line "tokei" tokei
+	echo ""
 	echo "HTTP / API"
+	tool_line "curl" curl "(baseline; xh is optional)"
 	tool_line "mitmproxy" mitmproxy
 	tool_line "mitmdump" mitmdump
 	tool_line "xh" xh
 	gui_line "Bruno" "Bruno" bruno
 	gui_line "Proxyman" "Proxyman" proxyman
 	echo ""
+	echo "Modern ergonomics (inventory)"
+	tool_line "mise" mise "(fnm remains DOTS Node authority)"
+	tool_line "jc" jc
+	tool_line "navi" navi
+	tool_line "sd" sd
+	tool_line "procs" procs
+	tool_line "ouch" ouch
+	tool_line "dust" dust
+	tool_line "duf" duf
+	tool_line "yazi" yazi "(additive; ranger default)"
+	echo ""
 	echo "Invariants"
 	echo "  Git remains default VCS"
 	echo "  No jj init / git-town config / history rewrite by this command"
 	echo "  No proxy start / CA trust / GUI launch"
+	echo "  No mise activate, watchexec runs, hyperfine benchmarks, or xh requests"
+	echo "  navi does not alter Tab/Ctrl-R; sd does not replace sed"
 	# Safety: ensure we did not create .jj in this repo as a side effect of version checks
 	if [[ -d ${ROOT}/.jj ]]; then
 		echo "  ${YELLOW}NOTE${NC}: .jj directory present (not created by this check)" >&2

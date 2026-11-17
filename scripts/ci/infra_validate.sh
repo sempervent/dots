@@ -72,6 +72,7 @@ tool_line() {
 		packer) ver="$(packer version 2>/dev/null | head -n1 || true)" ;;
 		infracost) ver="$(infracost --version 2>/dev/null | head -n1 || true)" ;;
 		helm) ver="$(helm version --short 2>/dev/null | head -n1 || true)" ;;
+		conftest) ver="$(conftest --version 2>/dev/null | head -n1 || true)" ;;
 		*) ver="present" ;;
 		esac
 		printf '  %-18s %s%s%s\n' "${label}" "${GREEN}OK${NC}" "${ver:+ (${ver})}" "${note:+ ${note}}"
@@ -167,6 +168,7 @@ run_status() {
 	tool_line "terraform-docs" terraform-docs
 	tool_line "tflint" tflint "(no Homebrew formula today; optional)"
 	tool_line "checkov" checkov
+	tool_line "conftest" conftest "(local Rego; not Checkov replacement)"
 	tool_line "terragrunt" terragrunt
 	tool_line "helm" helm "(pre-existing infra)"
 	echo ""
@@ -289,6 +291,25 @@ run_ansible_lint_dir() {
 	return 0
 }
 
+run_conftest_fixture() {
+	if ! have conftest; then
+		echo "  conftest             SKIP (not installed)"
+		return 0
+	fi
+	local pol="${FIXTURES}/conftest/policy.rego"
+	local data="${FIXTURES}/conftest/data.json"
+	[[ -f ${pol} && -f ${data} ]] || {
+		echo "  conftest             SKIP (fixtures missing)"
+		return 0
+	}
+	if conftest test "${data}" -p "${pol}" >/dev/null 2>&1; then
+		echo "  conftest             ${GREEN}PASS${NC} (local fixture)"
+		return 0
+	fi
+	echo "  conftest             ${YELLOW}FINDINGS${NC} (fixture)"
+	return 0
+}
+
 run_packer_fmt() {
 	local dir="$1"
 	if ! have packer; then
@@ -335,6 +356,10 @@ run_gate() {
 	else
 		echo "  SKIP: no fixtures"
 	fi
+
+	echo ""
+	echo "Conftest fixture"
+	run_conftest_fixture || true
 
 	echo ""
 	echo "Terragrunt"

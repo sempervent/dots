@@ -19,6 +19,7 @@ CLIs. DOTS validates tooling locally and does **not** deploy infrastructure.
 | `terraform-docs` | Module documentation generator |
 | `tflint` | Terraform linter (no current Homebrew formula; install from releases/Linux) |
 | `checkov` | Static IaC policy/security scan (**owned by infra**; local CLI) |
+| `conftest` | Rego assertions on JSON/YAML (complements Checkov; local fixtures in gate) |
 | `terragrunt` | DRY wrapper around Terraform/OpenTofu |
 | `ansible` / `ansible-lint` | Config management + lint |
 | `vault` | HashiCorp Vault CLI (same tap as terraform; install ≠ login) |

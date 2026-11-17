@@ -20,11 +20,17 @@ source "${ROOT}/helpers/toml.sh"
 source "${ROOT}/helpers/packages.sh"
 
 echo "=== modern package ownership ==="
-for p in jj git-town git-filter-repo git-sizer ast-grep lnav; do
+for p in jj git-town git-filter-repo git-sizer ast-grep lnav mise dust duf jc navi sd procs ouch; do
 	found=0
 	while IFS= read -r id; do [[ ${id} == "${p}" ]] && found=1; done < <(dots_group_package_ids modern optional)
 	[[ ${found} -eq 1 ]] && ok "modern owns ${p}" || bad "modern missing ${p}"
 done
+for p in watchexec hyperfine mprocs xh hexyl tokei; do
+	found=0
+	while IFS= read -r id; do [[ ${id} == "${p}" ]] && found=1; done < <(dots_group_package_ids dev optional)
+	[[ ${found} -eq 1 ]] && ok "dev owns ${p}" || bad "dev missing ${p}"
+done
+grep -q 'brew "yazi"' "${ROOT}/brew/groups/workstation.Brewfile" && ok "yazi workstation brew" || bad "yazi brew"
 
 echo "=== GUI / mitmproxy ownership ==="
 grep -q 'cask "bruno"' "${ROOT}/brew/Brewfile.mactools" && ok "Bruno in mactools" || bad "Bruno missing"

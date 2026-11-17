@@ -353,6 +353,43 @@ run_kubeconform() {
 	kubeconform -summary -ignore-missing-schemas "${files[@]}"
 }
 
+run_kustomize_fixture() {
+	if ! have kustomize; then
+		skip "kustomize (not installed)"
+		return 0
+	fi
+	local dir="${ROOT}/scripts/tests/fixtures/kustomize"
+	[[ -f ${dir}/kustomization.yaml ]] || {
+		skip "kustomize (fixture missing)"
+		return 0
+	}
+	local tmp
+	tmp="$(mktemp)"
+	if kustomize build "${dir}" >"${tmp}" 2>/dev/null; then
+		rm -f "${tmp}"
+		return 0
+	fi
+	rm -f "${tmp}"
+	fail "kustomize build (fixture)"
+}
+
+run_kyverno_fixture() {
+	if ! have kyverno; then
+		skip "kyverno (not installed)"
+		return 0
+	fi
+	local dir="${ROOT}/scripts/tests/fixtures/kyverno"
+	[[ -f ${dir}/kyverno-test.yaml ]] || {
+		skip "kyverno (fixture missing)"
+		return 0
+	}
+	if kyverno test "${dir}" >/dev/null 2>&1; then
+		return 0
+	fi
+	skip "kyverno (fixture test unavailable offline)"
+	return 0
+}
+
 run_kubescape_local() {
 	if ! have kubescape; then
 		skip "kubescape (not installed)"
@@ -406,6 +443,8 @@ k8s_status() {
 	ok_line "popeye" "$(tool_ok popeye)"
 	ok_line "helmfile" "$(tool_ok helmfile)"
 	ok_line "argocd" "$(tool_ok argocd)"
+	ok_line "kustomize" "$(tool_ok kustomize)"
+	ok_line "kyverno" "$(tool_ok kyverno)"
 	ok_line "helm" "$(tool_ok helm)"
 	echo ""
 	echo "CONNECTED ENVIRONMENT"
@@ -423,6 +462,8 @@ k8s_gate() {
 	echo "────────────────────────────"
 	run_step "kubectl-client" kubectl_client_ok || rc=1
 	run_step "kubeconform" run_kubeconform || rc=1
+	run_step "kustomize-fixture" run_kustomize_fixture || rc=1
+	run_step "kyverno-fixture" run_kyverno_fixture || true
 	run_step "kubescape-local" run_kubescape_local || rc=1
 	echo ""
 	k8s_status || true

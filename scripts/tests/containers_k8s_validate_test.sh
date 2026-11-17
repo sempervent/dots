@@ -27,11 +27,13 @@ for p in lazydocker dive skopeo crane oras devcontainer dagger; do
 	while IFS= read -r id; do [[ ${id} == "${p}" ]] && found=1; done < <(dots_group_package_ids containers optional)
 	[[ ${found} -eq 1 ]] && ok "containers owns ${p}" || bad "containers missing ${p}"
 done
-for p in kubernetes-cli k9s kubectx stern krew kubeconform kubescape popeye helmfile argocd; do
+for p in kubernetes-cli k9s kubectx stern krew kubeconform kubescape popeye helmfile argocd kustomize kyverno; do
 	found=0
 	while IFS= read -r id; do [[ ${id} == "${p}" ]] && found=1; done < <(dots_group_package_ids k8s optional)
 	[[ ${found} -eq 1 ]] && ok "k8s owns ${p}" || bad "k8s missing ${p}"
 done
+grep -q 'brew "kustomize"' "${ROOT}/brew/groups/k8s.Brewfile" && ok "kustomize brewfile" || bad "kustomize brew"
+grep -q 'brew "kyverno"' "${ROOT}/brew/groups/k8s.Brewfile" && ok "kyverno brewfile" || bad "kyverno brew"
 # No duplicate k9s in infra / stern in network
 infra_k9s=0
 while IFS= read -r id; do [[ ${id} == k9s ]] && infra_k9s=1; done < <(dots_group_package_ids infra optional)

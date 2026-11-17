@@ -78,6 +78,7 @@ _dots() {
     'images:Images toolkit'
     'tex:TeX'
     'mactools:macOS tools'
+    'karabiner-elements:Karabiner-Elements'
     'orbstack:OrbStack'
     'davinci-resolve:DaVinci Resolve'
     'mitmproxy:mitmproxy'

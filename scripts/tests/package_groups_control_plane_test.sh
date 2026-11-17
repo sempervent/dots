@@ -108,7 +108,9 @@ echo "${hint}" | grep -qi 'package group\|packages' && ok "act hint mentions gro
 echo "${hint}" | grep -qE '\./dots setup --with|\./setup\.sh --with' &&
 	bad "act hint should not suggest --with" || ok "act hint avoids --with"
 hint_dust="$(dots_pkg_activate_hint dust 2>&1 || true)"
-echo "${hint_dust}" | grep -q '\-\-with' && ok "dust hint uses --with" || bad "dust hint: ${hint_dust}"
+echo "${hint_dust}" | grep -qi 'package group\|modern' && ok "dust hint mentions group" || bad "dust hint: ${hint_dust}"
+hint_disk="$(dots_pkg_activate_hint diskbloom 2>&1 || true)"
+echo "${hint_disk}" | grep -q '\-\-with' && ok "diskbloom hint uses --with" || bad "diskbloom hint: ${hint_disk}"
 
 echo "=== CLI: packages groups / group / plan ==="
 groups_out="$("${ROOT}/dots" packages groups 2>&1)" || {

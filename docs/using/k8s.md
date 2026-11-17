@@ -34,6 +34,8 @@ Helm itself remains in package group **`infra`** (Helmfile soft-depends on it).
 | popeye | Live cluster sanitation (opt-in use only) |
 | helmfile | Declarative Helm (no apply during checks) |
 | argocd | Argo CD CLI (no login/sync during checks) |
+| kustomize | Overlay builds (`kustomize build` on fixtures only) |
+| kyverno | Policy tests (`kyverno test` on local fixtures; no cluster) |
 
 ## Validation
 

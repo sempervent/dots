@@ -21,8 +21,10 @@ grep -q 'cask "vorssaint"' "${bf}" && ok "vorssaint cask" || bad "no vorssaint"
 grep -q 'cask "flux-app"' "${bf}" && ok "flux-app cask" || bad "no flux-app"
 grep -q 'cask "raycast"' "${bf}" && ok "raycast" || bad "no raycast"
 grep -qiE 'davinci|571213070' "${bf}" && bad "Resolve in mactools" || ok "Resolve not in mactools"
-grep -q 'brew "mise"' "${bf}" && ok "mise" || bad "no mise"
-grep -q 'brew "yazi"' "${bf}" && ok "yazi" || bad "no yazi"
+grep -qE 'brew "mise"|brew "yazi"|brew "watchexec"|brew "dust"' "${bf}" && bad "portable CLI still in mactools" || ok "portable CLI promoted out"
+grep -q 'cask "hammerspoon"' "${bf}" && ok "hammerspoon" || bad "no hammerspoon"
+grep -q 'cask "swiftbar"' "${bf}" && ok "swiftbar" || bad "no swiftbar"
+grep -q 'cask "iina"' "${bf}" && ok "iina" || bad "no iina"
 # Dedup against modern group
 grep -qE 'brew "just"|brew "lazygit"' "${bf}" && bad "duplicates just/lazygit" || ok "no just/lazygit dup"
 # No redundant utility casks

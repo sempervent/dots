@@ -2,6 +2,9 @@
 # scripts/tests/infra_validate_test.sh — Phase 7 infrastructure safety
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+DIR="${ROOT}"
+export DIR ROOT
+unset DOTS_GROUPS_REGISTRY DOTS_PROFILE_FILE 2>/dev/null || true
 pass=0
 fail=0
 ok() { echo "OK: $1"; pass=$((pass + 1)); }
@@ -20,7 +23,7 @@ source "${ROOT}/helpers/toml.sh"
 source "${ROOT}/helpers/packages.sh"
 
 echo "=== infra package ownership ==="
-for p in terraform terraform-docs tflint checkov infracost terragrunt ansible ansible-lint vault packer helm; do
+for p in terraform terraform-docs tflint checkov conftest infracost terragrunt ansible ansible-lint vault packer helm; do
 	found=0
 	while IFS= read -r id; do [[ ${id} == "${p}" ]] && found=1; done < <(dots_group_package_ids infra optional)
 	[[ ${found} -eq 1 ]] && ok "infra owns ${p}" || bad "infra missing ${p}"
@@ -29,6 +32,7 @@ grep -q 'hashicorp/tap/terraform' "${ROOT}/brew/groups/infra.Brewfile" && ok "te
 grep -q 'hashicorp/tap/vault' "${ROOT}/brew/groups/infra.Brewfile" && ok "vault hashicorp/tap" || bad "vault tap"
 grep -q 'hashicorp/tap/packer' "${ROOT}/brew/groups/infra.Brewfile" && ok "packer hashicorp/tap" || bad "packer tap"
 grep -q 'brew "checkov"' "${ROOT}/brew/groups/infra.Brewfile" && ok "checkov in infra Brewfile" || bad "checkov"
+grep -q 'brew "conftest"' "${ROOT}/brew/groups/infra.Brewfile" && ok "conftest in infra Brewfile" || bad "conftest"
 # checkov not duplicated into security Brewfile
 grep -q 'checkov' "${ROOT}/brew/groups/security.Brewfile" && bad "checkov duplicated in security" || ok "checkov not duplicated in security"
 # tflint omitted from Darwin brew (no formula)

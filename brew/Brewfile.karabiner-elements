@@ -1,0 +1,12 @@
+# brew/Brewfile.karabiner-elements — optional keyboard remapper
+#
+# Install: ./setup.sh --with karabiner-elements
+# Platforms: darwin only (component gate).
+#
+# Install-only. DOTS never:
+#   - launches Karabiner
+#   - writes ~/.config/karabiner
+#   - installs complex modifications or rules
+#   - approves system extensions / Accessibility / driver extensions
+
+cask "karabiner-elements"

@@ -86,13 +86,13 @@ else
 	ok "cursor not consented from herdr/ollama inventory"
 fi
 
-echo "=== mocked brew: git MANAGED, herdr MANAGED, dust INACTIVE, glow UNDECLARED ==="
+echo "=== mocked brew: git MANAGED, herdr MANAGED, diskbloom INACTIVE, glow UNDECLARED ==="
 dots_pkg_ownership_reset
 export DOTS_PACKAGE_GROUPS="core"
 DOTS_RESOLVED_GROUPS=(core)
 DOTS_WITH_COMPONENTS=(herdr)
-export DOTS_PKG_MOCK_LEAVES=$'git\nherdr\ndust\nglow'
-export DOTS_PKG_MOCK_FORMULAE=$'git\nherdr\ndust\nglow'
+export DOTS_PKG_MOCK_LEAVES=$'git\nherdr\ndiskbloom\nglow'
+export DOTS_PKG_MOCK_FORMULAE=$'git\nherdr\ndiskbloom\nglow'
 export DOTS_PKG_MOCK_CASKS=''
 export DOTS_PKG_MOCK_OUTDATED_FORMULAE=''
 export DOTS_PKG_MOCK_OUTDATED_CASKS=''
@@ -102,33 +102,33 @@ dots_pkg_classify_resolved 1
 dots_pkg_status_print >"${TMP}/status.out"
 
 # git from core → MANAGED; herdr from component → MANAGED
-# dust from mactools (not selected) → INACTIVE; glow → UNDECLARED
+# diskbloom from mactools (not selected) → INACTIVE; glow → UNDECLARED
 # (act is owned by group:dev once that Brewfile exists — use glow for undeclared)
 printf '%s\n' "${DOTS_DESIRED_FORMULAE[@]}" | grep -qx git && ok "git in desired" || bad "git not desired"
 printf '%s\n' "${DOTS_DESIRED_FORMULAE[@]}" | grep -qx herdr && ok "herdr in desired" || bad "herdr not desired"
-printf '%s\n' "${DOTS_DESIRED_FORMULAE[@]}" | grep -qx dust && bad "dust should not be desired" || ok "dust not in desired"
+printf '%s\n' "${DOTS_DESIRED_FORMULAE[@]}" | grep -qx diskbloom && bad "diskbloom should not be desired" || ok "diskbloom not in desired"
 [[ ${DOTS_PKG_COUNT_MANAGED} -ge 2 ]] && ok "managed>=2 (git+herdr)" || bad "managed=${DOTS_PKG_COUNT_MANAGED}"
-printf '%s\n' "${DOTS_PKG_INACTIVE_FORMULAE[@]+"${DOTS_PKG_INACTIVE_FORMULAE[@]}"}" | grep -qx dust && ok "dust INACTIVE" || bad "dust not inactive"
+printf '%s\n' "${DOTS_PKG_INACTIVE_FORMULAE[@]+"${DOTS_PKG_INACTIVE_FORMULAE[@]}"}" | grep -qx diskbloom && ok "diskbloom INACTIVE" || bad "diskbloom not inactive"
 printf '%s\n' "${DOTS_PKG_UNDECLARED_FORMULAE[@]+"${DOTS_PKG_UNDECLARED_FORMULAE[@]}"}" | grep -qx glow && ok "glow UNDECLARED" || bad "glow not undeclared"
-printf '%s\n' "${DOTS_PKG_UNDECLARED_FORMULAE[@]+"${DOTS_PKG_UNDECLARED_FORMULAE[@]}"}" | grep -qx dust && bad "dust wrongly undeclared" || ok "dust not undeclared"
+printf '%s\n' "${DOTS_PKG_UNDECLARED_FORMULAE[@]+"${DOTS_PKG_UNDECLARED_FORMULAE[@]}"}" | grep -qx diskbloom && bad "diskbloom wrongly undeclared" || ok "diskbloom not undeclared"
 printf '%s\n' "${DOTS_PKG_INACTIVE_FORMULAE[@]+"${DOTS_PKG_INACTIVE_FORMULAE[@]}"}" | grep -qx glow && bad "glow wrongly inactive" || ok "glow not inactive"
 
 grep -q 'inactive:' "${TMP}/status.out" && ok "status prints inactive" || bad "no inactive line"
 grep -qi 'Inactive' "${TMP}/status.out" && ok "status has Inactive section" || bad "no Inactive section"
 
 echo "=== overlapping ownership: any active owner → not INACTIVE ==="
-# dust owned by mactools; activate mactools → MANAGED
+# diskbloom owned by mactools; activate mactools → MANAGED
 DOTS_WITH_COMPONENTS=(herdr mactools)
 dots_pkg_ownership_reset
 dots_desired_packages_resolve
 dots_pkg_classify_resolved 1
-printf '%s\n' "${DOTS_DESIRED_FORMULAE[@]}" | grep -qx dust && ok "dust desired with mactools" || bad "dust not desired"
-printf '%s\n' "${DOTS_PKG_INACTIVE_FORMULAE[@]+"${DOTS_PKG_INACTIVE_FORMULAE[@]}"}" | grep -qx dust && bad "dust still inactive" || ok "dust not inactive when mactools active"
+printf '%s\n' "${DOTS_DESIRED_FORMULAE[@]}" | grep -qx diskbloom && ok "diskbloom desired with mactools" || bad "diskbloom not desired"
+printf '%s\n' "${DOTS_PKG_INACTIVE_FORMULAE[@]+"${DOTS_PKG_INACTIVE_FORMULAE[@]}"}" | grep -qx diskbloom && bad "diskbloom still inactive" || ok "diskbloom not inactive when mactools active"
 # herdr still managed (active component owner)
-[[ ${DOTS_PKG_COUNT_MANAGED} -ge 3 ]] && ok "managed includes herdr+dust+git" || bad "managed=${DOTS_PKG_COUNT_MANAGED}"
+[[ ${DOTS_PKG_COUNT_MANAGED} -ge 3 ]] && ok "managed includes herdr+diskbloom+git" || bad "managed=${DOTS_PKG_COUNT_MANAGED}"
 
 echo "=== packages explain ==="
-exp="$(dots_pkg_explain dust 2>&1)" || true
+exp="$(dots_pkg_explain diskbloom 2>&1)" || true
 echo "${exp}" | grep -q 'state:.*INACTIVE\|state:.*MANAGED' && ok "explain has state" || bad "explain state"
 echo "${exp}" | grep -q 'component:mactools' && ok "explain known owner mactools" || bad "explain owners: ${exp}"
 echo "${exp}" | grep -q '\-\-with' && ok "explain activate hint" || bad "no activate hint"
@@ -147,7 +147,7 @@ printf '%s\n' "${DOTS_PKG_INACTIVE_FORMULAE[@]+"${DOTS_PKG_INACTIVE_FORMULAE[@]}
 exp_act="$(dots_pkg_explain act 2>&1)" || true
 echo "${exp_act}" | grep -q 'INACTIVE\|group:dev' && ok "explain act known owner" || bad "act explain: ${exp_act}"
 
-adopt_out="$(dots_pkg_suggest_declare brew dust 2>&1)" || true
+adopt_out="$(dots_pkg_suggest_declare brew diskbloom 2>&1)" || true
 echo "${adopt_out}" | grep -qi 'do not adopt\|already has DOTS ownership\|--with' && ok "adopt redirects for owned pkg" || bad "adopt: ${adopt_out}"
 
 echo "=== components list / active / show ==="
@@ -170,7 +170,7 @@ echo "${act_out}" | grep -q herdr && ok "active shows herdr" || bad "active: ${a
 echo "${act_out}" | grep -qi 'informational\|consent\|NOT authorize' && ok "active consent disclaimer" || bad "no disclaimer"
 
 show_m="$(dots_components_show mactools 2>&1)" || true
-echo "${show_m}" | grep -q dust && ok "show mactools lists dust" || bad "show mactools: ${show_m}"
+echo "${show_m}" | grep -q diskbloom && ok "show mactools lists diskbloom" || bad "show mactools: ${show_m}"
 show_sk="$(dots_components_show skills 2>&1)" || true
 echo "${show_sk}" | grep -qi skill && ok "show skills mentions skills" || bad "show skills"
 show_ai="$(dots_components_show ai 2>&1)" || true
@@ -211,7 +211,7 @@ else
 	bad "docs generate --check drift"
 fi
 [[ -f ${ROOT}/docs/reference/generated/with-options.md ]] && ok "with-options.md exists" || bad "missing with-options.md"
-grep -q 'dust' "${ROOT}/docs/reference/generated/with-options.md" && ok "with-options lists dust" || bad "with-options dust"
+grep -q 'diskbloom' "${ROOT}/docs/reference/generated/with-options.md" && ok "with-options lists diskbloom" || bad "with-options diskbloom"
 
 echo "Passed: ${pass}  Failed: ${fail}"
 [[ ${fail} -eq 0 ]]
