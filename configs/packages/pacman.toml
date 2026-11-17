@@ -140,6 +140,11 @@ fio = "fio"
 picocom = "picocom"
 usbutils = "usbutils"
 pciutils = "pciutils"
+# v1.8 — SSH tooling
+sshuttle = "sshuttle"
+autossh = "autossh"
+ssh-audit = "ssh-audit"
+sshs = "sshs"
 # v1.7 Phase 7
 terraform-docs = ""
 tflint = ""
