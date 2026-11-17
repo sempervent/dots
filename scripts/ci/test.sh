@@ -101,5 +101,9 @@ run scripts/tests/package_groups_control_plane_test.sh
 run scripts/tests/linux_distro_test.sh
 run scripts/tests/network_hardware_validate_test.sh
 run scripts/tests/security_validate_test.sh
+run scripts/tests/dev_validate_test.sh
+run scripts/tests/infra_validate_test.sh
+run scripts/tests/containers_k8s_validate_test.sh
+run scripts/tests/v190_workstation_ergonomics_test.sh
 
 echo "OK: all CI tests passed"

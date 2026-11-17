@@ -1,0 +1,14 @@
+apiVersion: cli.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: dots-fixture
+policies:
+  - policy.yaml
+resources:
+  - resource.yaml
+results:
+  - policy: require-labels
+    rule: check-labels
+    resource: good-pod
+    kind: Pod
+    result: pass

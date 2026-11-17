@@ -59,7 +59,7 @@ echo "=== with mactools, union includes mactools tokens ==="
 DOTS_WITH_COMPONENTS=(mactools)
 dots_desired_packages_resolve
 printf '%s\n' "${DOTS_DESIRED_CASKS[@]}" | grep -qx raycast && ok "mactools raycast desired" || bad "raycast missing from union"
-printf '%s\n' "${DOTS_DESIRED_FORMULAE[@]}" | grep -qx mise && ok "mactools mise desired" || bad "mise missing"
+printf '%s\n' "${DOTS_DESIRED_FORMULAE[@]}" | grep -qx diskbloom && ok "mactools diskbloom desired" || bad "diskbloom missing"
 DOTS_WITH_COMPONENTS=()
 
 echo "=== classify: managed / missing / outdated / undeclared / inactive / transitive ignored ==="
@@ -68,9 +68,9 @@ echo "=== classify: managed / missing / outdated / undeclared / inactive / trans
 DOTS_DESIRED_FORMULAE=(jq ripgrep missing-tool)
 DOTS_DESIRED_CASKS=(iterm2 raycast)
 export DOTS_PKG_MOCK_EXTERNAL_APPS=$'raycast'
-# glow is undeclared (no owner); add dust as leaf that has mactools owner → INACTIVE
-export DOTS_PKG_MOCK_LEAVES=$'jq\nglow\nripgrep\ndust'
-export DOTS_PKG_MOCK_FORMULAE=$'jq\nglow\nripgrep\noniguruma\npcre2\ndust'
+# glow is undeclared (no owner); diskbloom has mactools owner → INACTIVE
+export DOTS_PKG_MOCK_LEAVES=$'jq\nglow\nripgrep\ndiskbloom'
+export DOTS_PKG_MOCK_FORMULAE=$'jq\nglow\nripgrep\noniguruma\npcre2\ndiskbloom'
 
 dots_pkg_ownership_reset
 dots_pkg_classify_resolved 0
@@ -83,7 +83,7 @@ grep -q 'inactive:' "${TMP}/status.out" && ok "status prints inactive" || bad "n
 [[ ${DOTS_PKG_COUNT_OUTDATED} -eq 1 ]] && ok "outdated=1 (jq)" || bad "outdated=${DOTS_PKG_COUNT_OUTDATED}"
 [[ ${DOTS_PKG_COUNT_EXTERNAL} -eq 1 ]] && ok "external=1 (raycast)" || bad "external=${DOTS_PKG_COUNT_EXTERNAL}"
 printf '%s\n' "${DOTS_PKG_UNDECLARED_FORMULAE[@]}" | grep -qx glow && ok "undeclared glow leaf" || bad "glow not undeclared"
-printf '%s\n' "${DOTS_PKG_INACTIVE_FORMULAE[@]+"${DOTS_PKG_INACTIVE_FORMULAE[@]}"}" | grep -qx dust && ok "inactive dust" || bad "dust not inactive"
+printf '%s\n' "${DOTS_PKG_INACTIVE_FORMULAE[@]+"${DOTS_PKG_INACTIVE_FORMULAE[@]}"}" | grep -qx diskbloom && ok "inactive diskbloom" || bad "diskbloom not inactive"
 printf '%s\n' "${DOTS_PKG_UNDECLARED_FORMULAE[@]}" | grep -qx oniguruma && bad "transitive oniguruma undeclared" || ok "transitive dep ignored"
 printf '%s\n' "${DOTS_PKG_UNDECLARED_CASKS[@]}" | grep -qx some-extra-cask && ok "undeclared cask" || bad "cask not undeclared"
 dots_pkg_classify_resolved 1
