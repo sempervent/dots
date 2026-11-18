@@ -13,15 +13,31 @@ Required check failures make bootstrap **fail**. Warnings do not.
 `./dots status` runs a concise read-only dashboard (including a quick package
 drift summary when Homebrew is available).
 
-## Package audit
+## Package audit and upgrades
+
+`dots update` updates the **DOTS repository** (`git pull`). `dots upgrade`
+upgrades **installed Homebrew software** in the active DOTS desired scope
+(`update != upgrade`).
+
+| Command | Role |
+|---------|------|
+| `dots update` | Update DOTS itself |
+| `dots upgrade` | Upgrade managed software |
+| `dots install X` | Add known software/capability to persistent desired state |
+| `dots profile` | Inspect/edit desired state |
+| `dots setup` | Bootstrap/reconfigure/converge |
 
 ```bash
 ./dots packages status     # full audit (advisories)
 ./dots packages outdated   # outdated DOTS-managed packages
-./dots packages upgrade    # upgrade resolved desired set only
+./dots upgrade --dry-run   # preview managed, excluded, and undeclared updates
+./dots upgrade             # upgrade resolved desired set only
+./dots upgrade --all --yes # opt-in: also upgrade undeclared Homebrew packages
 ```
 
-DOTS never runs `brew bundle cleanup`. See [Packages](../concepts/packages.md).
+DOTS never runs `brew bundle cleanup`, `brew cleanup`, or OS package-manager
+upgrades (`apt full-upgrade`, `dnf upgrade`, `pacman -Syu`, `xbps-install -Su`).
+See [Packages](../concepts/packages.md).
 
 ## Backup before risky changes
 

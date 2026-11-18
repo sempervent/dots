@@ -1,7 +1,10 @@
 # Getting Started
 
 ```bash
-./dots                     # interactive setup wizard
+./dots                     # interactive setup / returning-machine menu
+./dots install hyperfine   # persist known software/capability + apply
+./dots upgrade             # upgrade managed software (distinct from update)
+./dots profile             # inspect/edit persistent desired-state overlays
 ./dots setup --dry-run     # preview without mutating
 ./dots status              # read-only dashboard
 ./dots check               # health verification

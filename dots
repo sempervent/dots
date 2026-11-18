@@ -49,6 +49,10 @@ source "${DIR}/helpers/linux_distro.sh"
 source "${DIR}/helpers/suggest.sh"
 # shellcheck source=helpers/shell_diag.sh
 source "${DIR}/helpers/shell_diag.sh"
+# shellcheck source=helpers/profiles.sh
+source "${DIR}/helpers/profiles.sh"
+# shellcheck source=helpers/profile_edit.sh
+source "${DIR}/helpers/profile_edit.sh"
 
 dots_usage() {
 	# Prefer generated synopsis (configs/help/commands.toml → scripts/docs/generate_usage.py)
@@ -146,9 +150,11 @@ dots_cmd_status() {
 				fi
 			fi
 		fi
-		echo "  detail: ./dots packages status"
-		echo "  plan:   ./dots packages plan"
-		echo "  groups: ./dots packages groups"
+		echo "  status:  ./dots packages status"
+		echo "  upgrade: ./dots upgrade"
+		echo "  install: ./dots install <name>"
+		echo "  plan:    ./dots packages plan"
+		echo "  groups:  ./dots packages groups"
 		echo ""
 		echo "Components:"
 		if [[ -n ${DOTS_ACTIVE_COMPONENTS:-} ]]; then
@@ -173,7 +179,9 @@ dots_cmd_status() {
 		if ! command -v "${DOTS_BREW_BIN:-brew}" >/dev/null 2>&1; then
 			echo "  Homebrew unavailable"
 		else
-			echo "  detail: ./dots packages status"
+			echo "  status:  ./dots packages status"
+			echo "  upgrade: ./dots upgrade"
+			echo "  install: ./dots install <name>"
 		fi
 	fi
 
@@ -351,36 +359,615 @@ dots_cmd_restore() {
 	dots_backup_restore "${args[@]}"
 }
 
-dots_cmd_profile() {
-	dots_ui_load_answers
-	dots_ui_header "Profiles"
-	DOTS_UI_CHOICE_DEFAULT=1
-	local c
-	c="$(dots_prompt_choice "Profiles:" \
-		"Show active" \
-		"Create (configure.sh)" \
-		"Preview resolved (--show)" \
-		"Switch / reapply (bootstrap)" \
-		"Back")"
-	case "${c}" in
-	1)
-		dots_cmd_status
+dots_cmd_install() {
+	local selector="" dry=0 yes=0 no_apply=0 profile_arg=""
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+		--dry-run) dry=1 ;;
+		--yes | -y) yes=1 ;;
+		--no-apply) no_apply=1 ;;
+		--profile)
+			profile_arg="${2:-}"
+			[[ -n ${profile_arg} ]] || {
+				echo "Error: --profile requires a value" >&2
+				return 1
+			}
+			shift
+			;;
+		--profile=*) profile_arg="${1#*=}" ;;
+		-h | --help | help)
+			cat <<'EOF'
+Usage: ./dots install SELECTOR [options]
+
+Add a known DOTS capability (package group, component, supergroup, or package)
+to this machine's persistent desired profile and converge toward it.
+
+Does NOT install arbitrary undeclared packages (use ./dots packages adopt
+for maintainer Brewfile declarations).
+
+Options:
+  --dry-run         Preview owner resolution, profile diff, and package plan
+  --yes, -y         Skip confirmation prompt
+  --no-apply        Persist desired profile update without running bootstrap
+  --profile NAME    Target profile (default: active profile)
+
+Examples:
+  ./dots install dev
+  ./dots install hyperfine
+  ./dots install karabiner-elements
+  ./dots install ai
+  ./dots install sshuttle --dry-run
+EOF
+			return 0
+			;;
+		-*)
+			echo "Error: unknown install option: $1" >&2
+			return 1
+			;;
+		*)
+			if [[ -z ${selector} ]]; then
+				selector="$1"
+			else
+				echo "Error: unexpected argument: $1 (pass one selector per invocation)" >&2
+				return 1
+			fi
+			;;
+		esac
+		shift
+	done
+
+	local allow_prompt=1
+	if [[ ${DOTS_UI_NONINTERACTIVE:-0} -eq 1 ]] || { [[ ! -t 0 ]] && [[ -z ${DOTS_UI_ANSWERS:-} ]]; }; then
+		allow_prompt=0
+	fi
+
+	if [[ -z ${selector} ]]; then
+		if [[ ${allow_prompt} -eq 1 ]]; then
+			[[ -z ${DOTS_UI_ANSWER_FD:-} ]] && dots_ui_load_answers
+			selector="$(dots_prompt_text "Capability, group, component, or package to install" "")" || return 1
+		fi
+	fi
+	[[ -n ${selector} ]] || {
+		echo "Error: selector required (e.g. ./dots install hyperfine)" >&2
+		return 1
+	}
+
+	# 1. Resolve selector -> DOTS_SEL_OWNER
+	dots_resolve_capability_selector "${selector}" "${allow_prompt}" || return 1
+
+	# Platform check for explicit leaf component
+	if [[ ${DOTS_SEL_KIND} == "component" ]]; then
+		dots_require_explicit_component_supported "${DOTS_SEL_ID}" || return 1
+	fi
+
+	# 2. Explain resolution & scope
+	echo "DOTS Install"
+	echo ""
+	echo "Requested:"
+	echo "  ${selector}"
+	echo "Owner:"
+	echo "  ${DOTS_SEL_OWNER}"
+	if [[ -n ${DOTS_SEL_VIA_PKG} ]]; then
+		echo ""
+		if [[ ${DOTS_SEL_KIND} == "group" ]]; then
+			echo "${DOTS_SEL_VIA_PKG} is provided by package group '${DOTS_SEL_ID}'."
+		else
+			echo "${DOTS_SEL_VIA_PKG} is provided by ${DOTS_SEL_KIND} '${DOTS_SEL_ID}'."
+		fi
+	fi
+	case "${DOTS_SEL_KIND}" in
+	group)
+		local desc p line=""
+		desc="$(dots_group_description "${DOTS_SEL_ID}" 2>/dev/null || true)"
+		[[ -n ${desc} ]] && echo "Role: ${desc}"
+		echo ""
+		echo "Adding ${DOTS_SEL_ID} also makes these packages desired:"
+		while IFS= read -r p; do
+			[[ -z ${p} ]] && continue
+			line="${line}${line:+ }${p}"
+		done < <(dots_pe_group_packages "${DOTS_SEL_ID}")
+		echo "  ${line:-(none)}"
 		;;
-	2)
-		exec "${DIR}/configure.sh"
+	component)
+		local desc rel kind tok
+		desc="$(dots_component_description "${DOTS_SEL_ID}" 2>/dev/null || true)"
+		[[ -n ${desc} ]] && echo "Role: ${desc}"
+		if rel="$(dots_component_brewfile "${DOTS_SEL_ID}" 2>/dev/null)" && [[ -f ${DIR}/${rel} ]]; then
+			echo ""
+			echo "Component packages (${rel}):"
+			while IFS=$'\t' read -r kind tok; do
+				[[ -z ${tok} ]] && continue
+				echo "  ${kind}: ${tok}"
+			done < <(dots_brewfile_tokens "${DIR}/${rel}" all)
+		fi
 		;;
-	3)
-		local p
-		p="$(dots_prompt_text "Profile name or path" "home")"
-		exec "${DIR}/bootstrap.sh" --profile "${p}" --show
+	supergroup)
+		echo ""
+		echo "Expanding supergroup '${DOTS_SEL_ID}' (platform-filtered; explicit consent):"
+		local m reason
+		while IFS= read -r m; do
+			[[ -z ${m} ]] && continue
+			if dots_component_supported_here "${m}"; then
+				echo "  + ${m}"
+			else
+				reason="$(dots_component_unsupported_reason "${m}" 2>/dev/null || echo unsupported)"
+				echo "  - ${m} (skipped: ${reason})"
+			fi
+		done < <(dots_supergroup_members "${DOTS_SEL_ID}")
 		;;
-	4)
-		local p
-		p="$(dots_prompt_text "Profile name or path" "home")"
-		exec "${DIR}/bootstrap.sh" --profile "${p}"
-		;;
-	5) return 0 ;;
 	esac
+
+	# 3. Resolve target profile & overlay (never mutate builtins or user-authored custom files)
+	dots_profile_edit_resolve_target "${profile_arg}" "${allow_prompt}" || return 1
+
+	# 4. Compute sparse edit & diff
+	local tmp_toml tmp_diff
+	tmp_toml="$(mktemp "${TMPDIR:-/tmp}/dots-install-toml.XXXXXX")"
+	tmp_diff="$(mktemp "${TMPDIR:-/tmp}/dots-install-diff.XXXXXX")"
+	if ! dots_profile_edit_compute add "${DOTS_SEL_OWNER}" \
+		"${DOTS_PE_SOURCE_FILE}" "${DOTS_PE_OVERLAY_FILE}" \
+		"${DOTS_PE_OVERLAY_NAME}" "${DOTS_PE_EXTENDS_VAL}" \
+		"${tmp_toml}" "${tmp_diff}"; then
+		rm -f "${tmp_toml}" "${tmp_diff}"
+		return 1
+	fi
+
+	echo ""
+	if [[ ${DOTS_PE_CHANGED} -eq 0 ]]; then
+		echo "${DOTS_PE_STATUS_MSG}"
+		rm -f "${tmp_toml}" "${tmp_diff}"
+		return 0
+	fi
+
+	echo "Profile delta:"
+	sed 's/^/  /' "${tmp_diff}"
+	echo ""
+	if [[ ${no_apply} -eq 1 ]]; then
+		echo "Mode: persist profile only (--no-apply)"
+	else
+		echo "Mode: persist profile + converge via bootstrap.sh"
+	fi
+
+	# 5. Dry-run stops here with zero mutation
+	if [[ ${dry} -eq 1 ]]; then
+		echo ""
+		echo "[dry-run] Would write overlay: ${DOTS_PE_OVERLAY_FILE}"
+		if [[ ${no_apply} -eq 0 ]]; then
+			echo "[dry-run] Would run: ./bootstrap.sh --profile ${DOTS_PE_OVERLAY_FILE}"
+		fi
+		echo "[dry-run] No files modified and no packages installed."
+		rm -f "${tmp_toml}" "${tmp_diff}"
+		return 0
+	fi
+
+	# 6. Confirm unless --yes
+	if [[ ${yes} -ne 1 ]]; then
+		if [[ ${allow_prompt} -eq 1 ]]; then
+			[[ -z ${DOTS_UI_ANSWER_FD:-} ]] && dots_ui_load_answers
+			local ans
+			ans="$(dots_prompt_yesno "Proceed" y)" || {
+				rm -f "${tmp_toml}" "${tmp_diff}"
+				echo "Aborted. No changes made."
+				return 0
+			}
+			if [[ ${ans} != y ]]; then
+				rm -f "${tmp_toml}" "${tmp_diff}"
+				echo "Aborted. No changes made."
+				return 0
+			fi
+		else
+			rm -f "${tmp_toml}" "${tmp_diff}"
+			echo "Error: confirmation required in noninteractive mode (pass --yes or --dry-run)" >&2
+			return 1
+		fi
+	fi
+
+	# 7. Atomic persist
+	if ! dots_profile_edit_commit_atomic "${DOTS_PE_OVERLAY_FILE}" "${tmp_toml}"; then
+		rm -f "${tmp_toml}" "${tmp_diff}"
+		return 1
+	fi
+	rm -f "${tmp_toml}" "${tmp_diff}"
+
+	if [[ ${no_apply} -eq 1 ]]; then
+		echo ""
+		echo "Profile updated."
+		echo ""
+		echo "Apply later:"
+		echo "  dots profile apply"
+		return 0
+	fi
+
+	# 8. Converge via bootstrap.sh — never revert desired profile on apply failure
+	local boot_bin="${DOTS_BOOTSTRAP_SH:-${DIR}/bootstrap.sh}"
+	echo ""
+	if "${boot_bin}" --profile "${DOTS_PE_OVERLAY_FILE}"; then
+		echo ""
+		echo "OK: ${DOTS_SEL_OWNER} persisted in ${DOTS_PE_OVERLAY_NAME} and applied."
+		return 0
+	fi
+
+	echo "" >&2
+	echo "Desired state updated successfully." >&2
+	echo "" >&2
+	echo "Machine convergence failed." >&2
+	echo "" >&2
+	echo "Current desired profile:" >&2
+	echo "  ${DOTS_PE_OVERLAY_NAME}" >&2
+	echo "" >&2
+	echo "Retry:" >&2
+	echo "  dots profile apply" >&2
+	echo "" >&2
+	echo "Diagnostics:" >&2
+	echo "  dots check --profile ${DOTS_PE_OVERLAY_NAME}" >&2
+	return 1
+}
+
+dots_cmd_upgrade() {
+	local has_profile=0 a
+	for a in "$@"; do
+		case "${a}" in
+		--profile | --profile=*) has_profile=1 ;;
+		-h | --help)
+			dots_pkg_upgrade --help
+			return 0
+			;;
+		esac
+	done
+	if [[ ${has_profile} -eq 0 ]] && declare -F dots_packages_plan_load_profile >/dev/null 2>&1; then
+		dots_packages_plan_load_profile "" >/dev/null 2>&1 || true
+	fi
+	dots_pkg_upgrade "$@"
+}
+
+_dots_profile_edit_subcmd() {
+	local action="$1"
+	shift
+	local selector="" profile_arg="" apply=0 dry=0 yes=0
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+		--profile)
+			profile_arg="${2:-}"
+			[[ -n ${profile_arg} ]] || {
+				echo "Error: --profile requires a value" >&2
+				return 1
+			}
+			shift
+			;;
+		--profile=*) profile_arg="${1#*=}" ;;
+		--apply) apply=1 ;;
+		--dry-run) dry=1 ;;
+		--yes | -y) yes=1 ;;
+		-h | --help)
+			echo "Usage: ./dots profile ${action} SELECTOR [--profile NAME|PATH] [--apply] [--dry-run] [--yes]"
+			return 0
+			;;
+		-*)
+			echo "Error: unknown profile ${action} option: $1" >&2
+			return 1
+			;;
+		*)
+			if [[ -z ${selector} ]]; then
+				selector="$1"
+			else
+				echo "Error: unexpected argument: $1" >&2
+				return 1
+			fi
+			;;
+		esac
+		shift
+	done
+
+	local allow_prompt=1
+	if [[ ${DOTS_UI_NONINTERACTIVE:-0} -eq 1 ]] || { [[ ! -t 0 ]] && [[ -z ${DOTS_UI_ANSWERS:-} ]]; }; then
+		allow_prompt=0
+	fi
+	if [[ -z ${selector} ]] && [[ ${allow_prompt} -eq 1 ]]; then
+		[[ -z ${DOTS_UI_ANSWER_FD:-} ]] && dots_ui_load_answers
+		selector="$(dots_prompt_text "Selector (group, component, supergroup, or package)" "")" || return 1
+	fi
+	[[ -n ${selector} ]] || {
+		echo "Error: selector required (e.g. ./dots profile ${action} dev)" >&2
+		return 1
+	}
+
+	dots_resolve_capability_selector "${selector}" "${allow_prompt}" || return 1
+	if [[ ${action} == "add" && ${DOTS_SEL_KIND} == "component" ]]; then
+		dots_require_explicit_component_supported "${DOTS_SEL_ID}" || return 1
+	fi
+	dots_profile_edit_resolve_target "${profile_arg}" "${allow_prompt}" || return 1
+
+	local tmp_toml tmp_diff
+	tmp_toml="$(mktemp "${TMPDIR:-/tmp}/dots-prof-toml.XXXXXX")"
+	tmp_diff="$(mktemp "${TMPDIR:-/tmp}/dots-prof-diff.XXXXXX")"
+	if ! dots_profile_edit_compute "${action}" "${DOTS_SEL_OWNER}" \
+		"${DOTS_PE_SOURCE_FILE}" "${DOTS_PE_OVERLAY_FILE}" \
+		"${DOTS_PE_OVERLAY_NAME}" "${DOTS_PE_EXTENDS_VAL}" \
+		"${tmp_toml}" "${tmp_diff}"; then
+		rm -f "${tmp_toml}" "${tmp_diff}"
+		return 1
+	fi
+
+	if [[ ${DOTS_PE_CHANGED} -eq 0 ]]; then
+		echo "${DOTS_PE_STATUS_MSG}"
+		rm -f "${tmp_toml}" "${tmp_diff}"
+		return 0
+	fi
+
+	cat "${tmp_diff}"
+	if [[ ${dry} -eq 1 ]]; then
+		echo ""
+		echo "[dry-run] Would write overlay: ${DOTS_PE_OVERLAY_FILE}"
+		[[ ${apply} -eq 1 ]] && echo "[dry-run] Would apply: ./bootstrap.sh --profile ${DOTS_PE_OVERLAY_FILE}"
+		echo "[dry-run] No files modified."
+		rm -f "${tmp_toml}" "${tmp_diff}"
+		return 0
+	fi
+
+	if [[ ${yes} -ne 1 && ${allow_prompt} -eq 1 ]]; then
+		[[ -z ${DOTS_UI_ANSWER_FD:-} ]] && dots_ui_load_answers
+		local ans
+		ans="$(dots_prompt_yesno "Write profile change" y)" || {
+			rm -f "${tmp_toml}" "${tmp_diff}"
+			echo "Aborted. No changes made."
+			return 0
+		}
+		if [[ ${ans} != y ]]; then
+			rm -f "${tmp_toml}" "${tmp_diff}"
+			echo "Aborted. No changes made."
+			return 0
+		fi
+	fi
+
+	if ! dots_profile_edit_commit_atomic "${DOTS_PE_OVERLAY_FILE}" "${tmp_toml}"; then
+		rm -f "${tmp_toml}" "${tmp_diff}"
+		return 1
+	fi
+	rm -f "${tmp_toml}" "${tmp_diff}"
+
+	echo "OK: updated ${DOTS_PE_OVERLAY_FILE} (active: ${DOTS_PE_OVERLAY_NAME})"
+	if [[ ${action} == "remove" ]]; then
+		echo "Note: removing desired state does not uninstall already-installed packages."
+	fi
+
+	if [[ ${apply} -eq 1 ]]; then
+		local boot_bin="${DOTS_BOOTSTRAP_SH:-${DIR}/bootstrap.sh}"
+		if ! "${boot_bin}" --profile "${DOTS_PE_OVERLAY_FILE}"; then
+			echo "Desired state updated successfully. Machine convergence failed." >&2
+			echo "Retry: ./dots profile apply" >&2
+			return 1
+		fi
+	else
+		echo "Apply later: ./dots profile apply"
+	fi
+	return 0
+}
+
+dots_cmd_profile() {
+	local sub="${1:-}"
+	if [[ $# -gt 0 ]]; then
+		shift
+	fi
+
+	case "${sub}" in
+	-h | --help | help)
+		cat <<'EOF'
+Usage:
+  ./dots profile                             Interactive profile menu (TTY) or show
+  ./dots profile show [PROFILE]              Show resolved profile (read-only)
+  ./dots profile add SELECTOR [options]      Persist capability into sparse overlay
+  ./dots profile remove SELECTOR [options]   Remove capability from desired state (no uninstall)
+  ./dots profile diff [PROFILE]              Show local overlay additions/removals
+  ./dots profile apply [PROFILE] [--dry-run] Converge machine toward profile
+  ./dots profile create [configure.sh args]  Create/edit profile TOML via configure.sh
+  ./dots profile switch PROFILE [--apply]    Switch active profile pointer
+
+Options for add/remove:
+  --profile NAME|PATH   Target profile (default: active profile)
+  --apply               Converge via bootstrap.sh after updating profile
+  --dry-run             Preview diff without writing files
+  --yes, -y             Skip confirmation prompt
+EOF
+		return 0
+		;;
+	show)
+		local p="${1:-}"
+		if [[ -z ${p} ]]; then
+			if dots_state_load_active 2>/dev/null; then
+				p="${DOTS_ACTIVE_PROFILE_FILE:-${DOTS_ACTIVE_PROFILE}}"
+			else
+				echo "No active profile recorded. Preview a builtin with: ./dots profile show home" >&2
+				return 1
+			fi
+		fi
+		local pf
+		pf="$(dots_resolve_profile_path "${p}")" || return 1
+		"${DOTS_BOOTSTRAP_SH:-${DIR}/bootstrap.sh}" --profile "${pf}" --show
+		return $?
+		;;
+	add)
+		_dots_profile_edit_subcmd add "$@"
+		return $?
+		;;
+	remove)
+		_dots_profile_edit_subcmd remove "$@"
+		return $?
+		;;
+	diff)
+		dots_profile_show_diff "${1:-}"
+		return $?
+		;;
+	apply)
+		local target="" dry=0
+		while [[ $# -gt 0 ]]; do
+			case "$1" in
+			--dry-run) dry=1 ;;
+			-h | --help)
+				echo "Usage: ./dots profile apply [PROFILE] [--dry-run]"
+				return 0
+				;;
+			-*)
+				echo "Unknown profile apply option: $1" >&2
+				return 1
+				;;
+			*) target="$1" ;;
+			esac
+			shift
+		done
+		if [[ -z ${target} ]]; then
+			if dots_state_load_active 2>/dev/null; then
+				target="${DOTS_ACTIVE_PROFILE_FILE:-${DOTS_ACTIVE_PROFILE}}"
+			else
+				echo "Error: no active profile recorded; pass profile name or path." >&2
+				return 1
+			fi
+		fi
+		local pf
+		pf="$(dots_resolve_profile_path "${target}")" || return 1
+		local args=(--profile "${pf}")
+		[[ ${dry} -eq 1 ]] && args+=(--dry-run)
+		"${DOTS_BOOTSTRAP_SH:-${DIR}/bootstrap.sh}" "${args[@]}"
+		return $?
+		;;
+	create)
+		exec "${DIR}/configure.sh" "$@"
+		;;
+	switch)
+		local target="" apply=0 dry=0
+		while [[ $# -gt 0 ]]; do
+			case "$1" in
+			--apply) apply=1 ;;
+			--dry-run) dry=1 ;;
+			-h | --help)
+				echo "Usage: ./dots profile switch PROFILE [--apply] [--dry-run]"
+				return 0
+				;;
+			-*)
+				echo "Unknown profile switch option: $1" >&2
+				return 1
+				;;
+			*) target="$1" ;;
+			esac
+			shift
+		done
+		[[ -n ${target} ]] || {
+			echo "Usage: ./dots profile switch PROFILE [--apply] [--dry-run]" >&2
+			return 1
+		}
+		local pf
+		pf="$(dots_resolve_profile_path "${target}")" || return 1
+		dots_profile_parse "${pf}" >/dev/null || return 1
+		if [[ ${dry} -eq 1 ]]; then
+			echo "[dry-run] Would switch active profile to ${pf}"
+			[[ ${apply} -eq 1 ]] && echo "[dry-run] Would run: ./bootstrap.sh --profile ${pf}"
+			return 0
+		fi
+		dots_profile_write_active_marker "${pf}" || return 1
+		echo "OK: active profile switched to ${pf}"
+		if [[ ${apply} -eq 1 ]]; then
+			"${DOTS_BOOTSTRAP_SH:-${DIR}/bootstrap.sh}" --profile "${pf}"
+		else
+			echo "Apply later: ./dots profile apply"
+		fi
+		return 0
+		;;
+	"")
+		if [[ ${DOTS_UI_NONINTERACTIVE:-0} -eq 1 ]] || { [[ ! -t 0 ]] && [[ -z ${DOTS_UI_ANSWERS:-} ]]; }; then
+			dots_cmd_profile show
+			return $?
+		fi
+		;;
+	*)
+		# Backward-compatible: if someone passes a profile name directly (e.g. from completions)
+		if dots_resolve_profile_path "${sub}" >/dev/null 2>&1; then
+			dots_cmd_profile show "${sub}"
+			return $?
+		fi
+		echo "Unknown profile subcommand: ${sub}" >&2
+		echo "Try: ./dots profile --help" >&2
+		return 1
+		;;
+	esac
+
+	# Interactive menu
+	dots_ui_load_answers
+	while true; do
+		dots_ui_header "DOTS Profile"
+		local cur_name="(none)" cur_ext="" cur_file=""
+		if dots_state_load_active 2>/dev/null; then
+			cur_name="${DOTS_ACTIVE_PROFILE:-unknown}"
+			cur_file="${DOTS_ACTIVE_PROFILE_FILE:-}"
+			if [[ -n ${cur_file} && -f ${cur_file} ]]; then
+				cur_ext="$(dots_profile_parse "${cur_file}" 2>/dev/null | sed -n 's/^extends://p' | head -n 1 || true)"
+			fi
+		fi
+		echo ""
+		echo "Current:"
+		if [[ -n ${cur_ext} ]]; then
+			echo "  ${cur_name} → ${cur_ext}"
+		else
+			echo "  ${cur_name}"
+		fi
+		echo ""
+		echo "  1) Show resolved profile"
+		echo "  2) Add software/capability"
+		echo "  3) Remove capability"
+		echo "  4) Show local overrides"
+		echo "  5) Preview package plan"
+		echo "  6) Apply current profile"
+		echo "  7) Create profile"
+		echo "  8) Switch profile"
+		echo "  9) Show inheritance/source chain"
+		echo "  q) Back"
+		echo ""
+		local c
+		c="$(dots_ui_read_line "Choice" "1")" || return 0
+		case "${c}" in
+		1)
+			dots_cmd_profile show || true
+			;;
+		2)
+			local sel
+			sel="$(dots_prompt_text "Capability, group, component, or package to add" "")" || continue
+			[[ -n ${sel} ]] && { _dots_profile_edit_subcmd add "${sel}" || true; }
+			;;
+		3)
+			local sel
+			sel="$(dots_prompt_text "Capability, group, component, or package to remove" "")" || continue
+			[[ -n ${sel} ]] && { _dots_profile_edit_subcmd remove "${sel}" || true; }
+			;;
+		4)
+			dots_cmd_profile diff || true
+			;;
+		5)
+			dots_packages_plan || true
+			;;
+		6)
+			dots_cmd_profile apply || true
+			;;
+		7)
+			"${DIR}/configure.sh" || true
+			;;
+		8)
+			local p
+			p="$(dots_prompt_text "Profile name or path" "home")" || continue
+			[[ -n ${p} ]] && { dots_cmd_profile switch "${p}" || true; }
+			;;
+		9)
+			if [[ -n ${cur_file} && -f ${cur_file} ]]; then
+				dots_profile_parse "${cur_file}" | sed -n 's/^chain:/  -> /p'
+			else
+				dots_cmd_profile show || true
+			fi
+			;;
+		q | Q | 0 | b | B)
+			return 0
+			;;
+		*)
+			echo "Enter 1-9 or q." >&2
+			;;
+		esac
+	done
 }
 
 dots_cmd_models() {
@@ -898,16 +1485,7 @@ dots_cmd_packages() {
 		echo "      ./dots packages upgrade --all is broader (opt-in)."
 		;;
 	upgrade)
-		local warn_all=0 a
-		for a in "$@"; do
-			[[ ${a} == --all ]] && warn_all=1
-		done
-		if [[ ${warn_all} -eq 1 ]]; then
-			echo "These packages are not DOTS-managed and will be updated by Homebrew anyway."
-			echo "(--all includes undeclared/inactive Homebrew packages outside the desired set)"
-			echo ""
-		fi
-		dots_pkg_upgrade "$@"
+		dots_cmd_upgrade "$@"
 		;;
 	explain)
 		local name="${1:-}"
@@ -1136,6 +1714,14 @@ help)
 setup)
 	shift || true
 	dots_cmd_setup "$@"
+	;;
+install)
+	shift || true
+	dots_cmd_install "$@"
+	;;
+upgrade)
+	shift || true
+	dots_cmd_upgrade "$@"
 	;;
 status)
 	shift || true

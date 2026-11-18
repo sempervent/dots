@@ -9,7 +9,7 @@ _dots_complete() {
   local cmd="${COMP_WORDS[1]:-}"
   local sub="${COMP_WORDS[2]:-}"
 
-  local commands='setup status components lsp ai agent packages backup backups restore profile models check update help shell completion'
+  local commands='setup install upgrade status components lsp ai agent packages backup backups restore profile models check update help shell completion'
   local topics='overview getting-started shell completion keybindings profiles components supergroups packages ai models lsp skills backup data agent network agent-security hardware infra docs-tooling geo diagnostics media update commands files agent-evals agent-routing agent-teams'
   local selectors='ai herdr hermes ollama llamacpp archify skills ai-skills drawthings opencode codex cursor fluidvoice images tex mactools karabiner-elements orbstack davinci-resolve mitmproxy syncthing lsp ai-server pi litellm agent-sandbox openrig'
   local groups='core modern workstation infra media gui server dev security network hardware data backup geo containers k8s docs'
@@ -22,6 +22,7 @@ _dots_complete() {
   local shell_subs='status keys startup'
   local completion_subs='status paths'
   local pkg_subs='groups group plan status explain outdated upgrade adopt help'
+  local profile_subs='show add remove diff apply create switch help'
   local component_subs='list active show help'
   local ai_subs='status doctor up down help'
   local agent_subs='status doctor sandbox models scout route eval team run worktrees diff apply discard mcp costs gateway'
@@ -114,8 +115,44 @@ _dots_complete() {
   completion)
     COMPREPLY=($(compgen -W "${completion_subs}" -- "${cur}"))
     ;;
+  install)
+    case "${prev}" in
+    --profile)
+      COMPREPLY=($(compgen -W "${profiles} $(_dots_custom_profiles)" -- "${cur}"))
+      ;;
+    *)
+      if [[ ${cur} == -* ]]; then
+        COMPREPLY=($(compgen -W "--dry-run --yes --no-apply --profile --help" -- "${cur}"))
+      else
+        COMPREPLY=($(compgen -W "${groups} ${selectors}" -- "${cur}"))
+      fi
+      ;;
+    esac
+    ;;
+  upgrade)
+    case "${prev}" in
+    --profile)
+      COMPREPLY=($(compgen -W "${profiles} $(_dots_custom_profiles)" -- "${cur}"))
+      ;;
+    *)
+      COMPREPLY=($(compgen -W "--dry-run --yes --profile --all --help" -- "${cur}"))
+      ;;
+    esac
+    ;;
   profile)
-    COMPREPLY=($(compgen -W "${profiles} $(_dots_custom_profiles)" -- "${cur}"))
+    if [[ ${COMP_CWORD} -eq 2 ]]; then
+      COMPREPLY=($(compgen -W "${profile_subs} ${profiles} $(_dots_custom_profiles)" -- "${cur}"))
+    elif [[ ${sub} == show || ${sub} == diff || ${sub} == apply || ${sub} == switch ]]; then
+      COMPREPLY=($(compgen -W "${profiles} $(_dots_custom_profiles)" -- "${cur}"))
+    elif [[ ${sub} == add || ${sub} == remove ]]; then
+      if [[ ${cur} == -* ]]; then
+        COMPREPLY=($(compgen -W "--profile --apply --dry-run --yes --help" -- "${cur}"))
+      else
+        COMPREPLY=($(compgen -W "${groups} ${selectors}" -- "${cur}"))
+      fi
+    else
+      COMPREPLY=($(compgen -W "${profiles} $(_dots_custom_profiles)" -- "${cur}"))
+    fi
     ;;
   restore)
     COMPREPLY=($(compgen -W "$(_dots_snapshots)" -- "${cur}"))

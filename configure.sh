@@ -412,7 +412,16 @@ if [[ -f ${OUTPUT} ]] && [[ ${FORCE} -ne 1 ]]; then
 	fi
 fi
 
-write_profile_toml "${OUTPUT}"
+mkdir -p "$(dirname "${OUTPUT}")"
+_cfg_stage="$(mktemp "$(dirname "${OUTPUT}")/.configure.XXXXXX")"
+write_profile_toml "${_cfg_stage}" >/dev/null
+if ! dots_profile_parse "${_cfg_stage}" >/dev/null; then
+	rm -f "${_cfg_stage}"
+	echo "Error: generated profile failed validation; aborted without write." >&2
+	exit 1
+fi
+mv -f "${_cfg_stage}" "${OUTPUT}"
+echo "OK: wrote ${OUTPUT}"
 echo ""
 echo "Preview:"
 cat "${OUTPUT}"

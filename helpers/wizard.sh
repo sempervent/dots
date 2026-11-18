@@ -341,33 +341,73 @@ dots_wizard_collect() {
 
 	# Existing machine?
 	if dots_state_load_active 2>/dev/null; then
-		dots_ui_section "Existing configuration detected"
+		dots_ui_section "Existing DOTS Machine"
 		echo "  profile: ${DOTS_ACTIVE_PROFILE:-unknown}"
 		[[ -n ${DOTS_ACTIVE_PROFILE_FILE:-} ]] && echo "  file: ${DOTS_ACTIVE_PROFILE_FILE}"
-		DOTS_UI_CHOICE_DEFAULT=1
+		echo ""
+		echo "  1) Check health"
+		echo "  2) Add software/capability"
+		echo "  3) Edit profile"
+		echo "  4) Upgrade managed software"
+		echo "  5) Reapply profile"
+		echo "  6) Update DOTS"
+		echo "  7) Package status"
+		echo "  8) Models only"
+		echo "  9) Start over with another profile"
+		echo "  q) Exit"
+		echo ""
 		local ans
-		ans="$(dots_prompt_choice "What next?" \
-			"Reapply current profile" \
-			"Edit / create another profile (wizard)" \
-			"Models only" \
-			"Verify only" \
-			"Start over with another profile")"
-		case "${ans}" in
-		1)
-			WIZ_PASSTHRU_PROFILE="${DOTS_ACTIVE_PROFILE_FILE:-${DOTS_ACTIVE_PROFILE}}"
-			WIZ_BUILTIN="reapply"
-			return 0
-			;;
-		3)
-			WIZ_BUILTIN="models-only"
-			return 0
-			;;
-		4)
-			WIZ_BUILTIN="check-only"
-			return 0
-			;;
-		2 | 5) ;; # fall through to full wizard
-		esac
+		while true; do
+			ans="$(dots_ui_read_line "Choice" "1")" || {
+				WIZ_BUILTIN="exit-wizard"
+				return 0
+			}
+			case "${ans}" in
+			1)
+				WIZ_BUILTIN="check-only"
+				return 0
+				;;
+			2)
+				WIZ_BUILTIN="install-capability"
+				return 0
+				;;
+			3)
+				WIZ_BUILTIN="edit-profile"
+				return 0
+				;;
+			4)
+				WIZ_BUILTIN="upgrade-software"
+				return 0
+				;;
+			5)
+				WIZ_PASSTHRU_PROFILE="${DOTS_ACTIVE_PROFILE_FILE:-${DOTS_ACTIVE_PROFILE}}"
+				WIZ_BUILTIN="reapply"
+				return 0
+				;;
+			6)
+				WIZ_BUILTIN="update-dots"
+				return 0
+				;;
+			7)
+				WIZ_BUILTIN="package-status"
+				return 0
+				;;
+			8)
+				WIZ_BUILTIN="models-only"
+				return 0
+				;;
+			9)
+				break
+				;;
+			q | Q | 0 | 10)
+				WIZ_BUILTIN="exit-wizard"
+				return 0
+				;;
+			*)
+				echo "Enter 1-9 or q." >&2
+				;;
+			esac
+		done
 	fi
 
 	dots_ui_section "1. Machine type"
@@ -564,6 +604,63 @@ dots_wizard_apply() {
 		set -e
 		[[ ${WIZ_DRY_RUN} -eq 1 ]] && rm -f "${log}"
 		return "${rc}"
+		;;
+	install-capability)
+		[[ ${WIZ_DRY_RUN} -eq 1 ]] && rm -f "${log}"
+		if declare -F dots_cmd_install >/dev/null 2>&1; then
+			if [[ ${WIZ_DRY_RUN} -eq 1 ]]; then
+				dots_cmd_install --dry-run
+			else
+				dots_cmd_install
+			fi
+			return $?
+		fi
+		return 1
+		;;
+	edit-profile)
+		[[ ${WIZ_DRY_RUN} -eq 1 ]] && rm -f "${log}"
+		if declare -F dots_cmd_profile >/dev/null 2>&1; then
+			dots_cmd_profile
+			return $?
+		fi
+		return 1
+		;;
+	upgrade-software)
+		[[ ${WIZ_DRY_RUN} -eq 1 ]] && rm -f "${log}"
+		if declare -F dots_cmd_upgrade >/dev/null 2>&1; then
+			if [[ ${WIZ_DRY_RUN} -eq 1 ]]; then
+				dots_cmd_upgrade --dry-run
+			else
+				dots_cmd_upgrade
+			fi
+			return $?
+		fi
+		return 1
+		;;
+	update-dots)
+		if [[ ${WIZ_DRY_RUN} -eq 1 ]]; then
+			rm -f "${log}"
+			echo "[dry-run] would update DOTS repository (./dots update)"
+			return 0
+		fi
+		if declare -F dots_cmd_update >/dev/null 2>&1; then
+			dots_cmd_update
+			return $?
+		fi
+		return 1
+		;;
+	package-status)
+		[[ ${WIZ_DRY_RUN} -eq 1 ]] && rm -f "${log}"
+		if declare -F dots_cmd_packages >/dev/null 2>&1; then
+			dots_cmd_packages status
+			return $?
+		fi
+		return 1
+		;;
+	exit-wizard)
+		[[ ${WIZ_DRY_RUN} -eq 1 ]] && rm -f "${log}"
+		echo "No changes made."
+		return 0
 		;;
 	esac
 
@@ -789,7 +886,11 @@ EOF
 
 	# Short-circuit existing-machine modes (no full review loop)
 	case "${WIZ_BUILTIN}" in
-	reapply | models-only | check-only)
+	exit-wizard)
+		echo "No changes made."
+		return 0
+		;;
+	reapply | models-only | check-only | install-capability | edit-profile | upgrade-software | update-dots | package-status)
 		dots_wizard_apply
 		return $?
 		;;

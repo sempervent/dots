@@ -11,10 +11,12 @@ Captured from safe `--help` / `help` invocations. If a binary is missing or help
 ## `./dots`
 
 ```text
-DOTS — machine environment manager  (v1.9.0)
+DOTS — machine environment manager  (v1.10.0)
 
 Usage:
   ./dots setup [options]            Interactive or noninteractive setup / reconfigure...
+  ./dots install SELECTOR [--dry-run] [--yes] [--no-apply] [--profile NAME] Persist a known DOTS capability to desired profile...
+  ./dots upgrade [--dry-run] [--yes] [--profile NAME] [--all] Upgrade outdated Homebrew software in the active...
   ./dots status                     Show current DOTS state (profile, packages summary...
   ./dots components [list|active|show ID] Inspect optional components and --with selectors.
   ./dots lsp [status|check|install|list] Language-server install, status, and checks.
@@ -24,10 +26,10 @@ Usage:
   ./dots backup [--name N]          Snapshot managed targets under...
   ./dots backups                    List recoverable DOTS snapshots.
   ./dots restore [ID]               Restore a snapshot (creates a safety snapshot first).
-  ./dots profile …                  Create, preview, or switch machine profiles.
+  ./dots profile [show|add|remove|diff|apply|create|switch] Inspect, edit via sparse overlays, switch, or apply...
   ./dots models [discover|pull|…]   Local model plan, discovery, and pull workflows.
   ./dots check [--profile NAME] | dots check fast|workflows|docs|all-local|act|release-notes|security|containers|k8s|dev|data|geo|media|backup|network|hardware|infra Machine health plus local CI, docs, security...
-  ./dots update                     git pull the DOTS repo and optionally reapply setup.
+  ./dots update                     Pull latest DOTS repo and optionally reapply setup...
   ./dots help [topic] [--plain] [--search QUERY] [--cheatsheet] Interactive Textual help (dots-help) for this machine.
   ./dots shell [status|keys|startup] Inspect shell, prompt, and keybinding ownership.
   ./dots completion [status|paths]  DOTS CLI completion and fzf-tab diagnostics.
@@ -284,6 +286,47 @@ Examples:
 User overrides: ~/.config/dots/models.toml
 ```
 
+## `./dots install`
+
+```text
+Usage: ./dots install SELECTOR [options]
+
+Add a known DOTS capability (package group, component, supergroup, or package)
+to this machine's persistent desired profile and converge toward it.
+
+Does NOT install arbitrary undeclared packages (use ./dots packages adopt
+for maintainer Brewfile declarations).
+
+Options:
+  --dry-run         Preview owner resolution, profile diff, and package plan
+  --yes, -y         Skip confirmation prompt
+  --no-apply        Persist desired profile update without running bootstrap
+  --profile NAME    Target profile (default: active profile)
+
+Examples:
+  ./dots install dev
+  ./dots install hyperfine
+  ./dots install karabiner-elements
+  ./dots install ai
+  ./dots install sshuttle --dry-run
+```
+
+## `./dots upgrade`
+
+```text
+Usage: ./dots upgrade [--dry-run] [--yes] [--profile NAME|PATH] [--all]
+
+Upgrades installed Homebrew software in the active DOTS desired scope.
+Does NOT pull the DOTS repo (that is ./dots update).
+Does NOT run brew bundle cleanup, brew cleanup, or OS apt/dnf/pacman/xbps upgrades.
+
+Options:
+  --dry-run         Preview outdated managed, excluded, and undeclared packages
+  --yes, -y         Skip confirmation prompt
+  --profile NAME    Scope upgrades to NAME without changing active profile
+  --all             Also upgrade Homebrew packages outside active DOTS desired state
+```
+
 ## `./dots packages`
 
 ```text
@@ -338,6 +381,26 @@ Optional components are selected via profile with= or:
 
 Active inventory is INFORMATIONAL only — not AI consent.
 Docs: https://sempervent.github.io/dots/using/components/
+```
+
+## `./dots profile`
+
+```text
+Usage:
+  ./dots profile                             Interactive profile menu (TTY) or show
+  ./dots profile show [PROFILE]              Show resolved profile (read-only)
+  ./dots profile add SELECTOR [options]      Persist capability into sparse overlay
+  ./dots profile remove SELECTOR [options]   Remove capability from desired state (no uninstall)
+  ./dots profile diff [PROFILE]              Show local overlay additions/removals
+  ./dots profile apply [PROFILE] [--dry-run] Converge machine toward profile
+  ./dots profile create [configure.sh args]  Create/edit profile TOML via configure.sh
+  ./dots profile switch PROFILE [--apply]    Switch active profile pointer
+
+Options for add/remove:
+  --profile NAME|PATH   Target profile (default: active profile)
+  --apply               Converge via bootstrap.sh after updating profile
+  --dry-run             Preview diff without writing files
+  --yes, -y             Skip confirmation prompt
 ```
 
 ## `./dots models`

@@ -1,0 +1,23 @@
+.\" GENERATED — DO NOT EDIT.
+.\" Source: configs/help/commands.toml + scripts/docs/generate_manpages.py
+.
+.TH DOTS\-UPGRADE 1 "2026-11-02" "DOTS 1.10.0" "User Commands"
+.SH NAME
+dots\-upgrade \- Upgrade outdated Homebrew software in the active DOTS desired
+.SH SYNOPSIS
+.B dots upgrade [\-\-dry\-run] [\-\-yes] [\-\-profile NAME] [\-\-all]
+.SH DESCRIPTION
+Upgrade outdated Homebrew software in the active DOTS desired scope.
+.SH EXAMPLES
+.TP
+.B dots upgrade \-\-dry\-run
+List outdated managed, excluded, and undeclared packages without mutating.
+.TP
+.B dots upgrade \-\-yes
+Upgrade outdated packages in the active profile.
+.TP
+.B dots upgrade \-\-profile work \-\-dry\-run
+Preview upgrades scoped to the work profile.
+.SH SEE ALSO
+.BR dots (1),
+.BR dots\-help (1)

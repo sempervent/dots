@@ -708,12 +708,21 @@ dots_pkg_explain() {
 		state=UNDECLARED
 	fi
 
+	local desired_str="NO"
+	[[ ${in_desired} -eq 1 ]] && desired_str="YES"
+	local known_str=""
+	if dots_pkg_known_owners "${name}" >/dev/null 2>&1; then
+		known_str="$(dots_pkg_known_owners "${name}" | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
+	fi
+
 	echo "Package: ${name}"
 	echo "  kind:          ${kind}"
 	echo "  installed:     ${installed}"
 	echo "  brew-owned:    ${brew_owned}"
 	echo "  outdated:      ${outdated}"
 	echo "  state:         ${state}"
+	echo "  owner:         ${known_str:-(none)}"
+	echo "  desired:       ${desired_str}"
 	echo -n "  active owners: "
 	if dots_pkg_active_owners "${name}" >/dev/null 2>&1; then
 		dots_pkg_active_owners "${name}" | tr '\n' ' '
@@ -722,14 +731,27 @@ dots_pkg_explain() {
 		echo "(none)"
 	fi
 	echo -n "  known owners:  "
-	if dots_pkg_known_owners "${name}" >/dev/null 2>&1; then
-		dots_pkg_known_owners "${name}" | tr '\n' ' '
-		echo ""
+	if [[ -n ${known_str} ]]; then
+		echo "${known_str}"
 	else
 		echo "(none — not in group/component Brewfiles)"
 	fi
 	echo "  activate:"
+	if [[ -n ${known_str} ]]; then
+		echo "    ./dots install ${name}"
+	fi
 	dots_pkg_activate_hint "${name}" | sed 's/^/    /'
+	if [[ -n ${known_str} ]]; then
+		echo "  inspect:"
+		local own
+		while IFS= read -r own; do
+			[[ -z ${own} ]] && continue
+			case "${own}" in
+			group:*) echo "    ./dots packages group ${own#group:}" ;;
+			component:*) echo "    ./dots components show ${own#component:}" ;;
+			esac
+		done < <(dots_pkg_known_owners "${name}" 2>/dev/null || true)
+	fi
 }
 
 # Resolve desired set, classify inventory, optionally print.
@@ -781,41 +803,247 @@ dots_pkg_suggest_declare() {
 }
 
 # Upgrade only managed (desired) outdated packages. --all upgrades undeclared too (opt-in).
+# Flags: [--dry-run] [--yes|-y] [--all] [--profile NAME|PATH]
 dots_pkg_upgrade() {
-	local all=0
-	local a
-	for a in "$@"; do
-		[[ ${a} == --all ]] && all=1
+	local all=0 dry="${DRY_RUN:-0}" yes=0 profile_arg=""
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+		--all) all=1 ;;
+		--dry-run) dry=1 ;;
+		--yes | -y) yes=1 ;;
+		--profile)
+			profile_arg="${2:-}"
+			[[ -n ${profile_arg} ]] || {
+				echo "Error: --profile requires a value" >&2
+				return 1
+			}
+			shift
+			;;
+		--profile=*)
+			profile_arg="${1#*=}"
+			;;
+		-h | --help)
+			cat <<'EOF'
+Usage: ./dots upgrade [--dry-run] [--yes] [--profile NAME|PATH] [--all]
+
+Upgrades installed Homebrew software in the active DOTS desired scope.
+Does NOT pull the DOTS repo (that is ./dots update).
+Does NOT run brew bundle cleanup, brew cleanup, or OS apt/dnf/pacman/xbps upgrades.
+
+Options:
+  --dry-run         Preview outdated managed, excluded, and undeclared packages
+  --yes, -y         Skip confirmation prompt
+  --profile NAME    Scope upgrades to NAME without changing active profile
+  --all             Also upgrade Homebrew packages outside active DOTS desired state
+EOF
+			return 0
+			;;
+		*)
+			echo "Error: unknown upgrade option: $1" >&2
+			return 1
+			;;
+		esac
+		shift
 	done
-	if [[ ${DRY_RUN:-0} -eq 1 ]]; then
-		echo "[dry-run] would upgrade managed outdated packages (all=${all})"
-		return 0
+
+	if [[ -n ${profile_arg} ]]; then
+		if declare -F dots_packages_plan_load_profile >/dev/null 2>&1; then
+			dots_packages_plan_load_profile "${profile_arg}" || return 1
+		else
+			echo "Error: profile helpers unavailable for --profile" >&2
+			return 1
+		fi
 	fi
+
+	# Platform check: do not casually map to apt/dnf/pacman/xbps OS upgrades.
+	if ! command -v "${DOTS_BREW_BIN:-brew}" >/dev/null 2>&1 &&
+		[[ -z ${DOTS_PKG_MOCK_OUTDATED_FORMULAE+x} && -z ${DOTS_PKG_MOCK_OUTDATED_CASKS+x} ]]; then
+		if [[ "$(uname -s)" == "Linux" ]]; then
+			echo "Note: Homebrew/Linuxbrew is not installed on this host."
+			echo "DOTS scoped upgrades manage Homebrew formulae/casks only;"
+			echo "OS package upgrades (apt/dnf/pacman/xbps) are not run by 'dots upgrade'."
+			return 0
+		fi
+		echo "Error: Homebrew is not available." >&2
+		return 1
+	fi
+
+	local scope_profile="${PROFILE_NAME:-${DOTS_ACTIVE_PROFILE:-${DOTS_PROFILE:-"(default)"}}}"
 	dots_desired_packages_resolve
-	local -a to_f=() to_c=()
-	local line f
+	dots_pkg_build_ownership_catalog
+
+	local -a to_f=() to_c=() excluded_f=() excluded_c=() undeclared_f=() undeclared_c=()
+	local line
 	while IFS= read -r line; do
 		[[ -z ${line} ]] && continue
-		if [[ ${all} -eq 1 ]] || dots_pkg_in_list "${line}" "${DOTS_DESIRED_FORMULAE[@]+"${DOTS_DESIRED_FORMULAE[@]}"}"; then
+		if dots_pkg_in_list "${line}" "${DOTS_DESIRED_FORMULAE[@]+"${DOTS_DESIRED_FORMULAE[@]}"}"; then
 			to_f+=("${line}")
+		elif dots_pkg_has_known_owner "${line}"; then
+			excluded_f+=("${line}")
+			[[ ${all} -eq 1 ]] && to_f+=("${line}")
+		else
+			undeclared_f+=("${line}")
+			[[ ${all} -eq 1 ]] && to_f+=("${line}")
 		fi
 	done < <(dots_pkg_outdated_formulae)
+
 	while IFS= read -r line; do
 		[[ -z ${line} ]] && continue
-		if [[ ${all} -eq 1 ]] || dots_pkg_in_list "${line}" "${DOTS_DESIRED_CASKS[@]+"${DOTS_DESIRED_CASKS[@]}"}"; then
+		if dots_pkg_in_list "${line}" "${DOTS_DESIRED_CASKS[@]+"${DOTS_DESIRED_CASKS[@]}"}"; then
 			to_c+=("${line}")
+		elif dots_pkg_has_known_owner "${line}"; then
+			excluded_c+=("${line}")
+			[[ ${all} -eq 1 ]] && to_c+=("${line}")
+		else
+			undeclared_c+=("${line}")
+			[[ ${all} -eq 1 ]] && to_c+=("${line}")
 		fi
 	done < <(dots_pkg_outdated_casks)
 
-	if [[ ${all} -eq 1 ]]; then
-		echo "Warn: --all may update packages not declared by DOTS (Homebrew will upgrade them)."
-	fi
-	if [[ ${#to_f[@]} -eq 0 && ${#to_c[@]} -eq 0 ]]; then
-		echo "OK: nothing outdated in scope"
+	if [[ ${dry} -eq 1 ]]; then
+		echo "DOTS Upgrade (dry-run)"
+		echo ""
+		echo "Profile:"
+		echo "  ${scope_profile}"
+		echo ""
+		echo "Would upgrade:"
+		if [[ ${#to_f[@]} -eq 0 && ${#to_c[@]} -eq 0 ]]; then
+			echo "  (none)"
+		else
+			for line in "${to_f[@]+"${to_f[@]}"}"; do
+				echo "  ${line}"
+			done
+			for line in "${to_c[@]+"${to_c[@]}"}"; do
+				echo "  ${line} (cask)"
+			done
+		fi
+		echo ""
+		echo "Outdated but excluded from this profile:"
+		if [[ ${#excluded_f[@]} -eq 0 && ${#excluded_c[@]} -eq 0 ]]; then
+			echo "  (none)"
+		else
+			for line in "${excluded_f[@]+"${excluded_f[@]}"}"; do
+				echo "  ${line}"
+			done
+			for line in "${excluded_c[@]+"${excluded_c[@]}"}"; do
+				echo "  ${line} (cask)"
+			done
+		fi
+		echo ""
+		echo "Undeclared:"
+		if [[ ${#undeclared_f[@]} -eq 0 && ${#undeclared_c[@]} -eq 0 ]]; then
+			echo "  (none)"
+		else
+			for line in "${undeclared_f[@]+"${undeclared_f[@]}"}"; do
+				echo "  ${line}"
+			done
+			for line in "${undeclared_c[@]+"${undeclared_c[@]}"}"; do
+				echo "  ${line} (cask)"
+			done
+		fi
+		echo ""
+		echo "[dry-run] no packages upgraded."
 		return 0
 	fi
-	[[ ${#to_f[@]} -gt 0 ]] && dots_pkg_brew upgrade --formula "${to_f[@]}"
-	[[ ${#to_c[@]} -gt 0 ]] && dots_pkg_brew upgrade --cask "${to_c[@]}"
+
+	echo "DOTS Upgrade"
+	echo ""
+	echo "Profile:"
+	echo "  ${scope_profile}"
+	echo ""
+
+	if [[ ${#to_f[@]} -eq 0 && ${#to_c[@]} -eq 0 ]]; then
+		echo "OK: nothing outdated in scope"
+		if [[ ${#excluded_f[@]} -gt 0 || ${#excluded_c[@]} -gt 0 ]]; then
+			echo "Note: ${#excluded_f[@]} formula(e) / ${#excluded_c[@]} cask(s) outdated outside profile scope (use --all to include)."
+		fi
+		return 0
+	fi
+
+	local total=$((${#to_f[@]} + ${#to_c[@]}))
+	echo "Outdated managed software:"
+	for line in "${to_f[@]+"${to_f[@]}"}"; do
+		echo "  ${line}"
+	done
+	for line in "${to_c[@]+"${to_c[@]}"}"; do
+		echo "  ${line} (cask)"
+	done
+	echo ""
+	echo "${total} package(s) in scope can be upgraded."
+	if [[ ${all} -eq 1 ]]; then
+		echo "Warn: --all may upgrade Homebrew packages outside the active DOTS desired state."
+	fi
+
+	if [[ ${yes} -ne 1 ]]; then
+		if [[ ${DOTS_UI_NONINTERACTIVE:-0} -ne 1 ]] && { [[ -t 0 ]] || [[ -n ${DOTS_UI_ANSWERS:-} ]]; }; then
+			if [[ -z ${DOTS_UI_ANSWER_FD:-} ]] && declare -F dots_ui_load_answers >/dev/null 2>&1; then
+				dots_ui_load_answers
+			fi
+			local ans="n"
+			if declare -F dots_prompt_yesno >/dev/null 2>&1; then
+				if [[ ${all} -eq 1 ]]; then
+					ans="$(dots_prompt_yesno "Upgrade ALL ${total} Homebrew package(s) including outside DOTS scope" n)" || return 1
+				else
+					ans="$(dots_prompt_yesno "Upgrade now" y)" || return 1
+				fi
+			else
+				if [[ ${all} -eq 1 ]]; then
+					printf 'Upgrade ALL %s Homebrew package(s)? [y/N]: ' "${total}" >&2
+					read -r ans || return 1
+				else
+					printf 'Upgrade now? [Y/n]: ' >&2
+					read -r ans || return 1
+					[[ -z ${ans} ]] && ans="y"
+				fi
+			fi
+			case "${ans}" in
+			y | Y | yes | YES) ;;
+			*)
+				echo "Aborted. No packages upgraded."
+				return 0
+				;;
+			esac
+		else
+			if [[ ${all} -eq 1 ]]; then
+				echo "Error: --all in noninteractive mode requires --yes" >&2
+			else
+				echo "Error: confirmation required in noninteractive mode (pass --yes or --dry-run)" >&2
+			fi
+			return 1
+		fi
+	fi
+
+	local -a ok_pkgs=() fail_pkgs=() rem_pkgs=()
+	local pkg
+	for pkg in "${to_f[@]+"${to_f[@]}"}"; do
+		if dots_pkg_brew upgrade --formula "${pkg}"; then
+			ok_pkgs+=("${pkg}")
+		else
+			fail_pkgs+=("${pkg}")
+			rem_pkgs+=("${pkg}")
+		fi
+	done
+	for pkg in "${to_c[@]+"${to_c[@]}"}"; do
+		if dots_pkg_brew upgrade --cask "${pkg}"; then
+			ok_pkgs+=("${pkg} (cask)")
+		else
+			fail_pkgs+=("${pkg} (cask)")
+			rem_pkgs+=("${pkg} (cask)")
+		fi
+	done
+
+	if [[ ${#fail_pkgs[@]} -gt 0 ]]; then
+		echo "" >&2
+		echo "Upgrade completed with partial failures:" >&2
+		echo "  successful (${#ok_pkgs[@]}): ${ok_pkgs[*]:-(none)}" >&2
+		echo "  failed (${#fail_pkgs[@]}):     ${fail_pkgs[*]}" >&2
+		echo "  remaining (${#rem_pkgs[@]}):  ${rem_pkgs[*]}" >&2
+		return 1
+	fi
+
+	echo ""
+	echo "OK: upgraded ${#ok_pkgs[@]} package(s): ${ok_pkgs[*]}"
+	return 0
 }
 
 # Guard: never invoke cleanup from package helpers (tested via source scan + runtime).

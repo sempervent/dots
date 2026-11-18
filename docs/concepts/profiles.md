@@ -82,11 +82,23 @@ user files with the same basename.
 A `file-tank` profile extending `server` (ZFS / SMART / nvme tooling) is
 **future work** — not implemented. Do not document it as available.
 
-## CLI
+## CLI and persistent overlays
+
+Ordinary lifecycle edits never modify `configs/bootstrap/profiles/*.toml` or
+overwrite user-authored custom profiles. Instead, DOTS writes sparse
+DOTS-managed overlays (`~/.config/dots/profiles/<name>-local.toml`).
 
 ```bash
-./dots profile
-./configure.sh                 # edit/create profile TOML only
+./dots install dev             # resolve owner, update sparse overlay, apply
+./dots install geo --no-apply  # persist desired state only; apply later
+./dots profile                 # interactive profile lifecycle menu
+./dots profile show [NAME]     # resolved profile (read-only)
+./dots profile add dev         # persist group/component addition
+./dots profile remove geo      # remove from desired state (no uninstall)
+./dots profile diff            # local additions and removals
+./dots profile apply           # converge machine toward desired profile
+./dots profile switch work     # switch active profile pointer
+./configure.sh                 # create/edit standalone profile TOML only
 ./bootstrap.sh --profile home --show
 ```
 
