@@ -27,21 +27,37 @@ an interactive reference for **this** machine; `man dots` covers the same
 ground traditionally. Expert scripts remain available underneath for automation.
 
 ```bash
-./dots                     # interactive setup (same as ./dots setup)
+./dots                     # interactive setup / returning-machine menu
+./dots install hyperfine   # persist known capability into overlay + converge
+./dots upgrade             # upgrade managed software in active profile
 ./dots status              # read-only dashboard
 ./dots packages status     # package ownership / drift (read-only)
 ./dots packages outdated   # outdated DOTS-managed packages
-./dots packages upgrade    # upgrade resolved desired set only
 ./dots backup              # snapshot managed targets
 ./dots backups             # list recoverable snapshots
 ./dots restore             # restore a snapshot (creates a safety snapshot first)
-./dots profile             # create / preview / switch profiles
+./dots profile             # inspect / edit sparse overlays / switch / apply
 ./dots models              # local model plan & pull
 ./dots lsp                 # language-server install / status / checks
 ./dots check               # health verification
-./dots update              # git pull + optional reapply
+./dots update              # git pull DOTS repo + optional reapply (not upgrade)
 ./dots --version
 ```
+
+### Lifecycle commands (`update` vs `upgrade`)
+
+| Command | Role |
+|---------|------|
+| `dots update` | Update the DOTS repository itself (`git pull` + optional reapply) |
+| `dots upgrade` | Upgrade installed Homebrew software in the active DOTS desired scope |
+| `dots install X` | Add known software/capability `X` to persistent desired state (`<profile>-local.toml`) and apply |
+| `dots profile` | Inspect, edit sparse overlays, diff, switch, or apply desired state |
+| `dots setup` | Bootstrap, reconfigure, or open the returning-machine maintenance menu |
+
+Built-in profiles under `configs/bootstrap/profiles/` are never edited by
+`dots install` or `dots profile add/remove`; changes go into sparse
+DOTS-managed overlays under `~/.config/dots/profiles/<name>-local.toml`.
+Removing desired state never uninstalls already-installed software.
 
 Preview without mutating:
 

@@ -74,17 +74,25 @@ and selected via profile `packages =`.
 ## CLI
 
 ```bash
+./dots install hyperfine                # resolve owner, persist sparse overlay, apply
+./dots install karabiner-elements --dry-run
+./dots upgrade                          # upgrade managed outdated Homebrew software
+./dots upgrade --profile work --dry-run
+./dots upgrade --all --yes              # opt-in: broader Homebrew upgrades
 ./dots packages groups                  # capability groups (+ active)
 ./dots packages group geo               # one group in detail
 ./dots packages plan --profile home     # resolved plan (read-only)
 ./dots packages status                  # full audit (advisories only)
-./dots packages explain dust            # owners + activate hint
+./dots packages explain dust            # owners + desired state + install hint
 ./dots packages outdated                # outdated managed packages
-./dots packages upgrade                 # upgrade managed outdated only
-./dots packages upgrade --all           # opt-in: broader Homebrew upgrades
+./dots packages upgrade                 # delegates to dots upgrade
 ./dots packages adopt glow --group modern   # suggest Brewfile lines (no auto-edit)
-# If a package already has a component owner, adopt points to --with instead.
+# If a package already has a component owner, adopt points to --with / install instead.
 ```
+
+`dots install` activates **known** DOTS capabilities persistently (never arbitrary
+`brew install`). `dots packages adopt` teaches DOTS new ownership declarations.
+Removing desired state never uninstalls already-installed packages.
 
 Human guide: [Package groups](../using/package-groups.md).
 See also [Components and `--with`](../using/components.md).

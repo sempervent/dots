@@ -24,8 +24,21 @@ cd ~/dots
 ./dots
 ```
 
-`./dots` (same as `./dots setup`) runs the interactive wizard: machine role →
-profile → components → runtime → models → review → bootstrap → verify.
+`./dots` (same as `./dots setup`) runs the interactive wizard on a new machine:
+machine role → profile → components → runtime → models → review → bootstrap →
+verify. On an already-bootstrapped machine, `./dots` opens a returning-machine
+maintenance menu (`check`, `install`, `profile`, `upgrade`, `reapply`, `update`,
+`packages status`).
+
+## Lifecycle commands
+
+| Command | Role |
+|---------|------|
+| `dots update` | Update the DOTS repository (`git pull` + optional reapply) |
+| `dots upgrade` | Upgrade installed Homebrew software in the active DOTS desired scope |
+| `dots install X` | Add known software/capability `X` to persistent desired state and converge |
+| `dots profile` | Inspect, edit sparse overlays, diff, switch, or apply desired state |
+| `dots setup` | Bootstrap, reconfigure, or open the returning-machine menu |
 
 Expert / automation path:
 

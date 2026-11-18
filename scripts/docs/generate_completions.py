@@ -101,6 +101,7 @@ def build_zsh() -> str:
     shell_subs = ["status", "keys", "startup"]
     completion_subs = ["status", "paths"]
     pkg_subs = ["groups", "group", "plan", "status", "explain", "outdated", "upgrade", "adopt", "help"]
+    profile_subs = ["show", "add", "remove", "diff", "apply", "create", "switch", "help"]
     component_subs = ["list", "active", "show", "help"]
     ai_subs = ["status", "doctor", "up", "down", "help"]
     agent_subs = [
@@ -129,7 +130,7 @@ def build_zsh() -> str:
         "  local curcontext=\"$curcontext\" state state_descr line",
         "  typeset -A opt_args",
         "  local -a commands topics selectors groups profiles providers tiers",
-        "  local -a lsp_subs model_subs shell_subs completion_subs pkg_subs",
+        "  local -a lsp_subs model_subs shell_subs completion_subs pkg_subs profile_subs",
         "  local -a component_subs ai_subs agent_subs lsp_ids",
         "",
         "  commands=(",
@@ -152,6 +153,7 @@ def build_zsh() -> str:
         "  shell_subs=(" + " ".join(f"'{s}'" for s in shell_subs) + ")",
         "  completion_subs=(" + " ".join(f"'{s}'" for s in completion_subs) + ")",
         "  pkg_subs=(" + " ".join(f"'{s}'" for s in pkg_subs) + ")",
+        "  profile_subs=(" + " ".join(f"'{s}'" for s in profile_subs) + ")",
         "  component_subs=(" + " ".join(f"'{s}'" for s in component_subs) + ")",
         "  ai_subs=(" + " ".join(f"'{s}'" for s in ai_subs) + ")",
         "  agent_subs=(" + " ".join(f"'{s}'" for s in agent_subs) + ")",
@@ -252,8 +254,47 @@ def build_zsh() -> str:
         "    completion)",
         "      _values 'completion' ${completion_subs[@]}",
         "      ;;",
+        "    install)",
+        "      case ${words[CURRENT-1]} in",
+        "      --profile|--profile=*)",
+        "        _dots_profiles",
+        "        ;;",
+        "      *)",
+        "        if [[ ${words[CURRENT]} == -* ]]; then",
+        "          _values 'install flags' --dry-run --yes --no-apply --profile --help",
+        "        else",
+        "          _describe -t groups 'package group' groups",
+        "          _describe -t selectors 'component/supergroup' selectors",
+        "        fi",
+        "        ;;",
+        "      esac",
+        "      ;;",
+        "    upgrade)",
+        "      case ${words[CURRENT-1]} in",
+        "      --profile|--profile=*)",
+        "        _dots_profiles",
+        "        ;;",
+        "      *)",
+        "        _values 'upgrade flags' --dry-run --yes --profile --all --help",
+        "        ;;",
+        "      esac",
+        "      ;;",
         "    profile)",
-        "      _dots_profiles",
+        "      if (( CURRENT == 2 )); then",
+        "        _values 'profile' ${profile_subs[@]}",
+        "        _dots_profiles",
+        "      elif [[ ${words[2]} == show || ${words[2]} == diff || ${words[2]} == apply || ${words[2]} == switch ]]; then",
+        "        _dots_profiles",
+        "      elif [[ ${words[2]} == add || ${words[2]} == remove ]]; then",
+        "        if [[ ${words[CURRENT]} == -* ]]; then",
+        "          _values 'profile edit flags' --profile --apply --dry-run --yes --help",
+        "        else",
+        "          _describe -t groups 'package group' groups",
+        "          _describe -t selectors 'component/supergroup' selectors",
+        "        fi",
+        "      else",
+        "        _dots_profiles",
+        "      fi",
         "      ;;",
         "    restore)",
         "      _dots_snapshots",
@@ -339,6 +380,7 @@ _dots_complete() {{
   local shell_subs='status keys startup'
   local completion_subs='status paths'
   local pkg_subs='groups group plan status explain outdated upgrade adopt help'
+  local profile_subs='show add remove diff apply create switch help'
   local component_subs='list active show help'
   local ai_subs='status doctor up down help'
   local agent_subs='status doctor sandbox models scout route eval team run worktrees diff apply discard mcp costs gateway'
@@ -431,8 +473,44 @@ _dots_complete() {{
   completion)
     COMPREPLY=($(compgen -W "${{completion_subs}}" -- "${{cur}}"))
     ;;
+  install)
+    case "${{prev}}" in
+    --profile)
+      COMPREPLY=($(compgen -W "${{profiles}} $(_dots_custom_profiles)" -- "${{cur}}"))
+      ;;
+    *)
+      if [[ ${{cur}} == -* ]]; then
+        COMPREPLY=($(compgen -W "--dry-run --yes --no-apply --profile --help" -- "${{cur}}"))
+      else
+        COMPREPLY=($(compgen -W "${{groups}} ${{selectors}}" -- "${{cur}}"))
+      fi
+      ;;
+    esac
+    ;;
+  upgrade)
+    case "${{prev}}" in
+    --profile)
+      COMPREPLY=($(compgen -W "${{profiles}} $(_dots_custom_profiles)" -- "${{cur}}"))
+      ;;
+    *)
+      COMPREPLY=($(compgen -W "--dry-run --yes --profile --all --help" -- "${{cur}}"))
+      ;;
+    esac
+    ;;
   profile)
-    COMPREPLY=($(compgen -W "${{profiles}} $(_dots_custom_profiles)" -- "${{cur}}"))
+    if [[ ${{COMP_CWORD}} -eq 2 ]]; then
+      COMPREPLY=($(compgen -W "${{profile_subs}} ${{profiles}} $(_dots_custom_profiles)" -- "${{cur}}"))
+    elif [[ ${{sub}} == show || ${{sub}} == diff || ${{sub}} == apply || ${{sub}} == switch ]]; then
+      COMPREPLY=($(compgen -W "${{profiles}} $(_dots_custom_profiles)" -- "${{cur}}"))
+    elif [[ ${{sub}} == add || ${{sub}} == remove ]]; then
+      if [[ ${{cur}} == -* ]]; then
+        COMPREPLY=($(compgen -W "--profile --apply --dry-run --yes --help" -- "${{cur}}"))
+      else
+        COMPREPLY=($(compgen -W "${{groups}} ${{selectors}}" -- "${{cur}}"))
+      fi
+    else
+      COMPREPLY=($(compgen -W "${{profiles}} $(_dots_custom_profiles)" -- "${{cur}}"))
+    fi
     ;;
   restore)
     COMPREPLY=($(compgen -W "$(_dots_snapshots)" -- "${{cur}}"))

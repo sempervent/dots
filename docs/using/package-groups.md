@@ -83,6 +83,19 @@ add = ["network"]
 
 Examples: `examples/profiles/developer.toml`, `data-geo.toml`, `work-network.toml`.
 
+## Adding capabilities persistently
+
+Use `./dots install` or `./dots profile add` to persist package groups,
+components, supergroups, or package-owned tools into a sparse overlay
+(`~/.config/dots/profiles/<name>-local.toml`) without editing built-in profiles:
+
+```bash
+./dots install dev              # activate package group 'dev' + apply
+./dots install hyperfine        # resolves owner group:dev automatically
+./dots install geo --no-apply   # persist desired state, apply later
+./dots profile remove geo       # remove from desired state (no uninstall)
+```
+
 ## CLI (read-only)
 
 ```bash
