@@ -7,11 +7,13 @@ _dots() {
   local curcontext="$curcontext" state state_descr line
   typeset -A opt_args
   local -a commands topics selectors groups profiles providers tiers
-  local -a lsp_subs model_subs shell_subs completion_subs pkg_subs
+  local -a lsp_subs model_subs shell_subs completion_subs pkg_subs profile_subs
   local -a component_subs ai_subs agent_subs lsp_ids
 
   commands=(
     'setup:Interactive or noninteractive setup / reconfigure towar…'
+    'install:Persist a known DOTS capability to desired profile and…'
+    'upgrade:Upgrade outdated Homebrew software in the active DOTS d…'
     'status:Show current DOTS state (profile, packages summary, com…'
     'components:Inspect optional components and --with selectors.'
     'lsp:Language-server install, status, and checks.'
@@ -21,10 +23,10 @@ _dots() {
     'backup:Snapshot managed targets under ~/.local/state/dots/back…'
     'backups:List recoverable DOTS snapshots.'
     'restore:Restore a snapshot (creates a safety snapshot first).'
-    'profile:Create, preview, or switch machine profiles.'
+    'profile:Inspect, edit via sparse overlays, switch, or apply pro…'
     'models:Local model plan, discovery, and pull workflows.'
     'check:Machine health plus local CI, docs, security, container…'
-    'update:git pull the DOTS repo and optionally reapply setup.'
+    'update:Pull latest DOTS repo and optionally reapply setup (not…'
     'help:Interactive Textual help (dots-help) for this machine.'
     'shell:Inspect shell, prompt, and keybinding ownership.'
     'completion:DOTS CLI completion and fzf-tab diagnostics.'
@@ -117,6 +119,7 @@ _dots() {
   shell_subs=('status' 'keys' 'startup')
   completion_subs=('status' 'paths')
   pkg_subs=('groups' 'group' 'plan' 'status' 'explain' 'outdated' 'upgrade' 'adopt' 'help')
+  profile_subs=('show' 'add' 'remove' 'diff' 'apply' 'create' 'switch' 'help')
   component_subs=('list' 'active' 'show' 'help')
   ai_subs=('status' 'doctor' 'up' 'down' 'help')
   agent_subs=('status' 'doctor' 'sandbox' 'models' 'scout' 'route' 'eval' 'team' 'run' 'worktrees' 'diff' 'apply' 'discard' 'mcp' 'costs' 'gateway')
@@ -217,8 +220,47 @@ _dots() {
     completion)
       _values 'completion' ${completion_subs[@]}
       ;;
+    install)
+      case ${words[CURRENT-1]} in
+      --profile|--profile=*)
+        _dots_profiles
+        ;;
+      *)
+        if [[ ${words[CURRENT]} == -* ]]; then
+          _values 'install flags' --dry-run --yes --no-apply --profile --help
+        else
+          _describe -t groups 'package group' groups
+          _describe -t selectors 'component/supergroup' selectors
+        fi
+        ;;
+      esac
+      ;;
+    upgrade)
+      case ${words[CURRENT-1]} in
+      --profile|--profile=*)
+        _dots_profiles
+        ;;
+      *)
+        _values 'upgrade flags' --dry-run --yes --profile --all --help
+        ;;
+      esac
+      ;;
     profile)
-      _dots_profiles
+      if (( CURRENT == 2 )); then
+        _values 'profile' ${profile_subs[@]}
+        _dots_profiles
+      elif [[ ${words[2]} == show || ${words[2]} == diff || ${words[2]} == apply || ${words[2]} == switch ]]; then
+        _dots_profiles
+      elif [[ ${words[2]} == add || ${words[2]} == remove ]]; then
+        if [[ ${words[CURRENT]} == -* ]]; then
+          _values 'profile edit flags' --profile --apply --dry-run --yes --help
+        else
+          _describe -t groups 'package group' groups
+          _describe -t selectors 'component/supergroup' selectors
+        fi
+      else
+        _dots_profiles
+      fi
       ;;
     restore)
       _dots_snapshots
