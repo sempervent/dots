@@ -135,7 +135,7 @@ else
 fi
 rm -rf "${ahome}"
 
-echo "=== wizard: existing profile → verify only ==="
+echo "=== wizard: existing profile → check health (1) ==="
 ehome="$(mktemp -d "${TMPDIR:-/tmp}/dots-exist.XXXXXX")"
 mkdir -p "${ehome}/.config/dots"
 cat >"${ehome}/.config/dots/active-profile" <<EOF
@@ -143,10 +143,10 @@ DOTS_PROFILE='server'
 DOTS_PROFILE_FILE='${ROOT}/configs/bootstrap/profiles/server.toml'
 EOF
 set +e
-HOME="${ehome}" DOTS_UI_ANSWERS=$'4\n' \
+HOME="${ehome}" DOTS_UI_ANSWERS=$'1\n' \
 	"${ROOT}/dots" setup --dry-run >"${ehome}/out.txt" 2>&1
 set -e
-grep -qiE 'Existing|Verify|check|Health|server|DOTS' "${ehome}/out.txt" && ok "existing-machine menu" || {
+grep -qiE 'Existing|Check health|check|Health|server|DOTS' "${ehome}/out.txt" && ok "existing-machine menu" || {
 	bad "existing menu"
 	tail -40 "${ehome}/out.txt" || true
 }

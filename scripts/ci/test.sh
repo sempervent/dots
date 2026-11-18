@@ -105,5 +105,6 @@ run scripts/tests/dev_validate_test.sh
 run scripts/tests/infra_validate_test.sh
 run scripts/tests/containers_k8s_validate_test.sh
 run scripts/tests/v190_workstation_ergonomics_test.sh
+run scripts/tests/lifecycle_ux_test.sh
 
 echo "OK: all CI tests passed"

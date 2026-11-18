@@ -32,6 +32,7 @@ SCRIPTS=(
 	helpers/optional_components.sh
 	helpers/ui.sh
 	helpers/state.sh
+	helpers/profile_edit.sh
 	helpers/wizard.sh
 	helpers/lsp.sh
 	helpers/cask_apps.sh
@@ -83,6 +84,7 @@ SCRIPTS=(
 	scripts/ci/media_validate.sh
 	scripts/tests/package_state_test.sh
 	scripts/tests/linux_distro_test.sh
+	scripts/tests/lifecycle_ux_test.sh
 	scripts/mactools/export-configs.sh
 	scripts/mactools/import-configs.sh
 	scripts/mactools/docker-orbstack-audit.sh
@@ -109,7 +111,7 @@ shfmt -d -s \
 	helpers/packages.sh helpers/links.sh helpers/git_config.sh \
 	helpers/toml.sh helpers/bootstrap_prereqs.sh \
 	helpers/hardware.sh helpers/models.sh helpers/model_providers.sh \
-	helpers/ui.sh helpers/state.sh helpers/wizard.sh helpers/cask_apps.sh \
+	helpers/ui.sh helpers/state.sh helpers/profile_edit.sh helpers/wizard.sh helpers/cask_apps.sh \
 	helpers/lsp.sh \
 	helpers/backup.sh helpers/package_state.sh helpers/linux_distro.sh \
 	helpers/fnm.sh helpers/openrig.sh helpers/davinci_resolve.sh \
