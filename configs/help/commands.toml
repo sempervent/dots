@@ -11,13 +11,47 @@ usage = "dots setup [options]"
 category = "lifecycle"
 description = "Interactive or noninteractive setup / reconfigure toward desired state."
 mutating = true
-related = ["status", "check", "update", "help"]
+related = ["install", "upgrade", "profile", "status", "check", "update", "help"]
 [[commands.examples]]
 command = "dots setup"
 description = "Interactive wizard."
 [[commands.examples]]
 command = "dots setup --dry-run"
 description = "Preview without mutating."
+
+[[commands]]
+name = "install"
+usage = "dots install SELECTOR [--dry-run] [--yes] [--no-apply] [--profile NAME]"
+category = "lifecycle"
+description = "Persist a known DOTS capability to desired profile and apply."
+mutating = true
+related = ["profile", "upgrade", "packages", "components", "setup"]
+[[commands.examples]]
+command = "dots install hyperfine"
+description = "Resolve group owner (dev), persist sparse overlay, and converge."
+[[commands.examples]]
+command = "dots install karabiner-elements --dry-run"
+description = "Preview component installation without modifying files."
+[[commands.examples]]
+command = "dots install ai --no-apply"
+description = "Persist AI supergroup selection and apply later with dots profile apply."
+
+[[commands]]
+name = "upgrade"
+usage = "dots upgrade [--dry-run] [--yes] [--profile NAME] [--all]"
+category = "lifecycle"
+description = "Upgrade outdated Homebrew software in the active DOTS desired scope."
+mutating = true
+related = ["update", "packages", "install", "status"]
+[[commands.examples]]
+command = "dots upgrade --dry-run"
+description = "List outdated managed, excluded, and undeclared packages without mutating."
+[[commands.examples]]
+command = "dots upgrade --yes"
+description = "Upgrade outdated packages in the active profile."
+[[commands.examples]]
+command = "dots upgrade --profile work --dry-run"
+description = "Preview upgrades scoped to the work profile."
 
 [[commands]]
 name = "status"
@@ -49,7 +83,7 @@ name = "lsp"
 usage = "dots lsp [status|check|install|list]"
 category = "developer_tooling"
 description = "Language-server install, status, and checks."
-mutating = false
+mutating = true
 related = ["setup", "check", "help"]
 [[commands.examples]]
 command = "dots lsp status"
@@ -130,8 +164,8 @@ name = "packages"
 usage = "dots packages [groups|group|plan|status|explain|outdated|upgrade|adopt]"
 category = "packages"
 description = "Package ownership, drift, groups, and upgrades."
-mutating = false
-related = ["status", "check", "setup", "help"]
+mutating = true
+related = ["install", "upgrade", "status", "check", "setup", "help"]
 [[commands.examples]]
 command = "dots packages groups"
 description = "List capability groups."
@@ -171,18 +205,30 @@ related = ["backup", "backups", "help"]
 
 [[commands]]
 name = "profile"
-usage = "dots profile …"
+usage = "dots profile [show|add|remove|diff|apply|create|switch]"
 category = "lifecycle"
-description = "Create, preview, or switch machine profiles."
+description = "Inspect, edit via sparse overlays, switch, or apply profiles."
 mutating = true
-related = ["setup", "status", "help"]
+related = ["install", "setup", "status", "help"]
+[[commands.examples]]
+command = "dots profile show"
+description = "Show the active resolved profile."
+[[commands.examples]]
+command = "dots profile add dev"
+description = "Persist group:dev into a DOTS-managed overlay without touching builtins."
+[[commands.examples]]
+command = "dots profile diff"
+description = "Show local additions and removals in the active overlay."
+[[commands.examples]]
+command = "dots profile apply"
+description = "Converge machine toward the current desired profile."
 
 [[commands]]
 name = "models"
 usage = "dots models [discover|pull|…]"
 category = "ai"
 description = "Local model plan, discovery, and pull workflows."
-mutating = false
+mutating = true
 related = ["ai", "setup", "help"]
 [[commands.examples]]
 command = "dots models discover"
@@ -290,9 +336,12 @@ description = "Print infra-tool example commands (stdout only; not executed)."
 name = "update"
 usage = "dots update"
 category = "lifecycle"
-description = "git pull the DOTS repo and optionally reapply setup."
+description = "Pull latest DOTS repo and optionally reapply setup (not package upgrade)."
 mutating = true
-related = ["setup", "check", "help"]
+related = ["upgrade", "setup", "check", "help"]
+[[commands.examples]]
+command = "dots update"
+description = "Update DOTS repository code (use dots upgrade for installed packages)."
 
 [[commands]]
 name = "help"

@@ -627,7 +627,8 @@ for g in data.get("supergroups") or []:
     raise SystemExit(0)
 raise SystemExit(1)
 PY
-		echo "  activate:    ./dots setup --with ${id}"
+		echo "  install:     ./dots install ${id}"
+		echo "  activate:    ./dots setup --with ${id}   # low-level one-run selection"
 		return 0
 	fi
 	if ! dots_component_is_known "${id}"; then
@@ -710,6 +711,7 @@ PY
 		echo "  note: Brewfile.archify is shared by archify/skills/ai-skills"
 		;;
 	esac
-	echo "  activate:    ./dots setup --with ${id}"
+	echo "  install:     ./dots install ${id}"
+	echo "  activate:    ./dots setup --with ${id}   # low-level one-run selection"
 }
 
