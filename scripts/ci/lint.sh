@@ -85,6 +85,7 @@ SCRIPTS=(
 	scripts/tests/package_state_test.sh
 	scripts/tests/linux_distro_test.sh
 	scripts/tests/lifecycle_ux_test.sh
+	scripts/tests/tui_api_test.sh
 	scripts/mactools/export-configs.sh
 	scripts/mactools/import-configs.sh
 	scripts/mactools/docker-orbstack-audit.sh

@@ -226,6 +226,7 @@ def generate() -> dict[str, str]:
         name = str(c.get("name") or "")
         if name in {
             "setup",
+            "tui",
             "install",
             "upgrade",
             "profile",

@@ -803,13 +803,17 @@ dots_pkg_suggest_declare() {
 }
 
 # Upgrade only managed (desired) outdated packages. --all upgrades undeclared too (opt-in).
-# Flags: [--dry-run] [--yes|-y] [--all] [--profile NAME|PATH]
+# Flags: [--dry-run] [--json] [--yes|-y] [--all] [--profile NAME|PATH]
 dots_pkg_upgrade() {
-	local all=0 dry="${DRY_RUN:-0}" yes=0 profile_arg=""
+	local all=0 dry="${DRY_RUN:-0}" yes=0 json=0 profile_arg=""
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
 		--all) all=1 ;;
 		--dry-run) dry=1 ;;
+		--json)
+			json=1
+			dry=1
+			;;
 		--yes | -y) yes=1 ;;
 		--profile)
 			profile_arg="${2:-}"
@@ -824,7 +828,7 @@ dots_pkg_upgrade() {
 			;;
 		-h | --help)
 			cat <<'EOF'
-Usage: ./dots upgrade [--dry-run] [--yes] [--profile NAME|PATH] [--all]
+Usage: ./dots upgrade [--dry-run] [--json] [--yes] [--profile NAME|PATH] [--all]
 
 Upgrades installed Homebrew software in the active DOTS desired scope.
 Does NOT pull the DOTS repo (that is ./dots update).
@@ -832,6 +836,7 @@ Does NOT run brew bundle cleanup, brew cleanup, or OS apt/dnf/pacman/xbps upgrad
 
 Options:
   --dry-run         Preview outdated managed, excluded, and undeclared packages
+  --json            Emit structured JSON preview (implies --dry-run)
   --yes, -y         Skip confirmation prompt
   --profile NAME    Scope upgrades to NAME without changing active profile
   --all             Also upgrade Homebrew packages outside active DOTS desired state
@@ -855,9 +860,29 @@ EOF
 		fi
 	fi
 
+	local scope_profile="${PROFILE_NAME:-${DOTS_ACTIVE_PROFILE:-${DOTS_PROFILE:-"(default)"}}}"
+
 	# Platform check: do not casually map to apt/dnf/pacman/xbps OS upgrades.
 	if ! command -v "${DOTS_BREW_BIN:-brew}" >/dev/null 2>&1 &&
 		[[ -z ${DOTS_PKG_MOCK_OUTDATED_FORMULAE+x} && -z ${DOTS_PKG_MOCK_OUTDATED_CASKS+x} ]]; then
+		if [[ ${json} -eq 1 ]]; then
+			if declare -F dots_require_python >/dev/null 2>&1 && dots_require_python 0 2>/dev/null; then
+				SCOPE_PROFILE="${scope_profile}" ALL_FLAG="${all}" "${DOTS_PYTHON}" -B <<'PY'
+import json, os
+print(json.dumps({
+    "schema_version": 1,
+    "profile": os.environ.get("SCOPE_PROFILE", ""),
+    "all": os.environ.get("ALL_FLAG", "0") == "1",
+    "homebrew_available": False,
+    "note": "Homebrew/Linuxbrew unavailable; OS package managers are not upgraded by dots upgrade.",
+    "would_upgrade": [],
+    "excluded": [],
+    "undeclared": [],
+}, indent=2))
+PY
+				return 0
+			fi
+		fi
 		if [[ "$(uname -s)" == "Linux" ]]; then
 			echo "Note: Homebrew/Linuxbrew is not installed on this host."
 			echo "DOTS scoped upgrades manage Homebrew formulae/casks only;"
@@ -868,7 +893,6 @@ EOF
 		return 1
 	fi
 
-	local scope_profile="${PROFILE_NAME:-${DOTS_ACTIVE_PROFILE:-${DOTS_PROFILE:-"(default)"}}}"
 	dots_desired_packages_resolve
 	dots_pkg_build_ownership_catalog
 
@@ -899,6 +923,35 @@ EOF
 			[[ ${all} -eq 1 ]] && to_c+=("${line}")
 		fi
 	done < <(dots_pkg_outdated_casks)
+
+	if [[ ${json} -eq 1 ]]; then
+		dots_require_python 0 || return 1
+		SCOPE_PROFILE="${scope_profile}" \
+			ALL_FLAG="${all}" \
+			TO_F="$(printf '%s\n' "${to_f[@]+"${to_f[@]}"}")" \
+			TO_C="$(printf '%s\n' "${to_c[@]+"${to_c[@]}"}")" \
+			EX_F="$(printf '%s\n' "${excluded_f[@]+"${excluded_f[@]}"}")" \
+			EX_C="$(printf '%s\n' "${excluded_c[@]+"${excluded_c[@]}"}")" \
+			UN_F="$(printf '%s\n' "${undeclared_f[@]+"${undeclared_f[@]}"}")" \
+			UN_C="$(printf '%s\n' "${undeclared_c[@]+"${undeclared_c[@]}"}")" \
+			"${DOTS_PYTHON}" -B <<'PY'
+import json, os
+def rows(env_f, env_c):
+    out = [{"name": x.strip(), "kind": "formula"} for x in os.environ.get(env_f, "").splitlines() if x.strip()]
+    out.extend({"name": x.strip(), "kind": "cask"} for x in os.environ.get(env_c, "").splitlines() if x.strip())
+    return out
+print(json.dumps({
+    "schema_version": 1,
+    "profile": os.environ.get("SCOPE_PROFILE", ""),
+    "all": os.environ.get("ALL_FLAG", "0") == "1",
+    "homebrew_available": True,
+    "would_upgrade": rows("TO_F", "TO_C"),
+    "excluded": rows("EX_F", "EX_C"),
+    "undeclared": rows("UN_F", "UN_C"),
+}, indent=2))
+PY
+		return 0
+	fi
 
 	if [[ ${dry} -eq 1 ]]; then
 		echo "DOTS Upgrade (dry-run)"

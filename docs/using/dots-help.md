@@ -3,8 +3,9 @@
 After setup, DOTS is self-documenting for **this** machine:
 
 ```bash
-dots-help                 # Textual TUI
+dots-help                 # Textual documentation TUI
 ./dots help               # same
+./dots tui                # Dynamic desired-state TUI (groups/components/upgrades)
 ./dots help completion    # jump to a topic
 dots-help --cheatsheet    # machine-specific one-pager
 dots-help --plain lsp     # noninteractive / pipes / CI

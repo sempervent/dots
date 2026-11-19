@@ -36,8 +36,11 @@ echo "=== metadata files ==="
 [[ -x ${ROOT}/scripts/dots-help ]] && ok "scripts/dots-help executable" || bad "launcher"
 
 echo "=== CLI dispatcher ↔ commands.toml drift ==="
-cli_cmds=(setup install upgrade status components lsp ai agent packages backup backups restore profile models check update help shell completion)
-mapfile -t meta_cmds < <(
+cli_cmds=(setup tui install upgrade status components lsp ai agent packages backup backups restore profile models check update help shell completion)
+meta_cmds=()
+while IFS= read -r _mc; do
+	[[ -n ${_mc} ]] && meta_cmds+=("${_mc}")
+done < <(
 	cd "${ROOT}" && "${PY}" - <<'PY'
 import tomllib
 from pathlib import Path
@@ -87,10 +90,10 @@ fi
 echo "=== plain help (isolated HOME) ==="
 # Simulate home profile selection without real machine noise
 cat >"${HOME}/.config/dots/active-profile" <<'EOF'
-DOTS_PROFILE=home
-DOTS_PACKAGE_GROUPS=core modern
-DOTS_ACTIVE_COMPONENTS=lsp hermes ollama
-DOTS_MULTIPLEXER=tmux
+DOTS_PROFILE='home'
+DOTS_PACKAGE_GROUPS='core modern'
+DOTS_ACTIVE_COMPONENTS='lsp hermes ollama'
+DOTS_MULTIPLEXER='tmux'
 EOF
 mkdir -p "${HOME}/.local/state/dots/backups/2026-11-02T120000-test"
 mkdir -p "${HOME}/.config/dots/profiles"
@@ -105,6 +108,14 @@ out="$("${HELP}" --version 2>&1)" || {
 	out=""
 }
 echo "${out}" | grep -Fq "DOTS ${expected_ver}" && ok "--version reports DOTS version" || bad "--version: ${out}"
+pyproj_ver="$(
+	"${PY}" - "${ROOT}/tools/dots_help/pyproject.toml" <<'PY'
+import sys, tomllib
+from pathlib import Path
+print(tomllib.loads(Path(sys.argv[1]).read_text())["project"]["version"])
+PY
+)"
+[[ ${pyproj_ver} == "${expected_ver}" ]] && ok "pyproject.toml version matches VERSION (${expected_ver})" || bad "pyproject.toml=${pyproj_ver} != VERSION=${expected_ver}"
 
 plain="$("${HELP}" --plain 2>&1)" || {
 	bad "--plain failed"

@@ -34,6 +34,8 @@ maintenance menu (`check`, `install`, `profile`, `upgrade`, `reapply`, `update`,
 
 | Command | Role |
 |---------|------|
+| `dots tui` | Dynamic desired-state TUI (groups, components, bundles, upgrades) |
+| `dots help` | Documentation TUI (`dots-help`) |
 | `dots update` | Update the DOTS repository (`git pull` + optional reapply) |
 | `dots upgrade` | Upgrade installed Homebrew software in the active DOTS desired scope |
 | `dots install X` | Add known software/capability `X` to persistent desired state and converge |

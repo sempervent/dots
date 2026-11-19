@@ -11,10 +11,11 @@ Captured from safe `--help` / `help` invocations. If a binary is missing or help
 ## `./dots`
 
 ```text
-DOTS — machine environment manager  (v1.10.0)
+DOTS — machine environment manager  (v1.11.0)
 
 Usage:
   ./dots setup [options]            Interactive or noninteractive setup / reconfigure...
+  ./dots tui                        Launch dynamic Textual desired-state TUI (groups...
   ./dots install SELECTOR [--dry-run] [--yes] [--no-apply] [--profile NAME] Persist a known DOTS capability to desired profile...
   ./dots upgrade [--dry-run] [--yes] [--profile NAME] [--all] Upgrade outdated Homebrew software in the active...
   ./dots status                     Show current DOTS state (profile, packages summary...
@@ -26,7 +27,7 @@ Usage:
   ./dots backup [--name N]          Snapshot managed targets under...
   ./dots backups                    List recoverable DOTS snapshots.
   ./dots restore [ID]               Restore a snapshot (creates a safety snapshot first).
-  ./dots profile [show|add|remove|diff|apply|create|switch] Inspect, edit via sparse overlays, switch, or apply...
+  ./dots profile [list|show|plan|resolve|add|remove|mutate|diff|apply|create|switch] Inspect, edit via sparse overlays, switch, or apply...
   ./dots models [discover|pull|…]   Local model plan, discovery, and pull workflows.
   ./dots check [--profile NAME] | dots check fast|workflows|docs|all-local|act|release-notes|security|containers|k8s|dev|data|geo|media|backup|network|hardware|infra Machine health plus local CI, docs, security...
   ./dots update                     Pull latest DOTS repo and optionally reapply setup...
@@ -286,6 +287,18 @@ Examples:
 User overrides: ~/.config/dots/models.toml
 ```
 
+## `./dots tui`
+
+```text
+Usage: ./dots tui
+
+Launch the dynamic Textual desired-state TUI (front-end over DOTS registries,
+structured state APIs, and helpers/profile_edit.sh).
+
+Noninteractive fallback commands remain available without Textual:
+  ./dots install   ./dots upgrade   ./dots profile   ./dots setup   ./dots status
+```
+
 ## `./dots install`
 
 ```text
@@ -314,7 +327,7 @@ Examples:
 ## `./dots upgrade`
 
 ```text
-Usage: ./dots upgrade [--dry-run] [--yes] [--profile NAME|PATH] [--all]
+Usage: ./dots upgrade [--dry-run] [--json] [--yes] [--profile NAME|PATH] [--all]
 
 Upgrades installed Homebrew software in the active DOTS desired scope.
 Does NOT pull the DOTS repo (that is ./dots update).
@@ -322,6 +335,7 @@ Does NOT run brew bundle cleanup, brew cleanup, or OS apt/dnf/pacman/xbps upgrad
 
 Options:
   --dry-run         Preview outdated managed, excluded, and undeclared packages
+  --json            Emit structured JSON preview (implies --dry-run)
   --yes, -y         Skip confirmation prompt
   --profile NAME    Scope upgrades to NAME without changing active profile
   --all             Also upgrade Homebrew packages outside active DOTS desired state
@@ -388,15 +402,19 @@ Docs: https://sempervent.github.io/dots/using/components/
 ```text
 Usage:
   ./dots profile                             Interactive profile menu (TTY) or show
-  ./dots profile show [PROFILE]              Show resolved profile (read-only)
+  ./dots profile list [--json]               List builtin, custom, and overlay profiles
+  ./dots profile show [PROFILE] [--json]     Show resolved profile (read-only)
+  ./dots profile plan [options] --json       Preview delta impact without mutating
+  ./dots profile resolve SELECTOR --json     Resolve capability/package owner
   ./dots profile add SELECTOR [options]      Persist capability into sparse overlay
   ./dots profile remove SELECTOR [options]   Remove capability from desired state (no uninstall)
+  ./dots profile mutate [options]            Atomic batch add/remove into sparse overlay
   ./dots profile diff [PROFILE]              Show local overlay additions/removals
   ./dots profile apply [PROFILE] [--dry-run] Converge machine toward profile
   ./dots profile create [configure.sh args]  Create/edit profile TOML via configure.sh
   ./dots profile switch PROFILE [--apply]    Switch active profile pointer
 
-Options for add/remove:
+Options for add/remove/mutate:
   --profile NAME|PATH   Target profile (default: active profile)
   --apply               Converge via bootstrap.sh after updating profile
   --dry-run             Preview diff without writing files

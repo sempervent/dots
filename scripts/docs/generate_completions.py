@@ -101,7 +101,7 @@ def build_zsh() -> str:
     shell_subs = ["status", "keys", "startup"]
     completion_subs = ["status", "paths"]
     pkg_subs = ["groups", "group", "plan", "status", "explain", "outdated", "upgrade", "adopt", "help"]
-    profile_subs = ["show", "add", "remove", "diff", "apply", "create", "switch", "help"]
+    profile_subs = ["list", "show", "plan", "resolve", "add", "remove", "mutate", "diff", "apply", "create", "switch", "help"]
     component_subs = ["list", "active", "show", "help"]
     ai_subs = ["status", "doctor", "up", "down", "help"]
     agent_subs = [
@@ -254,6 +254,9 @@ def build_zsh() -> str:
         "    completion)",
         "      _values 'completion' ${completion_subs[@]}",
         "      ;;",
+        "    tui)",
+        "      _values 'tui flags' --help",
+        "      ;;",
         "    install)",
         "      case ${words[CURRENT-1]} in",
         "      --profile|--profile=*)",
@@ -380,7 +383,7 @@ _dots_complete() {{
   local shell_subs='status keys startup'
   local completion_subs='status paths'
   local pkg_subs='groups group plan status explain outdated upgrade adopt help'
-  local profile_subs='show add remove diff apply create switch help'
+  local profile_subs='list show plan resolve add remove mutate diff apply create switch help'
   local component_subs='list active show help'
   local ai_subs='status doctor up down help'
   local agent_subs='status doctor sandbox models scout route eval team run worktrees diff apply discard mcp costs gateway'
@@ -421,6 +424,9 @@ _dots_complete() {{
       COMPREPLY=($(compgen -W "--dry-run --yes --profile --with --without --help" -- "${{cur}}"))
       ;;
     esac
+    ;;
+  tui)
+    COMPREPLY=($(compgen -W "--help" -- "${{cur}}"))
     ;;
   help)
     if [[ ${{cur}} == -* ]]; then
