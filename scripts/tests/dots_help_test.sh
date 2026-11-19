@@ -36,7 +36,7 @@ echo "=== metadata files ==="
 [[ -x ${ROOT}/scripts/dots-help ]] && ok "scripts/dots-help executable" || bad "launcher"
 
 echo "=== CLI dispatcher ↔ commands.toml drift ==="
-cli_cmds=(setup install upgrade status components lsp ai agent packages backup backups restore profile models check update help shell completion)
+cli_cmds=(setup tui install upgrade status components lsp ai agent packages backup backups restore profile models check update help shell completion)
 mapfile -t meta_cmds < <(
 	cd "${ROOT}" && "${PY}" - <<'PY'
 import tomllib
@@ -105,6 +105,14 @@ out="$("${HELP}" --version 2>&1)" || {
 	out=""
 }
 echo "${out}" | grep -Fq "DOTS ${expected_ver}" && ok "--version reports DOTS version" || bad "--version: ${out}"
+pyproj_ver="$(
+	"${PY}" - "${ROOT}/tools/dots_help/pyproject.toml" <<'PY'
+import sys, tomllib
+from pathlib import Path
+print(tomllib.loads(Path(sys.argv[1]).read_text())["project"]["version"])
+PY
+)"
+[[ ${pyproj_ver} == "${expected_ver}" ]] && ok "pyproject.toml version matches VERSION (${expected_ver})" || bad "pyproject.toml=${pyproj_ver} != VERSION=${expected_ver}"
 
 plain="$("${HELP}" --plain 2>&1)" || {
 	bad "--plain failed"
