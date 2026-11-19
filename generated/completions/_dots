@@ -12,6 +12,7 @@ _dots() {
 
   commands=(
     'setup:Interactive or noninteractive setup / reconfigure towar…'
+    'tui:Launch dynamic Textual desired-state TUI (groups, compo…'
     'install:Persist a known DOTS capability to desired profile and…'
     'upgrade:Upgrade outdated Homebrew software in the active DOTS d…'
     'status:Show current DOTS state (profile, packages summary, com…'
@@ -119,7 +120,7 @@ _dots() {
   shell_subs=('status' 'keys' 'startup')
   completion_subs=('status' 'paths')
   pkg_subs=('groups' 'group' 'plan' 'status' 'explain' 'outdated' 'upgrade' 'adopt' 'help')
-  profile_subs=('show' 'add' 'remove' 'diff' 'apply' 'create' 'switch' 'help')
+  profile_subs=('list' 'show' 'plan' 'resolve' 'add' 'remove' 'mutate' 'diff' 'apply' 'create' 'switch' 'help')
   component_subs=('list' 'active' 'show' 'help')
   ai_subs=('status' 'doctor' 'up' 'down' 'help')
   agent_subs=('status' 'doctor' 'sandbox' 'models' 'scout' 'route' 'eval' 'team' 'run' 'worktrees' 'diff' 'apply' 'discard' 'mcp' 'costs' 'gateway')
@@ -219,6 +220,9 @@ _dots() {
       ;;
     completion)
       _values 'completion' ${completion_subs[@]}
+      ;;
+    tui)
+      _values 'tui flags' --help
       ;;
     install)
       case ${words[CURRENT-1]} in
