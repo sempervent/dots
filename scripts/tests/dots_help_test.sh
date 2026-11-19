@@ -90,10 +90,10 @@ fi
 echo "=== plain help (isolated HOME) ==="
 # Simulate home profile selection without real machine noise
 cat >"${HOME}/.config/dots/active-profile" <<'EOF'
-DOTS_PROFILE=home
-DOTS_PACKAGE_GROUPS=core modern
-DOTS_ACTIVE_COMPONENTS=lsp hermes ollama
-DOTS_MULTIPLEXER=tmux
+DOTS_PROFILE='home'
+DOTS_PACKAGE_GROUPS='core modern'
+DOTS_ACTIVE_COMPONENTS='lsp hermes ollama'
+DOTS_MULTIPLEXER='tmux'
 EOF
 mkdir -p "${HOME}/.local/state/dots/backups/2026-11-02T120000-test"
 mkdir -p "${HOME}/.config/dots/profiles"
