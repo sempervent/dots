@@ -35,6 +35,10 @@ dots_darwin_major() {
 }
 
 dots_components_registry_path() {
+	if [[ -n ${DOTS_COMPONENTS_REGISTRY:-} && -f ${DOTS_COMPONENTS_REGISTRY} ]]; then
+		printf '%s\n' "${DOTS_COMPONENTS_REGISTRY}"
+		return 0
+	fi
 	printf '%s\n' "${DIR}/configs/components.toml"
 }
 

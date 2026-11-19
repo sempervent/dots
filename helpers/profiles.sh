@@ -116,6 +116,7 @@ dots_profile_parse() {
 	pyhome="$(mktemp -d "${TMPDIR:-/tmp}/dots-pyhome.XXXXXX")"
 	FILE="${file}" BUILTIN_DIR="${builtin_dir}" USER_DIR="$(dots_user_profile_dir)" \
 	DOTS_GROUPS_REGISTRY="${DOTS_GROUPS_REGISTRY:-}" \
+	DOTS_COMPONENTS_REGISTRY="${DOTS_COMPONENTS_REGISTRY:-}" \
 	HOME="${pyhome}" \
 	PYTHONDONTWRITEBYTECODE=1 \
 	PYTHONNOUSERSITE=1 \
@@ -158,7 +159,8 @@ if not KNOWN_GROUPS:
 # Load component + supergroup ids from registry (configs/components.toml)
 known_components = set()
 known_selectors = set()
-reg = builtin_dir.parent.parent / "components.toml"
+_comps_env = os.environ.get("DOTS_COMPONENTS_REGISTRY", "").strip()
+reg = Path(_comps_env) if _comps_env else (builtin_dir.parent.parent / "components.toml")
 if reg.is_file():
     try:
         rdata = tomllib.loads(reg.read_text(encoding="utf-8"))

@@ -76,6 +76,47 @@ Regenerate synopsis: python3 scripts/docs/generate_usage.py
 EOF
 }
 
+dots_cmd_tui() {
+	local arg
+	for arg in "$@"; do
+		case "${arg}" in
+		-h | --help | help)
+			cat <<'EOF'
+Usage: ./dots tui
+
+Launch the dynamic Textual desired-state TUI (front-end over DOTS registries,
+structured state APIs, and helpers/profile_edit.sh).
+
+Noninteractive fallback commands remain available without Textual:
+  ./dots install   ./dots upgrade   ./dots profile   ./dots setup   ./dots status
+EOF
+			return 0
+			;;
+		esac
+	done
+
+	if [[ ! -t 0 || ! -t 1 || ${TERM:-} == dumb ]]; then
+		echo "Error: ./dots tui requires an interactive TTY." >&2
+		echo "Use noninteractive commands instead:" >&2
+		echo "  ./dots profile show --json" >&2
+		echo "  ./dots install <selector> --yes" >&2
+		echo "  ./dots upgrade --dry-run" >&2
+		return 1
+	fi
+
+	local helper="${DIR}/scripts/dots-help"
+	if [[ -x ${helper} ]]; then
+		"${helper}" --mode tui "$@"
+		return $?
+	fi
+	if command -v dots-help >/dev/null 2>&1; then
+		dots-help --mode tui "$@"
+		return $?
+	fi
+	echo "Error: dots-help Textual runtime not installed yet; run ./setup.sh or use ./dots setup." >&2
+	return 1
+}
+
 dots_cmd_help() {
 	local helper="${DIR}/scripts/dots-help"
 	if [[ -x ${helper} ]]; then
@@ -743,6 +784,165 @@ _dots_profile_edit_subcmd() {
 	return 0
 }
 
+_dots_profile_mutate_subcmd() {
+	local profile_arg="" expected_hash="" apply=0 dry=0 yes=0
+	local -a add_raws=() rem_raws=()
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+		--profile)
+			profile_arg="${2:-}"
+			[[ -n ${profile_arg} ]] || {
+				echo "Error: --profile requires a value" >&2
+				return 1
+			}
+			shift
+			;;
+		--profile=*) profile_arg="${1#*=}" ;;
+		--add)
+			[[ -n ${2:-} ]] || {
+				echo "Error: --add requires a selector" >&2
+				return 1
+			}
+			add_raws+=("${2}")
+			shift
+			;;
+		--add=*) add_raws+=("${1#*=}") ;;
+		--remove)
+			[[ -n ${2:-} ]] || {
+				echo "Error: --remove requires a selector" >&2
+				return 1
+			}
+			rem_raws+=("${2}")
+			shift
+			;;
+		--remove=*) rem_raws+=("${1#*=}") ;;
+		--expected-hash)
+			expected_hash="${2:-}"
+			shift
+			;;
+		--expected-hash=*) expected_hash="${1#*=}" ;;
+		--apply) apply=1 ;;
+		--dry-run) dry=1 ;;
+		--yes | -y) yes=1 ;;
+		-h | --help)
+			echo "Usage: ./dots profile mutate [--profile NAME|PATH] [--add SEL]... [--remove SEL]... [--expected-hash SHA] [--apply] [--dry-run] [--yes]"
+			return 0
+			;;
+		*)
+			echo "Error: unknown profile mutate option: $1" >&2
+			return 1
+			;;
+		esac
+		shift
+	done
+
+	if [[ ${#add_raws[@]} -eq 0 && ${#rem_raws[@]} -eq 0 ]]; then
+		echo "Error: profile mutate requires at least one --add or --remove selector" >&2
+		return 1
+	fi
+
+	# Validate and resolve EVERY selector BEFORE computing/writing anything (atomic all-or-nothing)
+	local -a resolved_adds=() resolved_rems=()
+	local s
+	for s in "${add_raws[@]+"${add_raws[@]}"}"; do
+		dots_resolve_capability_selector "${s}" 0 >/dev/null || {
+			dots_resolve_capability_selector "${s}" 0 || true
+			return 1
+		}
+		if [[ ${DOTS_SEL_KIND} == "component" ]]; then
+			dots_require_explicit_component_supported "${DOTS_SEL_ID}" || return 1
+		fi
+		resolved_adds+=("${DOTS_SEL_OWNER}")
+	done
+	for s in "${rem_raws[@]+"${rem_raws[@]}"}"; do
+		dots_resolve_capability_selector "${s}" 0 >/dev/null || {
+			dots_resolve_capability_selector "${s}" 0 || true
+			return 1
+		}
+		resolved_rems+=("${DOTS_SEL_OWNER}")
+	done
+
+	dots_profile_edit_resolve_target "${profile_arg}" 0 || return 1
+
+	# External change detection if caller provided expected hash of source/overlay
+	if [[ -n ${expected_hash} ]]; then
+		local check_file="${DOTS_PE_OVERLAY_FILE}"
+		[[ -f ${check_file} ]] || check_file="${DOTS_PE_SOURCE_FILE}"
+		local actual_hash=""
+		actual_hash="$(dots_profile_file_hash "${check_file}" 2>/dev/null || true)"
+		if [[ -n ${actual_hash} && ${actual_hash} != "${expected_hash}" ]]; then
+			echo "Error: profile changed on disk outside this session (expected ${expected_hash}, found ${actual_hash}). Refresh before saving." >&2
+			return 1
+		fi
+	fi
+
+	local adds_nl="" rems_nl=""
+	[[ ${#resolved_adds[@]} -gt 0 ]] && adds_nl="$(printf '%s\n' "${resolved_adds[@]}")"
+	[[ ${#resolved_rems[@]} -gt 0 ]] && rems_nl="$(printf '%s\n' "${resolved_rems[@]}")"
+
+	local tmp_toml tmp_diff
+	tmp_toml="$(mktemp "${TMPDIR:-/tmp}/dots-pmut-toml.XXXXXX")"
+	tmp_diff="$(mktemp "${TMPDIR:-/tmp}/dots-pmut-diff.XXXXXX")"
+	if ! dots_profile_edit_compute_batch "${DOTS_PE_SOURCE_FILE}" "${DOTS_PE_OVERLAY_FILE}" \
+		"${DOTS_PE_OVERLAY_NAME}" "${DOTS_PE_EXTENDS_VAL}" \
+		"${adds_nl}" "${rems_nl}" "${tmp_toml}" "${tmp_diff}"; then
+		rm -f "${tmp_toml}" "${tmp_diff}"
+		return 1
+	fi
+
+	if [[ ${DOTS_PE_CHANGED} -eq 0 ]]; then
+		echo "${DOTS_PE_STATUS_MSG}"
+		rm -f "${tmp_toml}" "${tmp_diff}"
+		return 0
+	fi
+
+	cat "${tmp_diff}"
+	if [[ ${dry} -eq 1 ]]; then
+		echo ""
+		echo "[dry-run] Would write overlay: ${DOTS_PE_OVERLAY_FILE}"
+		[[ ${apply} -eq 1 ]] && echo "[dry-run] Would apply: ./bootstrap.sh --profile ${DOTS_PE_OVERLAY_FILE}"
+		echo "[dry-run] No files modified."
+		rm -f "${tmp_toml}" "${tmp_diff}"
+		return 0
+	fi
+
+	if [[ ${yes} -ne 1 ]] && [[ ${DOTS_UI_NONINTERACTIVE:-0} -ne 1 ]] && { [[ -t 0 ]] || [[ -n ${DOTS_UI_ANSWERS:-} ]]; }; then
+		[[ -z ${DOTS_UI_ANSWER_FD:-} ]] && dots_ui_load_answers
+		local ans
+		ans="$(dots_prompt_yesno "Write batch profile changes" y)" || {
+			rm -f "${tmp_toml}" "${tmp_diff}"
+			echo "Aborted. No changes made."
+			return 0
+		}
+		if [[ ${ans} != y ]]; then
+			rm -f "${tmp_toml}" "${tmp_diff}"
+			echo "Aborted. No changes made."
+			return 0
+		fi
+	fi
+
+	if ! dots_profile_edit_commit_atomic "${DOTS_PE_OVERLAY_FILE}" "${tmp_toml}"; then
+		rm -f "${tmp_toml}" "${tmp_diff}"
+		return 1
+	fi
+	rm -f "${tmp_toml}" "${tmp_diff}"
+
+	echo "OK: updated ${DOTS_PE_OVERLAY_FILE} (active: ${DOTS_PE_OVERLAY_NAME})"
+	[[ ${#resolved_rems[@]} -gt 0 ]] && echo "Note: removing desired state does not uninstall already-installed packages."
+
+	if [[ ${apply} -eq 1 ]]; then
+		local boot_bin="${DOTS_BOOTSTRAP_SH:-${DIR}/bootstrap.sh}"
+		if ! "${boot_bin}" --profile "${DOTS_PE_OVERLAY_FILE}"; then
+			echo "Desired state updated successfully. Machine convergence failed." >&2
+			echo "Retry: ./dots profile apply" >&2
+			return 1
+		fi
+	else
+		echo "Apply later: ./dots profile apply"
+	fi
+	return 0
+}
+
 dots_cmd_profile() {
 	local sub="${1:-}"
 	if [[ $# -gt 0 ]]; then
@@ -754,15 +954,19 @@ dots_cmd_profile() {
 		cat <<'EOF'
 Usage:
   ./dots profile                             Interactive profile menu (TTY) or show
-  ./dots profile show [PROFILE]              Show resolved profile (read-only)
+  ./dots profile list [--json]               List builtin, custom, and overlay profiles
+  ./dots profile show [PROFILE] [--json]     Show resolved profile (read-only)
+  ./dots profile plan [options] --json       Preview delta impact without mutating
+  ./dots profile resolve SELECTOR --json     Resolve capability/package owner
   ./dots profile add SELECTOR [options]      Persist capability into sparse overlay
   ./dots profile remove SELECTOR [options]   Remove capability from desired state (no uninstall)
+  ./dots profile mutate [options]            Atomic batch add/remove into sparse overlay
   ./dots profile diff [PROFILE]              Show local overlay additions/removals
   ./dots profile apply [PROFILE] [--dry-run] Converge machine toward profile
   ./dots profile create [configure.sh args]  Create/edit profile TOML via configure.sh
   ./dots profile switch PROFILE [--apply]    Switch active profile pointer
 
-Options for add/remove:
+Options for add/remove/mutate:
   --profile NAME|PATH   Target profile (default: active profile)
   --apply               Converge via bootstrap.sh after updating profile
   --dry-run             Preview diff without writing files
@@ -770,8 +974,45 @@ Options for add/remove:
 EOF
 		return 0
 		;;
+	list)
+		if [[ ${1:-} == --json ]]; then
+			dots_profile_list_json
+		else
+			local ljson
+			ljson="$(dots_profile_list_json)" || return 1
+			JSON_IN="${ljson}" "${DOTS_PYTHON:-python3}" -B - <<'PY'
+import json, os
+data = json.loads(os.environ["JSON_IN"])
+for p in data.get("profiles") or []:
+    mark = "*" if p.get("active") else " "
+    ext = f" -> {p['extends']}" if p.get("extends") else ""
+    print(f"{mark} {p['name']:<18} [{p['kind']}] {p['file']}{ext}")
+PY
+		fi
+		return $?
+		;;
 	show)
-		local p="${1:-}"
+		local p="" json=0
+		while [[ $# -gt 0 ]]; do
+			case "$1" in
+			--json) json=1 ;;
+			--profile)
+				p="${2:-}"
+				shift || true
+				;;
+			--profile=*) p="${1#*=}" ;;
+			-*)
+				echo "Error: unknown profile show option: $1" >&2
+				return 1
+				;;
+			*) p="$1" ;;
+			esac
+			shift
+		done
+		if [[ ${json} -eq 1 ]]; then
+			dots_profile_show_json "${p}"
+			return $?
+		fi
 		if [[ -z ${p} ]]; then
 			if dots_state_load_active 2>/dev/null; then
 				p="${DOTS_ACTIVE_PROFILE_FILE:-${DOTS_ACTIVE_PROFILE}}"
@@ -783,6 +1024,90 @@ EOF
 		local pf
 		pf="$(dots_resolve_profile_path "${p}")" || return 1
 		"${DOTS_BOOTSTRAP_SH:-${DIR}/bootstrap.sh}" --profile "${pf}" --show
+		return $?
+		;;
+	plan)
+		local p="" json=0
+		local -a add_sels=() rem_sels=()
+		while [[ $# -gt 0 ]]; do
+			case "$1" in
+			--json) json=1 ;;
+			--profile)
+				p="${2:-}"
+				shift || true
+				;;
+			--profile=*) p="${1#*=}" ;;
+			--add)
+				add_sels+=("${2:-}")
+				shift || true
+				;;
+			--add=*) add_sels+=("${1#*=}") ;;
+			--remove)
+				rem_sels+=("${2:-}")
+				shift || true
+				;;
+			--remove=*) rem_sels+=("${1#*=}") ;;
+			-h | --help)
+				echo "Usage: ./dots profile plan [--profile NAME] [--add SEL]... [--remove SEL]... --json"
+				return 0
+				;;
+			*)
+				echo "Error: unknown profile plan option: $1" >&2
+				return 1
+				;;
+			esac
+			shift
+		done
+		local -a r_adds=() r_rems=()
+		local s
+		for s in "${add_sels[@]+"${add_sels[@]}"}"; do
+			[[ -z ${s} ]] && continue
+			dots_resolve_capability_selector "${s}" 0 >/dev/null || {
+				dots_resolve_capability_selector "${s}" 0 || true
+				return 1
+			}
+			r_adds+=("${DOTS_SEL_OWNER}")
+		done
+		for s in "${rem_sels[@]+"${rem_sels[@]}"}"; do
+			[[ -z ${s} ]] && continue
+			dots_resolve_capability_selector "${s}" 0 >/dev/null || {
+				dots_resolve_capability_selector "${s}" 0 || true
+				return 1
+			}
+			r_rems+=("${DOTS_SEL_OWNER}")
+		done
+		local adds_nl="" rems_nl=""
+		[[ ${#r_adds[@]} -gt 0 ]] && adds_nl="$(printf '%s\n' "${r_adds[@]}")"
+		[[ ${#r_rems[@]} -gt 0 ]] && rems_nl="$(printf '%s\n' "${r_rems[@]}")"
+		if [[ ${json} -eq 1 ]]; then
+			dots_profile_plan_json "${p}" "${adds_nl}" "${rems_nl}"
+			return $?
+		fi
+		dots_packages_plan ${p:+--profile "${p}"}
+		return $?
+		;;
+	resolve)
+		local sel="" json=0
+		while [[ $# -gt 0 ]]; do
+			case "$1" in
+			--json) json=1 ;;
+			*) sel="$1" ;;
+			esac
+			shift
+		done
+		[[ -n ${sel} ]] || {
+			echo "Usage: ./dots profile resolve SELECTOR [--json]" >&2
+			return 1
+		}
+		if [[ ${json} -eq 1 ]]; then
+			dots_profile_resolve_json "${sel}"
+			return $?
+		fi
+		dots_resolve_capability_selector "${sel}" 0 && echo "${DOTS_SEL_OWNER}"
+		return $?
+		;;
+	mutate)
+		_dots_profile_mutate_subcmd "$@"
 		return $?
 		;;
 	add)
@@ -1461,7 +1786,23 @@ dots_cmd_packages() {
 		dots_pkg_status_report
 		;;
 	groups)
-		dots_packages_groups_list
+		local json=0 profile_arg=""
+		while [[ $# -gt 0 ]]; do
+			case "$1" in
+			--json) json=1 ;;
+			--profile)
+				profile_arg="${2:-}"
+				shift || true
+				;;
+			--profile=*) profile_arg="${1#*=}" ;;
+			esac
+			shift
+		done
+		if [[ ${json} -eq 1 ]]; then
+			dots_packages_groups_json "${profile_arg}"
+		else
+			dots_packages_groups_list
+		fi
 		;;
 	group)
 		dots_packages_group_show "${1:-}"
@@ -1629,7 +1970,23 @@ dots_cmd_components() {
 
 	case "${sub}" in
 	list | ls)
-		dots_components_list
+		local json=0 profile_arg=""
+		while [[ $# -gt 0 ]]; do
+			case "$1" in
+			--json) json=1 ;;
+			--profile)
+				profile_arg="${2:-}"
+				shift || true
+				;;
+			--profile=*) profile_arg="${1#*=}" ;;
+			esac
+			shift
+		done
+		if [[ ${json} -eq 1 ]]; then
+			dots_components_list_json "${profile_arg}"
+		else
+			dots_components_list
+		fi
 		;;
 	active)
 		dots_components_active
@@ -1697,7 +2054,7 @@ EOF
 }
 
 # --- dispatch ---
-cmd="${1:-setup}"
+cmd="${1:-}"
 case "${cmd}" in
 -h | --help)
 	dots_usage
@@ -1706,6 +2063,10 @@ case "${cmd}" in
 help)
 	shift || true
 	dots_cmd_help "$@"
+	;;
+tui)
+	shift || true
+	dots_cmd_tui "$@"
 	;;
 --version | -V | version)
 	echo "dots $(dots_version)"
@@ -1784,6 +2145,11 @@ completion)
 	dots_cmd_completion "$@"
 	;;
 "")
+	if [[ -t 0 && -t 1 && -z ${DOTS_UI_ANSWERS:-} && ${DOTS_NO_TUI:-0} -ne 1 && ${TERM:-} != dumb ]] &&
+		[[ -d ${DIR}/tools/dots_help/.venv && -f "$(dots_active_profile_file)" ]] &&
+		dots_cmd_tui; then
+		exit 0
+	fi
 	dots_cmd_setup
 	;;
 *)
