@@ -558,7 +558,7 @@ def generate_cli_help(check: bool) -> bool:
 
     # Subcommand help — prefer live --help when stable; else source Usage stubs.
     # (profile/models have interactive menus without portable --help handlers.)
-    for sub in ("install", "upgrade", "packages", "components", "profile", "models", "backup", "restore"):
+    for sub in ("tui", "install", "upgrade", "packages", "components", "profile", "models", "backup", "restore"):
         out = _safe_help(["./dots", sub, "--help"])
         if out is None:
             out = _extract_dots_sub_usage(sub)

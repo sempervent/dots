@@ -6,11 +6,15 @@ Primary human interface: **`./dots`**. Expert scripts remain supported.
 
 | Command | Role |
 |---------|------|
-| `./dots` / `./dots setup` | Interactive setup / reconfigure |
+| `./dots` | Interactive TUI (when bootstrapped) or setup wizard |
+| `./dots tui` | Dynamic desired-state TUI (groups, components, upgrades) |
+| `./dots setup` | Interactive / noninteractive setup / reconfigure |
+| `./dots install` | Persist capability into sparse overlay and converge |
+| `./dots upgrade` | Upgrade managed Homebrew software (`update != upgrade`) |
 | `./dots status` | Read-only dashboard |
 | `./dots packages …` | Ownership / drift / upgrade / adopt |
 | `./dots backup` / `backups` / `restore` | Snapshots |
-| `./dots profile` | Profile management |
+| `./dots profile` | Profile management (`show`, `add`, `remove`, `mutate`, `diff`, `apply`, `switch`) |
 | `./dots models` | Local model plan & pull UX |
 | `./dots check` | Health verification |
 | `./dots update` | Repo update + optional reapply |

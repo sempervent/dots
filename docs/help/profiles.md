@@ -11,8 +11,10 @@ Builtin roles:
 | `all` | Broad optional set (see omit_from_all) |
 
 ```bash
+./dots tui                             # interactive desired-state TUI
 ./dots profile                         # interactive profile menu
-./dots profile show [NAME]             # resolved profile (read-only)
+./dots profile list [--json]           # list builtin, custom, and overlay profiles
+./dots profile show [NAME] [--json]    # resolved profile (read-only)
 ./dots profile add SELECTOR            # persist capability into sparse overlay
 ./dots profile remove SELECTOR         # remove from desired state (no uninstall)
 ./dots profile diff [NAME]             # local additions and removals

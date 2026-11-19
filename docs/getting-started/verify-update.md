@@ -21,6 +21,7 @@ upgrades **installed Homebrew software** in the active DOTS desired scope
 
 | Command | Role |
 |---------|------|
+| `dots tui` | Dynamic desired-state TUI |
 | `dots update` | Update DOTS itself |
 | `dots upgrade` | Upgrade managed software |
 | `dots install X` | Add known software/capability to persistent desired state |

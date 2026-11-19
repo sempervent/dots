@@ -27,7 +27,8 @@ an interactive reference for **this** machine; `man dots` covers the same
 ground traditionally. Expert scripts remain available underneath for automation.
 
 ```bash
-./dots                     # interactive setup / returning-machine menu
+./dots                     # interactive TUI (when bootstrapped) or setup wizard
+./dots tui                 # dynamic desired-state TUI (groups/components/upgrades)
 ./dots install hyperfine   # persist known capability into overlay + converge
 ./dots upgrade             # upgrade managed software in active profile
 ./dots status              # read-only dashboard
@@ -48,6 +49,8 @@ ground traditionally. Expert scripts remain available underneath for automation.
 
 | Command | Role |
 |---------|------|
+| `dots tui` | Dynamic desired-state TUI ([docs](docs/using/tui.md)) |
+| `dots help` | Documentation browser (`dots-help`) |
 | `dots update` | Update the DOTS repository itself (`git pull` + optional reapply) |
 | `dots upgrade` | Upgrade installed Homebrew software in the active DOTS desired scope |
 | `dots install X` | Add known software/capability `X` to persistent desired state (`<profile>-local.toml`) and apply |
