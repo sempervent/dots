@@ -31,7 +31,9 @@ if [[ ! -d ${PROJECT_DIR}/.venv ]]; then
 		echo "Error: uv sync failed for tools/dots_help" >&2
 		exit 1
 	}
+	exec uv run --directory "${PROJECT_DIR}" --python-preference system --frozen \
+		python -m dots_help "$@"
 fi
 
-exec uv run --directory "${PROJECT_DIR}" --python-preference system --frozen \
+exec uv run --directory "${PROJECT_DIR}" --python-preference system --frozen --no-sync \
 	python -m dots_help "$@"

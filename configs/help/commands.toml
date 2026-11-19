@@ -11,13 +11,27 @@ usage = "dots setup [options]"
 category = "lifecycle"
 description = "Interactive or noninteractive setup / reconfigure toward desired state."
 mutating = true
-related = ["install", "upgrade", "profile", "status", "check", "update", "help"]
+related = ["tui", "install", "upgrade", "profile", "status", "check", "update", "help"]
 [[commands.examples]]
 command = "dots setup"
 description = "Interactive wizard."
 [[commands.examples]]
 command = "dots setup --dry-run"
 description = "Preview without mutating."
+
+[[commands]]
+name = "tui"
+usage = "dots tui"
+category = "lifecycle"
+description = "Launch dynamic Textual desired-state TUI (groups, components, upgrades)."
+mutating = true
+related = ["setup", "install", "profile", "upgrade", "help"]
+[[commands.examples]]
+command = "dots tui"
+description = "Open interactive desired-state dashboard."
+[[commands.examples]]
+command = "dots tui --help"
+description = "Show TUI usage and noninteractive alternatives."
 
 [[commands]]
 name = "install"
@@ -205,7 +219,7 @@ related = ["backup", "backups", "help"]
 
 [[commands]]
 name = "profile"
-usage = "dots profile [show|add|remove|diff|apply|create|switch]"
+usage = "dots profile [list|show|plan|resolve|add|remove|mutate|diff|apply|create|switch]"
 category = "lifecycle"
 description = "Inspect, edit via sparse overlays, switch, or apply profiles."
 mutating = true

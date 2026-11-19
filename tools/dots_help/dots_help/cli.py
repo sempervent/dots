@@ -32,6 +32,9 @@ def build_parser() -> argparse.ArgumentParser:
         add_help=True,
     )
     p.add_argument("topic", nargs="?", help="Topic id (e.g. completion, packages, backup)")
+    p.add_argument("--mode", choices=("help", "tui"), default="help", help="UI mode: help (default) or lifecycle tui")
+    p.add_argument("--dry-run", action="store_true", help="Simulate mutations without writing (with --mode tui)")
+    p.add_argument("--profile", metavar="NAME", help="Target profile (with --mode tui)")
     p.add_argument("--plain", action="store_true", help="Plain text (no TUI)")
     p.add_argument("--search", metavar="QUERY", help="Search topics/commands/components")
     p.add_argument("--cheatsheet", action="store_true", help="Machine-specific cheat sheet")
@@ -60,6 +63,14 @@ def main(argv: list[str] | None = None) -> int:
     if args.version:
         print(f"dots-help (DOTS {reg.version()})")
         return 0
+
+    if args.mode == "tui":
+        if not _can_textual():
+            print("Error: DOTS lifecycle TUI requires an interactive TTY and Textual.", file=sys.stderr)
+            return 1
+        from .tui import run_lifecycle_tui
+
+        return run_lifecycle_tui(dry_run=args.dry_run, profile=args.profile)
 
     if args.list_topics:
         for t in reg.topic_rows():
