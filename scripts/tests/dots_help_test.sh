@@ -37,7 +37,10 @@ echo "=== metadata files ==="
 
 echo "=== CLI dispatcher ↔ commands.toml drift ==="
 cli_cmds=(setup tui install upgrade status components lsp ai agent packages backup backups restore profile models check update help shell completion)
-mapfile -t meta_cmds < <(
+meta_cmds=()
+while IFS= read -r _mc; do
+	[[ -n ${_mc} ]] && meta_cmds+=("${_mc}")
+done < <(
 	cd "${ROOT}" && "${PY}" - <<'PY'
 import tomllib
 from pathlib import Path

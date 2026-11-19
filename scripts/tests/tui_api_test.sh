@@ -86,7 +86,7 @@ assert "quantum-cabbage" in names, names
 
 echo "=== 4. Batch profile mutate (atomic single overlay write, builtin immutable) ==="
 home_before="$(cksum <"${ROOT}/configs/bootstrap/profiles/home.toml")"
-DRY_RUN_OUT="$("${ROOT}/dots" profile mutate --profile home --add group:dev --add component:karabiner-elements --remove group:network --dry-run --yes 2>&1)"
+DRY_RUN_OUT="$(DOTS_FORCE_OS=darwin DOTS_FORCE_DARWIN_MAJOR=15 "${ROOT}/dots" profile mutate --profile home --add group:dev --add component:karabiner-elements --remove group:network --dry-run --yes 2>&1)"
 echo "${DRY_RUN_OUT}" | grep -q '\[dry-run\] No files modified' && ok "mutate dry-run" || bad "mutate dry-run: ${DRY_RUN_OUT}"
 [[ ! -f ${HOME}/.config/dots/profiles/home-local.toml ]] && ok "mutate dry-run wrote zero files" || bad "mutate dry-run created file"
 
