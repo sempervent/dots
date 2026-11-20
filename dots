@@ -401,10 +401,11 @@ dots_cmd_restore() {
 }
 
 dots_cmd_install() {
-	local selector="" dry=0 yes=0 no_apply=0 profile_arg=""
+	local selector="" dry=0 yes=0 no_apply=0 profile_arg="" only=0
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
 		--dry-run) dry=1 ;;
+		--only) only=1 ;;
 		--yes | -y) yes=1 ;;
 		--no-apply) no_apply=1 ;;
 		--profile)
@@ -428,6 +429,7 @@ for maintainer Brewfile declarations).
 
 Options:
   --dry-run         Preview owner resolution, profile diff, and package plan
+  --only            Persist explicit package only (leaf-selectable packages)
   --yes, -y         Skip confirmation prompt
   --no-apply        Persist desired profile update without running bootstrap
   --profile NAME    Target profile (default: active profile)
@@ -435,6 +437,7 @@ Options:
 Examples:
   ./dots install dev
   ./dots install hyperfine
+  ./dots install raycast --only --dry-run
   ./dots install karabiner-elements
   ./dots install ai
   ./dots install sshuttle --dry-run
@@ -481,6 +484,7 @@ EOF
 		dots_require_explicit_component_supported "${DOTS_SEL_ID}" || return 1
 	fi
 	# Package/group installability check (never persist unsatisfiable direct package requests)
+	dots_install_pick_owner_mode "${only}" "${allow_prompt}" "${yes}" || return 1
 	dots_require_selector_installable || return 1
 
 	# 2. Explain resolution & scope
@@ -796,6 +800,91 @@ _dots_profile_edit_subcmd() {
 	else
 		echo "Apply later: ./dots profile apply"
 	fi
+	return 0
+}
+
+_dots_profile_package_subcmd() {
+	local action="$1"
+	shift
+	local pkg="" profile_arg="" apply=0 dry=0 yes=0
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+		--profile)
+			profile_arg="${2:-}"
+			[[ -n ${profile_arg} ]] || {
+				echo "Error: --profile requires a value" >&2
+				return 1
+			}
+			shift
+			;;
+		--profile=*) profile_arg="${1#*=}" ;;
+		--apply) apply=1 ;;
+		--dry-run) dry=1 ;;
+		--yes | -y) yes=1 ;;
+		-h | --help)
+			echo "Usage: ./dots profile ${action}-package ID [--profile NAME|PATH] [--apply] [--dry-run] [--yes]"
+			return 0
+			;;
+		-*)
+			echo "Error: unknown profile ${action}-package option: $1" >&2
+			return 1
+			;;
+		*)
+			[[ -z ${pkg} ]] && pkg="$1" || {
+				echo "Error: unexpected argument: $1" >&2
+				return 1
+			}
+			;;
+		esac
+		shift
+	done
+	[[ -n ${pkg} ]] || {
+		echo "Error: package id required (e.g. raycast)" >&2
+		return 1
+	}
+	dots_profile_edit_resolve_target "${profile_arg}" 0 || return 1
+	local tmp_toml tmp_diff
+	tmp_toml="$(mktemp "${TMPDIR:-/tmp}/dots-pkg-toml.XXXXXX")"
+	tmp_diff="$(mktemp "${TMPDIR:-/tmp}/dots-pkg-diff.XXXXXX")"
+	if ! dots_profile_edit_compute "${action}" "package:${pkg}" \
+		"${DOTS_PE_SOURCE_FILE}" "${DOTS_PE_OVERLAY_FILE}" \
+		"${DOTS_PE_OVERLAY_NAME}" "${DOTS_PE_EXTENDS_VAL}" \
+		"${tmp_toml}" "${tmp_diff}"; then
+		rm -f "${tmp_toml}" "${tmp_diff}"
+		return 1
+	fi
+	if [[ ${DOTS_PE_CHANGED} -eq 0 ]]; then
+		echo "${DOTS_PE_STATUS_MSG}"
+		rm -f "${tmp_toml}" "${tmp_diff}"
+		return 0
+	fi
+	cat "${tmp_diff}"
+	if [[ ${dry} -eq 1 ]]; then
+		echo ""
+		echo "[dry-run] Would write overlay: ${DOTS_PE_OVERLAY_FILE}"
+		rm -f "${tmp_toml}" "${tmp_diff}"
+		return 0
+	fi
+	if [[ ${yes} -ne 1 ]] && [[ -t 0 ]]; then
+		[[ -z ${DOTS_UI_ANSWER_FD:-} ]] && dots_ui_load_answers
+		local ans
+		ans="$(dots_prompt_yesno "Write explicit package to profile" y)" || {
+			rm -f "${tmp_toml}" "${tmp_diff}"
+			return 0
+		}
+		[[ ${ans} == y ]] || {
+			rm -f "${tmp_toml}" "${tmp_diff}"
+			echo "Aborted. No changes made."
+			return 0
+		}
+	fi
+	if ! dots_profile_edit_commit_atomic "${DOTS_PE_OVERLAY_FILE}" "${tmp_toml}"; then
+		rm -f "${tmp_toml}" "${tmp_diff}"
+		return 1
+	fi
+	rm -f "${tmp_toml}" "${tmp_diff}"
+	echo "OK: explicit package '${pkg}' updated in ${DOTS_PE_OVERLAY_NAME}"
+	[[ ${apply} -eq 1 ]] && "${DOTS_BOOTSTRAP_SH:-${DIR}/bootstrap.sh}" --profile "${DOTS_PE_OVERLAY_FILE}"
 	return 0
 }
 
@@ -1130,8 +1219,16 @@ PY
 		_dots_profile_edit_subcmd add "$@"
 		return $?
 		;;
+	add-package)
+		_dots_profile_package_subcmd add "$@"
+		return $?
+		;;
 	remove)
 		_dots_profile_edit_subcmd remove "$@"
+		return $?
+		;;
+	remove-package)
+		_dots_profile_package_subcmd remove "$@"
 		return $?
 		;;
 	diff)

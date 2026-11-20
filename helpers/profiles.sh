@@ -135,7 +135,7 @@ ALLOWED_PROFILE = {
     "open_apps", "include_all_optional",
 }
 ALLOWED_RUNTIME = {"multiplexer", "greeting", "prompt_stats", "auto_tmux"}
-ALLOWED_PACKAGES = {"add", "remove", "groups"}
+ALLOWED_PACKAGES = {"add", "remove", "groups", "include", "exclude"}
 ALLOWED_COMPONENTS = {"with", "without"}
 KNOWN_MUX = {"tmux", "herdr", "none"}
 
@@ -286,6 +286,8 @@ desc = ""
 extends_leaf = ""
 include_all = False
 packages = []  # ordered unique
+pkg_include = []
+pkg_exclude_set = set()
 with_list = []
 without_set = set()
 open_apps = []
@@ -332,6 +334,14 @@ for path, data in chain:
             if g not in KNOWN_GROUPS:
                 fail("Unknown package group '%s' in %s" % (g, path))
         pkg_explicit = True
+    for p in list_str(pkg_tbl.get("include"), "packages.include", path):
+        if p not in pkg_include:
+            pkg_include.append(p)
+        pkg_exclude_set.discard(p)
+    for p in list_str(pkg_tbl.get("exclude"), "packages.exclude", path):
+        if p in pkg_include:
+            pkg_include = [x for x in pkg_include if x != p]
+        pkg_exclude_set.add(p)
 
     # components (ids or supergroup selectors; expansion happens in shell)
     for item in list_str(prof.get("with"), "profile.with", path):
@@ -415,6 +425,10 @@ for item in open_apps:
     print("open:%s" % item)
 for item in packages:
     print("pkg:%s" % item)
+for p in pkg_include:
+    print("pkginc:%s" % p)
+for p in sorted(pkg_exclude_set):
+    print("pkgexc:%s" % p)
 if pkg_explicit:
     print("pkg_explicit:1")
 if "multiplexer" in runtime and runtime.get("multiplexer") is not None:
@@ -445,6 +459,8 @@ dots_load_profile_file() {
 	PROFILE_WITHOUT_RAW=()
 	PROFILE_OPEN_APPS=()
 	PROFILE_PACKAGES=()
+	PROFILE_PKG_INCLUDE=()
+	PROFILE_PKG_EXCLUDE=()
 	PROFILE_RUNTIME_MULTIPLEXER=""
 	PROFILE_RUNTIME_GREETING=""
 	PROFILE_RUNTIME_PROMPT_STATS=""
@@ -478,6 +494,8 @@ dots_load_profile_file() {
 		without:*) PROFILE_WITHOUT+=("${line#without:}") ;;
 		open:*) PROFILE_OPEN_APPS+=("${line#open:}") ;;
 		pkg:*) PROFILE_PACKAGES+=("${line#pkg:}") ;;
+		pkginc:*) PROFILE_PKG_INCLUDE+=("${line#pkginc:}") ;;
+		pkgexc:*) PROFILE_PKG_EXCLUDE+=("${line#pkgexc:}") ;;
 		pkg_explicit:*) pkg_explicit=1 ;;
 		runtime.multiplexer:*) PROFILE_RUNTIME_MULTIPLEXER="${line#runtime.multiplexer:}" ;;
 		runtime.greeting:*) PROFILE_RUNTIME_GREETING="${line#runtime.greeting:}" ;;

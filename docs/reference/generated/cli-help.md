@@ -312,6 +312,7 @@ for maintainer Brewfile declarations).
 
 Options:
   --dry-run         Preview owner resolution, profile diff, and package plan
+  --only            Persist explicit package only (leaf-selectable packages)
   --yes, -y         Skip confirmation prompt
   --no-apply        Persist desired profile update without running bootstrap
   --profile NAME    Target profile (default: active profile)
@@ -319,6 +320,7 @@ Options:
 Examples:
   ./dots install dev
   ./dots install hyperfine
+  ./dots install raycast --only --dry-run
   ./dots install karabiner-elements
   ./dots install ai
   ./dots install sshuttle --dry-run

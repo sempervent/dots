@@ -107,6 +107,7 @@ source "${DIR}/helpers/profiles.sh"
 
 PROFILE_NAME=""
 PROFILE_PACKAGES=()
+PROFILE_PKG_INCLUDE=()
 PROFILE_RUNTIME_MULTIPLEXER=""
 PROFILE_RUNTIME_GREETING=""
 PROFILE_RUNTIME_PROMPT_STATS=""
@@ -261,6 +262,18 @@ while [[ $# -gt 0 ]]; do
 			exit 1
 		}
 		IFS=',' read -r -a PROFILE_PACKAGES <<<"$2"
+		shift 2
+		;;
+	--explicit-packages=*)
+		IFS=',' read -r -a PROFILE_PKG_INCLUDE <<<"${1#--explicit-packages=}"
+		shift
+		;;
+	--explicit-packages)
+		[[ $# -ge 2 ]] || {
+			echo "Error: --explicit-packages requires an argument" >&2
+			exit 1
+		}
+		IFS=',' read -r -a PROFILE_PKG_INCLUDE <<<"$2"
 		shift 2
 		;;
 	--profile=*)
@@ -421,6 +434,12 @@ else
 	if ! dots_provision_packages; then
 		echo "Error: package provisioning failed" >&2
 		exit 1
+	fi
+	if declare -F dots_provision_explicit_packages >/dev/null 2>&1; then
+		dots_provision_explicit_packages || {
+			echo "Error: explicit package provisioning failed" >&2
+			exit 1
+		}
 	fi
 fi
 

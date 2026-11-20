@@ -406,6 +406,120 @@ PY
 		return 0
 	fi
 
+	if [[ ${DOTS_SEL_KIND:-} == "package" ]]; then
+		dots_require_python 0 || return 1
+		local pyhome out rc=0
+		pyhome="$(mktemp -d "${TMPDIR:-/tmp}/dots-pe-leaf.XXXXXX")"
+		out="$(
+			DOTS_DIR="${DIR}" \
+				HOME="${pyhome}" \
+				PYTHONDONTWRITEBYTECODE=1 \
+				PYTHONNOUSERSITE=1 \
+				"${DOTS_PYTHON}" -B - <<PY
+import os, sys, json
+from pathlib import Path
+sys.path.insert(0, str(Path(os.environ["DOTS_DIR"]) / "helpers"))
+import package_truth as pt
+root = Path(os.environ["DOTS_DIR"])
+meta = pt.find_package_meta(root, "${DOTS_SEL_ID}")
+if not meta.get("installable"):
+    print("ERR\t" + (meta.get("unsupported_reason") or "not installable"))
+    raise SystemExit(2)
+if not meta.get("leaf_selectable"):
+    print("ERR\t" + (meta.get("leaf_reason") or "not leaf-selectable"))
+    raise SystemExit(2)
+print("OK")
+PY
+		)" || rc=$?
+		rm -rf "${pyhome}"
+		if [[ ${rc} -ne 0 ]]; then
+			printf 'ERROR: %s\n' "${out#ERR$'\t'}" >&2
+			return 1
+		fi
+		return 0
+	fi
+
+	return 0
+}
+
+# After selector resolution: --only persists package:ID; otherwise optional TTY menu for leaf packages.
+dots_install_pick_owner_mode() {
+	local only="${1:-0}" allow_prompt="${2:-0}" yes="${3:-0}"
+	local raw="${DOTS_SEL_VIA_PKG:-}"
+	[[ -n ${raw} || ${DOTS_SEL_KIND:-} == "package" ]] || return 0
+	local canon="${raw:-${DOTS_SEL_ID}}"
+	[[ -n ${canon} ]] || return 0
+
+	local leaf owner_hint="${DOTS_SEL_OWNER:-}"
+	local pyhome
+	pyhome="$(mktemp -d "${TMPDIR:-/tmp}/dots-pe-leafpick.XXXXXX")"
+	leaf="$(
+		DOTS_DIR="${DIR}" \
+			CANON="${canon}" \
+			HOME="${pyhome}" \
+			PYTHONDONTWRITEBYTECODE=1 \
+			PYTHONNOUSERSITE=1 \
+			"${DOTS_PYTHON}" -B - <<'PY'
+import os, sys
+from pathlib import Path
+sys.path.insert(0, str(Path(os.environ["DOTS_DIR"]) / "helpers"))
+import package_truth as pt
+
+root = Path(os.environ["DOTS_DIR"])
+out = pt.resolve_selector(root, os.environ["CANON"], None, probe_installed=False)
+print("1" if out.get("leaf_selectable") else "0")
+PY
+	)" || {
+		rm -rf "${pyhome}"
+		return 1
+	}
+	rm -rf "${pyhome}"
+
+	if [[ ${only} -eq 1 ]]; then
+		if [[ ${leaf} != 1 ]]; then
+			echo "Error: '${canon}' is not leaf-selectable on this platform; cannot use --only." >&2
+			echo "Enable ${owner_hint} instead." >&2
+			return 1
+		fi
+		DOTS_SEL_OWNER="package:${canon}"
+		DOTS_SEL_KIND="package"
+		DOTS_SEL_ID="${canon}"
+		return 0
+	fi
+
+	[[ ${leaf} == 1 ]] || return 0
+
+	# Non-interactive / --yes: keep group or component owner (legacy install hyperfine -> group:dev).
+	if [[ ${only} -eq 0 ]] && { [[ ${allow_prompt} -eq 0 ]] || [[ ${yes} -eq 1 ]]; }; then
+		return 0
+	fi
+
+	if [[ ${allow_prompt} -eq 1 ]] && { [[ -t 0 ]] || [[ -n ${DOTS_UI_ANSWERS:-} ]]; }; then
+		[[ -z ${DOTS_UI_ANSWER_FD:-} ]] && dots_ui_load_answers
+		echo ""
+		echo "${canon} belongs to ${owner_hint}."
+		echo "1) Install ${canon} only (explicit desired state)"
+		echo "2) Enable full ${owner_hint}"
+		echo "q) Cancel"
+		local pick=""
+		pick="$(dots_ui_read_line "Choose [1/2/q]" "1")" || return 1
+		case "${pick}" in
+		1 | "")
+			DOTS_SEL_OWNER="package:${canon}"
+			DOTS_SEL_KIND="package"
+			DOTS_SEL_ID="${canon}"
+			;;
+		2) ;;
+		q | Q)
+			echo "Aborted."
+			return 1
+			;;
+		*)
+			echo "Invalid choice." >&2
+			return 1
+			;;
+		esac
+	fi
 	return 0
 }
 
@@ -537,6 +651,7 @@ dots_profile_edit_compute() {
 			GROUPS_REG="$(_dots_pe_groups_registry)" \
 			COMPS_REG="$(_dots_pe_components_registry)" \
 			MARKER="${DOTS_OVERLAY_MARKER}" \
+			DOTS_DIR="${DIR}" \
 			HOME="${pyhome}" \
 			PYTHONDONTWRITEBYTECODE=1 \
 			PYTHONNOUSERSITE=1 \
@@ -545,6 +660,10 @@ import os
 import sys
 import tomllib
 from pathlib import Path
+
+sys.path.insert(0, str(Path(os.environ["DOTS_DIR"]) / "helpers"))
+import profile_merge as pm
+import package_truth as pt
 
 action = os.environ["ACTION"]
 owner = os.environ["OWNER"]
@@ -606,75 +725,6 @@ def str_list(val):
         return []
     return [str(x).strip() for x in val if str(x).strip()]
 
-def effective_state(chain):
-    pkgs = []
-    with_raw = []
-    without_raw = set()
-    include_all = False
-    pkg_explicit = False
-    prof_name = ""
-    for _p, data in chain:
-        prof = data.get("profile") or {}
-        if prof.get("name"):
-            prof_name = str(prof["name"]).strip()
-        if prof.get("include_all_optional"):
-            include_all = True
-        if "packages" in prof and prof["packages"] is not None:
-            pkgs = str_list(prof["packages"])
-            pkg_explicit = True
-        ptbl = data.get("packages") or {}
-        for g in str_list(ptbl.get("add")):
-            if g not in pkgs:
-                pkgs.append(g)
-            pkg_explicit = True
-        for g in str_list(ptbl.get("remove")):
-            pkgs = [x for x in pkgs if x != g]
-            pkg_explicit = True
-        if "groups" in ptbl and ptbl["groups"] is not None:
-            pkgs = str_list(ptbl["groups"])
-            pkg_explicit = True
-        for w in str_list(prof.get("with")):
-            if w not in with_raw:
-                with_raw.append(w)
-        for o in str_list(prof.get("without")):
-            without_raw.add(o)
-        ctbl = data.get("components") or {}
-        for w in str_list(ctbl.get("with")):
-            if w not in with_raw:
-                with_raw.append(w)
-        for o in str_list(ctbl.get("without")):
-            without_raw.add(o)
-
-    if include_all:
-        for c in comps_data.get("components") or []:
-            cid = str(c.get("id") or "").strip()
-            if cid and not c.get("omit_from_all") and cid not in with_raw:
-                with_raw.append(cid)
-
-    if not pkg_explicit and prof_name:
-        fb = builtin_dir / f"{prof_name}.toml"
-        if fb.is_file():
-            fb_data = tomllib.loads(fb.read_text(encoding="utf-8"))
-            pkgs = str_list((fb_data.get("profile") or {}).get("packages"))
-    if not pkg_explicit and not pkgs:
-        pkgs = ["core", "modern"]
-
-    expanded_without = set()
-    for o in without_raw:
-        if o in supergroups:
-            expanded_without.update(supergroups[o])
-        else:
-            expanded_without.add(o)
-
-    expanded_with = []
-    for w in with_raw:
-        members = supergroups.get(w, [w])
-        for m in members:
-            if m not in expanded_without and m not in expanded_with:
-                expanded_with.append(m)
-
-    return pkgs, with_raw, without_raw, expanded_with
-
 # Determine existing overlay data if overlay already exists and is reusable
 use_existing_overlay = False
 if overlay_file.is_file():
@@ -707,11 +757,32 @@ else:
     parent_chain = base_chain
     eff_chain = base_chain
 
-eff_pkgs, eff_with_raw, eff_without_raw, eff_with = effective_state(eff_chain)
+eff = pm.effective_state(eff_chain, comps_data=comps_data, builtin_dir=builtin_dir)
 if parent_chain:
-    par_pkgs, par_with_raw, par_without_raw, par_with = effective_state(parent_chain)
+    par = pm.effective_state(parent_chain, comps_data=comps_data, builtin_dir=builtin_dir)
 else:
-    par_pkgs, par_with_raw, par_without_raw, par_with = ([], [], set(), [])
+    par = {
+        "groups": [],
+        "with_raw": [],
+        "without_raw": set(),
+        "expanded_with": [],
+        "pkg_include": [],
+        "pkg_exclude": set(),
+        "supergroups": eff["supergroups"],
+    }
+eff_pkgs, eff_with_raw, eff_without_raw, eff_with = (
+    eff["groups"],
+    eff["with_raw"],
+    eff["without_raw"],
+    eff["expanded_with"],
+)
+eff_pkg_inc = eff["pkg_include"]
+par_pkgs = par["groups"]
+par_pkg_inc = par["pkg_include"]
+par_with = par["expanded_with"]
+par_with_raw = par["with_raw"]
+par_without_raw = par["without_raw"]
+supergroups = eff["supergroups"]
 
 # Extract editable overlay fields while preserving unrelated fields
 prof_sec = dict(overlay_data.get("profile") or {})
@@ -727,6 +798,8 @@ if not prof_sec.get("extends") and extends_val:
 pkg_add = str_list(pkg_sec.get("add"))
 pkg_remove = str_list(pkg_sec.get("remove"))
 pkg_groups = str_list(pkg_sec.get("groups")) if pkg_sec.get("groups") is not None else None
+pkg_include = str_list(pkg_sec.get("include"))
+pkg_exclude = str_list(pkg_sec.get("exclude"))
 prof_pkgs = str_list(prof_sec.get("packages")) if prof_sec.get("packages") is not None else None
 
 prof_with = str_list(prof_sec.get("with"))
@@ -840,6 +913,51 @@ elif kind in ("component", "supergroup"):
             unique_add(comp_without, item_id)
         diff_lines.append(f"- {kind}:{item_id}")
 
+elif kind == "package":
+    root = Path(os.environ["DOTS_DIR"])
+    known = pt.known_package_ids(root)
+    canon = item_id.split("/")[-1]
+    if canon not in known and item_id not in known:
+        raise SystemExit(f"Error: unknown package id '{item_id}' (not in DOTS registry)")
+    if action == "add":
+        if canon in eff_pkg_inc:
+            print("changed=0")
+            print(f"msg=package:{canon} is already desired. No profile change required.")
+            sys.exit(0)
+        meta = pt.find_package_meta(root, canon)
+        if not meta.get("installable"):
+            raise SystemExit(
+                f"Error: package '{canon}' is not installable on this platform "
+                f"({meta.get('unsupported_reason') or 'no route'})"
+            )
+        if not meta.get("leaf_selectable"):
+            raise SystemExit(
+                f"Error: package '{canon}' cannot be selected independently "
+                f"({meta.get('leaf_reason') or meta.get('owner')}). "
+                f"Enable its owner capability instead."
+            )
+        changed = True
+        if canon in pkg_exclude:
+            pkg_exclude = list_del(pkg_exclude, canon)
+            diff_lines.append(f"- remove exclusion: package:{canon}")
+        if canon not in par_pkg_inc:
+            unique_add(pkg_include, canon)
+            diff_lines.append(f"+ package:{canon}")
+        else:
+            diff_lines.append(f"+ package:{canon} (restored from parent)")
+    elif action == "remove":
+        if canon not in eff_pkg_inc:
+            print("changed=0")
+            print(f"msg=package:{canon} is not in desired explicit packages. No profile change required.")
+            sys.exit(0)
+        changed = True
+        pkg_include = list_del(pkg_include, canon)
+        if canon in par_pkg_inc and canon not in pkg_exclude:
+            unique_add(pkg_exclude, canon)
+        diff_lines.append(f"- package:{canon}")
+else:
+    raise SystemExit(f"Error: unsupported owner kind '{kind}'")
+
 def fmt_val(v):
     if isinstance(v, bool):
         return "true" if v else "false"
@@ -873,7 +991,8 @@ if prof_without:
 if prof_sec.get("open_apps") is not None:
     lines.append(f"open_apps = {fmt_val(str_list(prof_sec.get('open_apps')))}")
 
-if pkg_add or pkg_remove or pkg_groups is not None:
+need_pkg_tbl = bool(pkg_add or pkg_remove or pkg_groups is not None or pkg_include or pkg_exclude)
+if need_pkg_tbl:
     lines.append("")
     lines.append("[packages]")
     if pkg_groups is not None:
@@ -882,6 +1001,10 @@ if pkg_add or pkg_remove or pkg_groups is not None:
         lines.append(f"add = {fmt_val(pkg_add)}")
     if pkg_remove:
         lines.append(f"remove = {fmt_val(pkg_remove)}")
+    if pkg_include:
+        lines.append(f"include = {fmt_val(pkg_include)}")
+    if pkg_exclude:
+        lines.append(f"exclude = {fmt_val(pkg_exclude)}")
 
 if comp_with or comp_without:
     lines.append("")
@@ -1235,6 +1358,8 @@ def str_list(v):
 
 def resolve_state(chain):
     pkgs = []
+    pkg_include = []
+    pkg_exclude = set()
     with_raw = []
     without_raw = set()
     include_all = False
@@ -1261,6 +1386,12 @@ def resolve_state(chain):
         if "groups" in ptbl and ptbl["groups"] is not None:
             pkgs = str_list(ptbl["groups"])
             pkg_explicit = True
+        for p in str_list(ptbl.get("include")):
+            if p not in pkg_exclude and p not in pkg_include:
+                pkg_include.append(p)
+        for p in str_list(ptbl.get("exclude")):
+            pkg_exclude.add(p)
+            pkg_include = [x for x in pkg_include if x != p]
         for w in str_list(prof.get("with")):
             if w not in with_raw:
                 with_raw.append(w)
@@ -1310,7 +1441,17 @@ def resolve_state(chain):
             if m not in exp_without and m not in exp_with:
                 exp_with.append(m)
 
-    return set(pkgs), set(with_raw), without_raw, set(exp_with), exp_without, runtime
+    eff_inc = [p for p in pkg_include if p not in pkg_exclude]
+    return (
+        set(pkgs),
+        set(with_raw),
+        without_raw,
+        set(exp_with),
+        exp_without,
+        runtime,
+        set(eff_inc),
+        pkg_exclude,
+    )
 
 def profile_kind(p: Path) -> str:
     try:
@@ -1355,8 +1496,9 @@ if not file_arg:
         "groups": groups_map,
         "components": comps_map,
         "supergroups": sgs_map,
-        "local_additions": {"groups": [], "components": [], "supergroups": []},
-        "local_removals": {"groups": [], "components": [], "supergroups": []},
+        "explicit_packages": {},
+        "local_additions": {"groups": [], "components": [], "supergroups": [], "packages": []},
+        "local_removals": {"groups": [], "components": [], "supergroups": [], "packages": []},
     }, indent=2))
     raise SystemExit(0)
 
@@ -1371,16 +1513,37 @@ ext_val = str(leaf_prof.get("extends") or "").strip() or None
 pkind = profile_kind(leaf_path)
 phash = hashlib.sha256(leaf_path.read_bytes()).hexdigest()
 
-eff_pkgs, eff_wraw, eff_oraw, eff_with, eff_without, runtime = resolve_state(chain)
+(
+    eff_pkgs,
+    eff_wraw,
+    eff_oraw,
+    eff_with,
+    eff_without,
+    runtime,
+    eff_pkg_inc,
+    eff_pkg_exc,
+) = resolve_state(chain)
 if len(chain) > 1:
-    par_pkgs, par_wraw, par_oraw, par_with, par_without, _ = resolve_state(chain[:-1])
+    (
+        par_pkgs,
+        par_wraw,
+        par_oraw,
+        par_with,
+        par_without,
+        _rt,
+        par_pkg_inc,
+        par_pkg_exc,
+    ) = resolve_state(chain[:-1])
 else:
     if pkind == "builtin":
         par_pkgs, par_wraw, par_oraw, par_with, par_without = (eff_pkgs, eff_wraw, eff_oraw, eff_with, eff_without)
+        par_pkg_inc, par_pkg_exc = (eff_pkg_inc, eff_pkg_exc)
     else:
         par_pkgs, par_wraw, par_oraw, par_with, par_without = (set(), set(), set(), set(), set())
+        par_pkg_inc, par_pkg_exc = (set(), set())
 
 leaf_pkg_remove = set(str_list(leaf_pkg.get("remove")))
+leaf_pkg_exclude = set(str_list(leaf_pkg.get("exclude")))
 leaf_comp_without = set(str_list(leaf_prof.get("without")) + str_list(leaf_comp.get("without")))
 
 groups_map = {}
@@ -1446,6 +1609,23 @@ loc_rem_comps = [c for c, v in comps_map.items() if v["state"] == "excluded"]
 loc_add_sgs = [s for s, v in sgs_map.items() if v["state"] == "local"]
 loc_rem_sgs = [s for s, v in sgs_map.items() if v["state"] == "excluded"]
 
+explicit_map = {}
+all_explicit = eff_pkg_inc | par_pkg_inc | eff_pkg_exc | par_pkg_exc
+for pid in sorted(all_explicit):
+    if pid in eff_pkg_exc:
+        st = "excluded"
+    elif pid in eff_pkg_inc:
+        st = "inherited" if pid in par_pkg_inc else "local"
+    elif pid in par_pkg_inc and pid in leaf_pkg_exclude:
+        st = "excluded"
+    elif pid in par_pkg_inc:
+        st = "inherited"
+    else:
+        st = "absent"
+    explicit_map[pid] = {"state": st}
+loc_add_pkgs = [p for p, v in explicit_map.items() if v["state"] == "local"]
+loc_rem_pkgs = [p for p, v in explicit_map.items() if v["state"] == "excluded"]
+
 print(json.dumps({
     "schema_version": 1,
     "active": active_flag,
@@ -1459,15 +1639,18 @@ print(json.dumps({
     "groups": groups_map,
     "components": comps_map,
     "supergroups": sgs_map,
+    "explicit_packages": explicit_map,
     "local_additions": {
         "groups": loc_add_groups,
         "components": loc_add_comps,
         "supergroups": loc_add_sgs,
+        "packages": loc_add_pkgs,
     },
     "local_removals": {
         "groups": loc_rem_groups,
         "components": loc_rem_comps,
         "supergroups": loc_rem_sgs,
+        "packages": loc_rem_pkgs,
     },
 }, indent=2))
 PY
