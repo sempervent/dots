@@ -107,5 +107,10 @@ run scripts/tests/containers_k8s_validate_test.sh
 run scripts/tests/v190_workstation_ergonomics_test.sh
 run scripts/tests/lifecycle_ux_test.sh
 run scripts/tests/tui_api_test.sh
+run scripts/tests/capability_truth_test.sh
+
+echo ""
+echo "=== Registry convergence audit ==="
+./dots packages audit
 
 echo "OK: all CI tests passed"

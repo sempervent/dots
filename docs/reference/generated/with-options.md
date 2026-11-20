@@ -24,6 +24,7 @@ Terminal multiplexer (Brewfile.herdr)
 - **category:** multiplexer
 - **platforms:** darwin, linux
 - **brewfile:** `brew/Brewfile.herdr`
+- **helper:** `helpers/bootstrap_prereqs.sh`
 - **formulae:** `herdr`
 - **activate:** `./dots setup --with herdr`
 
@@ -219,6 +220,8 @@ Optional professional NLE via Mac App Store (mas; install-only; never launch, sc
 - **platforms:** darwin
 - **brewfile:** `brew/Brewfile.davinci-resolve`
 - **omit_from_all:** yes
+- **helper:** `helpers/davinci_resolve.sh`
+- **helper_packages:** `davinci-resolve`
 - **formulae:** `mas`
 - **activate:** `./dots setup --with davinci-resolve`
 
@@ -277,6 +280,8 @@ Programmable coding-agent runtime for DOTS local-first agent orchestration (npm;
 - **category:** ai_client
 - **platforms:** darwin, linux
 - **brewfile:** `brew/Brewfile.pi`
+- **helper:** `helpers/pi.sh`
+- **helper_packages:** `@earendil-works/pi-coding-agent`
 - **activate:** `./dots setup --with pi`
 
 ### `litellm`
@@ -297,6 +302,8 @@ Filesystem/network policy and OS-level command sandbox for DOTS agents (provider
 - **category:** agent_security
 - **platforms:** darwin, linux
 - **brewfile:** `brew/Brewfile.agent-sandbox`
+- **helper:** `helpers/agent_sandbox.sh`
+- **helper_packages:** `pi-sandbox`
 - **formulae:** `ripgrep`
 - **activate:** `./dots setup --with agent-sandbox`
 
@@ -308,6 +315,8 @@ Persistent multi-agent orchestration for Pi, Codex and other coding runtimes (np
 - **category:** agent_orchestration
 - **platforms:** darwin, linux
 - **brewfile:** `brew/Brewfile.openrig`
+- **helper:** `helpers/openrig.sh`
+- **helper_packages:** `@openrig/cli`
 - **formulae:** `fnm`, `tmux`
 - **activate:** `./dots setup --with openrig`
 

@@ -1,23 +1,26 @@
 .\" GENERATED — DO NOT EDIT.
 .\" Source: configs/help/commands.toml + scripts/docs/generate_manpages.py
 .
-.TH DOTS\-PACKAGES 1 "2026-11-02" "DOTS 1.11.0" "User Commands"
+.TH DOTS\-PACKAGES 1 "2026-11-02" "DOTS 1.12.0" "User Commands"
 .SH NAME
-dots\-packages \- Package ownership, drift, groups, and upgrades.
+dots\-packages \- Package ownership, installability audit, drift, groups, and
 .SH SYNOPSIS
-.B dots packages [groups|group|plan|status|explain|outdated|upgrade|adopt]
+.B dots packages [groups|group|plan|status|explain|outdated|upgrade|adopt|audit]
 .SH DESCRIPTION
-Package ownership, drift, groups, and upgrades.
+Package ownership, installability audit, drift, groups, and upgrades.
 .SH EXAMPLES
 .TP
 .B dots packages groups
-List capability groups.
+List capability groups with platform support counts.
+.TP
+.B dots packages audit
+Run offline registry, Brewfile, and platform\-map convergence audit.
 .TP
 .B dots packages status
-Full package ownership audit.
+Full package ownership report.
 .TP
 .B dots packages explain bat
-Explain one package's ownership state.
+Explain one package's ownership and installability state.
 .SH SEE ALSO
 .BR dots (1),
 .BR dots\-help (1)

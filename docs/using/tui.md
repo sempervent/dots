@@ -75,10 +75,18 @@ Set `DOTS_TUI_ASCII=1` to use ASCII-only glyphs (`*`, `+`, ` `, `-`, `!`).
 ## Package search and owner resolution
 
 Press `/` to search across groups, bundles (supergroups), components,
-descriptions, and packages. Selecting a package uses the DOTS owner resolver
-(`dots profile resolve <pkg> --json`) to highlight its owning group or component
-and explain the full capability impact. When a package has multiple owners (such
-as `taplo`), the TUI prompts you to choose rather than picking arbitrarily.
+descriptions, and packages. Search results and group detail panes consume
+structured backend installability metadata (`./dots packages groups --json` and
+`./dots profile resolve <pkg> --json`) directly without hard-coding package
+rules in Python:
+
+- Group rows show true platform support alongside installed counts.
+- Package search hits show `Owner`, `Installable`, and `Installed` (or
+  `Platform: unavailable through DOTS on this machine` when a known package such
+  as `tflint` has no supported installer on the host platform).
+- Selecting a package reveals its owning group or component and explains full
+  capability impact. When a package has multiple owners (such as `taplo`), the
+  TUI prompts you to choose rather than picking arbitrarily.
 
 ## Keyboard shortcuts
 

@@ -27,6 +27,7 @@ brew "hashicorp/tap/vault"
 brew "hashicorp/tap/packer"
 
 # homebrew/core IaC companions
+brew "opentofu"
 brew "terraform-docs"
 brew "checkov"
 brew "infracost"

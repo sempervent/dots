@@ -245,11 +245,11 @@ class PackageSearchModal(ModalScreen[tuple[str, str] | None]):
         status = res.get("status")
         if status == "ok" and res.get("owner"):
             owner = str(res["owner"])
-            note = self._build_package_note(raw, owner, res.get("group_packages") or [])
+            note = self._build_package_note(raw, owner, res.get("group_packages") or [], res)
             self.dismiss((owner, note))
         elif status == "ambiguous":
             choices = list(res.get("choices") or [])
-            self._pick_ambiguous(raw, choices, res.get("group_packages") or {})
+            self._pick_ambiguous(raw, choices, res.get("group_packages") or {}, res)
         else:
             self.query_one("#search-hint", Static).update(
                 f"'{raw}' is not declared in DOTS. Maintainer workflow: dots packages adopt {raw} --group modern"
@@ -268,35 +268,80 @@ class PackageSearchModal(ModalScreen[tuple[str, str] | None]):
         status = res.get("status")
         if status == "ok" and res.get("owner"):
             owner = str(res["owner"])
-            note = self._build_package_note(hit.target_id, owner, res.get("group_packages") or [])
+            note = self._build_package_note(hit.target_id, owner, res.get("group_packages") or [], res)
             self.dismiss((owner, note))
         elif status == "ambiguous":
             choices = list(res.get("choices") or [])
-            self._pick_ambiguous(hit.target_id, choices, res.get("group_packages") or {})
+            self._pick_ambiguous(hit.target_id, choices, res.get("group_packages") or {}, res)
         elif hit.owner_selector:
             self.dismiss((hit.owner_selector, ""))
 
-    def _pick_ambiguous(self, pkg: str, choices: list[str], grp_pkgs: dict[str, list[str]]) -> None:
+    def _pick_ambiguous(
+        self,
+        pkg: str,
+        choices: list[str],
+        grp_pkgs: dict[str, list[str]],
+        res: dict[str, Any] | None = None,
+    ) -> None:
         def _picked(choice: str | None) -> None:
             if not choice:
                 return
             gpkgs = grp_pkgs.get(choice.split(":", 1)[1], []) if choice.startswith("group:") else []
-            note = self._build_package_note(pkg, choice, gpkgs)
+            note = self._build_package_note(pkg, choice, gpkgs, res)
             self.dismiss((choice, note))
 
         self.app.push_screen(AmbiguousOwnerModal(pkg, choices), _picked)
 
-    def _build_package_note(self, pkg: str, owner: str, group_pkgs: list[str]) -> str:
+    def _build_package_note(
+        self,
+        pkg: str,
+        owner: str,
+        group_pkgs: list[str],
+        res: dict[str, Any] | None = None,
+    ) -> str:
+        res = res or {}
+        pkg_info = res.get("package") or {}
+        grp_sum = res.get("group_summary") or {}
+        lines: list[str] = []
+        if pkg_info:
+            lines.append(f"{pkg_info.get('name') or pkg}")
+            lines.append(f"Owner: {owner}")
+            if not pkg_info.get("installable", True):
+                lines.append("Platform: unavailable through DOTS on this machine")
+                if pkg_info.get("unsupported_reason"):
+                    lines.append(f"Reason: {pkg_info['unsupported_reason']}")
+                inst_lbl = "yes (external)" if pkg_info.get("installed") else "no"
+                lines.append(f"Installed: {inst_lbl}")
+            else:
+                meth = pkg_info.get("install_method") or "brew"
+                tok = pkg_info.get("install_token") or pkg
+                lines.append(f"Installable: yes ({meth}: {tok})")
+                inst_lbl = "yes (external)" if pkg_info.get("external") else ("yes" if pkg_info.get("installed") else "no")
+                lines.append(f"Installed: {inst_lbl}")
+            lines.append("")
+
         if not owner.startswith("group:"):
-            return f"Package {pkg} is provided by {owner}."
+            if not lines:
+                return f"Package {pkg} is provided by {owner}."
+            lines.append(f"Selecting {owner} enables this component.")
+            return "\n".join(lines)
+
         gname = owner.split(":", 1)[1]
+        if pkg_info and not pkg_info.get("installable", True):
+            supp = grp_sum.get("supported_package_count")
+            tot = grp_sum.get("package_count")
+            cnt_note = f" ({supp}/{tot} supported)" if supp is not None and tot is not None else ""
+            lines.append(
+                f"Direct install of {pkg} is unavailable here, though selecting {owner}{cnt_note} remains valid."
+            )
+        else:
+            lines.append(f"Selecting {pkg} activates package group {gname}.")
+
         others = [p for p in group_pkgs if p != pkg]
         preview = "\n".join(f"  {p}" for p in others[:12])
         more = f"\n  ... (+{len(others) - 12} more)" if len(others) > 12 else ""
-        return (
-            f"Selecting {pkg} activates package group {gname}.\n\n"
-            f"Additional desired packages:\n{preview}{more}"
-        )
+        lines.extend(["", f"Additional packages in {gname}:", f"{preview}{more}"])
+        return "\n".join(lines)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-cancel":

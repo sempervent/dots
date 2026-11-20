@@ -168,6 +168,30 @@ PY
 			)
 		fi
 	fi
+	# Declarative logical ids in groups.toml (includes platform-unsupported capabilities like tflint) + helper packages
+	local grp_reg="${DOTS_GROUPS_REGISTRY:-${DIR}/configs/packages/groups.toml}"
+	if [[ -f ${grp_reg} ]] && declare -F dots_toml_query >/dev/null 2>&1; then
+		local _gname _gpkg
+		while IFS=$'\t' read -r _gpkg _gname; do
+			[[ -z ${_gpkg} || -z ${_gname} ]] && continue
+			DOTS_PKG_OWNERSHIP_INDEX="${DOTS_PKG_OWNERSHIP_INDEX}${_gpkg}"$'\t'"${_gname}"$'\n'
+		done < <(
+			dots_toml_query "${grp_reg}" <<'PY'
+for g in data.get("groups") or []:
+    gname = str(g.get("name") or "").strip()
+    if not gname:
+        continue
+    for cls in ("required", "optional", "tools", "brew_companions"):
+        for t in g.get(cls) or []:
+            tok = str(t).strip()
+            if tok:
+                print("%s\tgroup:%s" % (tok.split("/")[-1], gname))
+for pid, hp in (data.get("helper_packages") or {}).items():
+    if isinstance(hp, dict) and str(hp.get("owner") or "").strip():
+        print("%s\t%s" % (str(pid).strip(), str(hp["owner"]).strip()))
+PY
+		)
+	fi
 	DOTS_PKG_OWNERSHIP_BUILT=1
 }
 
@@ -715,10 +739,47 @@ dots_pkg_explain() {
 		known_str="$(dots_pkg_known_owners "${name}" | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
 	fi
 
+	local installable_str="unknown" install_method="none" unsup_reason=""
+	if [[ -f ${DIR}/helpers/package_truth.py ]] && declare -F dots_require_python >/dev/null 2>&1 && dots_require_python 0 2>/dev/null; then
+		local _truth_out _pyhome
+		_pyhome="$(mktemp -d "${TMPDIR:-/tmp}/dots-pkg-exp.XXXXXX")"
+		_truth_out="$(
+			DOTS_DIR="${DIR}" \
+				HOME="${_pyhome}" \
+				PYTHONDONTWRITEBYTECODE=1 \
+				PYTHONNOUSERSITE=1 \
+				"${DOTS_PYTHON}" -B "${DIR}/helpers/package_truth.py" resolve --selector "${name}" 2>/dev/null || true
+		)"
+		rm -rf "${_pyhome}"
+		if [[ -n ${_truth_out} ]]; then
+			local _parsed
+			_parsed="$(
+				TRUTH_JSON="${_truth_out}" "${DOTS_PYTHON}" -B - <<'PY' 2>/dev/null || true
+import json, os
+d = json.loads(os.environ["TRUTH_JSON"])
+pkg = d.get("package") or {}
+inst = d.get("installable")
+print("INST=" + ("yes" if inst else "no"))
+print("METH=" + str(pkg.get("install_method") or "none"))
+print("REAS=" + str(d.get("unsupported_reason") or pkg.get("unsupported_reason") or ""))
+PY
+			)"
+			while IFS= read -r _line; do
+				case "${_line}" in
+				INST=*) installable_str="${_line#INST=}" ;;
+				METH=*) install_method="${_line#METH=}" ;;
+				REAS=*) unsup_reason="${_line#REAS=}" ;;
+				esac
+			done <<<"${_parsed}"
+		fi
+	fi
+
 	echo "Package: ${name}"
 	echo "  kind:          ${kind}"
 	echo "  installed:     ${installed}"
 	echo "  brew-owned:    ${brew_owned}"
+	echo "  installable:   ${installable_str} (${install_method})"
+	[[ -n ${unsup_reason} ]] && echo "  unsupported:   ${unsup_reason}"
 	echo "  outdated:      ${outdated}"
 	echo "  state:         ${state}"
 	echo "  owner:         ${known_str:-(none)}"
@@ -734,11 +795,13 @@ dots_pkg_explain() {
 	if [[ -n ${known_str} ]]; then
 		echo "${known_str}"
 	else
-		echo "(none — not in group/component Brewfiles)"
+		echo "(none — not in groups/components registry)"
 	fi
 	echo "  activate:"
-	if [[ -n ${known_str} ]]; then
+	if [[ -n ${known_str} && ${installable_str} != "no" ]]; then
 		echo "    ./dots install ${name}"
+	elif [[ -n ${known_str} && ${installable_str} == "no" ]]; then
+		echo "    (direct install unavailable on this platform; select owning group instead)"
 	fi
 	dots_pkg_activate_hint "${name}" | sed 's/^/    /'
 	if [[ -n ${known_str} ]]; then

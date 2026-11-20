@@ -31,17 +31,22 @@ In `groups.toml`, each group lists **required** and **optional** portable ids.
 - **required** → ERROR after install if missing (profile contract)
 - **optional** → WARN if missing; may be `""` (SKIP) on some Linux maps
 
-## known ≠ selected ≠ installed
+## known ≠ installable ≠ installed ≠ selected
 
 | Term | Meaning |
 |------|---------|
-| **known** | Appears in `brew/groups/*.Brewfile` (or a component brewfile) |
-| **selected** | Active via profile `packages=` / resolved groups |
+| **known** | Appears in `configs/packages/groups.toml`, `brew/groups/*.Brewfile`, or a component registry entry |
+| **installable** | DOTS has an authoritative installation mechanism for this package on the current platform |
+| **unsupported** | Known capability has no DOTS-supported install route on this platform |
 | **installed** | Present on the machine |
+| **external** | Present on the machine, not owned by DOTS's selected install mechanism |
+| **selected** | Active via profile `packages=` / resolved groups or `with=` |
 
 An installed tool whose owner group is not selected is **INACTIVE**, not
-**UNDECLARED**. See [Components](components.md) and
-[Packages](../concepts/packages.md).
+**UNDECLARED**. Direct `./dots install <package>` refuses packages that are
+known but **unsupported** on the current platform, while selecting the owning
+group (`./dots install <group>`) remains valid when only optional members are
+unavailable. See [Components](components.md) and [Packages](../concepts/packages.md).
 
 ## Composition
 
@@ -99,10 +104,11 @@ components, supergroups, or package-owned tools into a sparse overlay
 ## CLI (read-only)
 
 ```bash
-./dots packages groups                    # all groups + active marker
+./dots packages groups                    # all groups + active marker + supported counts
 ./dots packages group geo                 # brewfile, membership, platform map, states
 ./dots packages plan --profile home       # resolved groups + components + counts
 ./dots packages plan --profile ./my.toml
+./dots packages audit [--json]            # offline registry / Brewfile / map integrity audit
 ```
 
 `plan` never installs, authenticates, or runs `brew outdated`. Reading a plan
@@ -120,11 +126,12 @@ These tools may be installed via groups; DOTS does **not** configure them:
 | **SOPS / age / Cosign** | Install only — no key generation |
 | **rclone** | Install only — no remotes / credentials |
 
-### mitmproxy (deferred)
+### mitmproxy (explicit opt-in component)
 
-`mitmproxy` is **not** in the `network` group. TLS interception is a different
-consent surface than ordinary networking CLIs. Future opt-in only — not in this
-control-plane release.
+`mitmproxy` is **not** in the default `network` group because TLS interception
+is a distinct consent surface from ordinary networking CLIs. It is available as
+an explicit opt-in component (`--with mitmproxy` or `./dots install mitmproxy`,
+`omit_from_all = true`; see [Components reference](../reference/generated/components.md)).
 
 ## Platform maps
 

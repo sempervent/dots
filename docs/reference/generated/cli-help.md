@@ -11,7 +11,7 @@ Captured from safe `--help` / `help` invocations. If a binary is missing or help
 ## `./dots`
 
 ```text
-DOTS — machine environment manager  (v1.11.0)
+DOTS — machine environment manager  (v1.12.0)
 
 Usage:
   ./dots setup [options]            Interactive or noninteractive setup / reconfigure...
@@ -23,7 +23,7 @@ Usage:
   ./dots lsp [status|check|install|list] Language-server install, status, and checks.
   ./dots ai [status|doctor|up|down|…] AI inference server (Compose + Open WebUI) control...
   ./dots agent [status|doctor|sandbox|models|scout|eval|team|run|…] Local-first agent harness (Pi, OpenRig, evals...
-  ./dots packages [groups|group|plan|status|explain|outdated|upgrade|adopt] Package ownership, drift, groups, and upgrades.
+  ./dots packages [groups|group|plan|status|explain|outdated|upgrade|adopt|audit] Package ownership, installability audit, drift...
   ./dots backup [--name N]          Snapshot managed targets under...
   ./dots backups                    List recoverable DOTS snapshots.
   ./dots restore [ID]               Restore a snapshot (creates a safety snapshot first).
@@ -359,6 +359,8 @@ Usage:
   ./dots packages adopt NAME [--group G|--component C] [--cask]
                                print suggested Brewfile declaration (no auto-edit)
                                (packages with component owners → use --with instead)
+  ./dots packages audit [--json] [--strict]
+                               offline registry / Brewfile / platform-map audit
 
 groups = capability ownership (configs/packages/groups.toml)
 plan   = resolved package actions for a profile, without mutation

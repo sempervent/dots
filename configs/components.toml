@@ -16,6 +16,7 @@ cloud = false
 local_ai = false
 platforms = ["darwin", "linux"]
 brewfile = "brew/Brewfile.herdr"
+helper = "helpers/bootstrap_prereqs.sh"
 description = "Terminal multiplexer (Brewfile.herdr)"
 
 [[components]]
@@ -192,6 +193,8 @@ local_ai = false
 omit_from_all = true
 platforms = ["darwin"]
 brewfile = "brew/Brewfile.davinci-resolve"
+helper = "helpers/davinci_resolve.sh"
+helper_packages = ["davinci-resolve"]
 description = "Optional professional NLE via Mac App Store (mas; install-only; never launch, scan media, or require App Store auth globally)"
 
 [[components]]
@@ -245,6 +248,8 @@ cloud = false
 local_ai = true
 platforms = ["darwin", "linux"]
 brewfile = "brew/Brewfile.pi"
+helper = "helpers/pi.sh"
+helper_packages = ["@earendil-works/pi-coding-agent"]
 description = "Programmable coding-agent runtime for DOTS local-first agent orchestration (npm; Node ≥22.19)"
 
 [[components]]
@@ -265,6 +270,9 @@ cloud = false
 local_ai = false
 platforms = ["darwin", "linux"]
 brewfile = "brew/Brewfile.agent-sandbox"
+helper = "helpers/agent_sandbox.sh"
+helper_packages = ["pi-sandbox"]
+linux_packages = ["bubblewrap", "socat"]
 description = "Filesystem/network policy and OS-level command sandbox for DOTS agents (provider: pi-sandbox)"
 
 [[components]]
@@ -275,6 +283,8 @@ cloud = false
 local_ai = true
 platforms = ["darwin", "linux"]
 brewfile = "brew/Brewfile.openrig"
+helper = "helpers/openrig.sh"
+helper_packages = ["@openrig/cli"]
 description = "Persistent multi-agent orchestration for Pi, Codex and other coding runtimes (npm @openrig/cli; Node ≥22)"
 
 # Declarative selector aggregates. Expand to member component ids before install.

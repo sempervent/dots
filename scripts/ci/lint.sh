@@ -86,6 +86,7 @@ SCRIPTS=(
 	scripts/tests/linux_distro_test.sh
 	scripts/tests/lifecycle_ux_test.sh
 	scripts/tests/tui_api_test.sh
+	scripts/tests/capability_truth_test.sh
 	scripts/mactools/export-configs.sh
 	scripts/mactools/import-configs.sh
 	scripts/mactools/docker-orbstack-audit.sh
@@ -127,6 +128,7 @@ shfmt -d -s \
 	scripts/ci/test.sh \
 	scripts/ci/distro_smoke.sh \
 	scripts/ci/distro_smoke_inner.sh \
-	scripts/ci/macos_smoke.sh
+	scripts/ci/macos_smoke.sh \
+	scripts/tests/capability_truth_test.sh
 
 echo "OK: lint"

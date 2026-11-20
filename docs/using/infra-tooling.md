@@ -14,8 +14,8 @@ CLIs. DOTS validates tooling locally and does **not** deploy infrastructure.
 
 | Tool | Role |
 |------|------|
-| `terraform` | IaC engine (HashiCorp tap; pre-existing) |
-| `tofu` | OpenTofu (optional if user-installed; **not** auto-migrated) |
+| `terraform` | IaC engine (`hashicorp/tap/terraform` on Homebrew; `pacman` on Arch) |
+| `tofu` | OpenTofu (`opentofu` package in `infra`: Homebrew, Fedora, Arch, Void; `apt` unsupported without external repo; **not** auto-migrated) |
 | `terraform-docs` | Module documentation generator |
 | `tflint` | Terraform linter (no current Homebrew formula; install from releases/Linux) |
 | `checkov` | Static IaC policy/security scan (**owned by infra**; local CLI) |
@@ -29,8 +29,16 @@ CLIs. DOTS validates tooling locally and does **not** deploy infrastructure.
 
 ## Terraform vs OpenTofu
 
-DOTS supports whichever binary is installed. It does **not** rename providers,
-rewrite `required_version`, convert state, or migrate backends.
+Terraform and OpenTofu are complementary supported IaC engines in `infra`. DOTS
+installs `opentofu` (`tofu` binary) on platforms with an authoritative native or
+Homebrew package (macOS/Linuxbrew, Fedora, Arch/Manjaro, Void), while reporting
+`apt` honestly as unsupported rather than enrolling third-party repositories.
+
+`./dots check infra` reports version metadata for both `terraform` and `tofu`
+when present, and `./dots check infra gate` runs non-mutating `fmt -check`
+against local fixtures using whichever engines are installed. DOTS **never**
+renames providers, rewrites `required_version`, runs `init`, converts `.tfstate`,
+or migrates backends between Terraform and OpenTofu.
 
 ## Diagnostics
 

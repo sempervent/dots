@@ -66,8 +66,10 @@ bash scripts/tests/network_hardware_validate_test.sh
 bash scripts/tests/v190_workstation_ergonomics_test.sh
 bash scripts/tests/lifecycle_ux_test.sh
 bash scripts/tests/tui_api_test.sh
+bash scripts/tests/capability_truth_test.sh
 bash scripts/tests/dots_help_test.sh
 
+/bin/bash ./dots packages audit
 /bin/bash ./dots --version
 /bin/bash ./dots help >/dev/null
 

@@ -194,6 +194,14 @@ def generate_with_options(check: bool) -> bool:
         parts.append(f"- **brewfile:** `{bf}`\n" if bf else "- **brewfile:** —\n")
         if c.get("omit_from_all"):
             parts.append("- **omit_from_all:** yes\n")
+        if c.get("helper"):
+            parts.append(f"- **helper:** `{c['helper']}`\n")
+        if c.get("helper_packages"):
+            parts.append(
+                "- **helper_packages:** "
+                + ", ".join(f"`{x}`" for x in c["helper_packages"])
+                + "\n"
+            )
         if bf:
             formulae, casks = _parse_brewfile_tokens(ROOT / bf)
             if formulae:
@@ -234,13 +242,32 @@ def generate_with_options(check: bool) -> bool:
 
 
 def generate_package_groups(check: bool) -> bool:
-    src = "configs/packages/groups.toml"
-    data = load_toml(ROOT / src)
+    src = "configs/packages/groups.toml + brew/groups/*.Brewfile + configs/packages/{apt,dnf,pacman,xbps}.toml"
+    data = load_toml(ROOT / "configs" / "packages" / "groups.toml")
+    aliases = {
+        str(k).strip(): str(v).strip()
+        for k, v in (data.get("brew_aliases") or {}).items()
+        if str(k).strip() and str(v).strip()
+    }
+    helper_pkgs = {
+        str(k).strip(): dict(v)
+        for k, v in (data.get("helper_packages") or {}).items()
+        if str(k).strip() and isinstance(v, dict)
+    }
+    linux_maps = {}
+    for mgr in ("apt", "dnf", "pacman", "xbps"):
+        mdata = load_toml(ROOT / "configs" / "packages" / f"{mgr}.toml")
+        linux_maps[mgr] = {
+            str(k).strip(): str(v).strip()
+            for k, v in (mdata.get("packages") or {}).items()
+            if str(k).strip()
+        }
+
     parts = [
         gen_header(src),
         "\n# Package groups (generated)\n\n",
-        "Logical groups from `configs/packages/groups.toml`. "
-        "Homebrew ownership: `brew/groups/<name>.Brewfile`.\n\n",
+        "Logical groups from `configs/packages/groups.toml` with per-platform install routes "
+        "(`brew/groups/<name>.Brewfile`, helper packages, and `configs/packages/*.toml`).\n\n",
     ]
     for g in data.get("groups") or []:
         name = g.get("name", "")
@@ -248,8 +275,35 @@ def generate_package_groups(check: bool) -> bool:
         parts.append(f"{g.get('description', '')}\n\n")
         req = g.get("required") or []
         opt = g.get("optional") or []
+        comp = g.get("brew_companions") or []
         parts.append(f"**Required:** {', '.join(f'`{x}`' for x in req) or '(none)'}\n\n")
         parts.append(f"**Optional:** {', '.join(f'`{x}`' for x in opt) or '(none)'}\n\n")
+        if comp:
+            parts.append(f"**Brew companions:** {', '.join(f'`{x}`' for x in comp)}\n\n")
+
+        bf_f, bf_c = _parse_brewfile_tokens(ROOT / "brew" / "groups" / f"{name}.Brewfile")
+        bf_shorts = {t.split("/")[-1] for t in bf_f + bf_c}
+        rows = []
+        for cls, ids in (("required", req), ("optional", opt)):
+            for pid in ids:
+                if pid in helper_pkgs and helper_pkgs[pid].get("owner") == f"group:{name}":
+                    h = helper_pkgs[pid]
+                    brew_str = f"helper (`{h.get('helper')}`)"
+                    lin_str = f"helper (`{h.get('helper')}`)"
+                else:
+                    at = aliases.get(pid, pid)
+                    if at in bf_f or at in bf_c or at.split("/")[-1] in bf_shorts:
+                        brew_str = f"`{at}`"
+                    else:
+                        brew_str = "unsupported"
+                    lin_parts = [
+                        mgr for mgr in ("apt", "dnf", "pacman", "xbps") if linux_maps[mgr].get(pid)
+                    ]
+                    lin_str = ", ".join(lin_parts) if lin_parts else "unsupported"
+                rows.append([f"`{pid}`", cls, brew_str, lin_str])
+        if rows:
+            parts.append(md_table(["package", "class", "darwin/brew", "linux native"], rows))
+            parts.append("\n")
     return write_or_check(GEN_DIR / "package-groups.md", "".join(parts), check=check)
 
 

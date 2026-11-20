@@ -101,8 +101,12 @@ class CapabilityItem:
     optional: list[str] = field(default_factory=list)
     required_count: int = 0
     optional_count: int = 0
+    package_count: int = 0
     supported_package_count: int = 0
+    unsupported_package_count: int = 0
     installed_count: int = 0
+    required_unsupported: list[str] = field(default_factory=list)
+    unsupported_packages: list[str] = field(default_factory=list)
     packages: list[dict[str, Any]] = field(default_factory=list)
     brewfile: str = ""
     # Component fields
@@ -133,6 +137,11 @@ class SearchHit:
     kind: str  # "group" | "component" | "supergroup" | "package"
     target_id: str  # group/component/supergroup id or package name
     owner_selector: str | None = None  # e.g. "group:dev" when unambiguous
+    installable: bool | None = None
+    installed: bool | None = None
+    external: bool = False
+    install_method: str = ""
+    unsupported_reason: str = ""
 
 
 class DesiredStateModel:
@@ -149,12 +158,14 @@ class DesiredStateModel:
         self.source_chain: list[dict[str, Any]] = []
         self.runtime: dict[str, Any] = {}
         self.os_name: str = ""
+        self.pkg_mgr: str = ""
         self.groups: list[CapabilityItem] = []
         self.components: list[CapabilityItem] = []
         self.supergroups: list[CapabilityItem] = []
         self.profiles_catalog: list[dict[str, Any]] = []
         self._by_selector: dict[str, CapabilityItem] = {}
         self._pkg_index: dict[str, list[CapabilityItem]] = {}
+        self._pkg_meta_index: dict[str, list[tuple[CapabilityItem, dict[str, Any]]]] = {}
 
     def load(self, profile: str | None = None) -> None:
         pshow = self.backend.profile_show(profile)
@@ -174,19 +185,26 @@ class DesiredStateModel:
         self.extends = str(pshow.get("extends") or "")
         self.source_chain = list(pshow.get("source_chain") or [])
         self.runtime = dict(pshow.get("runtime") or {})
-        self.os_name = str(cdata.get("os") or "")
+        self.os_name = str(gdata.get("os") or cdata.get("os") or "")
+        self.pkg_mgr = str(gdata.get("pkg_mgr") or "")
 
         self.groups = []
         self.components = []
         self.supergroups = []
         self._by_selector = {}
         self._pkg_index = {}
+        self._pkg_meta_index = {}
 
         for g in gdata.get("groups") or []:
             name = str(g.get("name") or "").strip()
             if not name:
                 continue
             st = SelectionState.from_raw(str(g.get("selected_state") or "absent"))
+            raw_psup = bool(g.get("platform_supported", True))
+            # If pkg_mgr is unknown (e.g. DOTS_FORCE_OS=linux on a Darwin test host without DOTS_FORCE_PKG_MGR),
+            # keep group toggleable while surfacing unsupported_reason honestly.
+            sup = True if self.pkg_mgr == "unknown" else raw_psup
+            pkgs_list = list(g.get("packages") or [])
             item = CapabilityItem(
                 kind="group",
                 id=name,
@@ -195,14 +213,19 @@ class DesiredStateModel:
                 category="Package Groups",
                 persisted=st,
                 working=st,
-                supported=True,
+                supported=sup,
+                unsupported_reason=str(g.get("unsupported_reason") or ""),
                 required=list(g.get("required") or []),
                 optional=list(g.get("optional") or []),
                 required_count=int(g.get("required_count") or 0),
                 optional_count=int(g.get("optional_count") or 0),
+                package_count=int(g.get("package_count") or len(pkgs_list)),
                 supported_package_count=int(g.get("supported_package_count") or 0),
+                unsupported_package_count=int(g.get("unsupported_package_count") or 0),
                 installed_count=int(g.get("installed_count") or 0),
-                packages=list(g.get("packages") or []),
+                required_unsupported=list(g.get("required_unsupported") or []),
+                unsupported_packages=list(g.get("unsupported_packages") or []),
+                packages=pkgs_list,
                 brewfile=str(g.get("brewfile") or ""),
             )
             self.groups.append(item)
@@ -212,8 +235,10 @@ class DesiredStateModel:
                 if pname:
                     short = pname.split("/")[-1]
                     self._pkg_index.setdefault(pname, []).append(item)
+                    self._pkg_meta_index.setdefault(pname, []).append((item, p))
                     if short != pname:
                         self._pkg_index.setdefault(short, []).append(item)
+                        self._pkg_meta_index.setdefault(short, []).append((item, p))
 
         for s in cdata.get("supergroups") or []:
             sid = str(s.get("id") or "").strip()
@@ -266,9 +291,19 @@ class DesiredStateModel:
             self._by_selector[item.selector] = item
             for tok in item.formulae + item.casks:
                 short = tok.split("/")[-1]
+                cmeta = {
+                    "name": short,
+                    "installable": sup,
+                    "installed": False,
+                    "external": False,
+                    "install_method": "brew" if sup else "none",
+                    "unsupported_reason": reason or None,
+                }
                 self._pkg_index.setdefault(tok, []).append(item)
+                self._pkg_meta_index.setdefault(tok, []).append((item, cmeta))
                 if short != tok:
                     self._pkg_index.setdefault(short, []).append(item)
+                    self._pkg_meta_index.setdefault(short, []).append((item, cmeta))
 
     def get(self, selector: str) -> CapabilityItem | None:
         return self._by_selector.get(selector)
@@ -288,11 +323,11 @@ class DesiredStateModel:
         item = self._by_selector.get(selector)
         if item is None:
             return False, f"Unknown item: {selector}"
-        if not item.supported or item.persisted == SelectionState.UNSUPPORTED:
+        cur = item.working
+        if (not item.supported or item.persisted == SelectionState.UNSUPPORTED) and not cur.is_desired:
             reason = item.unsupported_reason or "unsupported on this platform"
             return False, f"{item.label} is unavailable: {reason}"
 
-        cur = item.working
         if cur == SelectionState.INHERITED:
             item.working = SelectionState.LOCAL_EXCLUDE
         elif cur == SelectionState.LOCAL_EXCLUDE:
@@ -395,43 +430,66 @@ class DesiredStateModel:
                     )
 
         # Package search across dynamic index
-        pkg_matches: list[tuple[str, list[CapabilityItem]]] = []
-        for pname, owners in self._pkg_index.items():
+        pkg_matches: list[tuple[str, list[tuple[CapabilityItem, dict[str, Any]]]]] = []
+        for pname, entries in self._pkg_meta_index.items():
             if q in pname.lower():
-                uniq_owners: list[CapabilityItem] = []
+                uniq_entries: list[tuple[CapabilityItem, dict[str, Any]]] = []
                 seen_o: set[str] = set()
-                for o in owners:
+                for o, meta in entries:
                     if o.selector not in seen_o:
                         seen_o.add(o.selector)
-                        uniq_owners.append(o)
-                pkg_matches.append((pname, uniq_owners))
+                        uniq_entries.append((o, meta))
+                pkg_matches.append((pname, uniq_entries))
 
         pkg_matches.sort(key=lambda pair: (pair[0].lower() != q, len(pair[0]), pair[0].lower()))
-        for pname, owners in pkg_matches:
+        for pname, entries in pkg_matches:
             key = ("package", pname)
             if key in seen_keys:
                 continue
             seen_keys.add(key)
-            if len(owners) == 1:
-                owner = owners[0]
+            if len(entries) == 1:
+                owner, meta = entries[0]
+                inst_ok = meta.get("installable")
+                is_installed = bool(meta.get("installed", False))
+                is_external = bool(meta.get("external", False))
+                method = str(meta.get("install_method") or "")
+                unsup_reason = str(meta.get("unsupported_reason") or "")
+                if inst_ok is False:
+                    plat_str = "Platform: unavailable through DOTS on this machine"
+                    if is_installed:
+                        plat_str += " (installed externally)"
+                    subtitle = f"Owner: {owner.id}  |  {plat_str}"
+                elif inst_ok is True:
+                    inst_str = "yes" if is_installed else "no"
+                    via = f" ({method})" if method else ""
+                    subtitle = f"Owner: {owner.id}  |  Installable: yes{via}  |  Installed: {inst_str}"
+                else:
+                    subtitle = f"Package provided by {owner.selector}"
                 hits.append(
                     SearchHit(
                         title=pname,
-                        subtitle=f"Package provided by {owner.selector}",
+                        subtitle=subtitle,
                         kind="package",
                         target_id=pname,
                         owner_selector=owner.selector,
+                        installable=inst_ok,
+                        installed=is_installed,
+                        external=is_external,
+                        install_method=method,
+                        unsupported_reason=unsup_reason,
                     )
                 )
             else:
-                owner_str = ", ".join(o.selector for o in owners)
+                owner_str = ", ".join(o.selector for o, _ in entries)
+                any_inst = any(bool(m.get("installable")) for _, m in entries)
                 hits.append(
                     SearchHit(
                         title=pname,
-                        subtitle=f"Package with multiple owners: {owner_str}",
+                        subtitle=f"Owners: {owner_str}  |  Installable: {'yes' if any_inst else 'no'}",
                         kind="package",
                         target_id=pname,
                         owner_selector=None,
+                        installable=any_inst,
                     )
                 )
 

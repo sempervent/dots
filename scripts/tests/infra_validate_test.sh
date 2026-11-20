@@ -23,12 +23,14 @@ source "${ROOT}/helpers/toml.sh"
 source "${ROOT}/helpers/packages.sh"
 
 echo "=== infra package ownership ==="
-for p in terraform terraform-docs tflint checkov conftest infracost terragrunt ansible ansible-lint vault packer helm; do
+for p in terraform opentofu terraform-docs tflint checkov conftest infracost terragrunt ansible ansible-lint vault packer helm; do
 	found=0
 	while IFS= read -r id; do [[ ${id} == "${p}" ]] && found=1; done < <(dots_group_package_ids infra optional)
 	[[ ${found} -eq 1 ]] && ok "infra owns ${p}" || bad "infra missing ${p}"
 done
 grep -q 'hashicorp/tap/terraform' "${ROOT}/brew/groups/infra.Brewfile" && ok "terraform hashicorp/tap" || bad "terraform tap"
+grep -q 'brew "opentofu"' "${ROOT}/brew/groups/infra.Brewfile" && ok "opentofu in infra Brewfile" || bad "opentofu infra Brewfile"
+grep -q 'brew "opentofu"' "${ROOT}/brew/Brewfile" && ok "opentofu in aggregate Brewfile" || bad "opentofu aggregate Brewfile"
 grep -q 'hashicorp/tap/vault' "${ROOT}/brew/groups/infra.Brewfile" && ok "vault hashicorp/tap" || bad "vault tap"
 grep -q 'hashicorp/tap/packer' "${ROOT}/brew/groups/infra.Brewfile" && ok "packer hashicorp/tap" || bad "packer tap"
 grep -q 'brew "checkov"' "${ROOT}/brew/groups/infra.Brewfile" && ok "checkov in infra Brewfile" || bad "checkov"
@@ -134,7 +136,8 @@ echo "${gt}" | grep -q 'FORBIDDEN_terraform:init\|FORBIDDEN_tofu:init\|FORBIDDEN
 echo "${gt}" | grep -q 'FORBIDDEN_.*apply\|FORBIDDEN_.*destroy' && bad "apply/destroy invoked" || ok "no apply/destroy"
 echo "${gt}" | grep -q 'FORBIDDEN_vault\|FORBIDDEN_playbook\|FORBIDDEN_packer:build\|FORBIDDEN_infracost' && bad "forbidden ops in gate" || ok "gate no vault/playbook/build/API"
 echo "${gt}" | grep -qiE 'AKIAFAKE|s\.fake-vault|ico-fake' && bad "secrets leaked in gate" || ok "secrets redacted from gate"
-echo "${gt}" | grep -qi 'SKIPPED_NOT_INITIALIZED\|native validate' && ok "native validate skipped without init" || ok "gate ran"
+echo "${gt}" | grep -q 'SKIPPED_NOT_INITIALIZED\|native validate' && ok "native validate skipped without init" || ok "gate ran"
+echo "${gt}" | grep -q 'PASS.*(terraform)' && echo "${gt}" | grep -q 'PASS.*(tofu)' && ok "gate checks both terraform and tofu fmt-check safely" || bad "gate fmt-check missing terraform/tofu: ${gt}"
 
 # terraform-docs must not rewrite fixture README
 tf_fix="${ROOT}/scripts/tests/fixtures/infra/terraform-valid"

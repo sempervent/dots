@@ -105,7 +105,7 @@ for g in groups_data.get("groups") or []:
     if not gname:
         continue
     known_groups.add(gname)
-    for cls in ("required", "optional", "tools"):
+    for cls in ("required", "optional", "tools", "brew_companions"):
         for pkg in g.get(cls) or []:
             p = str(pkg).strip()
             if p:
@@ -120,6 +120,10 @@ for g in groups_data.get("groups") or []:
                 tok = m.group(1).strip()
                 pkg_owners.setdefault(tok, set()).add(f"group:{gname}")
                 pkg_owners.setdefault(tok.split("/")[-1], set()).add(f"group:{gname}")
+
+for pid, hspec in (groups_data.get("helper_packages") or {}).items():
+    if isinstance(hspec, dict) and str(hspec.get("owner") or "").strip():
+        pkg_owners.setdefault(str(pid).strip(), set()).add(str(hspec["owner"]).strip())
 
 known_components = set()
 known_supergroups = set()
@@ -139,6 +143,14 @@ for c in comps_data.get("components") or []:
                     tok = m.group(1).strip()
                     pkg_owners.setdefault(tok, set()).add(f"component:{cid}")
                     pkg_owners.setdefault(tok.split("/")[-1], set()).add(f"component:{cid}")
+    for hp in c.get("helper_packages") or []:
+        h = str(hp).strip()
+        if h:
+            pkg_owners.setdefault(h, set()).add(f"component:{cid}")
+    for lp in c.get("linux_packages") or []:
+        lpkg = str(lp).strip()
+        if lpkg:
+            pkg_owners.setdefault(lpkg, set()).add(f"component:{cid}")
 
 for s in comps_data.get("supergroups") or []:
     sid = str(s.get("id") or "").strip()
@@ -281,6 +293,120 @@ PY
 	echo "Repository-maintainer workflow:" >&2
 	echo "  dots packages adopt ${raw} --group modern" >&2
 	return 1
+}
+
+# Validate that a resolved selector is actually installable on the current platform.
+# Rejects:
+#   - direct package requests (DOTS_SEL_VIA_PKG set) when package has no installer here
+#   - groups whose REQUIRED packages have no installer here
+#   - components unsupported on current platform
+# Sets DOTS_SEL_INSTALL_SUMMARY for display when group has optional unavailable packages.
+dots_require_selector_installable() {
+	DOTS_SEL_INSTALL_SUMMARY=""
+	dots_require_python 0 || return 1
+	local check_sel="${DOTS_SEL_OWNER}"
+	if [[ -n ${DOTS_SEL_VIA_PKG:-} && ${DOTS_SEL_KIND:-} == "group" ]]; then
+		# Query the exact package truth within the chosen group
+		local pyhome out rc=0
+		pyhome="$(mktemp -d "${TMPDIR:-/tmp}/dots-pe-inst.XXXXXX")"
+		out="$(
+			DOTS_DIR="${DIR}" \
+				DOTS_GROUPS_REGISTRY="$(_dots_pe_groups_registry)" \
+				DOTS_COMPONENTS_REGISTRY="$(_dots_pe_components_registry)" \
+				TARGET_GROUP="${DOTS_SEL_ID}" \
+				TARGET_PKG="${DOTS_SEL_VIA_PKG}" \
+				HOME="${pyhome}" \
+				PYTHONDONTWRITEBYTECODE=1 \
+				PYTHONNOUSERSITE=1 \
+				"${DOTS_PYTHON}" -B - <<'PY'
+import os, sys
+from pathlib import Path
+sys.path.insert(0, str(Path(os.environ["DOTS_DIR"]) / "helpers"))
+import package_truth as pt
+
+root = Path(os.environ["DOTS_DIR"])
+os_name, _, pkg_mgr = pt.detect_platform()
+gdata = pt.compute_groups_data(root, None, os_name=os_name, pkg_mgr=pkg_mgr, probe_installed=False)
+tgrp = os.environ["TARGET_GROUP"]
+tpkg = os.environ["TARGET_PKG"]
+short = tpkg.split("/")[-1]
+grp = next((g for g in gdata["groups"] if g["name"] == tgrp), None)
+if not grp:
+    raise SystemExit(0)
+groups_toml = pt._load_toml(pt._groups_registry_path(root))
+aliases = {str(v).split("/")[-1]: str(k) for k, v in (groups_toml.get("brew_aliases") or {}).items()}
+mapped = aliases.get(short, tpkg)
+pkg = next((p for p in grp["packages"] if p["name"] in (tpkg, short, mapped) or (p.get("install_token") or "").split("/")[-1] == short), None)
+if pkg is not None and not pkg["installable"]:
+    print("ERR\t" + (
+        f"{pkg['name']} is known to DOTS through group:{tgrp},\\n"
+        f"but DOTS has no supported installer for {pkg['name']} on {os_name}.\\n\\n"
+        f"Selecting group:{tgrp} is still valid, but this direct package request\\n"
+        f"cannot be satisfied."
+    ))
+    raise SystemExit(2)
+if not grp["platform_supported"]:
+    print("ERR\t" + (
+        f"group:{tgrp} requires {', '.join(grp['required_unsupported'])} which has no supported installer on {os_name}/{pkg_mgr}."
+    ))
+    raise SystemExit(2)
+print(f"SUM\t{grp['supported_package_count']}/{grp['package_count']}\t{','.join(grp['unsupported_packages'])}")
+PY
+		)" || rc=$?
+		rm -rf "${pyhome}"
+		if [[ ${rc} -ne 0 ]]; then
+			local msg="${out#ERR$'\t'}"
+			printf 'ERROR:\n' >&2
+			printf '%b\n' "${msg}" | sed 's/^/  /;s/^  $//' >&2
+			return 1
+		fi
+		DOTS_SEL_INSTALL_SUMMARY="${out#SUM$'\t'}"
+		return 0
+	fi
+
+	if [[ ${DOTS_SEL_KIND:-} == "group" ]]; then
+		local pyhome out rc=0
+		pyhome="$(mktemp -d "${TMPDIR:-/tmp}/dots-pe-inst.XXXXXX")"
+		out="$(
+			DOTS_DIR="${DIR}" \
+				DOTS_GROUPS_REGISTRY="$(_dots_pe_groups_registry)" \
+				DOTS_COMPONENTS_REGISTRY="$(_dots_pe_components_registry)" \
+				TARGET_GROUP="${DOTS_SEL_ID}" \
+				HOME="${pyhome}" \
+				PYTHONDONTWRITEBYTECODE=1 \
+				PYTHONNOUSERSITE=1 \
+				"${DOTS_PYTHON}" -B - <<'PY'
+import os, sys
+from pathlib import Path
+sys.path.insert(0, str(Path(os.environ["DOTS_DIR"]) / "helpers"))
+import package_truth as pt
+
+root = Path(os.environ["DOTS_DIR"])
+os_name, _, pkg_mgr = pt.detect_platform()
+gdata = pt.compute_groups_data(root, None, os_name=os_name, pkg_mgr=pkg_mgr, probe_installed=False)
+tgrp = os.environ["TARGET_GROUP"]
+grp = next((g for g in gdata["groups"] if g["name"] == tgrp), None)
+if not grp:
+    raise SystemExit(0)
+if not grp["platform_supported"]:
+    print("ERR\t" + (
+        f"group:{tgrp} requires {', '.join(grp['required_unsupported'])}, which has no supported installer on {os_name}/{pkg_mgr}."
+    ))
+    raise SystemExit(2)
+print(f"SUM\t{grp['supported_package_count']}/{grp['package_count']}\t{','.join(grp['unsupported_packages'])}")
+PY
+		)" || rc=$?
+		rm -rf "${pyhome}"
+		if [[ ${rc} -ne 0 ]]; then
+			local msg="${out#ERR$'\t'}"
+			printf 'ERROR:\n  %s\n' "${msg}" >&2
+			return 1
+		fi
+		DOTS_SEL_INSTALL_SUMMARY="${out#SUM$'\t'}"
+		return 0
+	fi
+
+	return 0
 }
 
 # Print packages belonging to a group (one per line), using registry + Brewfile.
@@ -984,148 +1110,18 @@ dots_profile_resolve_json() {
 		return 1
 	}
 	dots_require_python 0 || return 1
-	local pyhome
+	local pjson=""
+	pjson="$(dots_profile_show_json "" 2>/dev/null || true)"
+	local pyhome rc=0
 	pyhome="$(mktemp -d "${TMPDIR:-/tmp}/dots-pe-rjson.XXXXXX")"
-	RAW="${raw}" \
-		REPO_DIR="${DIR}" \
-		GROUPS_REG="$(_dots_pe_groups_registry)" \
-		COMPS_REG="$(_dots_pe_components_registry)" \
+	PJSON="${pjson}" \
+		DOTS_DIR="${DIR}" \
+		DOTS_GROUPS_REGISTRY="$(_dots_pe_groups_registry)" \
+		DOTS_COMPONENTS_REGISTRY="$(_dots_pe_components_registry)" \
 		HOME="${pyhome}" \
 		PYTHONDONTWRITEBYTECODE=1 \
 		PYTHONNOUSERSITE=1 \
-		"${DOTS_PYTHON}" -B <<'PY'
-import json, os, re, tomllib
-from pathlib import Path
-
-raw = os.environ["RAW"].strip()
-repo = Path(os.environ["REPO_DIR"])
-groups_reg = Path(os.environ["GROUPS_REG"])
-comps_reg = Path(os.environ["COMPS_REG"])
-
-groups_data = tomllib.loads(groups_reg.read_text(encoding="utf-8")) if groups_reg.is_file() else {}
-comps_data = tomllib.loads(comps_reg.read_text(encoding="utf-8")) if comps_reg.is_file() else {}
-
-known_groups = {}
-pkg_owners = {}
-
-for g in groups_data.get("groups") or []:
-    gname = str(g.get("name") or "").strip()
-    if not gname:
-        continue
-    pkgs = []
-    for cls in ("required", "optional", "tools"):
-        for pkg in g.get(cls) or []:
-            p = str(pkg).strip()
-            if p:
-                pkgs.append(p)
-                pkg_owners.setdefault(p, set()).add(f"group:{gname}")
-                pkg_owners.setdefault(p.split("/")[-1], set()).add(f"group:{gname}")
-    bf = repo / "brew" / "groups" / f"{gname}.Brewfile"
-    if bf.is_file():
-        for line in bf.read_text(encoding="utf-8").splitlines():
-            line = line.split("#", 1)[0].strip()
-            m = re.match(r'^(?:brew|cask)\s+"([^"]+)"', line)
-            if m:
-                tok = m.group(1).strip()
-                pkgs.append(tok)
-                pkg_owners.setdefault(tok, set()).add(f"group:{gname}")
-                pkg_owners.setdefault(tok.split("/")[-1], set()).add(f"group:{gname}")
-    known_groups[gname] = sorted(set(pkgs))
-
-known_components = set()
-known_supergroups = set()
-for c in comps_data.get("components") or []:
-    cid = str(c.get("id") or "").strip()
-    if not cid:
-        continue
-    known_components.add(cid)
-    bf_rel = str(c.get("brewfile") or "").strip()
-    if bf_rel:
-        bf = repo / bf_rel
-        if bf.is_file():
-            for line in bf.read_text(encoding="utf-8").splitlines():
-                line = line.split("#", 1)[0].strip()
-                m = re.match(r'^(?:brew|cask)\s+"([^"]+)"', line)
-                if m:
-                    tok = m.group(1).strip()
-                    pkg_owners.setdefault(tok, set()).add(f"component:{cid}")
-                    pkg_owners.setdefault(tok.split("/")[-1], set()).add(f"component:{cid}")
-
-for s in comps_data.get("supergroups") or []:
-    sid = str(s.get("id") or "").strip()
-    if sid:
-        known_supergroups.add(sid)
-
-explicit_kind = ""
-target = raw
-if ":" in raw:
-    prefix, rest = raw.split(":", 1)
-    if prefix in ("group", "component", "supergroup", "package") and rest:
-        explicit_kind = prefix
-        target = rest.strip()
-    else:
-        print(json.dumps({"status": "unknown", "selector": raw, "choices": []}))
-        raise SystemExit(0)
-
-candidates = []
-via_pkg = ""
-if explicit_kind == "group":
-    if target in known_groups:
-        candidates = [f"group:{target}"]
-elif explicit_kind == "component":
-    if target in known_components:
-        candidates = [f"component:{target}"]
-elif explicit_kind == "supergroup":
-    if target in known_supergroups:
-        candidates = [f"supergroup:{target}"]
-elif explicit_kind == "package":
-    via_pkg = target
-    short = target.split("/")[-1]
-    candidates = sorted(set(pkg_owners.get(target, set())) | set(pkg_owners.get(short, set())))
-else:
-    direct = []
-    if target in known_groups:
-        direct.append(f"group:{target}")
-    if target in known_components:
-        direct.append(f"component:{target}")
-    if target in known_supergroups:
-        direct.append(f"supergroup:{target}")
-    short = target.split("/")[-1]
-    pkg_found = set(pkg_owners.get(target, set())) | set(pkg_owners.get(short, set()))
-    if direct:
-        merged = sorted(set(direct) | pkg_found)
-        candidates = merged
-        if len(merged) > len(direct):
-            via_pkg = target
-    elif pkg_found:
-        candidates = sorted(pkg_found)
-        via_pkg = target
-
-if not candidates:
-    out = {"status": "unknown", "selector": raw, "choices": []}
-elif len(candidates) == 1:
-    kind, oid = candidates[0].split(":", 1)
-    out = {
-        "status": "ok",
-        "selector": raw,
-        "owner": candidates[0],
-        "kind": kind,
-        "id": oid,
-        "via_package": via_pkg or None,
-        "group_packages": known_groups.get(oid, []) if kind == "group" else [],
-        "choices": candidates,
-    }
-else:
-    out = {
-        "status": "ambiguous",
-        "selector": raw,
-        "via_package": via_pkg or target,
-        "choices": candidates,
-        "group_packages": {c.split(":", 1)[1]: known_groups.get(c.split(":", 1)[1], []) for c in candidates if c.startswith("group:")},
-    }
-print(json.dumps(out, indent=2))
-PY
-	local rc=$?
+		"${DOTS_PYTHON}" -B "${DIR}/helpers/package_truth.py" resolve --selector "${raw}" || rc=$?
 	rm -rf "${pyhome}"
 	return "${rc}"
 }
@@ -2334,96 +2330,43 @@ dots_packages_groups_json() {
 	pjson="$(dots_profile_show_json "${profile_arg}")" || return 1
 
 	# Cheap installed formula/cask check if brew/mocks available (never brew outdated)
-	local inst_f="" inst_c=""
-	if command -v "${DOTS_BREW_BIN:-brew}" >/dev/null 2>&1 || [[ -n ${DOTS_PKG_MOCK_FORMULAE+x} || -n ${DOTS_PKG_MOCK_CASKS+x} ]]; then
+	local inst_f="" inst_c="" have_brew_lists=0
+	if [[ -n ${DOTS_PKG_MOCK_FORMULAE+x} || -n ${DOTS_PKG_MOCK_CASKS+x} ]]; then
+		have_brew_lists=1
 		inst_f="$(dots_pkg_installed_formulae 2>/dev/null || true)"
 		inst_c="$(dots_pkg_installed_casks 2>/dev/null || true)"
+	elif [[ ${DOTS_FORCE_OS:-} != "linux" && -z ${DOTS_FORCE_PKG_MGR:-} ]] || [[ ${DOTS_FORCE_PKG_MGR:-} == "brew" ]]; then
+		if command -v "${DOTS_BREW_BIN:-brew}" >/dev/null 2>&1; then
+			have_brew_lists=1
+			inst_f="$(dots_pkg_installed_formulae 2>/dev/null || true)"
+			inst_c="$(dots_pkg_installed_casks 2>/dev/null || true)"
+		fi
 	fi
 
 	dots_require_python 0 || return 1
 	local pyhome rc=0
 	pyhome="$(mktemp -d "${TMPDIR:-/tmp}/dots-pe-gjson.XXXXXX")"
-	PJSON="${pjson}" \
-		REPO_DIR="${DIR}" \
-		GROUPS_REG="$(_dots_pe_groups_registry)" \
-		INST_F="${inst_f}" \
-		INST_C="${inst_c}" \
-		HOME="${pyhome}" \
-		PYTHONDONTWRITEBYTECODE=1 \
-		PYTHONNOUSERSITE=1 \
-		"${DOTS_PYTHON}" -B <<'PY' || rc=$?
-import json, os, re, shutil, tomllib
-from pathlib import Path
-
-pstate = json.loads(os.environ["PJSON"])
-repo = Path(os.environ["REPO_DIR"])
-groups_reg = Path(os.environ["GROUPS_REG"])
-inst_f = {x.strip().split("/")[-1] for x in os.environ.get("INST_F", "").splitlines() if x.strip()}
-inst_c = {x.strip().split("/")[-1] for x in os.environ.get("INST_C", "").splitlines() if x.strip()}
-have_brew_lists = bool(inst_f or inst_c)
-
-groups_data = tomllib.loads(groups_reg.read_text(encoding="utf-8")) if groups_reg.is_file() else {}
-grp_states = pstate.get("groups") or {}
-
-def brewfile_tokens(bf: Path):
-    f, c = [], []
-    if not bf.is_file():
-        return f, c
-    for line in bf.read_text(encoding="utf-8").splitlines():
-        line = line.split("#", 1)[0].strip()
-        m = re.match(r'^brew\s+"([^"]+)"', line)
-        if m:
-            f.append(m.group(1).strip())
-            continue
-        m = re.match(r'^cask\s+"([^"]+)"', line)
-        if m:
-            c.append(m.group(1).strip())
-    return f, c
-
-def is_installed(tok):
-    short = tok.split("/")[-1]
-    if have_brew_lists:
-        return (short in inst_f) or (short in inst_c)
-    return shutil.which(short) is not None
-
-out_groups = []
-for g in groups_data.get("groups") or []:
-    name = str(g.get("name") or "").strip()
-    if not name:
-        continue
-    req = [str(x).strip() for x in (g.get("required") or []) + (g.get("tools") or []) if str(x).strip()]
-    opt = [str(x).strip() for x in (g.get("optional") or []) if str(x).strip()]
-    bf_rel = f"brew/groups/{name}.Brewfile"
-    bf_f, bf_c = brewfile_tokens(repo / bf_rel)
-    all_pkgs = []
-    seen = set()
-    for x in req + opt + bf_f + bf_c:
-        if x not in seen:
-            seen.add(x)
-            all_pkgs.append(x)
-    pkg_details = [{"name": x, "installed": is_installed(x)} for x in all_pkgs]
-    inst_count = sum(1 for p in pkg_details if p["installed"])
-    st = (grp_states.get(name) or {}).get("state") or "absent"
-    out_groups.append({
-        "name": name,
-        "description": str(g.get("description") or "").strip(),
-        "brewfile": bf_rel,
-        "required": req,
-        "optional": opt,
-        "required_count": len(req),
-        "optional_count": len(opt),
-        "supported_package_count": len(all_pkgs),
-        "installed_count": inst_count,
-        "packages": pkg_details,
-        "selected_state": st,
-    })
-
-print(json.dumps({
-    "schema_version": 1,
-    "profile": pstate.get("profile"),
-    "groups": out_groups,
-}, indent=2))
-PY
+	if [[ ${have_brew_lists} -eq 1 ]]; then
+		PJSON="${pjson}" \
+			DOTS_DIR="${DIR}" \
+			DOTS_GROUPS_REGISTRY="$(_dots_pe_groups_registry)" \
+			DOTS_COMPONENTS_REGISTRY="$(_dots_pe_components_registry)" \
+			INST_F="${inst_f}" \
+			INST_C="${inst_c}" \
+			HOME="${pyhome}" \
+			PYTHONDONTWRITEBYTECODE=1 \
+			PYTHONNOUSERSITE=1 \
+			"${DOTS_PYTHON}" -B "${DIR}/helpers/package_truth.py" groups-json || rc=$?
+	else
+		PJSON="${pjson}" \
+			DOTS_DIR="${DIR}" \
+			DOTS_GROUPS_REGISTRY="$(_dots_pe_groups_registry)" \
+			DOTS_COMPONENTS_REGISTRY="$(_dots_pe_components_registry)" \
+			HOME="${pyhome}" \
+			PYTHONDONTWRITEBYTECODE=1 \
+			PYTHONNOUSERSITE=1 \
+			"${DOTS_PYTHON}" -B "${DIR}/helpers/package_truth.py" groups-json || rc=$?
+	fi
 	rm -rf "${pyhome}"
 	return "${rc}"
 }

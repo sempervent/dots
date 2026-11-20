@@ -1,6 +1,6 @@
 # GENERATED — DO NOT EDIT. Source: configs/help/commands.toml
 # Generator: scripts/docs/generate_usage.py
-DOTS — machine environment manager  (v1.11.0)
+DOTS — machine environment manager  (v1.12.0)
 
 Usage:
   ./dots setup [options]            Interactive or noninteractive setup / reconfigure...
@@ -12,7 +12,7 @@ Usage:
   ./dots lsp [status|check|install|list] Language-server install, status, and checks.
   ./dots ai [status|doctor|up|down|…] AI inference server (Compose + Open WebUI) control...
   ./dots agent [status|doctor|sandbox|models|scout|eval|team|run|…] Local-first agent harness (Pi, OpenRig, evals...
-  ./dots packages [groups|group|plan|status|explain|outdated|upgrade|adopt] Package ownership, drift, groups, and upgrades.
+  ./dots packages [groups|group|plan|status|explain|outdated|upgrade|adopt|audit] Package ownership, installability audit, drift...
   ./dots backup [--name N]          Snapshot managed targets under...
   ./dots backups                    List recoverable DOTS snapshots.
   ./dots restore [ID]               Restore a snapshot (creates a safety snapshot first).

@@ -148,28 +148,79 @@ PY
 }
 
 # Map portable tool id → native name for current/forced Linux mgr (or brew on Darwin).
-# Prints: mapped_name | SKIP | MISSING | brew:<id>
+# Prints: mapped_name | SKIP | MISSING | brew:<id> | helper:<id>
 dots_group_tool_platform_name() {
 	local tool="$1"
 	local mgr="" mapfile=""
 	[[ -n ${tool} ]] || return 1
 	if [[ -n ${DOTS_FORCE_PKG_MGR:-} ]]; then
 		mgr="${DOTS_FORCE_PKG_MGR}"
+	elif [[ ${DOTS_FORCE_OS:-} == "darwin" ]]; then
+		mgr="brew"
+	elif [[ ${DOTS_FORCE_OS:-} == "linux" ]]; then
+		mgr="$(dots_detect_linux_pkg_mgr)"
 	elif command -v brew >/dev/null 2>&1 || [[ "$(uname -s)" == "Darwin" ]]; then
-		printf 'brew:%s\n' "${tool}"
-		return 0
+		mgr="brew"
 	else
 		mgr="$(dots_detect_linux_pkg_mgr)"
+	fi
+	if [[ ${mgr} == brew || ${mgr} == homebrew ]]; then
+		TOOL="${tool}" REPO_DIR="${DIR}" dots_toml_query "$(dots_groups_registry_path)" <<'PY'
+import os, re
+from pathlib import Path
+t = os.environ.get("TOOL", "").strip()
+root = Path(os.environ.get("REPO_DIR", "."))
+hp = (data.get("helper_packages") or {}).get(t)
+if isinstance(hp, dict):
+    print(f"helper:{hp.get('token') or t}")
+    raise SystemExit(0)
+aliases = data.get("brew_aliases") or {}
+tok = str(aliases.get(t) or t).strip()
+short = tok.split("/")[-1]
+owner_group = ""
+for g in data.get("groups") or []:
+    gname = str(g.get("name") or "").strip()
+    ids = [str(x).strip() for x in (g.get("required") or []) + (g.get("optional") or []) + (g.get("brew_companions") or [])]
+    if t in ids:
+        owner_group = gname
+        break
+if owner_group:
+    bf = root / "brew" / "groups" / f"{owner_group}.Brewfile"
+    if bf.is_file():
+        for line in bf.read_text(encoding="utf-8").splitlines():
+            line = line.split("#", 1)[0].strip()
+            m = re.match(r'^(?:brew|cask)\s+"([^"]+)"', line)
+            if m:
+                btok = m.group(1).strip()
+                if btok == tok or btok.split("/")[-1] == short:
+                    print(f"brew:{btok}")
+                    raise SystemExit(0)
+        print("SKIP")
+        raise SystemExit(0)
+print(f"brew:{tok}")
+PY
+		return 0
+	fi
+	# Check helper_packages for Linux too (e.g., mapshaper)
+	local helper_hit=""
+	helper_hit="$(
+		TOOL="${tool}" dots_toml_query "$(dots_groups_registry_path)" <<'PY'
+import os
+t = os.environ.get("TOOL", "").strip()
+hp = (data.get("helper_packages") or {}).get(t)
+if isinstance(hp, dict) and "linux" in [str(p).lower() for p in (hp.get("platforms") or ["darwin", "linux"])]:
+    print(f"helper:{hp.get('token') or t}")
+PY
+	)" || true
+	if [[ -n ${helper_hit} ]]; then
+		printf '%s\n' "${helper_hit}"
+		return 0
 	fi
 	case "${mgr}" in
 	apt) mapfile="${DIR}/configs/packages/apt.toml" ;;
 	pacman) mapfile="${DIR}/configs/packages/pacman.toml" ;;
 	xbps) mapfile="${DIR}/configs/packages/xbps.toml" ;;
 	dnf) mapfile="${DIR}/configs/packages/dnf.toml" ;;
-	brew | homebrew)
-		printf 'brew:%s\n' "${tool}"
-		return 0
-		;;
 	*)
 		printf 'MISSING\n'
 		return 0
@@ -599,8 +650,56 @@ dots_group_is_active() {
 	return 1
 }
 
-# List all package groups with active marker (read-only; no brew required).
+# List all package groups with active marker and platform support (read-only; no brew required).
 dots_packages_groups_list() {
+	if declare -F dots_require_python >/dev/null 2>&1 && dots_require_python 0 2>/dev/null && [[ -f ${DIR}/helpers/package_truth.py ]]; then
+		local active_csv
+		DOTS_RESOLVED_GROUPS=("${DOTS_RESOLVED_GROUPS[@]+"${DOTS_RESOLVED_GROUPS[@]}"}")
+		active_csv="$(
+			IFS=','
+			echo "${DOTS_RESOLVED_GROUPS[*]+"${DOTS_RESOLVED_GROUPS[*]}"}"
+		)"
+		local pyhome
+		pyhome="$(mktemp -d "${TMPDIR:-/tmp}/dots-pkg-list.XXXXXX")"
+		DOTS_DIR="${DIR}" \
+			DOTS_GROUPS_REGISTRY="$(dots_groups_registry_path)" \
+			ACTIVE_CSV="${active_csv}" \
+			HOME="${pyhome}" \
+			PYTHONDONTWRITEBYTECODE=1 \
+			PYTHONNOUSERSITE=1 \
+			"${DOTS_PYTHON}" -B - <<'PY'
+import os, sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(os.environ["DOTS_DIR"]) / "helpers"))
+import package_truth as pt
+
+root = Path(os.environ["DOTS_DIR"])
+reg_path = pt._groups_registry_path(root)
+active = {x.strip() for x in os.environ.get("ACTIVE_CSV", "").split(",") if x.strip()}
+data = pt.compute_groups_data(root)
+
+print(f"PACKAGE GROUPS  (authority: {reg_path})  [{data['os']}/{data['pkg_mgr']}]")
+print("")
+print(f"{'GROUP':<14} {'ACTIVE':<8} {'REQ':>4} {'OPT':>4} {'SUPP':>7}  {'ROLE'}")
+for g in data["groups"]:
+    name = g["name"]
+    is_act = name in active
+    mark = "*" if is_act else " "
+    act_str = "yes" if is_act else "no"
+    supp_str = f"{g['supported_package_count']}/{g['package_count']}"
+    warn_tag = " [required unsupported]" if not g["platform_supported"] else ""
+    print(f"{mark} {name:<12} {act_str:<8} {g['required_count']:>4} {g['optional_count']:>4} {supp_str:>7}  {g['description']}{warn_tag}")
+print("")
+print("Active = selected by current profile / DOTS_PACKAGE_GROUPS / resolved set.")
+print("Detail: ./dots packages group ID")
+print("Plan:   ./dots packages plan [--profile NAME|PATH]")
+print("Audit:  ./dots packages audit [--json]")
+PY
+		rm -rf "${pyhome}"
+		return 0
+	fi
+
 	local g desc counts req opt active mark
 	printf 'PACKAGE GROUPS  (authority: %s)\n' "$(dots_groups_registry_path)"
 	printf '\n'
@@ -647,15 +746,80 @@ dots_packages_group_show() {
 		return 1
 	fi
 
-	local desc bf rel selected
-	desc="$(dots_group_description "${id}" 2>/dev/null || true)"
-	rel="$(dots_group_brewfile "${id}")"
-	bf="${DIR}/${rel}"
+	local selected
 	if dots_group_is_active "${id}"; then
 		selected=yes
 	else
 		selected=no
 	fi
+
+	if declare -F dots_require_python >/dev/null 2>&1 && dots_require_python 0 2>/dev/null && [[ -f ${DIR}/helpers/package_truth.py ]]; then
+		local pyhome
+		pyhome="$(mktemp -d "${TMPDIR:-/tmp}/dots-pkg-show.XXXXXX")"
+		DOTS_DIR="${DIR}" \
+			DOTS_GROUPS_REGISTRY="$(dots_groups_registry_path)" \
+			GROUP_ID="${id}" \
+			SELECTED_YN="${selected}" \
+			HOME="${pyhome}" \
+			PYTHONDONTWRITEBYTECODE=1 \
+			PYTHONNOUSERSITE=1 \
+			"${DOTS_PYTHON}" -B - <<'PY'
+import os, sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(os.environ["DOTS_DIR"]) / "helpers"))
+import package_truth as pt
+
+root = Path(os.environ["DOTS_DIR"])
+gid = os.environ["GROUP_ID"]
+selected_yn = os.environ["SELECTED_YN"]
+data = pt.compute_groups_data(root)
+grp = next((g for g in data["groups"] if g["name"] == gid), None)
+if grp is None:
+    raise SystemExit(1)
+
+bf_path = root / grp["brewfile"]
+print(f"Group: {grp['name']}")
+print(f"Description: {grp['description'] or '(none)'}")
+print(f"Selected: {selected_yn}")
+print(f"Owner: {grp['brewfile']}")
+print(f"Brewfile: {'present' if bf_path.is_file() else f'MISSING ({bf_path})'}")
+print(f"Platform: {data['os']}/{data['pkg_mgr']}")
+print(f"Packages: {grp['supported_package_count']}/{grp['package_count']} supported on this platform ({grp['installed_count']} installed)")
+if grp["platform_supported"]:
+    print("Platform support: supported")
+else:
+    print(f"Platform support: UNSUPPORTED ({grp['unsupported_reason']})")
+if grp["unsupported_packages"]:
+    print(f"Unavailable: {', '.join(grp['unsupported_packages'])}")
+print("")
+print(f"{'PACKAGE':<20} {'CLASS':<10} {'METHOD':<8} {'PLATFORM NAME':<22} {'STATE'}")
+for p in grp["packages"]:
+    pname = p["name"]
+    pcls = p["class"]
+    method = p["install_method"]
+    tok = p["install_token"] or "unavailable"
+    if not p["installable"]:
+        if p["external"]:
+            st = "external (unsupported installer)"
+        else:
+            st = "unsupported"
+    elif p["external"]:
+        st = "external"
+    elif p["installed"]:
+        st = "installed" if selected_yn == "yes" else "installed (inactive)"
+    else:
+        st = "missing" if selected_yn == "yes" else "available (inactive)"
+    print(f"{pname:<20} {pcls:<10} {method:<8} {tok:<22} {st}")
+PY
+		rm -rf "${pyhome}"
+		return 0
+	fi
+
+	local desc bf rel
+	desc="$(dots_group_description "${id}" 2>/dev/null || true)"
+	rel="$(dots_group_brewfile "${id}")"
+	bf="${DIR}/${rel}"
 
 	echo "Group: ${id}"
 	echo "Description: ${desc:-"(none)"}"
@@ -683,7 +847,7 @@ dots_packages_group_show() {
 	local platform_hint="brew"
 	if [[ -n ${DOTS_FORCE_PKG_MGR:-} ]]; then
 		platform_hint="${DOTS_FORCE_PKG_MGR}"
-	elif [[ "$(uname -s)" == "Linux" ]] && ! command -v brew >/dev/null 2>&1; then
+	elif [[ ${DOTS_FORCE_OS:-} == "linux" ]] || { [[ "$(uname -s)" == "Linux" ]] && ! command -v brew >/dev/null 2>&1; }; then
 		platform_hint="$(dots_detect_linux_pkg_mgr)"
 	fi
 	echo "Platform map: ${platform_hint}"
@@ -913,15 +1077,13 @@ dots_packages_plan() {
 	local inactive="${DOTS_PKG_COUNT_INACTIVE:-0}"
 	local desired=$((${#DOTS_DESIRED_FORMULAE[@]} + ${#DOTS_DESIRED_CASKS[@]}))
 
-	# Unsupported count: optional/required ids in selected groups with empty native map
+	# Unsupported count: optional/required ids in selected groups with no install route on current platform
 	local unsupported=0 tool native
-	if [[ "$(uname -s)" == "Linux" ]] && ! command -v brew >/dev/null 2>&1; then
-		while IFS= read -r tool; do
-			[[ -z ${tool} ]] && continue
-			native="$(dots_group_tool_platform_name "${tool}" 2>/dev/null || echo MISSING)"
-			[[ ${native} == SKIP || ${native} == MISSING ]] && unsupported=$((unsupported + 1))
-		done < <(dots_tools_for_groups all 2>/dev/null || true)
-	fi
+	while IFS= read -r tool; do
+		[[ -z ${tool} ]] && continue
+		native="$(dots_group_tool_platform_name "${tool}" 2>/dev/null || echo MISSING)"
+		[[ ${native} == SKIP || ${native} == MISSING ]] && unsupported=$((unsupported + 1))
+	done < <(dots_tools_for_groups all 2>/dev/null || true)
 
 	echo "Summary:"
 	echo "  Desired packages: ${desired}"
@@ -944,4 +1106,55 @@ dots_packages_plan() {
 	echo ""
 	echo "Read-only plan — no install, no auth, no brew outdated queries."
 	echo "Groups vs components: profile packages= vs with=/--with (see ./dots packages groups)."
+}
+
+# Offline registry convergence audit (no network calls, no mutations).
+dots_packages_audit() {
+	local json=0 strict=0
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+		--json) json=1 ;;
+		--strict) strict=1 ;;
+		-h | --help)
+			cat <<'EOF'
+Usage: ./dots packages audit [--json] [--strict]
+
+Audit DOTS package registries, Brewfiles, platform maps, helper-managed packages,
+and profile requirements for structural drift (offline; non-mutating).
+
+Options:
+  --json     Emit structured JSON report
+  --strict   Exit non-zero on WARN findings as well as ERROR
+EOF
+			return 0
+			;;
+		*)
+			echo "Error: unknown audit option: $1" >&2
+			return 1
+			;;
+		esac
+		shift
+	done
+
+	if ! declare -F dots_require_python >/dev/null 2>&1; then
+		# shellcheck disable=SC1091
+		source "${DIR}/helpers/toml.sh" || return 1
+	fi
+	dots_require_python 0 || return 1
+
+	local -a py_args=("audit")
+	[[ ${json} -eq 1 ]] && py_args+=("--json")
+	[[ ${strict} -eq 1 ]] && py_args+=("--strict")
+
+	local pyhome rc=0
+	pyhome="$(mktemp -d "${TMPDIR:-/tmp}/dots-pkg-audit.XXXXXX")"
+	DOTS_DIR="${DIR}" \
+		DOTS_GROUPS_REGISTRY="$(dots_groups_registry_path)" \
+		DOTS_COMPONENTS_REGISTRY="${DOTS_COMPONENTS_REGISTRY:-${DIR}/configs/components.toml}" \
+		HOME="${pyhome}" \
+		PYTHONDONTWRITEBYTECODE=1 \
+		PYTHONNOUSERSITE=1 \
+		"${DOTS_PYTHON}" -B "${DIR}/helpers/package_truth.py" "${py_args[@]}" || rc=$?
+	rm -rf "${pyhome}"
+	return "${rc}"
 }

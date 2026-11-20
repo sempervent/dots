@@ -6,6 +6,51 @@
 
 version = 1
 
+# Declarative Brewfile token aliases (logical id -> Brewfile formula/cask token)
+[brew_aliases]
+leaf = "leaf-markdown-viewer"
+mprocs = "dekit"
+
+# Declarative executable probe names when binary != logical id (empty = non-CLI / font)
+[binaries]
+ansible-lint = "ansible-lint"
+ast-grep = "sg"
+bat = "bat"
+difftastic = "difft"
+fd = "fd"
+font-jetbrains-mono-nerd-font = ""
+git-delta = "delta"
+graphviz = "dot"
+imagemagick = "magick"
+kubernetes-cli = "kubectl"
+mermaid-cli = "mmdc"
+neovim = "nvim"
+opentofu = "tofu"
+poppler = "pdfinfo"
+ripgrep = "rg"
+ykman = "ykman"
+
+# Helper-managed group packages (when installation is owned by a DOTS helper rather than a Brewfile/native map)
+[helper_packages.mapshaper]
+owner = "group:geo"
+helper = "helpers/mapshaper.sh"
+method = "helper"
+token = "mapshaper"
+platforms = ["darwin", "linux"]
+
+# Documented multi-owner packages where overlap is intentional (reported as INFO in audit)
+[ownership_exceptions]
+docker = ["group:infra", "component:ai-server"]
+docker-compose = ["group:infra", "component:ai-server"]
+exiftool = ["group:media", "component:images"]
+fnm = ["group:core", "component:openrig"]
+htop = ["group:modern", "group:server"]
+imagemagick = ["group:media", "component:images"]
+ripgrep = ["group:core", "component:agent-sandbox"]
+taplo = ["group:dev", "component:lsp"]
+terraform-ls = ["group:infra", "component:lsp"]
+tmux = ["group:core", "component:openrig"]
+
 [[groups]]
 name = "core"
 description = "Portable essentials"
@@ -15,6 +60,9 @@ required = [
 ]
 optional = [
   "shellcheck", "fnm", "starship",
+]
+brew_companions = [
+  "bash-completion@2", "zsh-completions", "shfmt", "coreutils", "findutils", "gnu-sed",
 ]
 
 [[groups]]
@@ -31,6 +79,9 @@ optional = [
   # v1.9 — ergonomic CLI (install-only; fnm remains DOTS Node authority)
   "mise", "dust", "duf", "jc", "navi", "sd", "procs", "ouch",
 ]
+brew_companions = [
+  "git-lfs", "moreutils", "fastfetch", "vim",
+]
 
 [[groups]]
 name = "workstation"
@@ -43,19 +94,25 @@ optional = [
   # v1.9 — terminal file manager (additive; ranger remains default)
   "yazi",
 ]
+brew_companions = [
+  "media-info",
+]
 
 [[groups]]
 name = "infra"
 description = "Docker/Helm/Terraform + IaC engineering CLIs (install-only; no apply/login/build)"
 required = []
 optional = [
-  "docker", "docker-compose", "helm", "terraform",
+  "docker", "docker-compose", "helm", "terraform", "opentofu",
   # v1.7 Phase 7 — IaC / config mgmt / images / cost (no remote backends, no apply)
   "terraform-docs", "tflint", "checkov", "infracost", "terragrunt",
   "ansible", "ansible-lint", "vault", "packer",
   # v1.9 — Rego policy assertions (local fixtures only; no remote bundles)
   "conftest",
-  # OpenTofu not auto-installed; if present, check infra may use tofu fmt -check
+  # OpenTofu is managed as a complementary IaC engine alongside Terraform (install-only; no migration)
+]
+brew_companions = [
+  "docker-buildx", "terraform-ls",
 ]
 
 [[groups]]

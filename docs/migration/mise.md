@@ -15,7 +15,7 @@ any future migration stays intentional and reversible.
 | Go | not managed by dots | — | — | Optional later |
 | Ruby | not managed | — | — | Optional later |
 | Terraform | Homebrew `hashicorp/tap/terraform` + `terraform-ls` | PATH via brew | infra Brewfile | Prefer Homebrew (CLI plugins/taps) |
-| Docker engine | Docker Desktop and/or OrbStack | docker context | infra Brewfile + mactools OrbStack | N/A (not a mise concern) |
+| Docker engine | Docker Desktop and/or OrbStack | docker context | infra Brewfile + `--with orbstack` | N/A (not a mise concern) |
 | nvm | **retired** | explicitly not sourced | leftover `~/.nvm` may exist | Do not revive |
 | pyenv / rbenv / asdf | not wired by DOTS | — | — | Only if user already depends on them locally |
 
