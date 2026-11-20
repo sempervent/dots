@@ -158,6 +158,7 @@ category = "workstation"
 cloud = false
 local_ai = false
 omit_from_all = true
+allow_leaf_packages = true
 platforms = ["darwin"]
 brewfile = "brew/Brewfile.mactools"
 description = "Optional macOS workstation layer (Vorssaint, f.lux, automation/GUI apps; Brewfile.mactools)"

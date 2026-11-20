@@ -400,6 +400,312 @@ def _evaluate_group_package(
     }
 
 
+def _load_registries(root: Path) -> tuple[dict[str, Any], dict[str, Any]]:
+    return _load_toml(_groups_registry_path(root)), _load_toml(_components_registry_path(root))
+
+
+def _build_canonical_id_maps(
+    groups_data: dict[str, Any],
+) -> tuple[dict[str, str], dict[str, str]]:
+    """token_or_alias -> canonical package id; canonical id -> primary owner."""
+    brew_aliases = {
+        str(k).strip(): str(v).strip()
+        for k, v in (groups_data.get("brew_aliases") or {}).items()
+        if str(k).strip() and str(v).strip()
+    }
+    reverse: dict[str, str] = {}
+    for logical, physical in brew_aliases.items():
+        reverse[physical] = logical
+        reverse[physical.split("/")[-1]] = logical
+    owners: dict[str, set[str]] = {}
+    for g in groups_data.get("groups") or []:
+        gname = str(g.get("name") or "").strip()
+        if not gname:
+            continue
+        for key in ("required", "optional", "tools", "brew_companions"):
+            for pid in g.get(key) or []:
+                pid = str(pid).strip()
+                if not pid:
+                    continue
+                owners.setdefault(pid, set()).add(f"group:{gname}")
+                reverse.setdefault(pid, pid)
+                alias = brew_aliases.get(pid, pid)
+                reverse.setdefault(alias, pid)
+                reverse.setdefault(alias.split("/")[-1], pid)
+    return reverse, {k: sorted(v) for k, v in owners.items()}
+
+
+def _leaf_selectable(
+    pkg_id: str,
+    owner: str,
+    installable: bool,
+    comps_by_id: dict[str, dict[str, Any]],
+    helper_pkgs: dict[str, dict[str, Any]],
+) -> tuple[bool, str | None]:
+    if not installable:
+        return False, "not installable on this platform"
+    kind, oid = owner.split(":", 1)
+    hp = helper_pkgs.get(pkg_id) or {}
+    hp_owner = str(hp.get("owner") or "")
+    if hp_owner.startswith("component:"):
+        return False, f"requires component lifecycle: {hp_owner.split(':', 1)[1]}"
+    if hp_owner and hp_owner != owner:
+        return False, f"helper-managed under {hp_owner}"
+    if kind == "group":
+        if hp and hp_owner == owner:
+            return False, "requires helper script installation"
+        return True, None
+    if kind == "component":
+        comp = comps_by_id.get(oid) or {}
+        if comp.get("helper"):
+            return False, f"requires component lifecycle: {oid}"
+        helper_names = [str(x).strip() for x in (comp.get("helper_packages") or []) if str(x).strip()]
+        if pkg_id in helper_names:
+            return False, f"requires component lifecycle: {oid}"
+        if not comp.get("allow_leaf_packages"):
+            return False, f"managed as dedicated component: {oid}"
+        return True, None
+    return False, f"unknown owner kind for leaf selection: {owner}"
+
+
+def enrich_package_leaf_fields(
+    pkg: dict[str, Any],
+    comps_by_id: dict[str, dict[str, Any]],
+    helper_pkgs: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    owner = str(pkg.get("owner") or "")
+    inst = bool(pkg.get("installable"))
+    leaf_ok, leaf_reason = _leaf_selectable(str(pkg.get("name") or ""), owner, inst, comps_by_id, helper_pkgs)
+    pkg["leaf_selectable"] = bool(leaf_ok)
+    pkg["leaf_reason"] = leaf_reason
+    return pkg
+
+
+def known_package_ids(root: Path) -> set[str]:
+    groups_data, comps_data = _load_registries(root)
+    canon, _ = _build_canonical_id_maps(groups_data)
+    known = set(canon.values())
+    for spec in (groups_data.get("helper_packages") or {}).values():
+        if isinstance(spec, dict):
+            tok = str(spec.get("token") or "").strip()
+            if tok:
+                known.add(tok)
+    repo = root.resolve()
+    for c in comps_data.get("components") or []:
+        bf_rel = str(c.get("brewfile") or "").strip()
+        if bf_rel:
+            bf_f, bf_c = _parse_brewfile(repo / bf_rel)
+            for tok in bf_f + bf_c:
+                known.add(tok.split("/")[-1])
+                known.add(tok)
+        for hp in c.get("helper_packages") or []:
+            h = str(hp).strip()
+            if h:
+                known.add(h)
+    return {x for x in known if x}
+
+
+def compute_leaf_catalog(
+    root: Path,
+    pstate: dict[str, Any] | None = None,
+    *,
+    os_name: str | None = None,
+    darwin_major: str | None = None,
+    pkg_mgr: str | None = None,
+) -> dict[str, Any]:
+    gjson = compute_groups_data(
+        root,
+        pstate,
+        os_name=os_name,
+        darwin_major=darwin_major,
+        pkg_mgr=pkg_mgr,
+        probe_installed=False,
+    )
+    _, comps_data = _load_registries(root)
+    comps_by_id = {str(c.get("id") or "").strip(): c for c in (comps_data.get("components") or []) if c.get("id")}
+    helper_pkgs = {
+        str(k).strip(): dict(v)
+        for k, v in (_load_toml(_groups_registry_path(root)).get("helper_packages") or {}).items()
+        if str(k).strip() and isinstance(v, dict)
+    }
+    items: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for g in gjson.get("groups") or []:
+        for p in g.get("packages") or []:
+            pid = str(p.get("name") or "").strip()
+            if not pid or pid in seen:
+                continue
+            seen.add(pid)
+            owner = str(p.get("owner") or "")
+            leaf_ok = bool(p.get("leaf_selectable"))
+            if leaf_ok:
+                comp = comps_by_id.get(owner.split(":", 1)[-1], {}) if owner.startswith("component:") else {}
+                category = str(comp.get("category") or g.get("name") or "package")
+                items.append(
+                    {
+                        **p,
+                        "category": category,
+                        "label": pid.replace("-", " ").title(),
+                    }
+                )
+    for c in comps_data.get("components") or []:
+        if not c.get("allow_leaf_packages"):
+            continue
+        cid = str(c.get("id") or "").strip()
+        bf_rel = str(c.get("brewfile") or "").strip()
+        if not bf_rel:
+            continue
+        bf_f, bf_c = _parse_brewfile(root / bf_rel)
+        for kind, toks in (("formula", bf_f), ("cask", bf_c)):
+            for tok in toks:
+                short = tok.split("/")[-1]
+                pid = short
+                if pid in seen:
+                    continue
+                # Re-evaluate using group data when also in a group; prefer component owner for opt-in list
+                pseudo = {
+                    "name": pid,
+                    "owner": f"component:{cid}",
+                    "installable": True,
+                }
+                leaf_ok, leaf_reason = _leaf_selectable(pid, f"component:{cid}", True, comps_by_id, helper_pkgs)
+                if not leaf_ok:
+                    continue
+                seen.add(pid)
+                items.append(
+                    {
+                        "name": pid,
+                        "owner": f"component:{cid}",
+                        "install_kind": kind,
+                        "install_token": tok,
+                        "leaf_selectable": True,
+                        "leaf_reason": None,
+                        "category": str(c.get("category") or "workstation"),
+                        "label": pid.replace("-", " ").title(),
+                    }
+                )
+    return {
+        "schema_version": 1,
+        "os": gjson.get("os"),
+        "pkg_mgr": gjson.get("pkg_mgr"),
+        "count": len(items),
+        "packages": sorted(items, key=lambda x: (x.get("category", ""), x.get("name", ""))),
+    }
+
+
+def find_package_meta(
+    root: Path,
+    pkg_id: str,
+    pstate: dict[str, Any] | None = None,
+    *,
+    os_name: str | None = None,
+    darwin_major: str | None = None,
+    pkg_mgr: str | None = None,
+) -> dict[str, Any]:
+    short = pkg_id.split("/")[-1]
+    res = resolve_selector(root, short, pstate)
+    if isinstance(res.get("package"), dict):
+        return res["package"]
+    for p in compute_leaf_catalog(root, pstate, os_name=os_name, darwin_major=darwin_major, pkg_mgr=pkg_mgr).get(
+        "packages"
+    ) or []:
+        if p.get("name") == short:
+            return p
+    gjson = compute_groups_data(root, pstate, os_name=os_name, darwin_major=darwin_major, pkg_mgr=pkg_mgr, probe_installed=False)
+    for g in gjson.get("groups") or []:
+        for p in g.get("packages") or []:
+            tok = str(p.get("install_token") or "").split("/")[-1]
+            if p.get("name") == short or tok == short:
+                return p
+    return {
+        "name": short,
+        "known": bool(res.get("owner_exists")),
+        "owner": res.get("owner"),
+        "installable": False,
+        "leaf_selectable": False,
+        "leaf_reason": "unknown package",
+        "unsupported_reason": res.get("unsupported_reason"),
+    }
+
+
+def explicit_convergence_plan(
+    root: Path,
+    *,
+    group_names: list[str],
+    component_ids: list[str],
+    explicit_ids: list[str],
+    os_name: str | None = None,
+    pkg_mgr: str | None = None,
+) -> dict[str, Any]:
+    """Planned installs for explicit packages, deduped against selected groups/components."""
+    det_os, det_dmajor, det_mgr = detect_platform()
+    os_name = os_name or det_os
+    pkg_mgr = pkg_mgr or det_mgr
+    pstate = {
+        "groups": {g: {"state": "local"} for g in group_names},
+        "components": {c: {"state": "local"} for c in component_ids},
+    }
+    gjson = compute_groups_data(root, pstate, os_name=os_name, pkg_mgr=pkg_mgr, probe_installed=False)
+    selected_tokens: set[str] = set()
+    for g in gjson.get("groups") or []:
+        if g.get("name") not in group_names:
+            continue
+        for p in g.get("packages") or []:
+            tok = p.get("install_token")
+            if tok:
+                selected_tokens.add(str(tok).split("/")[-1])
+    _, comps_data = _load_registries(root)
+    for cid in component_ids:
+        c = next((x for x in (comps_data.get("components") or []) if str(x.get("id")) == cid), None)
+        if not c:
+            continue
+        bf_rel = str(c.get("brewfile") or "").strip()
+        if bf_rel:
+            bf_f, bf_c = _parse_brewfile(root / bf_rel)
+            for tok in bf_f + bf_c:
+                selected_tokens.add(tok.split("/")[-1])
+    installs: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+    for pid in explicit_ids:
+        short = pid.split("/")[-1]
+        meta = find_package_meta(root, short, None, os_name=os_name, pkg_mgr=pkg_mgr)
+        tok = str(meta.get("install_token") or short).split("/")[-1]
+        if tok in selected_tokens:
+            skipped.append(
+                {
+                    "name": short,
+                    "reason": "satisfied_by_owner_bundle",
+                    "owner": meta.get("owner"),
+                }
+            )
+            continue
+        if not meta.get("installable"):
+            skipped.append(
+                {
+                    "name": short,
+                    "reason": "unsupported",
+                    "unsupported_reason": meta.get("unsupported_reason"),
+                }
+            )
+            continue
+        installs.append(
+            {
+                "name": short,
+                "owner": meta.get("owner"),
+                "desired_via": "explicit-package",
+                "install_method": meta.get("install_method"),
+                "install_kind": meta.get("install_kind"),
+                "install_token": meta.get("install_token"),
+            }
+        )
+    return {
+        "schema_version": 1,
+        "explicit": explicit_ids,
+        "install": installs,
+        "skipped": skipped,
+    }
+
+
 def compute_groups_data(
     root: Path,
     pstate: dict[str, Any] | None = None,
@@ -442,6 +748,8 @@ def compute_groups_data(
         have_helper_mock, inst_helper = False, set()
 
     grp_states = (pstate or {}).get("groups") or {}
+    comps_data = _load_toml(_components_registry_path(root))
+    comps_by_id = {str(c.get("id") or "").strip(): c for c in (comps_data.get("components") or []) if c.get("id")}
 
     out_groups: list[dict[str, Any]] = []
     for g in groups_data.get("groups") or []:
@@ -506,6 +814,7 @@ def compute_groups_data(
             )
             for pid, pcls in entries
         ]
+        pkg_details = [enrich_package_leaf_fields(dict(p), comps_by_id, helper_pkgs) for p in pkg_details]
 
         supported_count = sum(1 for p in pkg_details if p["installable"])
         unsupported_pkgs = [p["name"] for p in pkg_details if not p["installable"]]
@@ -557,10 +866,19 @@ def resolve_selector(
     root: Path,
     raw: str,
     pstate: dict[str, Any] | None = None,
+    *,
+    probe_installed: bool = True,
 ) -> dict[str, Any]:
     raw = raw.strip()
     os_name, darwin_major, pkg_mgr = detect_platform()
-    gjson = compute_groups_data(root, pstate, os_name=os_name, darwin_major=darwin_major, pkg_mgr=pkg_mgr)
+    gjson = compute_groups_data(
+        root,
+        pstate,
+        os_name=os_name,
+        darwin_major=darwin_major,
+        pkg_mgr=pkg_mgr,
+        probe_installed=probe_installed,
+    )
     groups_by_name = {g["name"]: g for g in gjson["groups"]}
 
     groups_data = _load_toml(_groups_registry_path(root))
@@ -570,6 +888,11 @@ def resolve_selector(
         if str(k).strip() and str(v).strip()
     }
     reverse_aliases = {v.split("/")[-1]: k for k, v in brew_aliases.items()}
+    helper_pkgs = {
+        str(k).strip(): dict(v)
+        for k, v in (groups_data.get("helper_packages") or {}).items()
+        if str(k).strip() and isinstance(v, dict)
+    }
 
     comps_data = _load_toml(_components_registry_path(root))
     comps_by_id: dict[str, dict[str, Any]] = {}
@@ -764,10 +1087,11 @@ def resolve_selector(
         }
         pkg_obj = _find_pkg_in_group(oid, via_pkg) if via_pkg else None
         if via_pkg and pkg_obj is not None:
+            pkg_obj = enrich_package_leaf_fields(pkg_obj, comps_by_id, helper_pkgs)
             inst = bool(pkg_obj["installable"])
             psup = bool(pkg_obj["platform_supported"])
             unsup_reason = pkg_obj.get("unsupported_reason")
-            direct_ok = inst
+            direct_ok = bool(pkg_obj.get("leaf_selectable")) and inst
             direct_err = None
             if not inst:
                 direct_err = (
@@ -775,6 +1099,13 @@ def resolve_selector(
                     f"but DOTS has no supported installer for {pkg_obj['name']} on {os_name}.\n\n"
                     f"Selecting {owner} is still valid, but this direct package request\n"
                     f"cannot be satisfied."
+                )
+            elif not pkg_obj.get("leaf_selectable"):
+                direct_err = (
+                    f"{pkg_obj['name']} is known to DOTS through {owner},\n"
+                    f"but it cannot be installed independently ({pkg_obj.get('leaf_reason')}).\n\n"
+                    f"Use './dots install {owner}' or enable the owning component,\n"
+                    f"or './dots install {pkg_obj['name']}' and choose the bundle option."
                 )
         else:
             inst = bool(g["platform_supported"])
@@ -805,6 +1136,8 @@ def resolve_selector(
             "group_summary": group_summary,
             "group_packages": [p["name"] for p in g["packages"]],
             "direct_install_allowed": direct_ok,
+            "leaf_selectable": bool((pkg_obj or {}).get("leaf_selectable")) if via_pkg else False,
+            "leaf_reason": (pkg_obj or {}).get("leaf_reason") if via_pkg else None,
             "direct_install_error": direct_err,
             "choices": candidates,
         }
@@ -816,7 +1149,7 @@ def resolve_selector(
         if via_pkg:
             tok_meta = comp_pkg_tokens.get((oid, via_pkg.split("/")[-1])) or comp_pkg_tokens.get((oid, via_pkg))
             pkg_obj = {
-                "name": via_pkg,
+                "name": via_pkg.split("/")[-1],
                 "owner": owner,
                 "class": "component",
                 "required": False,
@@ -828,11 +1161,19 @@ def resolve_selector(
                 "external": False,
                 "platform_supported": sup,
                 "install_method": (tok_meta["kind"] if tok_meta else "brew") if sup else "none",
-                "install_kind": (tok_meta["kind"] if tok_meta else "brew") if sup else "none",
+                "install_kind": (tok_meta["kind"] if tok_meta else "cask") if sup else "none",
                 "install_token": tok_meta["token"] if (tok_meta and sup) else None,
                 "unsupported_reason": reason or None,
             }
+            pkg_obj = enrich_package_leaf_fields(pkg_obj, comps_by_id, helper_pkgs)
+        leaf_ok = bool(pkg_obj.get("leaf_selectable")) if pkg_obj else False
         direct_err = None if sup else f"{owner} is unsupported on {os_name}: {reason}"
+        if pkg_obj and sup and not leaf_ok:
+            direct_err = (
+                f"{pkg_obj['name']} requires component lifecycle management ({pkg_obj.get('leaf_reason')}).\n"
+                f"Enable {owner} instead of installing the package alone."
+            )
+        direct_ok = sup and (leaf_ok if pkg_obj else True)
         return {
             "status": "ok",
             "selector": raw,
@@ -848,7 +1189,9 @@ def resolve_selector(
             "unsupported_reason": reason or None,
             "package": pkg_obj,
             "group_packages": [],
-            "direct_install_allowed": sup,
+            "direct_install_allowed": direct_ok,
+            "leaf_selectable": leaf_ok if pkg_obj else False,
+            "leaf_reason": (pkg_obj or {}).get("leaf_reason"),
             "direct_install_error": direct_err,
             "choices": candidates,
         }
@@ -1254,6 +1597,9 @@ def main(argv: list[str] | None = None) -> int:
     p_audit.add_argument("--json", action="store_true", dest="as_json")
     p_audit.add_argument("--strict", action="store_true")
 
+    sub.add_parser("leaf-catalog")
+    sub.add_parser("explicit-plan")
+
     args = parser.parse_args(argv)
     root = _repo_root()
 
@@ -1268,6 +1614,21 @@ def main(argv: list[str] | None = None) -> int:
         pjson_raw = os.environ.get("PJSON", "").strip()
         pstate = json.loads(pjson_raw) if pjson_raw else None
         out = resolve_selector(root, args.selector, pstate)
+        print(json.dumps(out, indent=2))
+        return 0
+
+    if args.cmd == "leaf-catalog":
+        pjson_raw = os.environ.get("PJSON", "").strip()
+        pstate = json.loads(pjson_raw) if pjson_raw else None
+        out = compute_leaf_catalog(root, pstate)
+        print(json.dumps(out, indent=2))
+        return 0
+
+    if args.cmd == "explicit-plan":
+        groups = [x.strip() for x in os.environ.get("GROUPS_CSV", "").split(",") if x.strip()]
+        comps = [x.strip() for x in os.environ.get("COMPONENTS_CSV", "").split(",") if x.strip()]
+        explicit = [x.strip() for x in os.environ.get("EXPLICIT_CSV", "").split(",") if x.strip()]
+        out = explicit_convergence_plan(root, group_names=groups, component_ids=comps, explicit_ids=explicit)
         print(json.dumps(out, indent=2))
         return 0
 

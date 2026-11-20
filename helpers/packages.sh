@@ -636,6 +636,91 @@ dots_provision_packages() {
 	fi
 }
 
+# Install profile explicit packages (packages.include), deduped against groups/components.
+dots_provision_explicit_packages() {
+	local -a explicit=("${PROFILE_PKG_INCLUDE[@]+"${PROFILE_PKG_INCLUDE[@]}"}")
+	[[ ${#explicit[@]} -gt 0 ]] || return 0
+	dots_require_python 0 || return 1
+	local groups_csv components_csv explicit_csv pyhome plan rc=0
+	groups_csv="$(
+		IFS=,
+		echo "${DOTS_RESOLVED_GROUPS[*]+"${DOTS_RESOLVED_GROUPS[*]}"}"
+	)"
+	components_csv="$(
+		IFS=,
+		echo "${DOTS_WITH_COMPONENTS[*]+"${DOTS_WITH_COMPONENTS[@]}"}"
+	)"
+	explicit_csv="$(
+		IFS=,
+		echo "${explicit[*]}"
+	)"
+	pyhome="$(mktemp -d "${TMPDIR:-/tmp}/dots-explicit.XXXXXX")"
+	plan="$(
+		DOTS_DIR="${DIR}" \
+			GROUPS_CSV="${groups_csv}" \
+			COMPONENTS_CSV="${components_csv}" \
+			EXPLICIT_CSV="${explicit_csv}" \
+			HOME="${pyhome}" \
+			PYTHONDONTWRITEBYTECODE=1 \
+			PYTHONNOUSERSITE=1 \
+			"${DOTS_PYTHON}" -B "${DIR}/helpers/package_truth.py" explicit-plan
+	)" || rc=$?
+	rm -rf "${pyhome}"
+	[[ ${rc} -eq 0 ]] || return 1
+
+	echo "=== Explicit profile packages ==="
+	local py="${DOTS_PYTHON:-python3}"
+	PLAN_JSON="${plan}" DRY_RUN_FLAG="${DRY_RUN:-0}" "${py}" -B - <<'PY'
+import json, os, sys
+plan = json.loads(os.environ["PLAN_JSON"])
+for skip in plan.get("skipped") or []:
+    if skip.get("reason") == "satisfied_by_owner_bundle":
+        print(f"Note: explicit {skip['name']} already satisfied by {skip.get('owner')}")
+    else:
+        print(f"Note: explicit {skip['name']} skipped ({skip.get('reason')})")
+for item in plan.get("install") or []:
+    print(f"install\t{item['name']}\t{item.get('install_kind','formula')}\t{item.get('install_token') or item['name']}\t{item.get('install_method','brew')}")
+PY
+		local name kind tok method brew_bin
+		brew_bin="${DOTS_BREW_BIN:-brew}"
+		while IFS=$'\t' read -r tag name kind tok method; do
+			[[ ${tag} == "install" ]] || continue
+			[[ -n ${name} ]] || continue
+			if [[ ${DRY_RUN:-0} -eq 1 ]]; then
+				echo "[dry-run] would install explicit package ${name} (${method}/${kind}: ${tok})"
+				continue
+			fi
+			case "${method}" in
+			brew)
+				if [[ ${kind} == cask ]]; then
+					tok="${tok##*/}"
+					if declare -F dots_ensure_cask_app >/dev/null 2>&1; then
+						dots_ensure_cask_app "${tok}" || return 1
+					else
+						"${brew_bin}" install --cask "${tok}" || return 1
+					fi
+				else
+					"${brew_bin}" install "${tok}" || return 1
+				fi
+				;;
+			apt | dnf | pacman | xbps)
+				echo "Note: explicit ${name} via ${method} deferred to native batch (${tok})"
+				;;
+			*)
+				echo "Warn: unsupported explicit install method for ${name}: ${method}" >&2
+				;;
+			esac
+		done < <(
+			PLAN_JSON="${plan}" "${py}" -B - <<'PY2'
+import json, os
+plan = json.loads(os.environ["PLAN_JSON"])
+for item in plan.get("install") or []:
+    print(f"install\t{item['name']}\t{item.get('install_kind','formula')}\t{item.get('install_token') or item['name']}\t{item.get('install_method','brew')}")
+PY2
+		)
+	return 0
+}
+
 # ---------------------------------------------------------------------------
 # Read-only CLI: groups / group / plan (no install, no auth, no outdated queries)
 # ---------------------------------------------------------------------------

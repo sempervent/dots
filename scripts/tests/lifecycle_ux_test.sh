@@ -165,7 +165,7 @@ echo "${no_prof_err}" | grep -qi '\-\-profile' && ok "error requires --profile" 
 HOME_NOACT="${TMP}/home-noact"
 mkdir -p "${HOME_NOACT}"
 set +e
-HOME="${HOME_NOACT}" DOTS_UI_ANSWERS=$'4\ny\n' \
+HOME="${HOME_NOACT}" DOTS_UI_ANSWERS=$'2\n4\ny\n' \
 	"${ROOT}/dots" install hyperfine --no-apply >"${TMP}/noact.out" 2>&1
 noact_rc=$?
 set -e
@@ -211,7 +211,7 @@ EOF
 before_ab="$(snap_tree "${ABORT_HOME}")"
 : >"${MOCK_BREW_LOG}"
 : >"${MOCK_BOOT_LOG}"
-HOME="${ABORT_HOME}" DOTS_BOOTSTRAP_SH="${MOCK_BOOT_OK}" DOTS_UI_ANSWERS=$'n\n' \
+HOME="${ABORT_HOME}" DOTS_BOOTSTRAP_SH="${MOCK_BOOT_OK}" DOTS_UI_ANSWERS=$'2\nn\n' \
 	"${ROOT}/dots" install hyperfine >"${TMP}/abort.out" 2>&1
 after_ab="$(snap_tree "${ABORT_HOME}")"
 [[ ${before_ab} == "${after_ab}" ]] && ok "abort zero HOME/profile/active writes" || bad "abort mutated HOME"
