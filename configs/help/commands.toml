@@ -175,20 +175,23 @@ description = "Show DOTS-recorded spend from the local ledger."
 
 [[commands]]
 name = "packages"
-usage = "dots packages [groups|group|plan|status|explain|outdated|upgrade|adopt]"
+usage = "dots packages [groups|group|plan|status|explain|outdated|upgrade|adopt|audit]"
 category = "packages"
-description = "Package ownership, drift, groups, and upgrades."
+description = "Package ownership, installability audit, drift, groups, and upgrades."
 mutating = true
 related = ["install", "upgrade", "status", "check", "setup", "help"]
 [[commands.examples]]
 command = "dots packages groups"
-description = "List capability groups."
+description = "List capability groups with platform support counts."
+[[commands.examples]]
+command = "dots packages audit"
+description = "Run offline registry, Brewfile, and platform-map convergence audit."
 [[commands.examples]]
 command = "dots packages status"
-description = "Full package ownership audit."
+description = "Full package ownership report."
 [[commands.examples]]
 command = "dots packages explain bat"
-description = "Explain one package's ownership state."
+description = "Explain one package's ownership and installability state."
 
 [[commands]]
 name = "backup"

@@ -355,7 +355,11 @@
     "conftest",
     "tokei",
     "Rego",
-    "dekit"
+    "dekit",
+    "findutils",
+    "moreutils",
+    "fastfetch",
+    "earendil"
   ],
   "ignorePaths": [
     "**/*.svg",

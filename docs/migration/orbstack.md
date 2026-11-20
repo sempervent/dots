@@ -1,6 +1,6 @@
 # OrbStack ↔ Docker Desktop migration (manual, reversible)
 
-DOTS may install **OrbStack** via `--with mactools`. That does **not** remove
+DOTS may install **OrbStack** via `--with orbstack`. That does **not** remove
 Docker Desktop or migrate workloads. Treat migration as a deliberate project.
 
 ## Inventory (read-only)
@@ -41,7 +41,7 @@ Do not assume breakage — check your projects against:
 2. List **named volumes** that are not reproducible from Git/Compose.
 3. **Backup** non-reproducible data (volume tar, DB dumps, `.env` offline).
 4. **Stop** workloads cleanly (`compose down` / stop containers).
-5. Ensure **OrbStack** is installed (`./setup.sh --with mactools` or cask) and running.
+5. Ensure **OrbStack** is installed (`./setup.sh --with orbstack` or `./dots install orbstack`) and running.
 6. Inspect **contexts**: `docker context ls` — select OrbStack’s context when ready.
 7. Verify CLI: `docker info`, `docker run --rm hello-world`.
 8. **Rebuild** reproducible stacks from Compose/Dockerfiles.
@@ -70,5 +70,5 @@ docker context ls
 
 ## See also
 
-- [mactools](../macos/mactools.md) — mactools package set
-- `brew/Brewfile.mactools` — `cask "orbstack"`
+- [Components reference](../reference/generated/components.md) — `orbstack` component
+- `brew/Brewfile.orbstack` — `cask "orbstack"`

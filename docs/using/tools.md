@@ -3,6 +3,11 @@
 Conceptual tools DOTS cares about — not every transitive package. Upstream links
 are documentation only; CI does **not** fetch them.
 
+Authoritative inventories live in the generated references:
+[Package groups](../reference/generated/package-groups.md),
+[Components](../reference/generated/components.md), and
+[`--with` options](../reference/generated/with-options.md).
+
 | Tool | Role in DOTS | Installed by | Platforms | Upstream |
 |------|--------------|--------------|-----------|----------|
 | Homebrew | Primary package manager on macOS / Linuxbrew | Stage 0 official installer | darwin, linux | https://brew.sh |
@@ -24,7 +29,7 @@ are documentation only; CI does **not** fetch them.
 | Keyboard Maestro | macOS macro automation | `--with mactools` | darwin | https://www.keyboardmaestro.com |
 | Hazel | Folder automation | `--with mactools` | darwin | https://www.noodlesoft.com |
 | Little Snitch | Network connection alert / firewall | `--with mactools` | darwin | https://www.obdev.at/products/littlesnitch/ |
-| OrbStack | Containers / VMs (additive to Docker) | `--with mactools` | darwin | https://orbstack.dev |
+| OrbStack | Containers / VMs (additive to Docker) | `--with orbstack` | darwin | https://orbstack.dev |
 | Hookmark | Link notes to anything | `--with mactools` | darwin | https://hookproductivity.com |
 | DEVONthink | Personal knowledge base | `--with mactools` | darwin | https://www.devontechnologies.com/apps/devonthink |
 | Ghostty | Terminal emulator config linked | `--with mactools` / links | darwin | https://ghostty.org |
@@ -39,7 +44,7 @@ are documentation only; CI does **not** fetch them.
 | Sonic Pi | Live coding music | `--with mactools` | darwin | https://sonic-pi.net |
 | SuperCollider | Audio synthesis platform | `--with mactools` | darwin | https://supercollider.github.io |
 | Yazi | Terminal file manager (additive) | `workstation` group | darwin, linux | https://yazi-rs.github.io |
-| mise | Polyglot runtime manager | `modern` group | darwin, linux | https://mise.jdx.dev |
+| mise | Polyglot runtime manager (opt-in config; see MISE migration) | `modern` group | darwin, linux | https://mise.jdx.dev |
 | dust | Intuitive du | `modern` group | darwin, linux | https://github.com/bootandy/dust |
 | duf | Disk free utility | `modern` group | darwin, linux | https://github.com/muesli/duf |
 | jc | JSON CLI converters | `modern` group | darwin, linux | https://github.com/kellyjonbrazil/jc |
@@ -56,6 +61,7 @@ are documentation only; CI does **not** fetch them.
 | kustomize | Manifest overlays | `k8s` group | darwin, linux | https://kustomize.io |
 | kyverno | Policy engine CLI | `k8s` group | darwin, linux | https://kyverno.io |
 | conftest | Rego policy on structured config | `infra` group | darwin, linux | https://www.conftest.dev |
+| OpenTofu | Complementary IaC engine (`tofu`; install-only) | `infra` group | darwin, dnf/pacman/xbps (`apt` unsupported) | https://opentofu.org |
 | Hammerspoon | macOS automation app | `--with mactools` | darwin | https://www.hammerspoon.org |
 | SwiftBar | Menu bar plugins | `--with mactools` | darwin | https://github.com/swiftbar/SwiftBar |
 | BetterDisplay | Display control | `--with mactools` | darwin | https://betterdisplay.app |
@@ -64,7 +70,6 @@ are documentation only; CI does **not** fetch them.
 | IINA | Media player | `--with mactools` | darwin | https://iina.io |
 | Karabiner-Elements | Keyboard remapper | `--with karabiner-elements` | darwin | https://karabiner-elements.pqrs.org |
 | Ranger | Terminal file manager | workstation group | darwin, linux | https://ranger.github.io |
-| mise | Polyglot runtime manager (migration path) | linked config; see MISE migration | darwin, linux | https://mise.jdx.dev |
 | lazygit | TUI for git | modern group / mactools notes | darwin, linux | https://github.com/jesseduffield/lazygit |
 | atuin | Shell history sync | modern group | darwin, linux | https://atuin.sh |
 | direnv | Per-directory env | modern group | darwin, linux | https://direnv.net |
@@ -95,8 +100,6 @@ are documentation only; CI does **not** fetch them.
 | iperf3 | Throughput measurement | `network` group | darwin, linux | https://iperf.fr |
 | gping | Latency visualization | `network` group | darwin, linux | https://github.com/orf/gping |
 | bandwhich | Per-process bandwidth | `network` group | darwin, linux | https://github.com/imsnif/bandwhich |
-| mosh | Resilient remote shell | `network` group | darwin, linux | https://mosh.org |
-| tailscale | Overlay VPN client (install-only; no `up`) | `network` group | darwin, linux | https://tailscale.com |
 | doggo | Human-friendly DNS client | `network` group | darwin, linux | https://github.com/mr-karan/doggo |
 | smartctl | Storage health CLI | `hardware` / smartmontools | darwin, linux | https://www.smartmontools.org |
 | fio | Storage benchmarking | `hardware` group | darwin, linux | https://fio.readthedocs.io |
@@ -138,7 +141,9 @@ gdalinfo --version
 pmtiles show map.pmtiles
 ```
 
-`mitmproxy` is known but **not** in default `network` membership (opt-in later).
+`mitmproxy` is an explicit opt-in component (`--with mitmproxy`,
+`omit_from_all = true`), intentionally separate from default `network`
+membership. See [Components reference](../reference/generated/components.md).
 
 Ownership paths: [Architecture](../concepts/architecture.md). How to extend:
 [Extending](extending.md). macOS layer detail: [mactools](../macos/mactools.md).

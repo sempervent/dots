@@ -7,19 +7,21 @@ Installed software must never fail setup merely because DOTS did not install it.
 | Term | Meaning |
 |------|---------|
 | **managed** | Declared by the *resolved* DOTS package/component set **and** owned by Homebrew |
-| **missing** | Declared by DOTS but absent |
+| **missing** | Declared by DOTS and installable here, but absent |
 | **outdated** | Declared, Homebrew-owned, update available |
-| **external** | Declared by DOTS; app exists but Homebrew does not own it |
+| **external** | Present on the machine, not owned by DOTS's selected install mechanism |
 | **inactive** | Installed; known DOTS owner(s) exist but **none are selected** |
 | **undeclared** | Top-level Homebrew install with **no** DOTS group/component owner |
+| **installable** | DOTS has an authoritative installation mechanism on this platform |
+| **unsupported** | Known capability with no DOTS-supported install route on this platform |
 
 ```text
-known ≠ selected ≠ installed
+known ≠ installable ≠ installed ≠ selected
 
 installed ≠ managed
 managed = declared by resolved DOTS configuration (active groups + selected components)
-inactive = known in a Brewfile owner, but that owner is not active
-undeclared = no owner in brew/groups/*.Brewfile or component brewfile=
+inactive = known in a DOTS registry/Brewfile owner, but that owner is not active
+undeclared = no owner in configs/packages/groups.toml, brew/groups/*.Brewfile, or component registries
 ```
 
 Desired state is the **union** of active profile package-group Brewfiles plus
@@ -41,30 +43,21 @@ authority.
 
 ## Logical groups
 
-From `configs/packages/groups.toml` ([generated](../reference/generated/package-groups.md)):
+The complete, authoritative list of groups, required/optional memberships, and
+platform support lives in `configs/packages/groups.toml` and the
+[generated package-groups reference](../reference/generated/package-groups.md).
 
-| Group | Role |
-|-------|------|
-| `core` | Portable essentials |
-| `modern` | Shared ergonomic CLI |
-| `workstation` | Desktop-user tools (not headless) |
-| `infra` | Containers / k8s / terraform |
-| `media` | Image / video processing |
-| `gui` | macOS GUI / fonts |
-| `server` | Headless extras |
-| `dev` | Local CI / lint / Rust ergonomics (install-only) |
-| `security` | Secrets scanning / SBOM / signing CLIs (install-only; no auth) |
-| `network` | Network / remote / k8s context CLIs (install-only; no Tailscale up) |
-| `data` | Tabular / analytical CLIs |
-| `geo` | Geospatial CLI tooling |
-
-**required** → ERROR if missing after install for that profile contract.
-**optional** → WARN if missing; may be empty/SKIP on some managers.
+**required** → ERROR if missing after install for that profile contract (and
+if a group's required package has no installation route on the current platform,
+DOTS reports the group unsupported rather than claiming convergence).
+**optional** → WARN if missing; may be empty/SKIP on some managers without
+invalidating the owning group.
 Unavailable on a distro: map value `""` (skip) — do not invent fake names.
 
 New workstation tool groups are **mostly optional** membership. They do **not**
 change global Git (`difftastic` / `mergiraf` are install-only — opt in per-repo).
-`mitmproxy` is intentionally **not** in `network` (defer as opt-in later).
+`mitmproxy` is intentionally **not** in `network` — use the explicit opt-in
+`mitmproxy` component (`--with mitmproxy`, `omit_from_all = true`).
 DOTS never runs `tailscale up` / login.
 
 Aggregate `brew/Brewfile` still covers only the legacy bare-`setup.sh` set
@@ -82,7 +75,8 @@ and selected via profile `packages =`.
 ./dots packages groups                  # capability groups (+ active)
 ./dots packages group geo               # one group in detail
 ./dots packages plan --profile home     # resolved plan (read-only)
-./dots packages status                  # full audit (advisories only)
+./dots packages status                  # full ownership report (advisories only)
+./dots packages audit [--json]          # offline registry / Brewfile / map audit
 ./dots packages explain dust            # owners + desired state + install hint
 ./dots packages outdated                # outdated managed packages
 ./dots packages upgrade                 # delegates to dots upgrade
