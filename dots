@@ -480,6 +480,8 @@ EOF
 	if [[ ${DOTS_SEL_KIND} == "component" ]]; then
 		dots_require_explicit_component_supported "${DOTS_SEL_ID}" || return 1
 	fi
+	# Package/group installability check (never persist unsatisfiable direct package requests)
+	dots_require_selector_installable || return 1
 
 	# 2. Explain resolution & scope
 	echo "DOTS Install"
@@ -501,6 +503,16 @@ EOF
 		local desc p line=""
 		desc="$(dots_group_description "${DOTS_SEL_ID}" 2>/dev/null || true)"
 		[[ -n ${desc} ]] && echo "Role: ${desc}"
+		if [[ -n ${DOTS_SEL_INSTALL_SUMMARY:-} ]]; then
+			local _counts _unsup
+			_counts="${DOTS_SEL_INSTALL_SUMMARY%%$'\t'*}"
+			_unsup="${DOTS_SEL_INSTALL_SUMMARY#*$'\t'}"
+			echo "Packages: ${_counts} supported on this platform"
+			if [[ -n ${_unsup} ]]; then
+				echo "Unavailable (optional; skipped):"
+				echo "  ${_unsup//,/ }"
+			fi
+		fi
 		echo ""
 		echo "Adding ${DOTS_SEL_ID} also makes these packages desired:"
 		while IFS= read -r p; do
@@ -713,8 +725,11 @@ _dots_profile_edit_subcmd() {
 	}
 
 	dots_resolve_capability_selector "${selector}" "${allow_prompt}" || return 1
-	if [[ ${action} == "add" && ${DOTS_SEL_KIND} == "component" ]]; then
-		dots_require_explicit_component_supported "${DOTS_SEL_ID}" || return 1
+	if [[ ${action} == "add" ]]; then
+		if [[ ${DOTS_SEL_KIND} == "component" ]]; then
+			dots_require_explicit_component_supported "${DOTS_SEL_ID}" || return 1
+		fi
+		dots_require_selector_installable || return 1
 	fi
 	dots_profile_edit_resolve_target "${profile_arg}" "${allow_prompt}" || return 1
 
@@ -852,6 +867,7 @@ _dots_profile_mutate_subcmd() {
 		if [[ ${DOTS_SEL_KIND} == "component" ]]; then
 			dots_require_explicit_component_supported "${DOTS_SEL_ID}" || return 1
 		fi
+		dots_require_selector_installable || return 1
 		resolved_adds+=("${DOTS_SEL_OWNER}")
 	done
 	for s in "${rem_raws[@]+"${rem_raws[@]}"}"; do
@@ -1759,6 +1775,7 @@ dots_cmd_packages() {
 		echo "  5) outdated   managed packages with updates"
 		echo "  6) upgrade    upgrade DOTS-managed packages"
 		echo "  7) adopt      suggest Brewfile declaration"
+		echo "  8) audit      registry convergence audit"
 		echo "  q) quit"
 		echo ""
 		local choice
@@ -1774,6 +1791,7 @@ dots_cmd_packages() {
 		5 | outdated | o) sub=outdated ;;
 		6 | upgrade | u) sub=upgrade ;;
 		7 | adopt | a) sub=adopt ;;
+		8 | audit) sub=audit ;;
 		q | quit | Q) return 0 ;;
 		*) sub=status ;;
 		esac
@@ -1784,6 +1802,9 @@ dots_cmd_packages() {
 	case "${sub}" in
 	status | st)
 		dots_pkg_status_report
+		;;
+	audit)
+		dots_packages_audit "$@"
 		;;
 	groups)
 		local json=0 profile_arg=""
@@ -1910,6 +1931,8 @@ Usage:
   ./dots packages adopt NAME [--group G|--component C] [--cask]
                                print suggested Brewfile declaration (no auto-edit)
                                (packages with component owners → use --with instead)
+  ./dots packages audit [--json] [--strict]
+                               offline registry / Brewfile / platform-map audit
 
 groups = capability ownership (configs/packages/groups.toml)
 plan   = resolved package actions for a profile, without mutation
