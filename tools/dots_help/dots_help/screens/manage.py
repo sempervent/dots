@@ -64,7 +64,13 @@ class SoftwarePane(Vertical):
             mod_mark = "*" if item.modified else " "
             suffix = ""
             if item.kind == "group":
-                suffix = f" ({item.installed_count}/{item.supported_package_count} inst)"
+                if item.unsupported_package_count > 0:
+                    suffix = (
+                        f" ({item.installed_count}/{item.supported_package_count} inst, "
+                        f"{item.supported_package_count}/{item.package_count} avail)"
+                    )
+                else:
+                    suffix = f" ({item.installed_count}/{item.supported_package_count} inst)"
             elif item.kind == "supergroup":
                 suffix = f" ({len(item.supported_members)}/{len(item.members)} components)"
             elif not item.supported:
@@ -196,15 +202,28 @@ class SoftwarePane(Vertical):
         lines.append("")
 
         if item.kind == "group":
+            plat_desc = f"{self.model.os_name or '?'}/{self.model.pkg_mgr or '?'}"
             lines.extend([
-                f"Required: {item.required_count}   Optional: {item.optional_count}",
+                f"Required:  {item.required_count}   Optional: {item.optional_count}",
+                f"Platform:  {item.supported_package_count}/{item.package_count} supported on {plat_desc}",
                 f"Installed: {item.installed_count} / {item.supported_package_count}",
-                "",
-                "Packages:",
             ])
+            if not item.supported:
+                lines.append(f"Disabled:  {item.unsupported_reason or 'unsupported on this platform'}")
+            if item.unsupported_packages:
+                lines.append(f"Unavailable (optional): {', '.join(item.unsupported_packages)}")
+            lines.extend(["", "Packages:"])
             for p in item.packages:
                 pname = str(p.get("name") or "")
-                st_str = "installed" if p.get("installed") else "missing"
+                method = str(p.get("install_method") or "none")
+                if not p.get("installable", True):
+                    st_str = "unavailable (external)" if p.get("external") else "unavailable"
+                elif p.get("external"):
+                    st_str = f"external ({method})"
+                elif p.get("installed"):
+                    st_str = f"installed ({method})"
+                else:
+                    st_str = f"missing ({method})"
                 lines.append(f"  {pname:<20} {st_str}")
         elif item.kind == "component":
             desired = "yes" if item.working.is_desired else "no"
