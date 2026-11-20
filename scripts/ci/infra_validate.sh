@@ -163,8 +163,8 @@ run_status() {
 	echo "────────────────────────────────"
 	echo ""
 	echo "Terraform / OpenTofu"
-	tool_line "terraform" terraform "(authoritative when present)"
-	tool_line "tofu" tofu "(optional; no automatic migration)"
+	tool_line "terraform" terraform "(HashiCorp; complementary)"
+	tool_line "tofu" tofu "(OpenTofu; complementary, no automatic migration)"
 	tool_line "terraform-docs" terraform-docs
 	tool_line "tflint" tflint "(no Homebrew formula today; optional)"
 	tool_line "checkov" checkov
@@ -209,19 +209,29 @@ run_status() {
 
 run_fmt_check() {
 	local dir="$1"
-	local bin
-	bin="$(tf_bin)"
-	if [[ -z ${bin} ]]; then
-		echo "  fmt-check            SKIP (no terraform/tofu)"
-		return 0
+	local ran=0 rc=0
+	if have terraform; then
+		ran=1
+		if scrub_env terraform fmt -check -recursive "${dir}" >/dev/null 2>&1; then
+			echo "  fmt-check            ${GREEN}PASS${NC} (terraform)"
+		else
+			echo "  fmt-check            ${YELLOW}FAIL${NC} (terraform fmt -check)"
+			rc=1
+		fi
 	fi
-	if scrub_env "${bin}" fmt -check -recursive "${dir}" >/dev/null 2>&1; then
-		echo "  fmt-check            ${GREEN}PASS${NC} (${bin})"
-	else
-		echo "  fmt-check            ${YELLOW}FAIL${NC} (${bin} fmt -check)"
-		return 1
+	if have tofu; then
+		ran=1
+		if scrub_env tofu fmt -check -recursive "${dir}" >/dev/null 2>&1; then
+			echo "  fmt-check            ${GREEN}PASS${NC} (tofu)"
+		else
+			echo "  fmt-check            ${YELLOW}FAIL${NC} (tofu fmt -check)"
+			rc=1
+		fi
 	fi
-	return 0
+	if [[ ${ran} -eq 0 ]]; then
+		echo "  fmt-check            SKIP (neither terraform nor tofu installed)"
+	fi
+	return "${rc}"
 }
 
 run_tflint_dir() {
@@ -346,10 +356,10 @@ run_gate() {
 	local pkr_dir="${FIXTURES}/packer-valid"
 
 	echo ""
-	echo "Terraform fixture"
+	echo "Terraform / OpenTofu fixture"
 	if [[ -d ${tf_dir} ]]; then
 		run_fmt_check "${tf_dir}" || rc=1
-		echo "  native validate      SKIPPED_NOT_INITIALIZED (no terraform init)"
+		echo "  native validate      SKIPPED_NOT_INITIALIZED (no terraform/tofu init)"
 		run_tflint_dir "${tf_dir}" || true
 		run_checkov_dir "${tf_dir}" || true
 		run_terraform_docs_preview "${tf_dir}" || true
