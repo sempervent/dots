@@ -681,43 +681,43 @@ for skip in plan.get("skipped") or []:
 for item in plan.get("install") or []:
     print(f"install\t{item['name']}\t{item.get('install_kind','formula')}\t{item.get('install_token') or item['name']}\t{item.get('install_method','brew')}")
 PY
-		local name kind tok method brew_bin
-		brew_bin="${DOTS_BREW_BIN:-brew}"
-		while IFS=$'\t' read -r tag name kind tok method; do
-			[[ ${tag} == "install" ]] || continue
-			[[ -n ${name} ]] || continue
-			if [[ ${DRY_RUN:-0} -eq 1 ]]; then
-				echo "[dry-run] would install explicit package ${name} (${method}/${kind}: ${tok})"
-				continue
-			fi
-			case "${method}" in
-			brew)
-				if [[ ${kind} == cask ]]; then
-					tok="${tok##*/}"
-					if declare -F dots_ensure_cask_app >/dev/null 2>&1; then
-						dots_ensure_cask_app "${tok}" || return 1
-					else
-						"${brew_bin}" install --cask "${tok}" || return 1
-					fi
+	local name kind tok method brew_bin
+	brew_bin="${DOTS_BREW_BIN:-brew}"
+	while IFS=$'\t' read -r tag name kind tok method; do
+		[[ ${tag} == "install" ]] || continue
+		[[ -n ${name} ]] || continue
+		if [[ ${DRY_RUN:-0} -eq 1 ]]; then
+			echo "[dry-run] would install explicit package ${name} (${method}/${kind}: ${tok})"
+			continue
+		fi
+		case "${method}" in
+		brew)
+			if [[ ${kind} == cask ]]; then
+				tok="${tok##*/}"
+				if declare -F dots_ensure_cask_app >/dev/null 2>&1; then
+					dots_ensure_cask_app "${tok}" || return 1
 				else
-					"${brew_bin}" install "${tok}" || return 1
+					"${brew_bin}" install --cask "${tok}" || return 1
 				fi
-				;;
-			apt | dnf | pacman | xbps)
-				echo "Note: explicit ${name} via ${method} deferred to native batch (${tok})"
-				;;
-			*)
-				echo "Warn: unsupported explicit install method for ${name}: ${method}" >&2
-				;;
-			esac
-		done < <(
-			PLAN_JSON="${plan}" "${py}" -B - <<'PY2'
+			else
+				"${brew_bin}" install "${tok}" || return 1
+			fi
+			;;
+		apt | dnf | pacman | xbps)
+			echo "Note: explicit ${name} via ${method} deferred to native batch (${tok})"
+			;;
+		*)
+			echo "Warn: unsupported explicit install method for ${name}: ${method}" >&2
+			;;
+		esac
+	done < <(
+		PLAN_JSON="${plan}" "${py}" -B - <<'PY2'
 import json, os
 plan = json.loads(os.environ["PLAN_JSON"])
 for item in plan.get("install") or []:
     print(f"install\t{item['name']}\t{item.get('install_kind','formula')}\t{item.get('install_token') or item['name']}\t{item.get('install_method','brew')}")
 PY2
-		)
+	)
 	return 0
 }
 
