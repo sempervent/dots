@@ -517,3 +517,57 @@ def test_python_tui_has_no_direct_toml_writes_or_pkg_manager_calls():
             ]
             for ln in code_lines:
                 assert not forbidden_subprocesses.search(ln), f"direct pkg mgr in {py_file}: {ln}"
+        # Ensure TUI does not hard-code package installability names
+        assert "tflint" not in text.lower(), f"hard-coded package name tflint in {py_file}"
+        assert "opentofu" not in text.lower(), f"hard-coded package name opentofu in {py_file}"
+
+
+def test_tui_package_installability_search_and_group_counts(isolated_env):
+    from dots_help.backend import DotsBackend
+    from dots_help.model import DesiredStateModel
+    from dots_help.tui import DotsTuiApp
+
+    _write_active(isolated_env, "base", ROOT / "configs" / "bootstrap" / "profiles" / "base.toml")
+    backend = DotsBackend(
+        root=ROOT,
+        env_overrides={
+            "DOTS_FORCE_OS": "darwin",
+            "DOTS_FORCE_PKG_MGR": "brew",
+            "DOTS_PKG_DISABLE_HOST_WHICH": "1",
+            "DOTS_PKG_MOCK_FORMULAE": "opentofu",
+            "DOTS_PKG_MOCK_CASKS": "",
+        },
+    )
+    model = DesiredStateModel(backend)
+    model.load()
+
+    infra = model.get("group:infra")
+    assert infra is not None
+    assert infra.package_count == 17
+    assert infra.supported_package_count == 16
+    assert infra.unsupported_package_count == 1
+    assert "tflint" in infra.unsupported_packages
+
+    tl_hits = [h for h in model.search("tflint") if h.kind == "package" and h.target_id == "tflint"]
+    assert tl_hits, "tflint search hit missing"
+    assert tl_hits[0].installable is False
+    assert "unavailable through DOTS" in tl_hits[0].subtitle
+    assert "infra" in tl_hits[0].subtitle
+
+    tofu_hits = [h for h in model.search("opentofu") if h.kind == "package" and h.target_id == "opentofu"]
+    assert tofu_hits, "opentofu search hit missing"
+    assert tofu_hits[0].installable is True
+    assert tofu_hits[0].installed is True
+    assert "Installable: yes" in tofu_hits[0].subtitle
+    assert "Installed: yes" in tofu_hits[0].subtitle
+
+    async def _run() -> None:
+        app = DotsTuiApp(backend=backend, dry_run=True)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            lv = app.query_one("#capability-list")
+            rendered = "\n".join(str(lbl.render()) for lbl in lv.query("Label"))
+            assert "16/17 avail" in rendered
+
+    asyncio.run(_run())
+
