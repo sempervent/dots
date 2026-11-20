@@ -20,7 +20,7 @@ _dots() {
     'lsp:Language-server install, status, and checks.'
     'ai:AI inference server (Compose + Open WebUI) control plan…'
     'agent:Local-first agent harness (Pi, OpenRig, evals, guarded…'
-    'packages:Package ownership, drift, groups, and upgrades.'
+    'packages:Package ownership, installability audit, drift, groups,…'
     'backup:Snapshot managed targets under ~/.local/state/dots/back…'
     'backups:List recoverable DOTS snapshots.'
     'restore:Restore a snapshot (creates a safety snapshot first).'
