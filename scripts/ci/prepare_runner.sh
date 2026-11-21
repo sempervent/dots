@@ -18,7 +18,7 @@ fi
 sudo apt-get update -qq
 # Runtime helpers only — ShellCheck/shfmt come from pinned releases (not apt).
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
-	ripgrep zsh ca-certificates curl xz-utils >/dev/null
+	ripgrep zsh ca-certificates curl xz-utils python3-venv >/dev/null
 
 # shellcheck source=ensure_lint_tools.sh
 source "${ROOT}/scripts/ci/ensure_lint_tools.sh"
