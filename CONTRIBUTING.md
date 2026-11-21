@@ -53,8 +53,9 @@ shfmt 3.12.0
   durable `master` commit subject (Conventional Commits, e.g. `fix(ci): …`).
 - Release tags must be **annotated** (`git tag -a vX.Y.Z`). Do not move or
   force-update an existing release tag. Tag only after post-merge `master` CI
-  and Docs workflows are green. The Release workflow re-runs lint, tests, and
-  docs check on the tagged commit before it publishes.
+  and Docs workflows are green. The Release workflow prepares the runner with
+  `scripts/ci/prepare_runner.sh`, then re-runs lint, tests, and docs check on
+  the tagged commit before it publishes.
 - Intermediate branch commits need not remain in permanent history.
 
 ## GitHub repository settings (manual)
