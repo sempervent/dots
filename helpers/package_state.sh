@@ -306,7 +306,7 @@ dots_pkg_activate_hint() {
 dots_ensure_active_profile_package_state() {
 	[[ -n ${DOTS_ACTIVE_PROFILE_FILE:-} && -f ${DOTS_ACTIVE_PROFILE_FILE} ]] || return 0
 	if declare -F dots_load_profile_file >/dev/null 2>&1; then
-		dots_load_profile_file "${DOTS_ACTIVE_PROFILE_FILE}" 2>/dev/null || true
+		dots_load_profile_file "${DOTS_ACTIVE_PROFILE_FILE}" >/dev/null 2>&1 || true
 	fi
 }
 
@@ -357,21 +357,21 @@ dots_desired_merge_explicit_packages() {
 
 	local py="${DOTS_PYTHON:-python3}" tag short
 	while IFS=$'\t' read -r tag short; do
-			[[ -z ${short} ]] && continue
-			case "${tag}" in
-			cask)
-				if ! dots_pkg_in_list "${short}" "${DOTS_DESIRED_CASKS[@]+"${DOTS_DESIRED_CASKS[@]}"}"; then
-					DOTS_DESIRED_CASKS+=("${short}")
-				fi
-				;;
-			brew)
-				if ! dots_pkg_in_list "${short}" "${DOTS_DESIRED_FORMULAE[@]+"${DOTS_DESIRED_FORMULAE[@]}"}"; then
-					DOTS_DESIRED_FORMULAE+=("${short}")
-				fi
-				;;
-			esac
-		done < <(
-			PLAN_JSON="${plan}" "${py}" -B - <<'PY2'
+		[[ -z ${short} ]] && continue
+		case "${tag}" in
+		cask)
+			if ! dots_pkg_in_list "${short}" "${DOTS_DESIRED_CASKS[@]+"${DOTS_DESIRED_CASKS[@]}"}"; then
+				DOTS_DESIRED_CASKS+=("${short}")
+			fi
+			;;
+		brew)
+			if ! dots_pkg_in_list "${short}" "${DOTS_DESIRED_FORMULAE[@]+"${DOTS_DESIRED_FORMULAE[@]}"}"; then
+				DOTS_DESIRED_FORMULAE+=("${short}")
+			fi
+			;;
+		esac
+	done < <(
+		PLAN_JSON="${plan}" "${py}" -B - <<'PY2'
 import json, os
 plan = json.loads(os.environ["PLAN_JSON"])
 for item in plan.get("install") or []:
@@ -383,7 +383,7 @@ for item in plan.get("install") or []:
     tag = "cask" if kind == "cask" else "brew"
     print(f"{tag}\t{short}")
 PY2
-		)
+	)
 }
 
 dots_desired_packages_resolve() {
