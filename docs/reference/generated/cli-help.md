@@ -11,7 +11,7 @@ Captured from safe `--help` / `help` invocations. If a binary is missing or help
 ## `./dots`
 
 ```text
-DOTS — machine environment manager  (v1.12.0)
+DOTS — machine environment manager  (v1.13.0)
 
 Usage:
   ./dots setup [options]            Interactive or noninteractive setup / reconfigure...
