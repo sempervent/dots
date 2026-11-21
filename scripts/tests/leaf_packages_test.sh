@@ -54,6 +54,14 @@ d=json.load(sys.stdin)
 assert d.get("explicit_packages",{}).get("raycast",{}).get("state")=="local", d
 ' && pass "profile show --json explicit_packages.local" || bad "show json explicit_packages"
 
+leaves="$("${ROOT}/dots" packages leaves --json 2>/dev/null)"
+echo "${leaves}" | python3 -c '
+import json,sys
+d=json.load(sys.stdin)
+names=[p.get("name") for p in (d.get("packages") or [])]
+assert "raycast" in names, d
+' && pass "packages leaves --json lists raycast" || bad "packages leaves json"
+
 hyper="$("${ROOT}/dots" profile resolve hyperfine --json 2>/dev/null)"
 echo "${hyper}" | python3 -c '
 import json,sys

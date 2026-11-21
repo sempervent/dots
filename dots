@@ -1903,6 +1903,38 @@ dots_cmd_packages() {
 	audit)
 		dots_packages_audit "$@"
 		;;
+	leaves | leaf-packages)
+		local json=0 profile_arg=""
+		while [[ $# -gt 0 ]]; do
+			case "$1" in
+			--json) json=1 ;;
+			--profile)
+				profile_arg="${2:-}"
+				shift || true
+				;;
+			--profile=*) profile_arg="${1#*=}" ;;
+			-h | --help)
+				cat <<'EOF'
+Usage: ./dots packages leaves [--json] [--profile NAME]
+
+Leaf-selectable packages (opt-in explicit desired state).
+EOF
+				return 0
+				;;
+			*)
+				echo "Error: unknown leaves option: $1" >&2
+				return 1
+				;;
+			esac
+			shift
+		done
+		[[ ${json} -eq 1 ]] || {
+			echo "Error: packages leaves requires --json (structured API for TUI/automation)" >&2
+			return 1
+		}
+		dots_packages_leaves_json "${profile_arg}"
+		return $?
+		;;
 	groups)
 		local json=0 profile_arg=""
 		while [[ $# -gt 0 ]]; do
