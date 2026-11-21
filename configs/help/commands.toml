@@ -35,7 +35,7 @@ description = "Show TUI usage and noninteractive alternatives."
 
 [[commands]]
 name = "install"
-usage = "dots install SELECTOR [--dry-run] [--yes] [--no-apply] [--profile NAME]"
+usage = "dots install SELECTOR [--dry-run] [--yes] [--only] [--no-apply] [--profile NAME]"
 category = "lifecycle"
 description = "Persist a known DOTS capability to desired profile and apply."
 mutating = true
@@ -175,7 +175,7 @@ description = "Show DOTS-recorded spend from the local ledger."
 
 [[commands]]
 name = "packages"
-usage = "dots packages [groups|group|plan|status|explain|outdated|upgrade|adopt|audit]"
+usage = "dots packages [groups|group|leaves|plan|status|explain|outdated|upgrade|adopt|audit]"
 category = "packages"
 description = "Package ownership, installability audit, drift, groups, and upgrades."
 mutating = true
@@ -222,7 +222,7 @@ related = ["backup", "backups", "help"]
 
 [[commands]]
 name = "profile"
-usage = "dots profile [list|show|plan|resolve|add|remove|mutate|diff|apply|create|switch]"
+usage = "dots profile [list|show|plan|resolve|add|remove|add-package|remove-package|mutate|diff|apply|create|switch]"
 category = "lifecycle"
 description = "Inspect, edit via sparse overlays, switch, or apply profiles."
 mutating = true

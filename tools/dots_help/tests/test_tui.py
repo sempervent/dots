@@ -571,3 +571,38 @@ def test_tui_package_installability_search_and_group_counts(isolated_env):
 
     asyncio.run(_run())
 
+
+def test_explicit_leaf_staging_does_not_enable_owner(isolated_env, monkeypatch):
+    from dots_help.backend import DotsBackend
+    from dots_help.model import DesiredStateModel, SelectionState
+
+    monkeypatch.setenv("DOTS_FORCE_OS", "darwin")
+    monkeypatch.setenv("DOTS_FORCE_PKG_MGR", "brew")
+    monkeypatch.setenv("DOTS_FORCE_DARWIN_MAJOR", "15")
+    _write_active(isolated_env, "base", ROOT / "configs" / "bootstrap" / "profiles" / "base.toml")
+    model = DesiredStateModel(DotsBackend(ROOT))
+    model.load("base")
+    ray = model.get("package:raycast")
+    assert ray is not None
+    assert ray.leaf_selectable is True
+    assert ray.owner == "component:mactools"
+    assert ray.persisted == SelectionState.NOT_SELECTED
+    ok, _msg = model.toggle("package:raycast")
+    assert ok
+    assert model.pending_package_adds() == ["raycast"]
+    assert "component:mactools" not in model.pending_adds()
+    hits = [h for h in model.search("raycast") if h.target_id == "raycast"]
+    assert hits and hits[0].leaf_selectable is True
+    model.discard()
+    assert model.pending_package_adds() == []
+
+    monkeypatch.setenv("DOTS_FORCE_OS", "linux")
+    monkeypatch.setenv("DOTS_FORCE_PKG_MGR", "apt")
+    linux_model = DesiredStateModel(DotsBackend(ROOT))
+    linux_model.load("base")
+    linux_ray = linux_model.get("package:raycast")
+    assert linux_ray is not None
+    assert linux_ray.supported is False
+    ok, _msg = linux_model.toggle("package:raycast")
+    assert ok is False
+

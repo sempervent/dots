@@ -51,6 +51,10 @@ shfmt 3.12.0
 - Target `master`.
 - Prefer **squash merge** for agent/feature work; the PR title becomes the
   durable `master` commit subject (Conventional Commits, e.g. `fix(ci): …`).
+- Release tags must be **annotated** (`git tag -a vX.Y.Z`). Do not move or
+  force-update an existing release tag. Tag only after post-merge `master` CI
+  and Docs workflows are green. The Release workflow re-runs lint, tests, and
+  docs check on the tagged commit before it publishes.
 - Intermediate branch commits need not remain in permanent history.
 
 ## GitHub repository settings (manual)

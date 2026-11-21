@@ -422,6 +422,9 @@ sys.path.insert(0, str(Path(os.environ["DOTS_DIR"]) / "helpers"))
 import package_truth as pt
 root = Path(os.environ["DOTS_DIR"])
 meta = pt.find_package_meta(root, "${DOTS_SEL_ID}")
+if not meta.get("known") and not meta.get("owner"):
+    print("ERR\tunknown package")
+    raise SystemExit(2)
 if not meta.get("installable"):
     print("ERR\t" + (meta.get("unsupported_reason") or "not installable"))
     raise SystemExit(2)
@@ -1756,6 +1759,8 @@ def effective_state(chain):
     include_all = False
     pkg_explicit = False
     prof_name = ""
+    pkg_inc = []
+    pkg_exc = set()
     for _p, data in chain:
         prof = data.get("profile") or {}
         if prof.get("name"):
@@ -1776,6 +1781,13 @@ def effective_state(chain):
         if "groups" in ptbl and ptbl["groups"] is not None:
             pkgs = str_list(ptbl["groups"])
             pkg_explicit = True
+        for p in str_list(ptbl.get("include")):
+            pkg_exc.discard(p)
+            if p not in pkg_inc:
+                pkg_inc.append(p)
+        for p in str_list(ptbl.get("exclude")):
+            pkg_inc = [x for x in pkg_inc if x != p]
+            pkg_exc.add(p)
         for w in str_list(prof.get("with")):
             if w not in with_raw:
                 with_raw.append(w)
@@ -1815,7 +1827,7 @@ def effective_state(chain):
             if m not in expanded_without and m not in expanded_with:
                 expanded_with.append(m)
 
-    return pkgs, with_raw, without_raw, expanded_with
+    return pkgs, with_raw, without_raw, expanded_with, pkg_inc, pkg_exc
 
 use_existing_overlay = False
 if overlay_file.is_file():
@@ -1838,11 +1850,11 @@ else:
     parent_chain = base_chain
     eff_chain = base_chain
 
-eff_pkgs, eff_with_raw, eff_without_raw, eff_with = effective_state(eff_chain)
+eff_pkgs, eff_with_raw, eff_without_raw, eff_with, eff_pkg_inc, eff_pkg_exc = effective_state(eff_chain)
 if parent_chain:
-    par_pkgs, par_with_raw, par_without_raw, par_with = effective_state(parent_chain)
+    par_pkgs, par_with_raw, par_without_raw, par_with, par_pkg_inc, par_pkg_exc = effective_state(parent_chain)
 else:
-    par_pkgs, par_with_raw, par_without_raw, par_with = ([], [], set(), [])
+    par_pkgs, par_with_raw, par_without_raw, par_with, par_pkg_inc, par_pkg_exc = ([], [], set(), [], [], set())
 
 prof_sec = dict(overlay_data.get("profile") or {})
 pkg_sec = dict(overlay_data.get("packages") or {})
@@ -1857,6 +1869,8 @@ if not prof_sec.get("extends") and extends_val:
 pkg_add = str_list(pkg_sec.get("add"))
 pkg_remove = str_list(pkg_sec.get("remove"))
 pkg_groups = str_list(pkg_sec.get("groups")) if pkg_sec.get("groups") is not None else None
+pkg_include = str_list(pkg_sec.get("include"))
+pkg_exclude = str_list(pkg_sec.get("exclude"))
 prof_pkgs = str_list(prof_sec.get("packages")) if prof_sec.get("packages") is not None else None
 
 prof_with = str_list(prof_sec.get("with"))
@@ -1886,6 +1900,8 @@ def cur_overlay_state():
         "packages": {
             "add": list(pkg_add),
             "remove": list(pkg_remove),
+            "include": list(pkg_include),
+            "exclude": list(pkg_exclude),
         },
         "components": {
             "with": list(comp_with),
@@ -1900,7 +1916,7 @@ def cur_overlay_state():
 
 for owner in adds_raw:
     kind, item_id = owner.split(":", 1)
-    c_pkgs, c_wraw, c_oraw, c_with = cur_overlay_state()
+    c_pkgs, c_wraw, c_oraw, c_with, c_inc, c_exc = cur_overlay_state()
     if kind == "group":
         if item_id in c_pkgs:
             continue
@@ -1944,10 +1960,23 @@ for owner in adds_raw:
         if not parent_has and item_id not in prof_with and item_id not in comp_with:
             unique_add(comp_with, item_id)
             diff_lines.append(f"+ {kind}:{item_id}")
+    elif kind == "package":
+        canon = item_id.split("/")[-1]
+        if canon in c_inc:
+            continue
+        changed = True
+        if canon in pkg_exclude:
+            pkg_exclude = list_del(pkg_exclude, canon)
+            diff_lines.append(f"- remove exclusion: package:{canon}")
+        if canon not in par_pkg_inc:
+            unique_add(pkg_include, canon)
+            diff_lines.append(f"+ package:{canon}")
+        else:
+            diff_lines.append(f"+ package:{canon} (restored from parent)")
 
 for owner in rems_raw:
     kind, item_id = owner.split(":", 1)
-    c_pkgs, c_wraw, c_oraw, c_with = cur_overlay_state()
+    c_pkgs, c_wraw, c_oraw, c_with, c_inc, c_exc = cur_overlay_state()
     if kind == "group":
         if item_id not in c_pkgs:
             continue
@@ -1984,6 +2013,15 @@ for owner in rems_raw:
         if parent_has and item_id not in prof_without and item_id not in comp_without:
             unique_add(comp_without, item_id)
         diff_lines.append(f"- {kind}:{item_id}")
+    elif kind == "package":
+        canon = item_id.split("/")[-1]
+        if canon not in c_inc:
+            continue
+        changed = True
+        pkg_include = list_del(pkg_include, canon)
+        if canon in par_pkg_inc and canon not in pkg_exclude:
+            unique_add(pkg_exclude, canon)
+        diff_lines.append(f"- package:{canon}")
 
 if not changed:
     print("changed=0")
@@ -2023,7 +2061,7 @@ if prof_without:
 if prof_sec.get("open_apps") is not None:
     lines.append(f"open_apps = {fmt_val(str_list(prof_sec.get('open_apps')))}")
 
-if pkg_add or pkg_remove or pkg_groups is not None:
+if pkg_add or pkg_remove or pkg_groups is not None or pkg_include or pkg_exclude:
     lines.append("")
     lines.append("[packages]")
     if pkg_groups is not None:
@@ -2032,6 +2070,10 @@ if pkg_add or pkg_remove or pkg_groups is not None:
         lines.append(f"add = {fmt_val(pkg_add)}")
     if pkg_remove:
         lines.append(f"remove = {fmt_val(pkg_remove)}")
+    if pkg_include:
+        lines.append(f"include = {fmt_val(pkg_include)}")
+    if pkg_exclude:
+        lines.append(f"exclude = {fmt_val(pkg_exclude)}")
 
 if comp_with or comp_without:
     lines.append("")
@@ -2131,7 +2173,7 @@ dots_profile_plan_json() {
 		PYTHONDONTWRITEBYTECODE=1 \
 		PYTHONNOUSERSITE=1 \
 		"${DOTS_PYTHON}" -B <<'PY' || rc=$?
-import json, os, re, tomllib
+import json, os, re, sys, tomllib
 from pathlib import Path
 
 source_file = Path(os.environ["SOURCE_FILE"]).resolve()
@@ -2357,6 +2399,10 @@ for cid in a_comps:
         comps_to_cfg.append(cid)
 
 delta = {
+    "add": [x for x in adds_raw if not x.startswith("package:")],
+    "remove": [x for x in rems_raw if not x.startswith("package:")],
+    "add_packages": [x.split(":", 1)[1] for x in adds_raw if x.startswith("package:")],
+    "remove_packages": [x.split(":", 1)[1] for x in rems_raw if x.startswith("package:")],
     "add_groups": [x.split(":", 1)[1] for x in adds_raw if x.startswith("group:")],
     "remove_groups": [x.split(":", 1)[1] for x in rems_raw if x.startswith("group:")],
     "add_components": [x.split(":", 1)[1] for x in adds_raw if x.startswith("component:")],
@@ -2364,6 +2410,69 @@ delta = {
     "add_supergroups": [x.split(":", 1)[1] for x in adds_raw if x.startswith("supergroup:")],
     "remove_supergroups": [x.split(":", 1)[1] for x in rems_raw if x.startswith("supergroup:")],
 }
+
+def _pkg_obj(tok, *, via, owner, kind):
+    short = tok.split("/")[-1]
+    return {"name": short, "desired_via": via, "owner": owner, "kind": kind}
+
+structured_install = []
+seen_install = set()
+for tok in to_install:
+    short = tok.split("/")[-1]
+    if short in seen_install:
+        continue
+    seen_install.add(short)
+    kind = "cask" if tok in bc_after else "formula"
+    owner = "component" if tok in bc_after else "group"
+    structured_install.append(_pkg_obj(tok, via=owner, owner=owner, kind=kind))
+
+# Explicit leaves: preserve package intent and dedupe against owner bundles.
+sys.path.insert(0, str(repo / "helpers"))
+import package_truth as pt  # noqa: E402
+
+def _chain_includes(chain):
+    inc, exc = [], set()
+    for _p, data in chain:
+        ptbl = data.get("packages") or {}
+        for p in str_list(ptbl.get("include")):
+            exc.discard(p)
+            if p not in inc:
+                inc.append(p)
+        for p in str_list(ptbl.get("exclude")):
+            inc = [x for x in inc if x != p]
+            exc.add(p)
+    return inc
+
+after_inc = _chain_includes(after_chain)
+owner_shorts = {t.split("/")[-1] for t in a_all}
+plan = pt.explicit_convergence_plan(
+    repo,
+    group_names=a_groups,
+    component_ids=a_comps,
+    explicit_ids=after_inc,
+    os_name=os_name,
+)
+owner_satisfied = []
+for item in plan.get("install") or []:
+    name = item.get("name")
+    if not name or name in seen_install:
+        if name and name in owner_shorts:
+            owner_satisfied.append({"name": name, "reason": "explicit package satisfied by owner bundle", "owner": item.get("owner")})
+        continue
+    seen_install.add(name)
+    structured_install.append({
+        "name": name,
+        "desired_via": "explicit-package",
+        "owner": item.get("owner"),
+        "kind": item.get("install_kind") or "formula",
+    })
+for item in plan.get("skipped") or []:
+    if item.get("reason") == "satisfied_by_owner_bundle":
+        owner_satisfied.append({
+            "name": item.get("name"),
+            "reason": "explicit package satisfied by owner bundle",
+            "owner": item.get("owner"),
+        })
 
 print(json.dumps({
     "schema_version": 1,
@@ -2375,7 +2484,8 @@ print(json.dumps({
     "newly_desired_packages": newly_desired,
     "no_longer_desired_packages": no_longer_desired,
     "already_satisfied_packages": already_satisfied,
-    "packages_to_install": to_install,
+    "packages_to_install": structured_install,
+    "explicit_satisfied_by_owner": owner_satisfied,
     "unsupported": unsupported,
     "components_to_configure": comps_to_cfg,
     "no_uninstall_note": "Installed packages are not automatically removed.",

@@ -302,12 +302,70 @@ dots_pkg_activate_hint() {
 
 # Populate DOTS_DESIRED_FORMULAE[] and DOTS_DESIRED_CASKS[] (unique).
 # Uses DOTS_RESOLVED_GROUPS (or resolves defaults) + DOTS_WITH_COMPONENTS.
-# Reload pkginc/pkgexc from active profile TOML (not stored in active-profile marker).
-dots_ensure_active_profile_package_state() {
-	[[ -n ${DOTS_ACTIVE_PROFILE_FILE:-} && -f ${DOTS_ACTIVE_PROFILE_FILE} ]] || return 0
-	if declare -F dots_load_profile_file >/dev/null 2>&1; then
-		dots_load_profile_file "${DOTS_ACTIVE_PROFILE_FILE}" >/dev/null 2>&1 || true
+# Profile context (PROFILE_PKG_INCLUDE / EXCLUDE) must already be loaded by the caller.
+# DOTS_DESIRED_META is newline records: name<TAB>owner<TAB>desired_via (Bash 3.2 safe).
+
+dots_desired_meta_reset() {
+	DOTS_DESIRED_META=""
+}
+
+dots_desired_meta_get() {
+	local want="$1" line name rest
+	[[ -n ${DOTS_DESIRED_META:-} ]] || return 1
+	while IFS= read -r line; do
+		[[ -z ${line} ]] && continue
+		name="${line%%$'\t'*}"
+		[[ ${name} == "${want}" ]] || continue
+		rest="${line#*$'\t'}"
+		printf '%s\n' "${rest}"
+		return 0
+	done <<<"${DOTS_DESIRED_META}"
+	return 1
+}
+
+dots_desired_meta_owner() {
+	local rest
+	rest="$(dots_desired_meta_get "$1" 2>/dev/null || true)"
+	[[ -n ${rest} ]] || return 1
+	printf '%s\n' "${rest%%$'\t'*}"
+}
+
+dots_desired_meta_via() {
+	local rest
+	rest="$(dots_desired_meta_get "$1" 2>/dev/null || true)"
+	[[ -n ${rest} ]] || return 1
+	printf '%s\n' "${rest#*$'\t'}"
+}
+
+# Merge desired_via tokens without associative arrays.
+dots_desired_meta_note() {
+	local name="$1" owner="$2" via="$3"
+	local line cur_name cur_owner cur_via new_via="" found=0 rebuilt="" rest=""
+	[[ -n ${name} && -n ${via} ]] || return 0
+	[[ -n ${owner} ]] || owner="unknown"
+	while IFS= read -r line; do
+		[[ -z ${line} ]] && continue
+		cur_name="${line%%$'\t'*}"
+		rest="${line#*$'\t'}"
+		cur_owner="${rest%%$'\t'*}"
+		cur_via="${rest#*$'\t'}"
+		if [[ ${cur_name} == "${name}" ]]; then
+			found=1
+			case ",${cur_via}," in
+			*",${via},"*) new_via="${cur_via}" ;;
+			*) new_via="${cur_via}, ${via}" ;;
+			esac
+			# Keep the first concrete owner; explicit-package is provenance, not ownership.
+			[[ ${cur_owner} == unknown || ${cur_owner} == explicit-package ]] && [[ ${owner} != explicit-package ]] && cur_owner="${owner}"
+			rebuilt="${rebuilt}${cur_name}"$'\t'"${cur_owner}"$'\t'"${new_via}"$'\n'
+		else
+			rebuilt="${rebuilt}${line}"$'\n'
+		fi
+	done <<<"${DOTS_DESIRED_META:-}"
+	if [[ ${found} -eq 0 ]]; then
+		rebuilt="${rebuilt}${name}"$'\t'"${owner}"$'\t'"${via}"$'\n'
 	fi
+	DOTS_DESIRED_META="${rebuilt}"
 }
 
 # Add explicit profile packages (PROFILE_PKG_INCLUDE) into desired token lists.
@@ -355,8 +413,8 @@ dots_desired_merge_explicit_packages() {
 	rm -rf "${pyhome}"
 	[[ ${rc} -eq 0 ]] || return 1
 
-	local py="${DOTS_PYTHON:-python3}" tag short
-	while IFS=$'\t' read -r tag short; do
+	local py="${DOTS_PYTHON:-python3}" tag short owner via
+	while IFS=$'\t' read -r tag short owner via; do
 		[[ -z ${short} ]] && continue
 		case "${tag}" in
 		cask)
@@ -364,12 +422,14 @@ dots_desired_merge_explicit_packages() {
 				DOTS_DESIRED_CASKS+=("${short}")
 			fi
 			;;
-		brew)
+		brew | native)
 			if ! dots_pkg_in_list "${short}" "${DOTS_DESIRED_FORMULAE[@]+"${DOTS_DESIRED_FORMULAE[@]}"}"; then
 				DOTS_DESIRED_FORMULAE+=("${short}")
 			fi
 			;;
+		skip) ;;
 		esac
+		[[ -n ${via} ]] && dots_desired_meta_note "${short}" "${owner:-unknown}" "${via}"
 	done < <(
 		PLAN_JSON="${plan}" "${py}" -B - <<'PY2'
 import json, os
@@ -377,11 +437,25 @@ plan = json.loads(os.environ["PLAN_JSON"])
 for item in plan.get("install") or []:
     kind = (item.get("install_kind") or "formula").strip()
     tok = (item.get("install_token") or item.get("name") or "").strip()
-    if not tok:
+    name = (item.get("name") or tok.split("/")[-1]).strip()
+    if not name:
         continue
-    short = tok.split("/")[-1]
-    tag = "cask" if kind == "cask" else "brew"
-    print(f"{tag}\t{short}")
+    owner = (item.get("owner") or "unknown").strip()
+    via = (item.get("desired_via") or "explicit-package").strip()
+    if kind == "cask":
+        tag = "cask"
+    elif kind == "native":
+        tag = "native"
+    else:
+        tag = "brew"
+    print(f"{tag}\t{name}\t{owner}\t{via}")
+for item in plan.get("skipped") or []:
+    if item.get("reason") != "satisfied_by_owner_bundle":
+        continue
+    name = (item.get("name") or "").strip()
+    owner = (item.get("owner") or "unknown").strip()
+    if name:
+        print(f"skip\t{name}\t{owner}\texplicit-package")
 PY2
 	)
 }
@@ -389,9 +463,9 @@ PY2
 dots_desired_packages_resolve() {
 	DOTS_DESIRED_FORMULAE=()
 	DOTS_DESIRED_CASKS=()
+	dots_desired_meta_reset
 	DOTS_RESOLVED_GROUPS=("${DOTS_RESOLVED_GROUPS[@]+"${DOTS_RESOLVED_GROUPS[@]}"}")
 	DOTS_WITH_COMPONENTS=("${DOTS_WITH_COMPONENTS[@]+"${DOTS_WITH_COMPONENTS[@]}"}")
-	dots_ensure_active_profile_package_state
 	local -a files=()
 	local g f c token seen_f seen_c
 
@@ -428,8 +502,14 @@ dots_desired_packages_resolve() {
 	seen_f=$'\n'
 	seen_c=$'\n'
 	for p in "${uniq_files[@]+"${uniq_files[@]}"}"; do
+		local file_owner="unknown"
+		case "${p}" in
+		*/brew/groups/*.Brewfile) file_owner="group:$(basename "${p}" .Brewfile)" ;;
+		*/Brewfile.*) file_owner="component:$(basename "${p}" | sed 's/^Brewfile\.//')" ;;
+		esac
 		while IFS=$'\t' read -r kind token; do
 			[[ -z ${token} ]] && continue
+			local short="${token##*/}"
 			case "${kind}" in
 			brew)
 				case "${seen_f}" in
@@ -439,6 +519,7 @@ dots_desired_packages_resolve() {
 					seen_f="${seen_f}${token}"$'\n'
 					;;
 				esac
+				dots_desired_meta_note "${short}" "${file_owner}" "${file_owner}"
 				;;
 			cask)
 				case "${seen_c}" in
@@ -448,6 +529,7 @@ dots_desired_packages_resolve() {
 					seen_c="${seen_c}${token}"$'\n'
 					;;
 				esac
+				dots_desired_meta_note "${short}" "${file_owner}" "${file_owner}"
 				;;
 			esac
 		done < <(dots_brewfile_tokens "${p}" all)
@@ -725,6 +807,23 @@ dots_pkg_status_print() {
 	echo "      Docs: https://sempervent.github.io/dots/using/components/"
 }
 
+# Load active profile package scope when the caller has not already loaded one.
+dots_pkg_ensure_profile_scope() {
+	[[ -n ${PROFILE_NAME:-} ]] && return 0
+	[[ -n ${DOTS_ACTIVE_PROFILE_FILE:-} && -f ${DOTS_ACTIVE_PROFILE_FILE} ]] || return 0
+	declare -F dots_load_profile_file >/dev/null 2>&1 || return 0
+	dots_load_profile_file "${DOTS_ACTIVE_PROFILE_FILE}" >/dev/null || return 1
+	DOTS_RESOLVED_GROUPS=("${PROFILE_PACKAGES[@]+"${PROFILE_PACKAGES[@]}"}")
+	if declare -F dots_compute_effective_with >/dev/null 2>&1; then
+		dots_compute_effective_with >/dev/null 2>&1 || true
+		EFFECTIVE_WITH=("${EFFECTIVE_WITH[@]+"${EFFECTIVE_WITH[@]}"}")
+		if [[ ${#EFFECTIVE_WITH[@]} -gt 0 ]]; then
+			DOTS_WITH_COMPONENTS=("${EFFECTIVE_WITH[@]}")
+		fi
+	fi
+	return 0
+}
+
 # Explain one package name (formula or cask). Read-only.
 dots_pkg_explain() {
 	local name="$1"
@@ -732,6 +831,7 @@ dots_pkg_explain() {
 		echo "Usage: ./dots packages explain NAME" >&2
 		return 1
 	}
+	dots_pkg_ensure_profile_scope || return 1
 	dots_desired_packages_resolve
 	dots_pkg_build_ownership_catalog
 
@@ -860,6 +960,11 @@ PY
 		fi
 	fi
 
+	local meta_owner="" meta_via=""
+	meta_owner="$(dots_desired_meta_owner "${name}" 2>/dev/null || true)"
+	meta_via="$(dots_desired_meta_via "${name}" 2>/dev/null || true)"
+	[[ -n ${meta_owner} ]] && known_str="${meta_owner}"
+
 	echo "Package: ${name}"
 	echo "  kind:          ${kind}"
 	echo "  installed:     ${installed}"
@@ -869,6 +974,11 @@ PY
 	echo "  outdated:      ${outdated}"
 	echo "  state:         ${state}"
 	echo "  owner:         ${known_str:-(none)}"
+	if [[ -n ${meta_via} ]]; then
+		echo "  desired via:   ${meta_via}"
+	elif [[ ${in_desired} -eq 1 ]]; then
+		echo "  desired via:   ${known_str:-(desired)}"
+	fi
 	echo "  desired:       ${desired_str}"
 	echo -n "  active owners: "
 	if dots_pkg_active_owners "${name}" >/dev/null 2>&1; then
@@ -911,6 +1021,8 @@ dots_pkg_status_report() {
 	local fast="${2:-0}"
 	DOTS_RESOLVED_GROUPS=("${DOTS_RESOLVED_GROUPS[@]+"${DOTS_RESOLVED_GROUPS[@]}"}")
 	DOTS_WITH_COMPONENTS=("${DOTS_WITH_COMPONENTS[@]+"${DOTS_WITH_COMPONENTS[@]}"}")
+
+	dots_pkg_ensure_profile_scope || return 1
 
 	if ! command -v "${DOTS_BREW_BIN:-brew}" >/dev/null 2>&1 && [[ -z ${DOTS_PKG_MOCK_LEAVES+x} ]]; then
 		[[ ${quiet} -eq 0 ]] && echo "Packages: Homebrew unavailable"
@@ -1083,11 +1195,35 @@ PY
 			EX_C="$(printf '%s\n' "${excluded_c[@]+"${excluded_c[@]}"}")" \
 			UN_F="$(printf '%s\n' "${undeclared_f[@]+"${undeclared_f[@]}"}")" \
 			UN_C="$(printf '%s\n' "${undeclared_c[@]+"${undeclared_c[@]}"}")" \
+			DESIRED_META="${DOTS_DESIRED_META:-}" \
 			"${DOTS_PYTHON}" -B <<'PY'
 import json, os
+def via_for(name):
+    for line in os.environ.get("DESIRED_META", "").splitlines():
+        parts = line.split("\t")
+        if len(parts) >= 3 and parts[0] == name:
+            return parts[2]
+    return None
 def rows(env_f, env_c):
-    out = [{"name": x.strip(), "kind": "formula"} for x in os.environ.get(env_f, "").splitlines() if x.strip()]
-    out.extend({"name": x.strip(), "kind": "cask"} for x in os.environ.get(env_c, "").splitlines() if x.strip())
+    out = []
+    for x in os.environ.get(env_f, "").splitlines():
+        name = x.strip()
+        if not name:
+            continue
+        row = {"name": name, "kind": "formula"}
+        via = via_for(name)
+        if via:
+            row["desired_via"] = via
+        out.append(row)
+    for x in os.environ.get(env_c, "").splitlines():
+        name = x.strip()
+        if not name:
+            continue
+        row = {"name": name, "kind": "cask"}
+        via = via_for(name)
+        if via:
+            row["desired_via"] = via
+        out.append(row)
     return out
 print(json.dumps({
     "schema_version": 1,

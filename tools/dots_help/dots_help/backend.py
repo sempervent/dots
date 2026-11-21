@@ -140,12 +140,20 @@ class DotsBackend:
     def resolve_selector(self, selector: str) -> dict[str, Any]:
         return self._run_json(["profile", "resolve", selector, "--json"])
 
+    def leaf_packages(self, profile: str | None = None) -> dict[str, Any]:
+        args = ["packages", "leaves", "--json"]
+        if profile:
+            args.extend(["--profile", profile])
+        return self._run_json(args)
+
     def profile_plan(
         self,
         adds: list[str],
         removes: list[str],
         *,
         profile: str | None = None,
+        package_adds: list[str] | None = None,
+        package_removes: list[str] | None = None,
     ) -> dict[str, Any]:
         args = ["profile", "plan", "--json"]
         if profile:
@@ -154,6 +162,10 @@ class DotsBackend:
             args.extend(["--add", a])
         for r in removes:
             args.extend(["--remove", r])
+        for p in package_adds or []:
+            args.extend(["--add-package", p])
+        for p in package_removes or []:
+            args.extend(["--remove-package", p])
         return self._run_json(args)
 
     def profile_mutate(
@@ -166,6 +178,8 @@ class DotsBackend:
         apply: bool = False,
         dry_run: bool = False,
         on_line: Callable[[str], None] | None = None,
+        package_adds: list[str] | None = None,
+        package_removes: list[str] | None = None,
     ) -> CommandResult:
         args = ["profile", "mutate", "--yes"]
         if profile:
@@ -176,6 +190,10 @@ class DotsBackend:
             args.extend(["--add", a])
         for r in removes:
             args.extend(["--remove", r])
+        for p in package_adds or []:
+            args.extend(["--add-package", p])
+        for p in package_removes or []:
+            args.extend(["--remove-package", p])
         if dry_run:
             args.append("--dry-run")
         if apply:

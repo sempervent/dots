@@ -505,6 +505,89 @@ def known_package_ids(root: Path) -> set[str]:
     return {x for x in known if x}
 
 
+LEAF_CATALOG_FIELDS = (
+    "name",
+    "label",
+    "owner",
+    "category",
+    "platform_supported",
+    "installable",
+    "unsupported_reason",
+    "leaf_selectable",
+    "leaf_reason",
+    "install_method",
+    "install_kind",
+    "install_token",
+    "installed",
+    "external",
+    "selected_state",
+    "desired_via",
+)
+
+
+def _explicit_state_from_profile(pstate: dict[str, Any] | None, name: str) -> tuple[str, str | None]:
+    raw = ((pstate or {}).get("explicit_packages") or {}).get(name) or {}
+    state = str(raw.get("state") or "absent")
+    if state in ("local", "inherited"):
+        return state, "explicit-package"
+    return state if state else "absent", None
+
+
+def _leaf_catalog_row(fields: dict[str, Any]) -> dict[str, Any]:
+    row: dict[str, Any] = {k: None for k in LEAF_CATALOG_FIELDS}
+    row.update(
+        {
+            "label": "",
+            "category": "package",
+            "platform_supported": False,
+            "installable": False,
+            "leaf_selectable": False,
+            "install_method": "none",
+            "install_kind": "none",
+            "installed": False,
+            "external": False,
+            "selected_state": "absent",
+        }
+    )
+    row.update(fields)
+    name = str(row.get("name") or "")
+    if not row.get("label"):
+        row["label"] = name.replace("-", " ").title()
+    row["platform_supported"] = bool(row.get("installable"))
+    row["installable"] = bool(row.get("installable"))
+    row["leaf_selectable"] = bool(row.get("leaf_selectable"))
+    row["installed"] = bool(row.get("installed"))
+    row["external"] = bool(row.get("external"))
+    return {k: row.get(k) for k in LEAF_CATALOG_FIELDS}
+
+
+def _component_leaf_install(
+    root: Path,
+    comp: dict[str, Any],
+    pid: str,
+    kind: str,
+    tok: str,
+    *,
+    os_name: str,
+    darwin_major: str,
+    pkg_mgr: str,
+    linux_map: dict[str, str],
+) -> tuple[bool, str, str, str | None, str | None]:
+    """Return installable, method, kind, token, unsupported_reason for a component brewfile leaf."""
+    supported, reason = _comp_supported(comp, os_name, darwin_major)
+    if not supported:
+        why = "requires macOS" if reason == "macOS only" else (reason or f"unsupported on {os_name}")
+        return False, "none", "none", None, why
+    if pkg_mgr == "brew":
+        return True, "brew", kind, tok, None
+    if pkg_mgr in LINUX_PKG_MGRS:
+        mapped = linux_map.get(pid)
+        if mapped:
+            return True, pkg_mgr, "native", mapped, None
+        return False, "none", "none", None, f"{pid} has no mapping in configs/packages/{pkg_mgr}.toml"
+    return False, "none", "none", None, f"no supported package manager detected on {os_name}"
+
+
 def compute_leaf_catalog(
     root: Path,
     pstate: dict[str, Any] | None = None,
@@ -513,6 +596,10 @@ def compute_leaf_catalog(
     darwin_major: str | None = None,
     pkg_mgr: str | None = None,
 ) -> dict[str, Any]:
+    det_os, det_dmajor, det_mgr = detect_platform()
+    os_name = os_name or det_os
+    darwin_major = darwin_major if darwin_major is not None else det_dmajor
+    pkg_mgr = pkg_mgr or det_mgr
     gjson = compute_groups_data(
         root,
         pstate,
@@ -528,68 +615,102 @@ def compute_leaf_catalog(
         for k, v in (_load_toml(_groups_registry_path(root)).get("helper_packages") or {}).items()
         if str(k).strip() and isinstance(v, dict)
     }
+    linux_map = _load_linux_map(root, pkg_mgr) if pkg_mgr in LINUX_PKG_MGRS else {}
     items: list[dict[str, Any]] = []
     seen: set[str] = set()
+
+    def _append(row: dict[str, Any]) -> None:
+        pid = str(row.get("name") or "")
+        if not pid or pid in seen:
+            return
+        seen.add(pid)
+        items.append(_leaf_catalog_row(row))
+
     for g in gjson.get("groups") or []:
         for p in g.get("packages") or []:
             pid = str(p.get("name") or "").strip()
-            if not pid or pid in seen:
+            if not pid:
                 continue
-            seen.add(pid)
             owner = str(p.get("owner") or "")
-            leaf_ok = bool(p.get("leaf_selectable"))
-            if leaf_ok:
-                comp = comps_by_id.get(owner.split(":", 1)[-1], {}) if owner.startswith("component:") else {}
-                category = str(comp.get("category") or g.get("name") or "package")
-                items.append(
-                    {
-                        **p,
-                        "category": category,
-                        "label": pid.replace("-", " ").title(),
-                    }
-                )
+            installable = bool(p.get("installable"))
+            # Eligibility ignores the current platform so unsupported leaves stay visible.
+            eligible, eligible_reason = _leaf_selectable(pid, owner, True, comps_by_id, helper_pkgs)
+            if not eligible:
+                continue
+            leaf_ok, leaf_reason = _leaf_selectable(pid, owner, installable, comps_by_id, helper_pkgs)
+            state, via = _explicit_state_from_profile(pstate, pid)
+            why = p.get("unsupported_reason")
+            if not installable and not why:
+                why = leaf_reason or eligible_reason
+            _append(
+                {
+                    **p,
+                    "category": str(g.get("name") or "package"),
+                    "label": pid.replace("-", " ").title(),
+                    "leaf_selectable": bool(leaf_ok),
+                    "leaf_reason": None if leaf_ok else (leaf_reason or why),
+                    "unsupported_reason": None if installable else why,
+                    "selected_state": state,
+                    "desired_via": via,
+                }
+            )
+
     for c in comps_data.get("components") or []:
         if not c.get("allow_leaf_packages"):
             continue
         cid = str(c.get("id") or "").strip()
         bf_rel = str(c.get("brewfile") or "").strip()
-        if not bf_rel:
+        if not cid or not bf_rel:
             continue
         bf_f, bf_c = _parse_brewfile(root / bf_rel)
+        owner = f"component:{cid}"
         for kind, toks in (("formula", bf_f), ("cask", bf_c)):
             for tok in toks:
-                short = tok.split("/")[-1]
-                pid = short
-                if pid in seen:
+                pid = tok.split("/")[-1]
+                if not pid or pid in seen:
                     continue
-                # Re-evaluate using group data when also in a group; prefer component owner for opt-in list
-                pseudo = {
-                    "name": pid,
-                    "owner": f"component:{cid}",
-                    "installable": True,
-                }
-                leaf_ok, leaf_reason = _leaf_selectable(pid, f"component:{cid}", True, comps_by_id, helper_pkgs)
-                if not leaf_ok:
+                installable, method, ikind, itok, why = _component_leaf_install(
+                    root,
+                    c,
+                    pid,
+                    kind,
+                    tok,
+                    os_name=os_name,
+                    darwin_major=darwin_major,
+                    pkg_mgr=pkg_mgr,
+                    linux_map=linux_map,
+                )
+                leaf_ok, leaf_reason = _leaf_selectable(pid, owner, installable, comps_by_id, helper_pkgs)
+                if not leaf_ok and installable:
+                    # Lifecycle-managed component packages are not leaves.
                     continue
-                seen.add(pid)
-                items.append(
+                eligible, _ = _leaf_selectable(pid, owner, True, comps_by_id, helper_pkgs)
+                if not eligible and not installable:
+                    continue
+                state, via = _explicit_state_from_profile(pstate, pid)
+                _append(
                     {
                         "name": pid,
-                        "owner": f"component:{cid}",
-                        "install_kind": kind,
-                        "install_token": tok,
-                        "leaf_selectable": True,
-                        "leaf_reason": None,
+                        "owner": owner,
                         "category": str(c.get("category") or "workstation"),
                         "label": pid.replace("-", " ").title(),
+                        "installable": installable,
+                        "install_method": method if installable else "none",
+                        "install_kind": ikind if installable else "none",
+                        "install_token": itok if installable else None,
+                        "unsupported_reason": None if installable else why,
+                        "leaf_selectable": bool(leaf_ok),
+                        "leaf_reason": None if leaf_ok else (leaf_reason or why),
+                        "selected_state": state,
+                        "desired_via": via,
                     }
                 )
     return {
         "schema_version": 1,
-        "os": gjson.get("os"),
-        "pkg_mgr": gjson.get("pkg_mgr"),
+        "os": os_name,
+        "pkg_mgr": pkg_mgr,
         "count": len(items),
-        "packages": sorted(items, key=lambda x: (x.get("category", ""), x.get("name", ""))),
+        "packages": sorted(items, key=lambda x: (str(x.get("category") or ""), str(x.get("name") or ""))),
     }
 
 
@@ -666,10 +787,41 @@ def explicit_convergence_plan(
                 selected_tokens.add(tok.split("/")[-1])
     installs: list[dict[str, Any]] = []
     skipped: list[dict[str, Any]] = []
+    errors: list[dict[str, Any]] = []
+    known_ids = known_package_ids(root)
     for pid in explicit_ids:
         short = pid.split("/")[-1]
         meta = find_package_meta(root, short, None, os_name=os_name, pkg_mgr=pkg_mgr)
         tok = str(meta.get("install_token") or short).split("/")[-1]
+        if short not in known_ids and pid not in known_ids and not meta.get("owner"):
+            errors.append({"name": short, "reason": "unknown_package"})
+            continue
+        if not meta.get("leaf_selectable"):
+            reason = str(meta.get("leaf_reason") or "")
+            if "not installable" in reason or (meta.get("unsupported_reason") and "lifecycle" not in reason and "dedicated component" not in reason):
+                errors.append(
+                    {
+                        "name": short,
+                        "reason": "unsupported_platform",
+                        "unsupported_reason": meta.get("unsupported_reason") or reason,
+                        "owner": meta.get("owner"),
+                    }
+                )
+            else:
+                code = (
+                    "requires_component_lifecycle"
+                    if ("lifecycle" in reason or "dedicated component" in reason or str(meta.get("owner") or "").startswith("component:"))
+                    else "not_leaf_selectable"
+                )
+                errors.append(
+                    {
+                        "name": short,
+                        "reason": code,
+                        "owner": meta.get("owner"),
+                        "leaf_reason": meta.get("leaf_reason"),
+                    }
+                )
+            continue
         if tok in selected_tokens:
             skipped.append(
                 {
@@ -680,11 +832,12 @@ def explicit_convergence_plan(
             )
             continue
         if not meta.get("installable"):
-            skipped.append(
+            errors.append(
                 {
                     "name": short,
-                    "reason": "unsupported",
+                    "reason": "unsupported_platform",
                     "unsupported_reason": meta.get("unsupported_reason"),
+                    "owner": meta.get("owner"),
                 }
             )
             continue
@@ -703,7 +856,28 @@ def explicit_convergence_plan(
         "explicit": explicit_ids,
         "install": installs,
         "skipped": skipped,
+        "errors": errors,
+        "ok": not errors,
     }
+
+
+def validate_explicit_package_ids(
+    root: Path,
+    explicit_ids: list[str],
+    *,
+    os_name: str | None = None,
+    pkg_mgr: str | None = None,
+) -> list[dict[str, Any]]:
+    """Hard errors for manually authored packages.include entries."""
+    plan = explicit_convergence_plan(
+        root,
+        group_names=[],
+        component_ids=[],
+        explicit_ids=explicit_ids,
+        os_name=os_name,
+        pkg_mgr=pkg_mgr,
+    )
+    return list(plan.get("errors") or [])
 
 
 def compute_groups_data(
@@ -1565,6 +1739,64 @@ def run_audit(root: Path, *, strict: bool = False) -> dict[str, Any]:
                                     file=f"configs/bootstrap/profiles/{prof_file.name}",
                                 )
 
+    comps_by_id = {str(c.get("id") or "").strip(): c for c in (comps_data.get("components") or []) if c.get("id")}
+    leaf_schema = set(LEAF_CATALOG_FIELDS)
+    for os_name, mgr, dmajor in (("darwin", "brew", "15"), ("linux", "apt", "")):
+        catalog = compute_leaf_catalog(root, None, os_name=os_name, darwin_major=dmajor, pkg_mgr=mgr)
+        for row in catalog.get("packages") or []:
+            missing = sorted(leaf_schema - set(row))
+            if missing:
+                add(
+                    "ERROR",
+                    "leaf_catalog_schema",
+                    f"Leaf catalog row '{row.get('name')}' on {os_name} missing fields: {', '.join(missing)}",
+                    package=str(row.get("name") or ""),
+                )
+            owner = str(row.get("owner") or "")
+            if owner.startswith("component:"):
+                comp = comps_by_id.get(owner.split(":", 1)[1]) or {}
+                ok_plat, _why = _comp_supported(comp, os_name, dmajor)
+                if row.get("installable") and not ok_plat:
+                    add(
+                        "ERROR",
+                        "leaf_catalog_platform",
+                        f"Leaf '{row.get('name')}' is installable on {os_name} but {owner} is not",
+                        owner=owner,
+                        package=str(row.get("name") or ""),
+                    )
+                if row.get("leaf_selectable") and not comp.get("allow_leaf_packages"):
+                    add(
+                        "ERROR",
+                        "leaf_catalog_lifecycle",
+                        f"Component package '{row.get('name')}' is exposed as a leaf without allow_leaf_packages",
+                        owner=owner,
+                        package=str(row.get("name") or ""),
+                    )
+            if row.get("installable") and not (row.get("install_token") and row.get("install_method") not in ("", "none")):
+                add(
+                    "ERROR",
+                    "leaf_missing_install_route",
+                    f"Installable leaf '{row.get('name')}' on {os_name} has no install token/method",
+                    owner=owner,
+                    package=str(row.get("name") or ""),
+                )
+
+    prof_dir = root / "configs" / "bootstrap" / "profiles"
+    if prof_dir.is_dir():
+        for prof_file in sorted(prof_dir.glob("*.toml")):
+            pdata = _load_toml(prof_file)
+            incs = [str(x).strip() for x in ((pdata.get("packages") or {}).get("include") or []) if str(x).strip()]
+            if not incs:
+                continue
+            for err in validate_explicit_package_ids(root, incs):
+                add(
+                    "ERROR",
+                    "explicit_package_invalid",
+                    f"Profile '{prof_file.stem}' packages.include '{err.get('name')}' is invalid ({err.get('reason')})",
+                    package=str(err.get("name") or ""),
+                    file=f"configs/bootstrap/profiles/{prof_file.name}",
+                )
+
     errors = sum(1 for f in findings if f["level"] == "ERROR")
     warnings = sum(1 for f in findings if f["level"] == "WARN")
     info = sum(1 for f in findings if f["level"] == "INFO")
@@ -1599,6 +1831,7 @@ def main(argv: list[str] | None = None) -> int:
 
     sub.add_parser("leaf-catalog")
     sub.add_parser("explicit-plan")
+    sub.add_parser("validate-explicit")
 
     args = parser.parse_args(argv)
     root = _repo_root()
@@ -1630,7 +1863,13 @@ def main(argv: list[str] | None = None) -> int:
         explicit = [x.strip() for x in os.environ.get("EXPLICIT_CSV", "").split(",") if x.strip()]
         out = explicit_convergence_plan(root, group_names=groups, component_ids=comps, explicit_ids=explicit)
         print(json.dumps(out, indent=2))
-        return 0
+        return 0 if out.get("ok", True) else 1
+
+    if args.cmd == "validate-explicit":
+        explicit = [x.strip() for x in os.environ.get("EXPLICIT_CSV", "").split(",") if x.strip()]
+        errs = validate_explicit_package_ids(root, explicit)
+        print(json.dumps({"ok": not errs, "errors": errs}, indent=2))
+        return 0 if not errs else 1
 
     if args.cmd == "audit":
         res = run_audit(root, strict=args.strict)

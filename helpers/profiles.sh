@@ -444,6 +444,55 @@ PY
 	return "${rc}"
 }
 
+# Reject unknown, non-leaf, and platform-unsupported packages.include entries.
+dots_validate_profile_explicit_packages() {
+	[[ ${#PROFILE_PKG_INCLUDE[@]} -gt 0 ]] || return 0
+	if ! declare -F dots_require_python >/dev/null 2>&1; then
+		# shellcheck disable=SC1091
+		source "${DIR}/helpers/python_runtime.sh" || return 1
+	fi
+	dots_require_python 0 || return 1
+	local csv pyhome out rc=0
+	csv="$(
+		IFS=,
+		echo "${PROFILE_PKG_INCLUDE[*]}"
+	)"
+	pyhome="$(mktemp -d "${TMPDIR:-/tmp}/dots-pkginc.XXXXXX")"
+	out="$(
+		DOTS_DIR="${DIR}" \
+			EXPLICIT_CSV="${csv}" \
+			HOME="${pyhome}" \
+			PYTHONDONTWRITEBYTECODE=1 \
+			PYTHONNOUSERSITE=1 \
+			"${DOTS_PYTHON}" -B "${DIR}/helpers/package_truth.py" validate-explicit
+	)" || rc=$?
+	rm -rf "${pyhome}"
+	if [[ ${rc} -ne 0 ]]; then
+		EXPLICIT_JSON="${out}" "${DOTS_PYTHON}" -B - <<'PY' >&2 || true
+import json, os
+raw = os.environ.get("EXPLICIT_JSON") or ""
+try:
+    data = json.loads(raw)
+except json.JSONDecodeError:
+    data = {}
+for err in data.get("errors") or []:
+    name = err.get("name") or "?"
+    reason = err.get("reason") or "invalid"
+    owner = err.get("owner") or ""
+    extra = err.get("leaf_reason") or err.get("unsupported_reason") or ""
+    msg = f"Error: packages.include '{name}' rejected ({reason})"
+    if owner:
+        msg += f"; owner {owner}"
+    if extra:
+        msg += f"; {extra}"
+    print(msg)
+PY
+		echo "Error: profile explicit package desired state is invalid" >&2
+		return 1
+	fi
+	return 0
+}
+
 # Fill PROFILE_* globals from path. Honors include_all_optional / builtin name "all".
 dots_load_profile_file() {
 	local file="$1"
@@ -584,6 +633,8 @@ PY
 			[[ -n ${_cid} ]] && PROFILE_WITHOUT+=("${_cid}")
 		done <<<"${_exp}"
 	fi
+
+	dots_validate_profile_explicit_packages || return 1
 
 	# Explicit leaf components in the profile must be supported here.
 	if [[ ${#PROFILE_WITH_RAW[@]} -gt 0 ]]; then

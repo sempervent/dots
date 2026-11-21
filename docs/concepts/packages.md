@@ -24,8 +24,32 @@ inactive = known in a DOTS registry/Brewfile owner, but that owner is not active
 undeclared = no owner in configs/packages/groups.toml, brew/groups/*.Brewfile, or component registries
 ```
 
-Desired state is the **union** of active profile package-group Brewfiles plus
-selected optional components — never every Brewfile on disk, and never the
+Desired state has four layers:
+
+1. package groups (`packages = […]`)
+2. optional components (`with` / `--with`)
+3. supergroups (expanded to components)
+4. explicit leaf packages (`[packages] include` / `exclude`)
+
+`owner` and `desired_via` are different. Raycast's owner stays
+`component:mactools` even when it is desired via `explicit-package`.
+
+```toml
+[packages]
+include = ["raycast"]
+exclude = ["qgis"]
+```
+
+`./dots install raycast` can enable the owning component. `./dots install raycast --only`
+records only the leaf. `./dots install mactools` enables the whole component bundle.
+Selecting both deduplicates the package. Removing desired state does **not** uninstall.
+Explicit leaves participate in scoped `packages status`, `packages plan`, and `upgrade`.
+
+`dots upgrade` upgrades Homebrew formulae and casks in the desired set. It does **not**
+run `apt upgrade`, `dnf upgrade`, `pacman -Syu`, or `xbps-install -Su`.
+
+Desired state is the **union** of active profile package-group Brewfiles, selected
+optional components, and explicit leaves — never every Brewfile on disk, and never the
 aggregate `brew/Brewfile` as ownership authority.
 
 ## Where ownership lives

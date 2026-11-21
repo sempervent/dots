@@ -468,7 +468,40 @@ EOF
 	if [[ -z ${selector} ]]; then
 		if [[ ${allow_prompt} -eq 1 ]]; then
 			[[ -z ${DOTS_UI_ANSWER_FD:-} ]] && dots_ui_load_answers
-			selector="$(dots_prompt_text "Capability, group, component, or package to install" "")" || return 1
+			echo "DOTS Install"
+			echo ""
+			echo "  1) Search all software"
+			echo "  2) Browse individual packages/apps"
+			echo "  3) Browse package groups"
+			echo "  4) Browse optional components"
+			echo "  5) Browse bundles"
+			echo "  q) Quit"
+			local menu_choice
+			menu_choice="$(dots_ui_read_line "Choose" "1")" || return 1
+			case "${menu_choice}" in
+			q | Q)
+				echo "Aborted."
+				return 0
+				;;
+			2)
+				./dots packages leaves || true
+				selector="$(dots_ui_read_line "Package id" "")" || return 1
+				;;
+			3)
+				./dots packages groups || true
+				selector="$(dots_ui_read_line "Package group" "")" || return 1
+				;;
+			4)
+				./dots components list || true
+				selector="$(dots_ui_read_line "Component id" "")" || return 1
+				;;
+			5)
+				selector="$(dots_ui_read_line "Bundle id" "")" || return 1
+				;;
+			1 | *)
+				selector="$(dots_ui_read_line "Search software" "")" || return 1
+				;;
+			esac
 		fi
 	fi
 	[[ -n ${selector} ]] || {
@@ -890,7 +923,7 @@ _dots_profile_package_subcmd() {
 
 _dots_profile_mutate_subcmd() {
 	local profile_arg="" expected_hash="" apply=0 dry=0 yes=0
-	local -a add_raws=() rem_raws=()
+	local -a add_raws=() rem_raws=() add_pkgs=() rem_pkgs=()
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
 		--profile)
@@ -920,6 +953,24 @@ _dots_profile_mutate_subcmd() {
 			shift
 			;;
 		--remove=*) rem_raws+=("${1#*=}") ;;
+		--add-package)
+			[[ -n ${2:-} ]] || {
+				echo "Error: --add-package requires a package id" >&2
+				return 1
+			}
+			add_pkgs+=("${2}")
+			shift
+			;;
+		--add-package=*) add_pkgs+=("${1#*=}") ;;
+		--remove-package)
+			[[ -n ${2:-} ]] || {
+				echo "Error: --remove-package requires a package id" >&2
+				return 1
+			}
+			rem_pkgs+=("${2}")
+			shift
+			;;
+		--remove-package=*) rem_pkgs+=("${1#*=}") ;;
 		--expected-hash)
 			expected_hash="${2:-}"
 			shift
@@ -929,7 +980,7 @@ _dots_profile_mutate_subcmd() {
 		--dry-run) dry=1 ;;
 		--yes | -y) yes=1 ;;
 		-h | --help)
-			echo "Usage: ./dots profile mutate [--profile NAME|PATH] [--add SEL]... [--remove SEL]... [--expected-hash SHA] [--apply] [--dry-run] [--yes]"
+			echo "Usage: ./dots profile mutate [--profile NAME|PATH] [--add SEL]... [--remove SEL]... [--add-package PKG]... [--remove-package PKG]... [--expected-hash SHA] [--apply] [--dry-run] [--yes]"
 			return 0
 			;;
 		*)
@@ -940,8 +991,8 @@ _dots_profile_mutate_subcmd() {
 		shift
 	done
 
-	if [[ ${#add_raws[@]} -eq 0 && ${#rem_raws[@]} -eq 0 ]]; then
-		echo "Error: profile mutate requires at least one --add or --remove selector" >&2
+	if [[ ${#add_raws[@]} -eq 0 && ${#rem_raws[@]} -eq 0 && ${#add_pkgs[@]} -eq 0 && ${#rem_pkgs[@]} -eq 0 ]]; then
+		echo "Error: profile mutate requires at least one --add, --remove, --add-package, or --remove-package" >&2
 		return 1
 	fi
 
@@ -965,6 +1016,18 @@ _dots_profile_mutate_subcmd() {
 			return 1
 		}
 		resolved_rems+=("${DOTS_SEL_OWNER}")
+	done
+	local pkg
+	for pkg in "${add_pkgs[@]+"${add_pkgs[@]}"}"; do
+		DOTS_SEL_KIND="package"
+		DOTS_SEL_ID="${pkg}"
+		DOTS_SEL_OWNER="package:${pkg}"
+		DOTS_SEL_VIA_PKG=""
+		dots_require_selector_installable || return 1
+		resolved_adds+=("package:${pkg}")
+	done
+	for pkg in "${rem_pkgs[@]+"${rem_pkgs[@]}"}"; do
+		resolved_rems+=("package:${pkg}")
 	done
 
 	dots_profile_edit_resolve_target "${profile_arg}" 0 || return 1
@@ -1133,7 +1196,7 @@ PY
 		;;
 	plan)
 		local p="" json=0
-		local -a add_sels=() rem_sels=()
+		local -a add_sels=() rem_sels=() add_pkgs=() rem_pkgs=()
 		while [[ $# -gt 0 ]]; do
 			case "$1" in
 			--json) json=1 ;;
@@ -1152,8 +1215,18 @@ PY
 				shift || true
 				;;
 			--remove=*) rem_sels+=("${1#*=}") ;;
+			--add-package)
+				add_pkgs+=("${2:-}")
+				shift || true
+				;;
+			--add-package=*) add_pkgs+=("${1#*=}") ;;
+			--remove-package)
+				rem_pkgs+=("${2:-}")
+				shift || true
+				;;
+			--remove-package=*) rem_pkgs+=("${1#*=}") ;;
 			-h | --help)
-				echo "Usage: ./dots profile plan [--profile NAME] [--add SEL]... [--remove SEL]... --json"
+				echo "Usage: ./dots profile plan [--profile NAME] [--add SEL]... [--remove SEL]... [--add-package PKG]... [--remove-package PKG]... [--json]"
 				return 0
 				;;
 			*)
@@ -1180,6 +1253,19 @@ PY
 				return 1
 			}
 			r_rems+=("${DOTS_SEL_OWNER}")
+		done
+		local pkg
+		for pkg in "${add_pkgs[@]+"${add_pkgs[@]}"}"; do
+			[[ -z ${pkg} ]] && continue
+			DOTS_SEL_KIND="package"
+			DOTS_SEL_ID="${pkg}"
+			DOTS_SEL_OWNER="package:${pkg}"
+			dots_require_selector_installable || return 1
+			r_adds+=("package:${pkg}")
+		done
+		for pkg in "${rem_pkgs[@]+"${rem_pkgs[@]}"}"; do
+			[[ -z ${pkg} ]] && continue
+			r_rems+=("package:${pkg}")
 		done
 		local adds_nl="" rems_nl=""
 		[[ ${#r_adds[@]} -gt 0 ]] && adds_nl="$(printf '%s\n' "${r_adds[@]}")"
@@ -1867,12 +1953,13 @@ dots_cmd_packages() {
 		echo ""
 		echo "  1) status     ownership / drift (read-only)"
 		echo "  2) groups     capability groups"
-		echo "  3) plan       resolved package plan"
-		echo "  4) explain    explain one package"
-		echo "  5) outdated   managed packages with updates"
-		echo "  6) upgrade    upgrade DOTS-managed packages"
-		echo "  7) adopt      suggest Brewfile declaration"
-		echo "  8) audit      registry convergence audit"
+		echo "  3) individual software (leaf packages)"
+		echo "  4) plan       resolved package plan"
+		echo "  5) explain    explain one package"
+		echo "  6) outdated   managed packages with updates"
+		echo "  7) upgrade    upgrade DOTS-managed packages"
+		echo "  8) adopt      suggest Brewfile declaration"
+		echo "  9) audit      registry convergence audit"
 		echo "  q) quit"
 		echo ""
 		local choice
@@ -1880,15 +1967,16 @@ dots_cmd_packages() {
 		case "${choice}" in
 		1 | status | s) sub=status ;;
 		2 | groups | g) sub=groups ;;
-		3 | plan | p) sub=plan ;;
-		4 | explain | e)
+		3 | leaves | individual | i) sub=leaves ;;
+		4 | plan | p) sub=plan ;;
+		5 | explain | e)
 			sub=explain
 			set -- "$(dots_prompt_text "Package name" "")"
 			;;
-		5 | outdated | o) sub=outdated ;;
-		6 | upgrade | u) sub=upgrade ;;
-		7 | adopt | a) sub=adopt ;;
-		8 | audit) sub=audit ;;
+		6 | outdated | o) sub=outdated ;;
+		7 | upgrade | u) sub=upgrade ;;
+		8 | adopt | a) sub=adopt ;;
+		9 | audit) sub=audit ;;
 		q | quit | Q) return 0 ;;
 		*) sub=status ;;
 		esac
@@ -1928,11 +2016,26 @@ EOF
 			esac
 			shift
 		done
-		[[ ${json} -eq 1 ]] || {
-			echo "Error: packages leaves requires --json (structured API for TUI/automation)" >&2
-			return 1
-		}
-		dots_packages_leaves_json "${profile_arg}"
+		if [[ ${json} -eq 1 ]]; then
+			dots_packages_leaves_json "${profile_arg}"
+			return $?
+		fi
+		local raw
+		raw="$(dots_packages_leaves_json "${profile_arg}")" || return 1
+		LEAVES_JSON="${raw}" "${DOTS_PYTHON:-python3}" -B - <<'PY'
+import json, os
+data = json.loads(os.environ["LEAVES_JSON"])
+print(f"Individual software  [{data.get('os')}/{data.get('pkg_mgr')}]  ({data.get('count', 0)})")
+print("")
+print(f"{'NAME':<22} {'LEAF':<6} {'INSTALL':<8} {'OWNER'}")
+for p in data.get("packages") or []:
+    leaf = "yes" if p.get("leaf_selectable") else "no"
+    inst = "yes" if p.get("installable") else "no"
+    print(f"{p.get('name',''):<22} {leaf:<6} {inst:<8} {p.get('owner') or ''}")
+print("")
+print("leaf=yes packages can be selected with: ./dots install NAME --only")
+print("Structured: ./dots packages leaves --json")
+PY
 		return $?
 		;;
 	groups)
