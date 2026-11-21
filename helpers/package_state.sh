@@ -817,8 +817,11 @@ dots_pkg_ensure_profile_scope() {
 	if declare -F dots_compute_effective_with >/dev/null 2>&1; then
 		dots_compute_effective_with >/dev/null 2>&1 || true
 		EFFECTIVE_WITH=("${EFFECTIVE_WITH[@]+"${EFFECTIVE_WITH[@]}"}")
-		[[ ${#EFFECTIVE_WITH[@]} -gt 0 ]] && DOTS_WITH_COMPONENTS=("${EFFECTIVE_WITH[@]}")
+		if [[ ${#EFFECTIVE_WITH[@]} -gt 0 ]]; then
+			DOTS_WITH_COMPONENTS=("${EFFECTIVE_WITH[@]}")
+		fi
 	fi
+	return 0
 }
 
 # Explain one package name (formula or cask). Read-only.
