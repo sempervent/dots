@@ -288,6 +288,8 @@ class DotsTuiApp(App[None]):
                 adds,
                 removes,
                 profile=self.target_profile or (self.model.profile_file or None),
+                package_adds=self.model.pending_package_adds(),
+                package_removes=self.model.pending_package_removes(),
             )
         except BackendError as exc:
             self.notify(f"Plan failed: {exc}", severity="error")
@@ -311,6 +313,8 @@ class DotsTuiApp(App[None]):
             expected_hash=self.model.profile_hash or None,
             apply=False,
             dry_run=self.dry_run,
+            package_adds=self.model.pending_package_adds(),
+            package_removes=self.model.pending_package_removes(),
         )
 
     def action_save_only(self) -> bool:
@@ -348,7 +352,9 @@ class DotsTuiApp(App[None]):
     def _perform_save_apply(self) -> None:
         adds = self.model.pending_adds()
         removes = self.model.pending_removes()
-        if not adds and not removes:
+        pkg_adds = self.model.pending_package_adds()
+        pkg_rems = self.model.pending_package_removes()
+        if not adds and not removes and not pkg_adds and not pkg_rems:
             self.notify("No pending profile changes to save and apply.")
             return
         prof_arg = self.target_profile or (self.model.profile_file or None)
@@ -362,6 +368,8 @@ class DotsTuiApp(App[None]):
                 expected_hash=exp_hash,
                 apply=True,
                 dry_run=True,
+                package_adds=pkg_adds,
+                package_removes=pkg_rems,
             )
             self.notify(res.combined or "[dry-run] Save + Apply simulated")
             return
@@ -378,6 +386,8 @@ class DotsTuiApp(App[None]):
                 expected_hash=exp_hash,
                 apply=True,
                 on_line=cb,
+                package_adds=pkg_adds,
+                package_removes=pkg_rems,
             )
 
         def _done(ok: bool) -> None:

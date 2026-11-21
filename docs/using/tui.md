@@ -21,7 +21,7 @@ The TUI is strictly a presentation and controller layer:
 ```text
 configs/{packages/groups,components}.toml
         ↓
-./dots {profile show,components list,packages groups,profile plan} --json
+./dots {profile show,components list,packages groups,packages leaves,profile plan} --json
         ↓
 Textual TUI (tools/dots_help)
         ↓
@@ -111,6 +111,19 @@ rules in Python:
 ./dots components list --json
 ./dots packages groups --json
 ./dots profile resolve <selector> --json
-./dots profile plan [--profile NAME] [--add SEL] [--remove SEL] --json
+./dots profile plan [--profile NAME] [--add SEL] [--remove SEL] [--add-package PKG] [--remove-package PKG] --json
+./dots packages leaves --json
 ./dots upgrade --dry-run --json
 ```
+
+## Individual software
+
+The Software view lists package groups, leaf-selectable individual software from
+`./dots packages leaves --json`, components, and bundles. Names are not hard-coded.
+Search offers **install this package only** when `leaf_selectable` is true, or
+**enable the owner** (group or component). Lifecycle-managed packages do not offer
+package-only. Staged edits (`pending_package_adds` / `pending_package_removes`)
+are saved with groups and components in **one** `./dots profile mutate`.
+Save + Apply performs one overlay write and at most one bootstrap convergence.
+Preview text comes from the structured plan, including explicit package intent
+versus enabling an owner bundle. Removing desired state does not uninstall.

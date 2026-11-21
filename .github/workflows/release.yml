@@ -15,16 +15,28 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - name: Validate tag matches VERSION
+      - name: Validate annotated tag matches VERSION
         run: |
           set -euo pipefail
+          git fetch --tags --force
           expected="v$(tr -d '[:space:]' <VERSION)"
           actual="${GITHUB_REF_NAME}"
           if [[ "${actual}" != "${expected}" ]]; then
             echo "Tag ${actual} does not match VERSION (${expected})" >&2
             exit 1
           fi
-          echo "Tag ${actual} matches VERSION"
+          kind="$(git cat-file -t "${actual}")"
+          if [[ "${kind}" != "tag" ]]; then
+            echo "Release tag ${actual} must be an annotated tag (found ${kind})" >&2
+            exit 1
+          fi
+          echo "Annotated tag ${actual} matches VERSION"
+      - name: Release-critical validation
+        run: |
+          set -euo pipefail
+          ./scripts/ci/lint.sh
+          ./scripts/ci/test.sh
+          ./scripts/docs/check.sh
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:

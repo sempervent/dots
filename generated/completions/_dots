@@ -119,8 +119,8 @@ _dots() {
   model_subs=('discover' 'pull' 'plan' '--list')
   shell_subs=('status' 'keys' 'startup')
   completion_subs=('status' 'paths')
-  pkg_subs=('groups' 'group' 'plan' 'status' 'explain' 'outdated' 'upgrade' 'adopt' 'help')
-  profile_subs=('list' 'show' 'plan' 'resolve' 'add' 'remove' 'mutate' 'diff' 'apply' 'create' 'switch' 'help')
+  pkg_subs=('groups' 'group' 'leaves' 'leaf-packages' 'plan' 'status' 'explain' 'outdated' 'upgrade' 'adopt' 'audit' 'help')
+  profile_subs=('list' 'show' 'plan' 'resolve' 'add' 'remove' 'add-package' 'remove-package' 'mutate' 'diff' 'apply' 'create' 'switch' 'help')
   component_subs=('list' 'active' 'show' 'help')
   ai_subs=('status' 'doctor' 'up' 'down' 'help')
   agent_subs=('status' 'doctor' 'sandbox' 'models' 'scout' 'route' 'eval' 'team' 'run' 'worktrees' 'diff' 'apply' 'discard' 'mcp' 'costs' 'gateway')
@@ -231,7 +231,7 @@ _dots() {
         ;;
       *)
         if [[ ${words[CURRENT]} == -* ]]; then
-          _values 'install flags' --dry-run --yes --no-apply --profile --help
+          _values 'install flags' --dry-run --yes --only --no-apply --profile --help
         else
           _describe -t groups 'package group' groups
           _describe -t selectors 'component/supergroup' selectors
@@ -257,7 +257,7 @@ _dots() {
         _dots_profiles
       elif [[ ${words[2]} == add || ${words[2]} == remove ]]; then
         if [[ ${words[CURRENT]} == -* ]]; then
-          _values 'profile edit flags' --profile --apply --dry-run --yes --help
+          _values 'profile edit flags' --profile --apply --dry-run --yes --add --remove --add-package --remove-package --expected-hash --json --help
         else
           _describe -t groups 'package group' groups
           _describe -t selectors 'component/supergroup' selectors

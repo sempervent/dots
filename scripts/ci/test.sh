@@ -108,6 +108,7 @@ run scripts/tests/v190_workstation_ergonomics_test.sh
 run scripts/tests/lifecycle_ux_test.sh
 run scripts/tests/tui_api_test.sh
 run scripts/tests/leaf_packages_test.sh
+run scripts/tests/explicit_native_test.sh
 run scripts/tests/capability_truth_test.sh
 
 echo ""

@@ -86,6 +86,11 @@ class SoftwarePane(Vertical):
         for g in self.model.groups:
             add_item(g)
 
+        if self.model.explicit_packages:
+            add_header("Individual Software")
+            for pkg in self.model.explicit_packages:
+                add_item(pkg)
+
         if self.model.supergroups:
             add_header("Bundles (Supergroups)")
             for s in self.model.supergroups:

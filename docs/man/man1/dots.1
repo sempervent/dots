@@ -1,7 +1,7 @@
 .\" GENERATED — DO NOT EDIT.
 .\" Source: configs/help/commands.toml + scripts/docs/generate_manpages.py
 .
-.TH DOTS 1 "2026-11-02" "DOTS 1.13.1" "User Commands"
+.TH DOTS 1 "2026-11-02" "DOTS 1.13.2" "User Commands"
 .SH NAME
 dots \- desired\-state environment manager
 .SH SYNOPSIS
@@ -21,7 +21,7 @@ Interactive or noninteractive setup / reconfigure toward desired state.
 .B dots tui
 Launch dynamic Textual desired\-state TUI (groups, components, upgrades).
 .TP
-.B dots install SELECTOR [\-\-dry\-run] [\-\-yes] [\-\-no\-apply] [\-\-profile NAME]
+.B dots install SELECTOR [\-\-dry\-run] [\-\-yes] [\-\-only] [\-\-no\-apply] [\-\-profile NAME]
 Persist a known DOTS capability to desired profile and apply.
 .TP
 .B dots upgrade [\-\-dry\-run] [\-\-yes] [\-\-profile NAME] [\-\-all]
@@ -42,7 +42,7 @@ AI inference server (Compose + Open WebUI) control plane.
 .B dots agent [status|doctor|sandbox|models|scout|eval|team|run|…]
 Local\-first agent harness (Pi, OpenRig, evals, guarded autonomy).
 .TP
-.B dots packages [groups|group|plan|status|explain|outdated|upgrade|adopt|audit]
+.B dots packages [groups|group|leaves|plan|status|explain|outdated|upgrade|adopt|audit]
 Package ownership, installability audit, drift, groups, and upgrades.
 .TP
 .B dots backup [\-\-name N]
@@ -54,7 +54,7 @@ List recoverable DOTS snapshots.
 .B dots restore [ID]
 Restore a snapshot (creates a safety snapshot first).
 .TP
-.B dots profile [list|show|plan|resolve|add|remove|mutate|diff|apply|create|switch]
+.B dots profile [list|show|plan|resolve|add|remove|add\-package|remove\-package|mutate|diff|apply|create|switch]
 Inspect, edit via sparse overlays, switch, or apply profiles.
 .TP
 .B dots models [discover|pull|…]

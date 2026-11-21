@@ -408,6 +408,56 @@ dots_tool_is_required() {
 	return 1
 }
 
+# Install a native package batch. Shared by group provisioning and explicit leaves.
+# DOTS_PKG_MOCK_NATIVE_INSTALL=1 records the command and does not invoke sudo.
+dots_linux_mgr_install_batch() {
+	local mgr="$1"
+	shift
+	local -a batch=("$@")
+	[[ ${#batch[@]} -gt 0 ]] || return 0
+	local cmdline=""
+	case "${mgr}" in
+	apt) cmdline="apt-get install -y ${batch[*]}" ;;
+	pacman) cmdline="pacman -Sy --noconfirm --needed ${batch[*]}" ;;
+	xbps) cmdline="xbps-install -Sy ${batch[*]}" ;;
+	dnf) cmdline="dnf install -y ${batch[*]}" ;;
+	*)
+		echo "Error: unsupported native package manager '${mgr}'" >&2
+		return 1
+		;;
+	esac
+	if [[ -n ${DOTS_NATIVE_INSTALL_LOG:-} ]]; then
+		printf '%s\n' "${cmdline}" >>"${DOTS_NATIVE_INSTALL_LOG}"
+	fi
+	if [[ ${DRY_RUN:-0} -eq 1 ]]; then
+		echo "[dry-run] ${mgr} install: ${batch[*]}"
+		return 0
+	fi
+	if [[ ${DOTS_PKG_MOCK_NATIVE_INSTALL:-0} -eq 1 ]]; then
+		echo "OK: mock ${mgr} install: ${batch[*]}"
+		return 0
+	fi
+	case "${mgr}" in
+	apt)
+		sudo apt-get update -qq || return 1
+		sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "${batch[@]}" || return 1
+		;;
+	pacman)
+		sudo pacman -Sy --noconfirm --needed "${batch[@]}" || return 1
+		;;
+	xbps)
+		sudo xbps-install -Sy "${batch[@]}" || return 1
+		;;
+	dnf)
+		if command -v dnf >/dev/null 2>&1; then
+			sudo dnf install -y "${batch[@]}" || return 1
+		else
+			sudo yum install -y "${batch[@]}" || return 1
+		fi
+		;;
+	esac
+}
+
 dots_linux_install_packages() {
 	local mgr mapfile
 	mgr="$(dots_detect_linux_pkg_mgr)"
@@ -551,27 +601,7 @@ PY
 	fi
 
 	_dots_mgr_install_batch() {
-		local -a batch=("$@")
-		[[ ${#batch[@]} -eq 0 ]] && return 0
-		case "${mgr}" in
-		apt)
-			sudo apt-get update -qq || return 1
-			sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "${batch[@]}" || return 1
-			;;
-		pacman)
-			sudo pacman -Sy --noconfirm --needed "${batch[@]}" || return 1
-			;;
-		xbps)
-			sudo xbps-install -Sy "${batch[@]}" || return 1
-			;;
-		dnf)
-			if command -v dnf >/dev/null 2>&1; then
-				sudo dnf install -y "${batch[@]}" || return 1
-			else
-				sudo yum install -y "${batch[@]}" || return 1
-			fi
-			;;
-		esac
+		dots_linux_mgr_install_batch "${mgr}" "$@"
 	}
 
 	if [[ ${#uniq_req[@]} -gt 0 ]]; then
@@ -682,6 +712,7 @@ for item in plan.get("install") or []:
     print(f"install\t{item['name']}\t{item.get('install_kind','formula')}\t{item.get('install_token') or item['name']}\t{item.get('install_method','brew')}")
 PY
 	local name kind tok method brew_bin
+	local -a native_apt=() native_dnf=() native_pacman=() native_xbps=()
 	brew_bin="${DOTS_BREW_BIN:-brew}"
 	while IFS=$'\t' read -r tag name kind tok method; do
 		[[ ${tag} == "install" ]] || continue
@@ -703,21 +734,36 @@ PY
 				"${brew_bin}" install "${tok}" || return 1
 			fi
 			;;
-		apt | dnf | pacman | xbps)
-			echo "Note: explicit ${name} via ${method} deferred to native batch (${tok})"
-			;;
+		apt) native_apt+=("${tok}") ;;
+		dnf) native_dnf+=("${tok}") ;;
+		pacman) native_pacman+=("${tok}") ;;
+		xbps) native_xbps+=("${tok}") ;;
 		*)
-			echo "Warn: unsupported explicit install method for ${name}: ${method}" >&2
+			echo "Error: unsupported explicit install method for ${name}: ${method}" >&2
+			return 1
 			;;
 		esac
 	done < <(
 		PLAN_JSON="${plan}" "${py}" -B - <<'PY2'
 import json, os
 plan = json.loads(os.environ["PLAN_JSON"])
+for err in plan.get("errors") or []:
+    print(f"error\t{err.get('name','')}\t{err.get('reason','')}\t{err.get('owner') or ''}")
 for item in plan.get("install") or []:
     print(f"install\t{item['name']}\t{item.get('install_kind','formula')}\t{item.get('install_token') or item['name']}\t{item.get('install_method','brew')}")
 PY2
 	)
+	# Surface structured explicit-plan errors (the python CLI also exits non-zero).
+	if printf '%s' "${plan}" | grep -q '"ok": false'; then
+		echo "Error: explicit package desired state is not installable" >&2
+		return 1
+	fi
+	if [[ ${DRY_RUN:-0} -eq 0 ]]; then
+		[[ ${#native_apt[@]} -gt 0 ]] && { dots_linux_mgr_install_batch apt "${native_apt[@]}" || return 1; }
+		[[ ${#native_dnf[@]} -gt 0 ]] && { dots_linux_mgr_install_batch dnf "${native_dnf[@]}" || return 1; }
+		[[ ${#native_pacman[@]} -gt 0 ]] && { dots_linux_mgr_install_batch pacman "${native_pacman[@]}" || return 1; }
+		[[ ${#native_xbps[@]} -gt 0 ]] && { dots_linux_mgr_install_batch xbps "${native_xbps[@]}" || return 1; }
+	fi
 	return 0
 }
 
@@ -1163,6 +1209,24 @@ dots_packages_plan() {
 	fi
 	echo "  (informational — reading a plan is not AI consent)"
 	echo ""
+	echo "Explicit packages:"
+	local -a _exp_show=()
+	local _ep _ee _eskip
+	for _ep in "${PROFILE_PKG_INCLUDE[@]+"${PROFILE_PKG_INCLUDE[@]}"}"; do
+		_eskip=0
+		for _ee in "${PROFILE_PKG_EXCLUDE[@]+"${PROFILE_PKG_EXCLUDE[@]}"}"; do
+			[[ ${_ee} == "${_ep}" ]] && _eskip=1 && break
+		done
+		[[ ${_eskip} -eq 0 ]] && _exp_show+=("${_ep}")
+	done
+	if [[ ${#_exp_show[@]} -eq 0 ]]; then
+		echo "  (none)"
+	else
+		for _ep in "${_exp_show[@]}"; do
+			printf '  %s\n' "${_ep}"
+		done
+	fi
+	echo ""
 
 	if declare -F dots_pkg_ownership_reset >/dev/null 2>&1; then
 		dots_pkg_ownership_reset
@@ -1199,14 +1263,24 @@ dots_packages_plan() {
 	echo "  Unsupported map:  ${unsupported}"
 	echo ""
 	echo "Resolved packages (desired set):"
-	local name state
+	local name state via
 	for name in "${DOTS_DESIRED_FORMULAE[@]+"${DOTS_DESIRED_FORMULAE[@]}"}"; do
 		state="$(_dots_pkg_plan_state_for "${name}")"
-		printf '  %-24s %s\n' "${name}" "${state}"
+		via="$(dots_desired_meta_via "${name}" 2>/dev/null || true)"
+		if [[ -n ${via} ]]; then
+			printf '  %-24s %s   %s\n' "${name}" "${state}" "${via}"
+		else
+			printf '  %-24s %s\n' "${name}" "${state}"
+		fi
 	done
 	for name in "${DOTS_DESIRED_CASKS[@]+"${DOTS_DESIRED_CASKS[@]}"}"; do
 		state="$(_dots_pkg_plan_state_for "${name}")"
-		printf '  %-24s %s (cask)\n' "${name}" "${state}"
+		via="$(dots_desired_meta_via "${name}" 2>/dev/null || true)"
+		if [[ -n ${via} ]]; then
+			printf '  %-24s %s   %s (cask)\n' "${name}" "${state}" "${via}"
+		else
+			printf '  %-24s %s (cask)\n' "${name}" "${state}"
+		fi
 	done
 	echo ""
 	echo "Read-only plan — no install, no auth, no brew outdated queries."

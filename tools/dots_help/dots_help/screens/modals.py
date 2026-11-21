@@ -48,6 +48,10 @@ class PreviewPlanModal(ModalScreen[str]):
             lines.append(f"  - component:{c}")
         for s in delta.get("remove_supergroups") or []:
             lines.append(f"  - supergroup:{s}")
+        for pkg in delta.get("add_packages") or []:
+            lines.append(f"  + package:{pkg}")
+        for pkg in delta.get("remove_packages") or []:
+            lines.append(f"  - package:{pkg}")
         if not p.get("changed"):
             lines.append("  (no profile changes)")
 
@@ -59,7 +63,12 @@ class PreviewPlanModal(ModalScreen[str]):
         lines.extend(["", f"Packages expected to install ({len(to_install)}):"])
         if to_install:
             for pkg in to_install[:25]:
-                lines.append(f"  {pkg}")
+                if isinstance(pkg, dict):
+                    via = pkg.get("desired_via") or ""
+                    kind = pkg.get("kind") or ""
+                    lines.append(f"  {pkg.get('name')} ({kind}, {via})")
+                else:
+                    lines.append(f"  {pkg}")
             if len(to_install) > 25:
                 lines.append(f"  ... (+{len(to_install) - 25} more)")
         else:
@@ -84,8 +93,11 @@ class PreviewPlanModal(ModalScreen[str]):
             for u in unsupported:
                 lines.append(f"  ! {u.get('id')}: {u.get('reason')}")
 
+        for sat in p.get("explicit_satisfied_by_owner") or []:
+            lines.append(f"  explicit package satisfied by owner bundle: {sat.get('name')} ({sat.get('owner')})")
         lines.extend([
             "",
+            "Owner bundles are not enabled by explicit package selection.",
             "Note: Installed packages are not automatically removed.",
         ])
         if self.dry_run:
@@ -191,6 +203,48 @@ class AmbiguousOwnerModal(ModalScreen[str | None]):
         self.dismiss(None)
 
 
+class LeafActionModal(ModalScreen[str | None]):
+    """Choose explicit leaf install versus enabling the owning capability."""
+
+    BINDINGS = [Binding("escape", "cancel", "Cancel")]
+
+    def __init__(self, hit: SearchHit) -> None:
+        super().__init__()
+        self.hit = hit
+
+    def compose(self) -> ComposeResult:
+        hit = self.hit
+        lines = [
+            hit.title,
+            "",
+            f"Owner: {hit.owner_selector or '(unknown)'}",
+        ]
+        if hit.install_method or hit.install_token:
+            lines.append(f"Install route: {hit.install_method} {hit.install_kind} {hit.install_token}".strip())
+        if not hit.leaf_selectable:
+            lines.extend(["", "This package cannot be selected independently.", f"Reason: {hit.leaf_reason or hit.unsupported_reason or 'requires component lifecycle'}"])
+        with Vertical(id="modal-dialog"):
+            yield Label("Software action", classes="modal-title")
+            yield Static("\n".join(lines))
+            with Horizontal(classes="modal-buttons"):
+                if hit.leaf_selectable:
+                    yield Button("Install only", id="btn-only", variant="primary")
+                if hit.owner_selector:
+                    yield Button(f"Enable {hit.owner_selector}", id="btn-owner")
+                yield Button("Cancel", id="btn-cancel")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "btn-only":
+            self.dismiss(f"package:{self.hit.target_id}")
+        elif event.button.id == "btn-owner" and self.hit.owner_selector:
+            self.dismiss(self.hit.owner_selector)
+        else:
+            self.dismiss(None)
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
+
+
 class PackageSearchModal(ModalScreen[tuple[str, str] | None]):
     """Search groups, components, supergroups, and packages."""
 
@@ -256,6 +310,9 @@ class PackageSearchModal(ModalScreen[tuple[str, str] | None]):
             )
 
     def _resolve_and_return(self, hit: SearchHit) -> None:
+        if hit.kind == "package":
+            self.app.push_screen(LeafActionModal(hit), self._on_leaf_action)
+            return
         if hit.kind != "package" and hit.owner_selector:
             self.dismiss((hit.owner_selector, ""))
             return
@@ -275,6 +332,10 @@ class PackageSearchModal(ModalScreen[tuple[str, str] | None]):
             self._pick_ambiguous(hit.target_id, choices, res.get("group_packages") or {}, res)
         elif hit.owner_selector:
             self.dismiss((hit.owner_selector, ""))
+
+    def _on_leaf_action(self, choice: str | None) -> None:
+        if choice:
+            self.dismiss((choice, "explicit package action"))
 
     def _pick_ambiguous(
         self,

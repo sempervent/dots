@@ -29,7 +29,8 @@ ground traditionally. Expert scripts remain available underneath for automation.
 ```bash
 ./dots                     # interactive TUI (when bootstrapped) or setup wizard
 ./dots tui                 # dynamic desired-state TUI (groups/components/upgrades)
-./dots install hyperfine   # persist known capability into overlay + converge
+./dots install hyperfine   # persist owning group (or prompt leaf vs owner)
+./dots install raycast --only --yes   # explicit leaf only; does not enable mactools
 ./dots upgrade             # upgrade managed software in active profile
 ./dots status              # read-only dashboard
 ./dots packages status     # package ownership / drift (read-only)

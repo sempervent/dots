@@ -24,6 +24,24 @@ Authority for valid group ids is **only** `configs/packages/groups.toml`
 
 Do **not** use `./dots setup --with geo` — `geo` is a group, not a component.
 
+## Explicit leaf packages
+
+Groups and components are not the only desired-state layers. A profile may also
+name individual leaf-selectable packages:
+
+```toml
+[packages]
+include = ["hyperfine"]
+exclude = ["qgis"]
+```
+
+`include` adds that package without enabling its owner bundle. `exclude` removes
+an inherited explicit package. Inheritance follows the profile `extends` chain.
+Unknown ids, lifecycle-managed packages, and platform-unsupported leaves are
+rejected when the profile loads. `./dots packages leaves` lists the catalog;
+`--json` is the automation form. Native Linux leaves install through apt, dnf,
+pacman, or xbps using the mapped token from package truth — not the Homebrew name.
+
 ## Required vs optional
 
 In `groups.toml`, each group lists **required** and **optional** portable ids.

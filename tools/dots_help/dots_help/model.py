@@ -109,6 +109,7 @@ class CapabilityItem:
     unsupported_packages: list[str] = field(default_factory=list)
     packages: list[dict[str, Any]] = field(default_factory=list)
     brewfile: str = ""
+    owner: str = ""
     # Component fields
     platforms: list[str] = field(default_factory=list)
     min_darwin: str | None = None
@@ -120,6 +121,13 @@ class CapabilityItem:
     # Supergroup fields
     members: list[str] = field(default_factory=list)
     supported_members: list[str] = field(default_factory=list)
+    leaf_selectable: bool = True
+    leaf_reason: str = ""
+    install_method: str = ""
+    install_kind: str = ""
+    install_token: str = ""
+    installed: bool = False
+    external: bool = False
 
     @property
     def selector(self) -> str:
@@ -137,6 +145,10 @@ class SearchHit:
     kind: str  # "group" | "component" | "supergroup" | "package"
     target_id: str  # group/component/supergroup id or package name
     owner_selector: str | None = None  # e.g. "group:dev" when unambiguous
+    leaf_selectable: bool | None = None
+    leaf_reason: str = ""
+    install_kind: str = ""
+    install_token: str = ""
     installable: bool | None = None
     installed: bool | None = None
     external: bool = False
@@ -162,6 +174,7 @@ class DesiredStateModel:
         self.groups: list[CapabilityItem] = []
         self.components: list[CapabilityItem] = []
         self.supergroups: list[CapabilityItem] = []
+        self.explicit_packages: list[CapabilityItem] = []
         self.profiles_catalog: list[dict[str, Any]] = []
         self._by_selector: dict[str, CapabilityItem] = {}
         self._pkg_index: dict[str, list[CapabilityItem]] = {}
@@ -191,6 +204,7 @@ class DesiredStateModel:
         self.groups = []
         self.components = []
         self.supergroups = []
+        self.explicit_packages = []
         self._by_selector = {}
         self._pkg_index = {}
         self._pkg_meta_index = {}
@@ -305,11 +319,51 @@ class DesiredStateModel:
                     self._pkg_index.setdefault(short, []).append(item)
                     self._pkg_meta_index.setdefault(short, []).append((item, cmeta))
 
+        explicit_states = pshow.get("explicit_packages") or {}
+        try:
+            leaves = self.backend.leaf_packages(target_prof if pshow.get("profile") else None)
+        except Exception:
+            leaves = {"packages": []}
+        for row in leaves.get("packages") or []:
+            pid = str(row.get("name") or "").strip()
+            if not pid:
+                continue
+            installable = bool(row.get("installable"))
+            leaf_ok = bool(row.get("leaf_selectable"))
+            raw_state = str((explicit_states.get(pid) or {}).get("state") or row.get("selected_state") or "absent")
+            if not installable or not leaf_ok:
+                st = SelectionState.UNSUPPORTED if raw_state in ("absent", "unsupported", "") else SelectionState.from_raw(raw_state)
+                supported = False
+            else:
+                st = SelectionState.from_raw(raw_state)
+                supported = True
+            pkg_item = CapabilityItem(
+                kind="package",
+                id=pid,
+                label=str(row.get("label") or pid),
+                description=str(row.get("leaf_reason") or row.get("unsupported_reason") or ""),
+                owner=str(row.get("owner") or ""),
+                category=str(row.get("category") or "package"),
+                persisted=st,
+                working=st,
+                supported=supported,
+                unsupported_reason=str(row.get("unsupported_reason") or row.get("leaf_reason") or ""),
+                leaf_selectable=leaf_ok,
+                leaf_reason=str(row.get("leaf_reason") or ""),
+                install_method=str(row.get("install_method") or ""),
+                install_kind=str(row.get("install_kind") or ""),
+                install_token=str(row.get("install_token") or ""),
+                installed=bool(row.get("installed")),
+                external=bool(row.get("external")),
+            )
+            self.explicit_packages.append(pkg_item)
+            self._by_selector[pkg_item.selector] = pkg_item
+
     def get(self, selector: str) -> CapabilityItem | None:
         return self._by_selector.get(selector)
 
     def all_items(self) -> list[CapabilityItem]:
-        return [*self.groups, *self.supergroups, *self.components]
+        return [*self.groups, *self.supergroups, *self.components, *self.explicit_packages]
 
     def component_categories(self) -> list[tuple[str, list[CapabilityItem]]]:
         """Group components dynamically by registry category preserving order."""
@@ -324,6 +378,9 @@ class DesiredStateModel:
         if item is None:
             return False, f"Unknown item: {selector}"
         cur = item.working
+        if item.kind == "package" and not item.leaf_selectable:
+            reason = item.leaf_reason or item.unsupported_reason or "requires component lifecycle"
+            return False, f"{item.label} cannot be selected independently: {reason}"
         if (not item.supported or item.persisted == SelectionState.UNSUPPORTED) and not cur.is_desired:
             reason = item.unsupported_reason or "unsupported on this platform"
             return False, f"{item.label} is unavailable: {reason}"
@@ -345,16 +402,30 @@ class DesiredStateModel:
     def pending_adds(self) -> list[str]:
         adds: list[str] = []
         for item in self.all_items():
-            if not item.modified:
+            if item.kind == "package" or not item.modified:
                 continue
             if item.working.is_desired and not item.persisted.is_desired:
                 adds.append(item.selector)
         return adds
 
+    def pending_package_adds(self) -> list[str]:
+        return [
+            item.id
+            for item in self.explicit_packages
+            if item.modified and item.working.is_desired and not item.persisted.is_desired
+        ]
+
+    def pending_package_removes(self) -> list[str]:
+        return [
+            item.id
+            for item in self.explicit_packages
+            if item.modified and item.persisted.is_desired and not item.working.is_desired
+        ]
+
     def pending_removes(self) -> list[str]:
         rems: list[str] = []
         for item in self.all_items():
-            if not item.modified:
+            if item.kind == "package" or not item.modified:
                 continue
             if not item.working.is_desired and item.persisted.is_desired:
                 rems.append(item.selector)
@@ -362,7 +433,12 @@ class DesiredStateModel:
 
     @property
     def has_unsaved_changes(self) -> bool:
-        return bool(self.pending_adds() or self.pending_removes())
+        return bool(
+            self.pending_adds()
+            or self.pending_removes()
+            or self.pending_package_adds()
+            or self.pending_package_removes()
+        )
 
     def pending_summary(self) -> str:
         adds = self.pending_adds()
@@ -372,6 +448,8 @@ class DesiredStateModel:
         tokens = [f"+{x.split(':', 1)[1]}" for x in adds] + [
             f"-{x.split(':', 1)[1]}" for x in rems
         ]
+        tokens += [f"+package:{x}" for x in self.pending_package_adds()]
+        tokens += [f"-package:{x}" for x in self.pending_package_removes()]
         return " ".join(tokens)
 
     def search(self, query: str) -> list[SearchHit]:
@@ -429,6 +507,43 @@ class DesiredStateModel:
                         )
                     )
 
+        for pkg in self.explicit_packages:
+            if pkg.id in self._pkg_meta_index:
+                continue
+            blob = f"{pkg.id} {pkg.label} {pkg.owner} {pkg.description}".lower()
+            if q not in blob and q not in pkg.id.lower():
+                continue
+            key = ("package", pkg.id)
+            if key in seen_keys:
+                continue
+            seen_keys.add(key)
+            if pkg.supported:
+                subtitle = (
+                    f"Owner: {pkg.owner}  |  Install route: {pkg.install_method} {pkg.install_kind} {pkg.install_token}"
+                ).strip()
+            else:
+                subtitle = f"Owner: {pkg.owner}  |  Platform: unavailable through DOTS on this machine"
+                if pkg.installed:
+                    subtitle += " (installed externally)"
+            hits.append(
+                SearchHit(
+                    title=pkg.label,
+                    subtitle=subtitle,
+                    kind="package",
+                    target_id=pkg.id,
+                    owner_selector=pkg.owner or None,
+                    leaf_selectable=pkg.leaf_selectable,
+                    leaf_reason=pkg.leaf_reason or pkg.unsupported_reason,
+                    install_kind=pkg.install_kind,
+                    install_token=pkg.install_token,
+                    installable=pkg.supported,
+                    installed=pkg.installed,
+                    external=pkg.external,
+                    install_method=pkg.install_method,
+                    unsupported_reason=pkg.unsupported_reason,
+                )
+            )
+
         # Package search across dynamic index
         pkg_matches: list[tuple[str, list[tuple[CapabilityItem, dict[str, Any]]]]] = []
         for pname, entries in self._pkg_meta_index.items():
@@ -465,13 +580,18 @@ class DesiredStateModel:
                     subtitle = f"Owner: {owner.id}  |  Installable: yes{via}  |  Installed: {inst_str}"
                 else:
                     subtitle = f"Package provided by {owner.selector}"
+                leaf_item = next((p for p in self.explicit_packages if p.id == pname), None)
                 hits.append(
                     SearchHit(
                         title=pname,
                         subtitle=subtitle,
                         kind="package",
                         target_id=pname,
-                        owner_selector=owner.selector,
+                        owner_selector=(leaf_item.owner if leaf_item and leaf_item.owner else owner.selector),
+                        leaf_selectable=(leaf_item.leaf_selectable if leaf_item else bool(meta.get("leaf_selectable"))),
+                        leaf_reason=(leaf_item.leaf_reason if leaf_item else str(meta.get("leaf_reason") or "")),
+                        install_kind=str((leaf_item.install_kind if leaf_item else meta.get("install_kind")) or ""),
+                        install_token=str((leaf_item.install_token if leaf_item else meta.get("install_token")) or ""),
                         installable=inst_ok,
                         installed=is_installed,
                         external=is_external,

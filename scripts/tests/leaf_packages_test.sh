@@ -69,6 +69,29 @@ d=json.load(sys.stdin)
 assert d.get("leaf_selectable") is True, d
 ' && pass "hyperfine group-owned leaf-selectable" || bad "hyperfine leaf"
 
+plan="$("${ROOT}/dots" profile plan --profile base --add-package raycast --json 2>/dev/null)" || bad "profile plan --add-package failed"
+echo "${plan}" | python3 -c '
+import json,sys
+d=json.load(sys.stdin)
+delta=d.get("delta") or {}
+assert "raycast" in (delta.get("add_packages") or []), delta
+' && pass "profile plan --add-package raycast" || bad "plan add-package json"
+
+linux_leaves="$(DOTS_FORCE_OS=linux DOTS_FORCE_PKG_MGR=apt "${ROOT}/dots" packages leaves --json 2>/dev/null)"
+echo "${linux_leaves}" | python3 -c '
+import json,sys
+d=json.load(sys.stdin)
+rows={p["name"]: p for p in d.get("packages") or []}
+ray=rows.get("raycast")
+assert ray is not None, "raycast should remain visible"
+assert ray.get("installable") is False, ray
+assert ray.get("leaf_selectable") is False, ray
+keys={"name","label","owner","category","platform_supported","installable","unsupported_reason","leaf_selectable","leaf_reason","install_method","install_kind","install_token","installed","external","selected_state","desired_via"}
+for p in d.get("packages") or []:
+    missing=keys-set(p)
+    assert not missing, (p.get("name"), missing)
+' && pass "linux leaf catalog hides raycast installability and shares schema" || bad "linux leaf catalog"
+
 rm -rf "${CUST_HOME}"
 echo ""
 echo "Passed: ${ok}"
