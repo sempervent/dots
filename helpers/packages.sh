@@ -722,8 +722,28 @@ PY2
 }
 
 # ---------------------------------------------------------------------------
-# Read-only CLI: groups / group / plan (no install, no auth, no outdated queries)
+# Read-only CLI: groups / group / plan / leaves (no install, no auth, no outdated queries)
 # ---------------------------------------------------------------------------
+
+dots_packages_leaves_json() {
+	local profile_arg="${1:-}"
+	dots_require_python 0 || return 1
+	local pjson="" pyhome rc=0
+	if [[ -n ${profile_arg} ]]; then
+		pjson="$(dots_profile_show_json "${profile_arg}" 2>/dev/null || true)"
+	elif dots_state_load_active 2>/dev/null; then
+		pjson="$(dots_profile_show_json "" 2>/dev/null || true)"
+	fi
+	pyhome="$(mktemp -d "${TMPDIR:-/tmp}/dots-pkg-leaves.XXXXXX")"
+	PJSON="${pjson}" \
+		DOTS_DIR="${DIR}" \
+		HOME="${pyhome}" \
+		PYTHONDONTWRITEBYTECODE=1 \
+		PYTHONNOUSERSITE=1 \
+		"${DOTS_PYTHON}" -B "${DIR}/helpers/package_truth.py" leaf-catalog || rc=$?
+	rm -rf "${pyhome}"
+	return "${rc}"
+}
 
 # True if group id is in the active/resolved set.
 dots_group_is_active() {

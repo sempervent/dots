@@ -302,11 +302,96 @@ dots_pkg_activate_hint() {
 
 # Populate DOTS_DESIRED_FORMULAE[] and DOTS_DESIRED_CASKS[] (unique).
 # Uses DOTS_RESOLVED_GROUPS (or resolves defaults) + DOTS_WITH_COMPONENTS.
+# Reload pkginc/pkgexc from active profile TOML (not stored in active-profile marker).
+dots_ensure_active_profile_package_state() {
+	[[ -n ${DOTS_ACTIVE_PROFILE_FILE:-} && -f ${DOTS_ACTIVE_PROFILE_FILE} ]] || return 0
+	if declare -F dots_load_profile_file >/dev/null 2>&1; then
+		dots_load_profile_file "${DOTS_ACTIVE_PROFILE_FILE}" >/dev/null 2>&1 || true
+	fi
+}
+
+# Add explicit profile packages (PROFILE_PKG_INCLUDE) into desired token lists.
+dots_desired_merge_explicit_packages() {
+	local -a effective_inc=()
+	local p e skip
+	for p in "${PROFILE_PKG_INCLUDE[@]+"${PROFILE_PKG_INCLUDE[@]}"}"; do
+		[[ -n ${p} ]] || continue
+		skip=0
+		for e in "${PROFILE_PKG_EXCLUDE[@]+"${PROFILE_PKG_EXCLUDE[@]}"}"; do
+			[[ ${e} == "${p}" ]] && {
+				skip=1
+				break
+			}
+		done
+		[[ ${skip} -eq 0 ]] && effective_inc+=("${p}")
+	done
+	[[ ${#effective_inc[@]} -gt 0 ]] || return 0
+
+	dots_require_python 0 || return 1
+	local groups_csv components_csv explicit_csv pyhome plan rc=0
+	groups_csv="$(
+		IFS=,
+		echo "${DOTS_RESOLVED_GROUPS[*]+"${DOTS_RESOLVED_GROUPS[*]}"}"
+	)"
+	components_csv="$(
+		IFS=,
+		echo "${DOTS_WITH_COMPONENTS[@]+"${DOTS_WITH_COMPONENTS[@]}"}"
+	)"
+	explicit_csv="$(
+		IFS=,
+		echo "${effective_inc[*]}"
+	)"
+	pyhome="$(mktemp -d "${TMPDIR:-/tmp}/dots-desired-exc.XXXXXX")"
+	plan="$(
+		DOTS_DIR="${DIR}" \
+			GROUPS_CSV="${groups_csv}" \
+			COMPONENTS_CSV="${components_csv}" \
+			EXPLICIT_CSV="${explicit_csv}" \
+			HOME="${pyhome}" \
+			PYTHONDONTWRITEBYTECODE=1 \
+			PYTHONNOUSERSITE=1 \
+			"${DOTS_PYTHON}" -B "${DIR}/helpers/package_truth.py" explicit-plan
+	)" || rc=$?
+	rm -rf "${pyhome}"
+	[[ ${rc} -eq 0 ]] || return 1
+
+	local py="${DOTS_PYTHON:-python3}" tag short
+	while IFS=$'\t' read -r tag short; do
+		[[ -z ${short} ]] && continue
+		case "${tag}" in
+		cask)
+			if ! dots_pkg_in_list "${short}" "${DOTS_DESIRED_CASKS[@]+"${DOTS_DESIRED_CASKS[@]}"}"; then
+				DOTS_DESIRED_CASKS+=("${short}")
+			fi
+			;;
+		brew)
+			if ! dots_pkg_in_list "${short}" "${DOTS_DESIRED_FORMULAE[@]+"${DOTS_DESIRED_FORMULAE[@]}"}"; then
+				DOTS_DESIRED_FORMULAE+=("${short}")
+			fi
+			;;
+		esac
+	done < <(
+		PLAN_JSON="${plan}" "${py}" -B - <<'PY2'
+import json, os
+plan = json.loads(os.environ["PLAN_JSON"])
+for item in plan.get("install") or []:
+    kind = (item.get("install_kind") or "formula").strip()
+    tok = (item.get("install_token") or item.get("name") or "").strip()
+    if not tok:
+        continue
+    short = tok.split("/")[-1]
+    tag = "cask" if kind == "cask" else "brew"
+    print(f"{tag}\t{short}")
+PY2
+	)
+}
+
 dots_desired_packages_resolve() {
 	DOTS_DESIRED_FORMULAE=()
 	DOTS_DESIRED_CASKS=()
 	DOTS_RESOLVED_GROUPS=("${DOTS_RESOLVED_GROUPS[@]+"${DOTS_RESOLVED_GROUPS[@]}"}")
 	DOTS_WITH_COMPONENTS=("${DOTS_WITH_COMPONENTS[@]+"${DOTS_WITH_COMPONENTS[@]}"}")
+	dots_ensure_active_profile_package_state
 	local -a files=()
 	local g f c token seen_f seen_c
 
@@ -367,6 +452,7 @@ dots_desired_packages_resolve() {
 			esac
 		done < <(dots_brewfile_tokens "${p}" all)
 	done
+	dots_desired_merge_explicit_packages
 }
 
 dots_pkg_brew() {
