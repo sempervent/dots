@@ -1086,10 +1086,13 @@ EOF
 	mv -f "${tmp}" "${active}"
 }
 
-# Validate temp TOML, back up previous overlay if any, atomically rename, and activate marker.
-# Args: overlay_file out_toml_tmp
+# Validate temp TOML, back up previous overlay if any, atomically rename.
+# Args: overlay_file out_toml_tmp [activate]
+# activate defaults to 1 so existing callers still move the active-profile pointer.
+# activate=0 writes the overlay and leaves the active-profile marker untouched.
 dots_profile_edit_commit_atomic() {
 	local overlay_file="$1" new_toml_tmp="$2"
+	local activate="${3:-1}"
 	local odir stage_tmp bak_dir bak_file
 
 	if dots_profile_is_builtin_path "${overlay_file}"; then
@@ -1120,7 +1123,9 @@ dots_profile_edit_commit_atomic() {
 	fi
 
 	mv -f "${stage_tmp}" "${overlay_file}"
-	dots_profile_write_active_marker "${overlay_file}" || return 1
+	if [[ ${activate} -eq 1 ]]; then
+		dots_profile_write_active_marker "${overlay_file}" || return 1
+	fi
 	return 0
 }
 

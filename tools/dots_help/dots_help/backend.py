@@ -180,10 +180,13 @@ class DotsBackend:
         on_line: Callable[[str], None] | None = None,
         package_adds: list[str] | None = None,
         package_removes: list[str] | None = None,
+        preserve_active: bool = False,
     ) -> CommandResult:
         args = ["profile", "mutate", "--yes"]
         if profile:
             args.extend(["--profile", profile])
+        if preserve_active:
+            args.append("--preserve-active")
         if expected_hash:
             args.extend(["--expected-hash", expected_hash])
         for a in adds:
