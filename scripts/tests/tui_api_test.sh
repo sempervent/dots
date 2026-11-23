@@ -115,6 +115,25 @@ set -e
 ov_after="$(cksum <"${HOME}/.config/dots/profiles/home-local.toml")"
 [[ ${bad_rc} -ne 0 && ${ov_before} == "${ov_after}" ]] && ok "invalid batch aborted atomically" || bad "batch wrote partial state"
 
+echo "=== 6b. explicit profile show reports real active state ==="
+home_local="${HOME}/.config/dots/profiles/home-local.toml"
+# home-local already exists from section 4 and is the active marker target
+show_active="$("${ROOT}/dots" profile show home-local --json)"
+show_work="$("${ROOT}/dots" profile show work --json)"
+show_base="$("${ROOT}/dots" profile show base --json)"
+show_none="$("${ROOT}/dots" profile show --json)"
+python3 - "${show_active}" "${show_work}" "${show_base}" "${show_none}" <<'PY'
+import json, sys
+active, work, base, none = (json.loads(x) for x in sys.argv[1:5])
+assert active["active"] is True, active["profile"]
+assert active["profile"] == "home-local"
+assert work["active"] is False, work
+assert work["profile"] == "work"
+assert base["active"] is False, base
+assert none["active"] is True and none["profile"] == "home-local", none["profile"]
+PY
+ok "explicit profile active flag matches the machine pointer"
+
 echo "=== 6. dots tui --help and non-TTY safety ==="
 tui_help="$("${ROOT}/dots" tui --help 2>&1)"
 echo "${tui_help}" | grep -q 'dots tui' && ok "dots tui --help" || bad "dots tui --help"

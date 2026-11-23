@@ -12,6 +12,75 @@ from ..model import DesiredStateModel
 from .modals import ApplyProgressModal, ConfirmActionModal
 
 
+def format_profile_details(data: dict[str, Any], *, editing_file: str = "") -> str:
+    """Render structured profile JSON, including explicit package deltas."""
+    name = data.get("profile") or "(none)"
+    kind = data.get("profile_kind") or "none"
+    pfile = str(data.get("profile_file") or "(none)")
+    chain = data.get("source_chain") or []
+    adds = data.get("local_additions") or {}
+    rems = data.get("local_removals") or {}
+    runtime = data.get("runtime") or {}
+    editing = bool(editing_file) and pfile == editing_file
+
+    lines = [
+        f"Profile: {name}   [{kind}]",
+        f"File:    {pfile}",
+        f"Active:  {'yes' if data.get('active') else 'no'}",
+        f"Editing: {'yes' if editing else 'no'}",
+        f"Extends: {data.get('extends') or '(none)'}",
+        "",
+        "Source chain:",
+    ]
+    if chain:
+        for idx, c in enumerate(chain):
+            if idx > 0:
+                lines.append("    ↓")
+            lines.append(f"  {c.get('name')}  [{c.get('kind')}]  ({c.get('file')})")
+    else:
+        lines.append("  (none)")
+
+    lines.extend(["", "Local additions:"])
+    any_add = False
+    for g in adds.get("groups") or []:
+        lines.append(f"  + group:{g}")
+        any_add = True
+    for c in adds.get("components") or []:
+        lines.append(f"  + component:{c}")
+        any_add = True
+    for s in adds.get("supergroups") or []:
+        lines.append(f"  + supergroup:{s}")
+        any_add = True
+    for pkg in adds.get("packages") or []:
+        lines.append(f"  + package:{pkg}")
+        any_add = True
+    if not any_add:
+        lines.append("  (none)")
+
+    lines.extend(["", "Local exclusions:"])
+    any_rem = False
+    for g in rems.get("groups") or []:
+        lines.append(f"  - group:{g}")
+        any_rem = True
+    for c in rems.get("components") or []:
+        lines.append(f"  - component:{c}")
+        any_rem = True
+    for s in rems.get("supergroups") or []:
+        lines.append(f"  - supergroup:{s}")
+        any_rem = True
+    for pkg in rems.get("packages") or []:
+        lines.append(f"  - package:{pkg}")
+        any_rem = True
+    if not any_rem:
+        lines.append("  (none)")
+
+    if runtime:
+        lines.extend(["", "Runtime overrides:"])
+        for key in sorted(runtime):
+            lines.append(f"  {key} = {runtime[key]}")
+    return "\n".join(lines)
+
+
 class ProfilePane(Vertical):
     """Inspect active or other profiles, inheritance chain, and local deltas."""
 
@@ -84,52 +153,8 @@ class ProfilePane(Vertical):
         self.query_one("#profile-details", Static).update("\n".join(lines))
 
     def _render_profile_dict(self, data: dict[str, Any]) -> None:
-        name = data.get("profile") or "(none)"
-        kind = data.get("profile_kind") or "none"
-        pfile = data.get("profile_file") or "(none)"
-        chain = data.get("source_chain") or []
-        adds = data.get("local_additions") or {}
-        rems = data.get("local_removals") or {}
-
-        lines = [
-            f"Profile: {name}   [{kind}]",
-            f"File:    {pfile}",
-            f"Active:  {'YES' if data.get('active') else 'NO (browsing only)'}",
-            "",
-            "Source chain:",
-        ]
-        if chain:
-            for idx, c in enumerate(chain):
-                if idx > 0:
-                    lines.append("    ↓")
-                lines.append(f"  {c.get('name')}  [{c.get('kind')}]  ({c.get('file')})")
-        else:
-            lines.append("  (none)")
-
-        lines.extend(["", "Local desired-state changes:"])
-        any_delta = False
-        for g in adds.get("groups") or []:
-            lines.append(f"  + group:{g}")
-            any_delta = True
-        for c in adds.get("components") or []:
-            lines.append(f"  + component:{c}")
-            any_delta = True
-        for s in adds.get("supergroups") or []:
-            lines.append(f"  + supergroup:{s}")
-            any_delta = True
-        for g in rems.get("groups") or []:
-            lines.append(f"  - group:{g}")
-            any_delta = True
-        for c in rems.get("components") or []:
-            lines.append(f"  - component:{c}")
-            any_delta = True
-        for s in rems.get("supergroups") or []:
-            lines.append(f"  - supergroup:{s}")
-            any_delta = True
-        if not any_delta:
-            lines.append("  (none)")
-
-        self.query_one("#profile-details", Static).update("\n".join(lines))
+        text = format_profile_details(data, editing_file=self.model.profile_file)
+        self.query_one("#profile-details", Static).update(text)
 
     def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
         if event.list_view.id != "profile-catalog":

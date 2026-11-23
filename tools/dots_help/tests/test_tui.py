@@ -606,3 +606,60 @@ def test_explicit_leaf_staging_does_not_enable_owner(isolated_env, monkeypatch):
     ok, _msg = linux_model.toggle("package:raycast")
     assert ok is False
 
+
+def test_package_only_pending_summary_is_not_none():
+    from dots_help.backend import DotsBackend
+    from dots_help.model import CapabilityItem, DesiredStateModel, SelectionState
+
+    model = DesiredStateModel(DotsBackend(ROOT))
+    model.explicit_packages.append(
+        CapabilityItem(
+            kind="package",
+            id="raycast",
+            label="Raycast",
+            description="",
+            persisted=SelectionState.NOT_SELECTED,
+            working=SelectionState.LOCAL_ADD,
+        )
+    )
+    assert model.pending_summary() == "+package:raycast"
+    assert "none" not in model.pending_bar_text()
+    assert "+package:raycast" in model.pending_bar_text()
+
+    model.explicit_packages.clear()
+    model.explicit_packages.append(
+        CapabilityItem(
+            kind="package",
+            id="qgis",
+            label="QGIS",
+            description="",
+            persisted=SelectionState.LOCAL_ADD,
+            working=SelectionState.NOT_SELECTED,
+        )
+    )
+    assert model.pending_summary() == "-package:qgis"
+
+
+def test_profile_details_render_package_deltas():
+    from dots_help.screens.profile import format_profile_details
+
+    text = format_profile_details(
+        {
+            "profile": "work-local",
+            "profile_kind": "overlay",
+            "profile_file": "/tmp/work-local.toml",
+            "active": False,
+            "extends": "work",
+            "source_chain": [{"name": "work", "kind": "builtin", "file": "/tmp/work.toml"}],
+            "local_additions": {"groups": ["geo"], "components": [], "supergroups": [], "packages": ["raycast"]},
+            "local_removals": {"groups": [], "components": [], "supergroups": [], "packages": ["qgis"]},
+            "runtime": {},
+        },
+        editing_file="/tmp/work-local.toml",
+    )
+    assert "+ package:raycast" in text
+    assert "- package:qgis" in text
+    assert "+ group:geo" in text
+    assert "Editing: yes" in text
+    assert "Active:  no" in text
+

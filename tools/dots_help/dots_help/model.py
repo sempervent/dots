@@ -440,17 +440,30 @@ class DesiredStateModel:
             or self.pending_package_removes()
         )
 
-    def pending_summary(self) -> str:
-        adds = self.pending_adds()
-        rems = self.pending_removes()
-        if not adds and not rems:
-            return "none"
-        tokens = [f"+{x.split(':', 1)[1]}" for x in adds] + [
-            f"-{x.split(':', 1)[1]}" for x in rems
-        ]
+    def pending_tokens(self) -> list[str]:
+        tokens = [f"+{x.split(':', 1)[1]}" for x in self.pending_adds()]
+        tokens += [f"-{x.split(':', 1)[1]}" for x in self.pending_removes()]
         tokens += [f"+package:{x}" for x in self.pending_package_adds()]
         tokens += [f"-package:{x}" for x in self.pending_package_removes()]
+        return tokens
+
+    def pending_summary(self) -> str:
+        tokens = self.pending_tokens()
+        if not tokens:
+            return "none"
         return " ".join(tokens)
+
+    def pending_bar_text(self) -> str:
+        """Human pending line. Package-only edits must not read as 'none'."""
+        tokens = self.pending_tokens()
+        note = "Removing desired state does not uninstall software."
+        if not tokens:
+            return f"Pending: none   |   {note}"
+        shown = tokens[:3]
+        extra = len(tokens) - len(shown)
+        more = f" +{extra} more" if extra else ""
+        noun = "change" if len(tokens) == 1 else "changes"
+        return f"{len(tokens)} pending {noun}: {' '.join(shown)}{more}   |   {note}"
 
     def search(self, query: str) -> list[SearchHit]:
         q = (query or "").strip().lower()
