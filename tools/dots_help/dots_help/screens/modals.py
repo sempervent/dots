@@ -11,7 +11,7 @@ from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Label, ListItem, ListView, RichLog, Static
 
 from ..backend import CommandResult
-from ..model import DesiredStateModel, SearchHit, SelectionState
+from ..model import CapabilityItem, DesiredStateModel, SearchAction, SearchHit, SelectionState
 
 
 class PreviewPlanModal(ModalScreen[str]):
@@ -21,10 +21,19 @@ class PreviewPlanModal(ModalScreen[str]):
         Binding("escape", "cancel", "Back"),
     ]
 
-    def __init__(self, plan: dict[str, Any], *, dry_run: bool = False) -> None:
+    def __init__(
+        self,
+        plan: dict[str, Any],
+        *,
+        dry_run: bool = False,
+        editing_active: bool = True,
+        active_name: str = "",
+    ) -> None:
         super().__init__()
         self.plan = plan
         self.dry_run = dry_run
+        self.editing_active = editing_active
+        self.active_name = active_name
 
     def compose(self) -> ComposeResult:
         p = self.plan
@@ -98,18 +107,28 @@ class PreviewPlanModal(ModalScreen[str]):
         lines.extend([
             "",
             "Owner bundles are not enabled by explicit package selection.",
-            "Note: Installed packages are not automatically removed.",
+            "No automatic uninstall: removed software may remain installed.",
         ])
+        if self.editing_active:
+            lines.append("Saving keeps the current active profile.")
+        else:
+            lines.append(
+                f"Saving this preview will NOT activate {p.get('overlay_name') or 'this profile'}."
+            )
+            lines.append(f"Active machine profile stays: {self.active_name or '(unchanged)'}")
+            lines.append("Save + Activate + Apply will make this profile active and converge the machine.")
         if self.dry_run:
             lines.append("[DRY-RUN MODE: Save/Apply buttons simulate without mutating]")
 
+        save_label = "Save" if self.editing_active else "Save Profile"
+        apply_label = "Save + Apply" if self.editing_active else "Save + Activate + Apply"
         with Vertical(id="modal-dialog"):
             yield Label("Preview Desired-State Plan", classes="modal-title")
             with VerticalScroll(id="modal-scroll"):
                 yield Static("\n".join(lines), id="preview-text")
             with Horizontal(classes="modal-buttons"):
-                yield Button("Save Only", id="btn-save", variant="primary")
-                yield Button("Save + Apply", id="btn-apply", variant="success")
+                yield Button(save_label, id="btn-save", variant="primary")
+                yield Button(apply_label, id="btn-apply", variant="success")
                 yield Button("Back", id="btn-cancel")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -203,41 +222,109 @@ class AmbiguousOwnerModal(ModalScreen[str | None]):
         self.dismiss(None)
 
 
-class LeafActionModal(ModalScreen[str | None]):
-    """Choose explicit leaf install versus enabling the owning capability."""
+class EditTargetModal(ModalScreen[str]):
+    """Protect unsaved edits before the Profile Editor loads a different profile."""
 
     BINDINGS = [Binding("escape", "cancel", "Cancel")]
 
-    def __init__(self, hit: SearchHit) -> None:
+    def __init__(self, current_name: str, next_target: str) -> None:
+        super().__init__()
+        self.current_name = current_name
+        self.next_target = next_target
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="modal-dialog-sm"):
+            yield Label(f"Unsaved changes in profile {self.current_name}", classes="modal-title")
+            yield Static(
+                "Save the current profile, discard those edits, or stay here.",
+                classes="modal-body",
+            )
+            with Horizontal(classes="modal-buttons"):
+                yield Button(f"Save {self.current_name}", id="btn-save-target", variant="primary")
+                yield Button("Discard and edit", id="btn-discard-target", variant="warning")
+                yield Button("Cancel", id="btn-cancel")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "btn-save-target":
+            self.dismiss("save")
+        elif event.button.id == "btn-discard-target":
+            self.dismiss("discard")
+        else:
+            self.dismiss("cancel")
+
+    def action_cancel(self) -> None:
+        self.dismiss("cancel")
+
+
+class LeafActionModal(ModalScreen[SearchAction | None]):
+    """Stage an individual package or its owner. Buttons act immediately."""
+
+    BINDINGS = [Binding("escape", "cancel", "Cancel")]
+
+    def __init__(self, hit: SearchHit, item: CapabilityItem | None) -> None:
         super().__init__()
         self.hit = hit
+        self.item = item
 
     def compose(self) -> ComposeResult:
         hit = self.hit
+        item = self.item
+        state = item.working.tag if item else (hit.state_tag or "absent")
         lines = [
             hit.title,
             "",
             f"Owner: {hit.owner_selector or '(unknown)'}",
+            f"State: {state}",
         ]
         if hit.install_method or hit.install_token:
             lines.append(f"Install route: {hit.install_method} {hit.install_kind} {hit.install_token}".strip())
-        if not hit.leaf_selectable:
-            lines.extend(["", "This package cannot be selected independently.", f"Reason: {hit.leaf_reason or hit.unsupported_reason or 'requires component lifecycle'}"])
+        leaf_ok = bool(hit.leaf_selectable) and bool(item.supported if item else hit.installable is not False)
+        unsupported = bool(item and not item.supported) or hit.installable is False
+        lifecycle = hit.leaf_selectable is False
+        if lifecycle:
+            lines.extend([
+                "",
+                "This package cannot be selected independently.",
+                f"Reason: {hit.leaf_reason or hit.unsupported_reason or 'requires component lifecycle'}",
+            ])
+        elif unsupported:
+            lines.extend([
+                "",
+                "Unavailable on this platform.",
+                f"Reason: {hit.unsupported_reason or (item.unsupported_reason if item else '') or 'unsupported'}",
+            ])
         with Vertical(id="modal-dialog"):
-            yield Label("Software action", classes="modal-title")
+            yield Label("Add or Manage Software", classes="modal-title")
             yield Static("\n".join(lines))
             with Horizontal(classes="modal-buttons"):
-                if hit.leaf_selectable:
-                    yield Button("Install only", id="btn-only", variant="primary")
-                if hit.owner_selector:
+                if leaf_ok and not unsupported and state in ("absent", "excluded"):
+                    yield Button(f"Add {hit.title} only", id="btn-add-leaf", variant="primary")
+                if leaf_ok and not unsupported and state == "local":
+                    yield Button(f"Remove {hit.title} from profile", id="btn-remove-leaf", variant="warning")
+                if leaf_ok and not unsupported and state == "inherited":
+                    yield Button(f"Exclude {hit.title} in this profile", id="btn-remove-leaf", variant="warning")
+                if hit.owner_selector and not unsupported and lifecycle:
+                    yield Button(f"Enable {hit.owner_selector}", id="btn-owner", variant="primary")
+                elif hit.owner_selector and not unsupported and state in ("absent", "excluded"):
                     yield Button(f"Enable {hit.owner_selector}", id="btn-owner")
+                if hit.owner_selector and (unsupported or state in ("local", "inherited")):
+                    yield Button("View owner", id="btn-focus")
+                elif unsupported:
+                    yield Button("View details", id="btn-focus")
                 yield Button("Cancel", id="btn-cancel")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "btn-only":
-            self.dismiss(f"package:{self.hit.target_id}")
-        elif event.button.id == "btn-owner" and self.hit.owner_selector:
-            self.dismiss(self.hit.owner_selector)
+        pkg = f"package:{self.hit.target_id}"
+        bid = event.button.id
+        if bid == "btn-add-leaf":
+            self.dismiss(SearchAction(pkg, "add"))
+        elif bid == "btn-remove-leaf":
+            self.dismiss(SearchAction(pkg, "remove"))
+        elif bid == "btn-owner" and self.hit.owner_selector:
+            self.dismiss(SearchAction(self.hit.owner_selector, "add"))
+        elif bid == "btn-focus":
+            target = self.hit.owner_selector or pkg
+            self.dismiss(SearchAction(target, "focus"))
         else:
             self.dismiss(None)
 
@@ -245,8 +332,8 @@ class LeafActionModal(ModalScreen[str | None]):
         self.dismiss(None)
 
 
-class PackageSearchModal(ModalScreen[tuple[str, str] | None]):
-    """Search groups, components, supergroups, and packages."""
+class PackageSearchModal(ModalScreen[SearchAction | None]):
+    """Search packages, groups, components, and bundles. Actions stage immediately."""
 
     BINDINGS = [
         Binding("escape", "cancel", "Cancel"),
@@ -259,10 +346,10 @@ class PackageSearchModal(ModalScreen[tuple[str, str] | None]):
 
     def compose(self) -> ComposeResult:
         with Vertical(id="modal-dialog"):
-            yield Label("Search groups, components, bundles, or packages", classes="modal-title")
-            yield Input(placeholder="e.g. hyperfine, postgis, karabiner, sshuttle, dev…", id="search-input")
+            yield Label("Add or Manage Software", classes="modal-title")
+            yield Input(placeholder="Search packages, groups, components, or bundles…", id="search-input")
             yield ListView(id="search-results")
-            yield Static("Type to search. Enter selects and reveals owner.", id="search-hint")
+            yield Static("Choose a result. The action stages desired state immediately.", id="search-hint")
             with Horizontal(classes="modal-buttons"):
                 yield Button("Cancel", id="btn-cancel")
 
@@ -274,8 +361,14 @@ class PackageSearchModal(ModalScreen[tuple[str, str] | None]):
         lv = self.query_one("#search-results", ListView)
         lv.clear()
         self._hits = self.model.search(q) if q else []
-        for h in self._hits[:60]:
-            lv.append(ListItem(Label(f"[{h.kind}] {h.title}  —  {h.subtitle}")))
+        kind_label = {"package": "individual", "group": "group", "component": "component", "supergroup": "bundle"}
+        for h in self._hits[:40]:
+            kind = kind_label.get(h.kind, h.kind)
+            state = h.state_tag or "absent"
+            owner = ""
+            if h.kind == "package" and h.owner_selector:
+                owner = f"  owner: {h.owner_selector.split(':', 1)[-1]}"
+            lv.append(ListItem(Label(f"{h.title:<18} {kind:<12} {state:<12}{owner}")))
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         idx = event.list_view.index
@@ -300,7 +393,7 @@ class PackageSearchModal(ModalScreen[tuple[str, str] | None]):
         if status == "ok" and res.get("owner"):
             owner = str(res["owner"])
             note = self._build_package_note(raw, owner, res.get("group_packages") or [], res)
-            self.dismiss((owner, note))
+            self.dismiss(self._action_for_selector(owner, note))
         elif status == "ambiguous":
             choices = list(res.get("choices") or [])
             self._pick_ambiguous(raw, choices, res.get("group_packages") or {}, res)
@@ -309,33 +402,36 @@ class PackageSearchModal(ModalScreen[tuple[str, str] | None]):
                 f"'{raw}' is not declared in DOTS. Maintainer workflow: dots packages adopt {raw} --group modern"
             )
 
+    def _action_for_selector(self, selector: str, note: str = "") -> SearchAction:
+        item = self.model.get(selector)
+        if item and item.supported and not item.working.is_desired:
+            return SearchAction(selector, "add", note)
+        return SearchAction(selector, "focus", note)
+
     def _resolve_and_return(self, hit: SearchHit) -> None:
         if hit.kind == "package":
-            self.app.push_screen(LeafActionModal(hit), self._on_leaf_action)
+            item = self.model.get(f"package:{hit.target_id}")
+            self.app.push_screen(LeafActionModal(hit, item), self._on_leaf_action)
             return
-        if hit.kind != "package" and hit.owner_selector:
-            self.dismiss((hit.owner_selector, ""))
+        if hit.owner_selector:
+            self.dismiss(self._action_for_selector(hit.owner_selector))
             return
         try:
             res = self.model.backend.resolve_selector(hit.target_id)
         except Exception:
-            if hit.owner_selector:
-                self.dismiss((hit.owner_selector, ""))
             return
         status = res.get("status")
         if status == "ok" and res.get("owner"):
             owner = str(res["owner"])
             note = self._build_package_note(hit.target_id, owner, res.get("group_packages") or [], res)
-            self.dismiss((owner, note))
+            self.dismiss(self._action_for_selector(owner, note))
         elif status == "ambiguous":
             choices = list(res.get("choices") or [])
             self._pick_ambiguous(hit.target_id, choices, res.get("group_packages") or {}, res)
-        elif hit.owner_selector:
-            self.dismiss((hit.owner_selector, ""))
 
-    def _on_leaf_action(self, choice: str | None) -> None:
+    def _on_leaf_action(self, choice: SearchAction | None) -> None:
         if choice:
-            self.dismiss((choice, "explicit package action"))
+            self.dismiss(choice)
 
     def _pick_ambiguous(
         self,
@@ -349,7 +445,7 @@ class PackageSearchModal(ModalScreen[tuple[str, str] | None]):
                 return
             gpkgs = grp_pkgs.get(choice.split(":", 1)[1], []) if choice.startswith("group:") else []
             note = self._build_package_note(pkg, choice, gpkgs, res)
-            self.dismiss((choice, note))
+            self.dismiss(self._action_for_selector(choice, note))
 
         self.app.push_screen(AmbiguousOwnerModal(pkg, choices), _picked)
 
@@ -557,13 +653,19 @@ class HelpKeysModal(ModalScreen[None]):
             "  Space     Toggle capability",
             "  Tab       Next pane",
             "  Shift+Tab Previous pane",
-            "  /         Search groups / components / packages",
+            "  /         Add or manage software",
+            "  v         Change catalog view",
             "  p         Preview plan",
-            "  s         Save only (no bootstrap)",
-            "  a         Save + Apply",
+            "  s         Save profile (does not activate a different profile)",
+            "  a         Save + Apply, or Save + Activate + Apply",
             "  r         Refresh from backend",
             "  ?         This legend",
             "  q         Quit (prompts if unsaved)",
+            "",
+            "Profiles chooses a profile. Profile Editor changes its desired software.",
+            "Active is the machine profile. Editing is the profile open in the editor.",
+            "Save Profile writes without changing which profile is active.",
+            "Save + Activate + Apply asks before switching the active profile.",
             "",
             "Selection States (non-color accessible):",
         ]

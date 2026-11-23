@@ -82,10 +82,17 @@ dots_cmd_tui() {
 		case "${arg}" in
 		-h | --help | help)
 			cat <<'EOF'
-Usage: ./dots tui
+Usage:
+  ./dots tui [--profile NAME|PATH] [--dry-run]
 
-Launch the dynamic Textual desired-state TUI (front-end over DOTS registries,
-structured state APIs, and helpers/profile_edit.sh).
+Options:
+  --profile PROFILE    Open the profile editor targeting PROFILE.
+                       Does not activate PROFILE merely by opening it.
+  --dry-run            Simulate profile saves and applies.
+
+Launch the Textual profile editor for individual software, package groups,
+components, bundles, and upgrades. It is a front-end over DOTS registries
+and helpers/profile_edit.sh.
 
 Noninteractive fallback commands remain available without Textual:
   ./dots install   ./dots upgrade   ./dots profile   ./dots setup   ./dots status

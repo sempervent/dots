@@ -94,16 +94,21 @@ class ProfilePane(Vertical):
     def compose(self) -> ComposeResult:
         with Horizontal(id="profile-split"):
             with Vertical(id="profile-left"):
-                yield Label("Available Profiles (browse without mutating)", classes="pane-title")
+                yield Label("Profiles", classes="pane-title")
+                yield Static("Create new profiles with: dots profile create", id="profile-create-hint")
                 yield ListView(id="profile-catalog")
             with Vertical(id="profile-right"):
                 yield Label("Profile Details & Source Chain", classes="pane-title")
                 with VerticalScroll(id="profile-scroll"):
                     yield Static("", id="profile-details")
-        with Horizontal(id="profile-actions"):
-            yield Button("Switch + Apply", id="btn-switch-apply", variant="primary")
-            yield Button("Switch Only", id="btn-switch-only")
-            yield Button("Refresh (r)", id="btn-prof-refresh")
+        with Vertical(id="profile-actions"):
+            with Horizontal():
+                yield Button("Edit Selected", id="btn-edit-selected", variant="primary")
+                yield Button("Edit Active", id="btn-edit-active")
+                yield Button("Refresh (r)", id="btn-prof-refresh")
+            with Horizontal():
+                yield Button("Switch Only", id="btn-switch-only")
+                yield Button("Switch + Apply", id="btn-switch-apply", variant="success")
 
     def on_mount(self) -> None:
         self.refresh_view()
@@ -114,13 +119,18 @@ class ProfilePane(Vertical):
         lv.clear()
         active_idx = 0
         for i, p in enumerate(self._profiles):
-            mark = "*" if p.get("active") else " "
             kind = str(p.get("kind") or "custom")
             name = str(p.get("name") or "")
-            ext = f" -> {p['extends']}" if p.get("extends") else ""
-            lv.append(ListItem(Label(f"{mark} {name:<18} [{kind}]{ext}")))
+            flags: list[str] = []
             if p.get("active"):
+                flags.append("ACTIVE")
                 active_idx = i
+            if str(p.get("file") or "") == self.model.profile_file:
+                flags.append("EDITING")
+            mark = "*" if p.get("active") else " "
+            editing = ">" if "EDITING" in flags else " "
+            flag_s = ("  " + " · ".join(flags)) if flags else ""
+            lv.append(ListItem(Label(f"{mark}{editing} {name:<16} [{kind}]{flag_s}")))
         if self._profiles:
             lv.index = active_idx
             self._inspect_profile(str(self._profiles[active_idx].get("file") or ""))
@@ -176,7 +186,19 @@ class ProfilePane(Vertical):
         if bid == "btn-prof-refresh":
             self.app.action_refresh()  # type: ignore[attr-defined]
             return
+        if bid == "btn-edit-active":
+            active = self.model.current_active_profile()
+            if not active:
+                self.app.notify("No active profile is recorded.", severity="warning")
+                return
+            self.app.request_edit_profile(str(active.get("file") or active.get("name") or ""))  # type: ignore[attr-defined]
+            return
         entry = self._selected_profile_entry()
+        if bid == "btn-edit-selected":
+            if not entry:
+                return
+            self.app.request_edit_profile(str(entry.get("file") or entry.get("name") or ""))  # type: ignore[attr-defined]
+            return
         if not entry:
             return
         target = str(entry.get("file") or entry.get("name") or "")
