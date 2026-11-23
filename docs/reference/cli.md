@@ -7,7 +7,7 @@ Primary human interface: **`./dots`**. Expert scripts remain supported.
 | Command | Role |
 |---------|------|
 | `./dots` | Interactive TUI (when bootstrapped) or setup wizard |
-| `./dots tui` | Dynamic desired-state TUI (groups, components, upgrades) |
+| `./dots tui` | Profile editor for individual software, groups, components, bundles, and upgrades |
 | `./dots setup` | Interactive / noninteractive setup / reconfigure |
 | `./dots install` | Persist capability into sparse overlay and converge |
 | `./dots upgrade` | Upgrade managed Homebrew software (`update != upgrade`) |
