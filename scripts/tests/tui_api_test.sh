@@ -115,6 +115,50 @@ set -e
 ov_after="$(cksum <"${HOME}/.config/dots/profiles/home-local.toml")"
 [[ ${bad_rc} -ne 0 && ${ov_before} == "${ov_after}" ]] && ok "invalid batch aborted atomically" || bad "batch wrote partial state"
 
+echo "=== 6b. explicit profile show reports real active state ==="
+home_local="${HOME}/.config/dots/profiles/home-local.toml"
+# home-local already exists from section 4 and is the active marker target
+show_active="$("${ROOT}/dots" profile show home-local --json)"
+show_work="$("${ROOT}/dots" profile show work --json)"
+show_base="$("${ROOT}/dots" profile show base --json)"
+show_none="$("${ROOT}/dots" profile show --json)"
+python3 - "${show_active}" "${show_work}" "${show_base}" "${show_none}" <<'PY'
+import json, sys
+active, work, base, none = (json.loads(x) for x in sys.argv[1:5])
+assert active["active"] is True, active["profile"]
+assert active["profile"] == "home-local"
+assert work["active"] is False, work
+assert work["profile"] == "work"
+assert base["active"] is False, base
+assert none["active"] is True and none["profile"] == "home-local", none["profile"]
+PY
+ok "explicit profile active flag matches the machine pointer"
+
+echo "=== 6c. preserve-active writes target without switching the pointer ==="
+marker_before="$(cat "${HOME}/.config/dots/active-profile")"
+printf '%s\n' "${marker_before}" | grep -q 'home-local' && ok "precondition active is home-local" || bad "expected home-local active"
+DOTS_FORCE_OS=darwin DOTS_FORCE_DARWIN_MAJOR=15 \
+	"${ROOT}/dots" profile mutate --profile work --add-package raycast --preserve-active --yes >/dev/null
+work_ov="${HOME}/.config/dots/profiles/work-local.toml"
+[[ -f ${work_ov} ]] && grep -q 'raycast' "${work_ov}" && ok "preserve-active wrote work-local" || bad "work-local missing raycast"
+marker_after="$(cat "${HOME}/.config/dots/active-profile")"
+printf '%s\n' "${marker_after}" | grep -q 'home-local' && ! printf '%s\n' "${marker_after}" | grep -q 'work-local' \
+	&& ok "preserve-active left active marker" || bad "active marker changed: ${marker_after}"
+work_cksum="$(cksum <"${work_ov}")"
+set +e
+combo="$("${ROOT}/dots" profile mutate --profile work --add group:geo --preserve-active --apply --yes 2>&1)"
+combo_rc=$?
+set -e
+[[ ${combo_rc} -ne 0 ]] && printf '%s\n' "${combo}" | grep -q 'preserve-active' && ok "preserve-active --apply refused" || bad "combo: ${combo}"
+marker_combo="$(cat "${HOME}/.config/dots/active-profile")"
+[[ ${marker_combo} == "${marker_after}" ]] && ok "refused combo wrote nothing to marker" || bad "marker changed after refused combo"
+[[ "$(cksum <"${work_ov}")" == "${work_cksum}" ]] && ok "refused combo left work overlay unchanged" || bad "work overlay changed"
+# Legacy activation still moves the pointer
+DOTS_FORCE_OS=darwin DOTS_FORCE_DARWIN_MAJOR=15 \
+	"${ROOT}/dots" profile mutate --profile base --add group:geo --yes >/dev/null
+printf '%s\n' "$(cat "${HOME}/.config/dots/active-profile")" | grep -q 'base-local' \
+	&& ok "legacy mutate still activates" || bad "legacy mutate did not activate"
+
 echo "=== 6. dots tui --help and non-TTY safety ==="
 tui_help="$("${ROOT}/dots" tui --help 2>&1)"
 echo "${tui_help}" | grep -q 'dots tui' && ok "dots tui --help" || bad "dots tui --help"

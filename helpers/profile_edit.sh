@@ -1086,10 +1086,13 @@ EOF
 	mv -f "${tmp}" "${active}"
 }
 
-# Validate temp TOML, back up previous overlay if any, atomically rename, and activate marker.
-# Args: overlay_file out_toml_tmp
+# Validate temp TOML, back up previous overlay if any, atomically rename.
+# Args: overlay_file out_toml_tmp [activate]
+# activate defaults to 1 so existing callers still move the active-profile pointer.
+# activate=0 writes the overlay and leaves the active-profile marker untouched.
 dots_profile_edit_commit_atomic() {
 	local overlay_file="$1" new_toml_tmp="$2"
+	local activate="${3:-1}"
 	local odir stage_tmp bak_dir bak_file
 
 	if dots_profile_is_builtin_path "${overlay_file}"; then
@@ -1120,7 +1123,9 @@ dots_profile_edit_commit_atomic() {
 	fi
 
 	mv -f "${stage_tmp}" "${overlay_file}"
-	dots_profile_write_active_marker "${overlay_file}" || return 1
+	if [[ ${activate} -eq 1 ]]; then
+		dots_profile_write_active_marker "${overlay_file}" || return 1
+	fi
 	return 0
 }
 
@@ -1256,14 +1261,25 @@ dots_profile_resolve_json() {
 # Output: schema_version=1 JSON with groups/components/supergroups selection states.
 dots_profile_show_json() {
 	local target="${1:-}"
-	local file="" active_flag=1
+	local file="" active_flag=0 actual_file=""
+	# Active is the machine pointer, never "whatever profile argument was passed".
+	if dots_state_load_active 2>/dev/null; then
+		if [[ -n ${DOTS_ACTIVE_PROFILE_FILE:-} || -n ${DOTS_ACTIVE_PROFILE:-} ]]; then
+			actual_file="$(dots_resolve_profile_path "${DOTS_ACTIVE_PROFILE_FILE:-${DOTS_ACTIVE_PROFILE}}" 2>/dev/null || true)"
+		fi
+	fi
 	if [[ -n ${target} ]]; then
 		file="$(dots_resolve_profile_path "${target}")" || return 1
-	elif dots_state_load_active 2>/dev/null; then
-		file="$(dots_resolve_profile_path "${DOTS_ACTIVE_PROFILE_FILE:-${DOTS_ACTIVE_PROFILE}}")" || return 1
-	else
-		active_flag=0
-		file=""
+	elif [[ -n ${actual_file} ]]; then
+		file="${actual_file}"
+	fi
+	if [[ -n ${file} && -n ${actual_file} && -e ${file} && -e ${actual_file} ]]; then
+		local fa aa
+		fa="$(cd "$(dirname "${file}")" && pwd)/$(basename "${file}")"
+		aa="$(cd "$(dirname "${actual_file}")" && pwd)/$(basename "${actual_file}")"
+		if [[ ${fa} == "${aa}" ]]; then
+			active_flag=1
+		fi
 	fi
 
 	dots_require_python 0 || return 1

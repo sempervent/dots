@@ -1,4 +1,4 @@
-"""Primary dynamic desired-state Software management pane."""
+"""Profile Editor: individual software, groups, components, and bundles."""
 
 from __future__ import annotations
 
@@ -6,16 +6,47 @@ from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.widgets import Button, Label, ListItem, ListView, Static
 
-from ..model import CapabilityItem, DesiredStateModel, SelectionState
+from ..model import CapabilityItem, DesiredStateModel
+
+EDITOR_VIEWS = ("all", "individual", "groups", "components", "bundles", "selected", "changes")
+VIEW_LABELS = {
+    "all": "All",
+    "individual": "Individual",
+    "groups": "Groups",
+    "components": "Components",
+    "bundles": "Bundles",
+    "selected": "Selected",
+    "changes": "Changes",
+}
+
+
+def item_matches_view(item: CapabilityItem, view: str, *, show_unsupported: bool) -> bool:
+    """Catalog visibility. Unsupported hiding is independent of the view filter."""
+    if not item.supported and not show_unsupported:
+        return False
+    if view == "individual":
+        return item.kind == "package"
+    if view == "groups":
+        return item.kind == "group"
+    if view == "components":
+        return item.kind == "component"
+    if view == "bundles":
+        return item.kind == "supergroup"
+    if view == "selected":
+        return item.working.is_desired
+    if view == "changes":
+        return item.modified
+    return True
 
 
 class SoftwarePane(Vertical):
-    """Dynamic registry-driven group / bundle / component selector + details pane."""
+    """Registry-driven profile editor for software desired state."""
 
     def __init__(self, model: DesiredStateModel, **kwargs) -> None:
         super().__init__(**kwargs)
         self.model = model
-        self.show_unsupported: bool = True
+        self.show_unsupported: bool = False
+        self.view: str = "all"
         self._row_selectors: list[str | None] = []
         self._search_note: str = ""
         self._current_selector: str | None = None
@@ -25,8 +56,9 @@ class SoftwarePane(Vertical):
         with Horizontal(id="software-split"):
             with Vertical(id="software-left"):
                 with Horizontal(id="software-toolbar"):
-                    yield Label("Capabilities (Space=toggle, /=search)", id="software-list-title")
-                    yield Button("Hide unsupported", id="btn-toggle-unsup")
+                    yield Button("Add Software (/)", id="btn-add-software", variant="primary")
+                    yield Button("View: All", id="btn-view")
+                    yield Button("Show unavailable", id="btn-toggle-unsup")
                 yield ListView(id="capability-list")
             with Vertical(id="software-right"):
                 yield Label("Details", id="details-title")
@@ -35,7 +67,7 @@ class SoftwarePane(Vertical):
         yield Static("Pending: none   |   Installed packages are not automatically removed.", id="pending-bar")
         with Horizontal(id="software-actions"):
             yield Button("Preview (p)", id="btn-preview")
-            yield Button("Save Only (s)", id="btn-save", variant="primary")
+            yield Button("Save (s)", id="btn-save", variant="primary")
             yield Button("Save + Apply (a)", id="btn-apply", variant="success")
             yield Button("Discard", id="btn-discard", variant="warning")
 
@@ -55,54 +87,37 @@ class SoftwarePane(Vertical):
             lv.append(ListItem(Label(f"── {text} ──"), classes="cat-header"))
             self._row_selectors.append(None)
 
-        def add_item(item: CapabilityItem) -> None:
-            if not item.supported and not self.show_unsupported:
-                return
+        def add_item(item: CapabilityItem) -> bool:
+            if not item_matches_view(item, self.view, show_unsupported=self.show_unsupported):
+                return False
             st = item.working
-            glyph = st.glyph()
-            tag = f"[{st.tag}]"
             mod_mark = "*" if item.modified else " "
-            suffix = ""
-            if item.kind == "group":
-                if item.unsupported_package_count > 0:
-                    suffix = (
-                        f" ({item.installed_count}/{item.supported_package_count} inst, "
-                        f"{item.supported_package_count}/{item.package_count} avail)"
-                    )
-                else:
-                    suffix = f" ({item.installed_count}/{item.supported_package_count} inst)"
-            elif item.kind == "supergroup":
-                suffix = f" ({len(item.supported_members)}/{len(item.members)} components)"
-            elif not item.supported:
-                suffix = f" ({item.unsupported_reason or 'unavailable'})"
-            line = f"{mod_mark}{glyph} {tag:<13} {item.label}{suffix}"
+            extra = " unavailable" if not item.supported else ""
+            avail = ""
+            if item.kind == "group" and item.package_count:
+                avail = f"  {item.supported_package_count}/{item.package_count} avail"
+            line = f"{mod_mark} {st.glyph()} {item.label:<22} {st.tag}{avail}{extra}"
             classes = f"cap-row state-{st.value}"
             if not item.supported:
                 classes += " cap-disabled"
             lv.append(ListItem(Label(line), classes=classes))
             self._row_selectors.append(item.selector)
+            return True
 
-        add_header("Package Groups")
-        for g in self.model.groups:
-            add_item(g)
-
-        if self.model.explicit_packages:
-            add_header("Individual Software")
-            for pkg in self.model.explicit_packages:
-                add_item(pkg)
-
-        if self.model.supergroups:
-            add_header("Bundles (Supergroups)")
-            for s in self.model.supergroups:
-                add_item(s)
-
+        sections: list[tuple[str, list[CapabilityItem]]] = [
+            ("Individual Software", list(self.model.explicit_packages)),
+            ("Package Groups", list(self.model.groups)),
+        ]
         for cat_title, comps in self.model.component_categories():
-            visible = [c for c in comps if c.supported or self.show_unsupported]
+            sections.append((f"Components · {cat_title}", list(comps)))
+        sections.append(("Bundles", list(self.model.supergroups)))
+        for title, items in sections:
+            visible = [i for i in items if item_matches_view(i, self.view, show_unsupported=self.show_unsupported)]
             if not visible:
                 continue
-            add_header(f"Components: {cat_title}")
-            for c in visible:
-                add_item(c)
+            add_header(title)
+            for item in visible:
+                add_item(item)
 
         # Restore focus/index
         chosen_idx = None
@@ -119,21 +134,47 @@ class SoftwarePane(Vertical):
         if chosen_idx is not None:
             lv.index = chosen_idx
             self._show_details_for(self._row_selectors[chosen_idx])
+        self._sync_action_labels()
+
+    def cycle_view(self) -> None:
+        idx = EDITOR_VIEWS.index(self.view) if self.view in EDITOR_VIEWS else 0
+        self.view = EDITOR_VIEWS[(idx + 1) % len(EDITOR_VIEWS)]
+        self.rebuild()
+
+    def _sync_action_labels(self) -> None:
+        try:
+            view_btn = self.query_one("#btn-view", Button)
+            unsup_btn = self.query_one("#btn-toggle-unsup", Button)
+            save_btn = self.query_one("#btn-save", Button)
+            apply_btn = self.query_one("#btn-apply", Button)
+        except Exception:
+            return
+        view_btn.label = f"View: {VIEW_LABELS.get(self.view, self.view)}"
+        unsup_btn.label = "Hide unavailable" if self.show_unsupported else "Show unavailable"
+        if self.model.active:
+            save_btn.label = "Save (s)"
+            apply_btn.label = "Save + Apply (a)"
+        else:
+            save_btn.label = "Save Profile (s)"
+            apply_btn.label = "Save + Activate + Apply (a)"
 
     def _update_profile_bar(self) -> None:
         m = self.model
-        ext = f" -> {m.extends}" if m.extends else ""
-        kind = f" [{m.profile_kind}]" if m.profile_kind else ""
-        self.query_one("#software-profile-bar", Static).update(
-            f"Profile: {m.profile_name}{ext}{kind}   |   OS: {m.os_name or '?'}   |   "
-            f"State legend: ● inherited  ✓ local  □ absent  ⊘ excluded  ! unsupported"
-        )
+        active = m.current_active_profile()
+        active_name = str((active or {}).get("name") or "(none)")
+        kind = m.profile_kind or "profile"
+        plat = f"{m.os_name or '?'} / {m.pkg_mgr or '?'}"
+        if m.active:
+            editing = f"Editing: {m.profile_name} [{kind}]   ACTIVE"
+        else:
+            editing = f"Editing profile: {m.profile_name} [{kind}]"
+            if kind == "builtin":
+                editing += "  (writes an overlay; builtin files stay immutable)"
+        active_line = f"Active machine profile: {active_name}   |   Platform: {plat}"
+        self.query_one("#software-profile-bar", Static).update(f"{editing}\n{active_line}")
 
     def _update_pending_bar(self) -> None:
-        pending = self.model.pending_summary()
-        self.query_one("#pending-bar", Static).update(
-            f"Pending: {pending}   |   Installed packages are not automatically removed."
-        )
+        self.query_one("#pending-bar", Static).update(self.model.pending_bar_text())
 
     def highlighted_selector(self) -> str | None:
         lv = self.query_one("#capability-list", ListView)
@@ -172,9 +213,10 @@ class SoftwarePane(Vertical):
     def focus_selector(self, selector: str, note: str = "") -> None:
         self._search_note = note
         item = self.model.get(selector)
-        if item and not item.supported and not self.show_unsupported:
+        if item and not item.supported:
             self.show_unsupported = True
-            self.query_one("#btn-toggle-unsup", Button).label = "Hide unsupported"
+        if item and not item_matches_view(item, self.view, show_unsupported=self.show_unsupported):
+            self.view = "all"
         self.rebuild(preserve_selector=selector)
         self._show_details_for(selector)
 
@@ -206,7 +248,34 @@ class SoftwarePane(Vertical):
             lines.append(f"  (pending change from: {item.persisted.tag})")
         lines.append("")
 
-        if item.kind == "group":
+        if item.kind == "package":
+            installed = "yes" if item.installed else "no"
+            external = "yes" if item.external else "no"
+            leaf = "yes" if item.leaf_selectable else "no"
+            route = " ".join(x for x in (item.install_method, item.install_kind, item.install_token) if x) or "(none)"
+            lines.extend([
+                f"Owner:     {item.owner or '(none)'}",
+                f"Install:   {route}",
+                f"Installed: {installed}",
+                f"External:  {external}",
+                f"Leaf selectable: {leaf}",
+                f"Platform:  {'supported' if item.supported else 'unsupported'}",
+            ])
+            if item.working.is_desired:
+                lines.append("Desired via: explicit package")
+            if not item.supported:
+                lines.append(f"Unavailable: {item.unsupported_reason or item.leaf_reason or 'unsupported on this platform'}")
+            if item.owner:
+                owner = self.model.get(item.owner)
+                if owner:
+                    lines.append(f"Owner state: {owner.label} [{owner.working.tag}]")
+                    if owner.working.is_desired:
+                        lines.append(
+                            f"This package is already satisfied by {item.owner}. "
+                            "Adding it explicitly is redundant but valid desired-state intent."
+                        )
+            lines.append("Removing desired state does not uninstall software.")
+        elif item.kind == "group":
             plat_desc = f"{self.model.os_name or '?'}/{self.model.pkg_mgr or '?'}"
             lines.extend([
                 f"Required:  {item.required_count}   Optional: {item.optional_count}",
@@ -272,9 +341,12 @@ class SoftwarePane(Vertical):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         bid = event.button.id
-        if bid == "btn-toggle-unsup":
+        if bid == "btn-add-software":
+            self.app.action_search()  # type: ignore[attr-defined]
+        elif bid == "btn-view":
+            self.cycle_view()
+        elif bid == "btn-toggle-unsup":
             self.show_unsupported = not self.show_unsupported
-            event.button.label = "Hide unsupported" if self.show_unsupported else "Show unsupported"
             self.rebuild()
         elif bid == "btn-preview":
             self.app.action_preview()  # type: ignore[attr-defined]

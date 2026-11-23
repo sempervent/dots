@@ -12,7 +12,7 @@ _dots() {
 
   commands=(
     'setup:Interactive or noninteractive setup / reconfigure towar…'
-    'tui:Launch dynamic Textual desired-state TUI (groups, compo…'
+    'tui:Interactive profile editor for individual software, pac…'
     'install:Persist a known DOTS capability to desired profile and…'
     'upgrade:Upgrade outdated Homebrew software in the active DOTS d…'
     'status:Show current DOTS state (profile, packages summary, com…'
@@ -222,7 +222,14 @@ _dots() {
       _values 'completion' ${completion_subs[@]}
       ;;
     tui)
-      _values 'tui flags' --help
+      case ${words[CURRENT-1]} in
+      --profile|--profile=*)
+        _dots_profiles
+        ;;
+      *)
+        _values 'tui flags' --profile --dry-run --help
+        ;;
+      esac
       ;;
     install)
       case ${words[CURRENT-1]} in
@@ -255,6 +262,15 @@ _dots() {
         _dots_profiles
       elif [[ ${words[2]} == show || ${words[2]} == diff || ${words[2]} == apply || ${words[2]} == switch ]]; then
         _dots_profiles
+      elif [[ ${words[2]} == mutate || ${words[2]} == plan ]]; then
+        case ${words[CURRENT-1]} in
+        --profile|--profile=*)
+          _dots_profiles
+          ;;
+        *)
+          _values 'profile mutate flags' --profile --add --remove --add-package --remove-package --expected-hash --preserve-active --apply --dry-run --yes --json --help
+          ;;
+        esac
       elif [[ ${words[2]} == add || ${words[2]} == remove ]]; then
         if [[ ${words[CURRENT]} == -* ]]; then
           _values 'profile edit flags' --profile --apply --dry-run --yes --add --remove --add-package --remove-package --expected-hash --json --help

@@ -28,7 +28,7 @@ ground traditionally. Expert scripts remain available underneath for automation.
 
 ```bash
 ./dots                     # interactive TUI (when bootstrapped) or setup wizard
-./dots tui                 # dynamic desired-state TUI (groups/components/upgrades)
+./dots tui                 # profile editor: software, groups, components, bundles
 ./dots install hyperfine   # persist owning group (or prompt leaf vs owner)
 ./dots install raycast --only --yes   # explicit leaf only; does not enable mactools
 ./dots upgrade             # upgrade managed software in active profile
@@ -50,7 +50,7 @@ ground traditionally. Expert scripts remain available underneath for automation.
 
 | Command | Role |
 |---------|------|
-| `dots tui` | Dynamic desired-state TUI ([docs](docs/using/tui.md)) |
+| `dots tui` | Profile editor for individual software, groups, components, and bundles ([docs](docs/using/tui.md)) |
 | `dots help` | Documentation browser (`dots-help`) |
 | `dots update` | Update the DOTS repository itself (`git pull` + optional reapply) |
 | `dots upgrade` | Upgrade installed Homebrew software in the active DOTS desired scope |

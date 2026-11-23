@@ -21,10 +21,10 @@ class OverviewPane(Vertical):
         with VerticalScroll(id="overview-scroll"):
             yield Static("", id="overview-body")
         with Horizontal(id="overview-actions"):
-            yield Button("Go to Software", id="ov-software", variant="primary")
-            yield Button("Go to Profile", id="ov-profile")
-            yield Button("Go to Upgrade", id="ov-upgrade")
-            yield Button("Refresh (r)", id="ov-refresh")
+            yield Button("Edit Profile", id="ov-software", variant="primary")
+            yield Button("Add Software", id="ov-search")
+            yield Button("Review Upgrades", id="ov-upgrade")
+            yield Button("Profiles", id="ov-profile")
 
     def on_mount(self) -> None:
         self.refresh_view()
@@ -35,6 +35,9 @@ class OverviewPane(Vertical):
         chain_names = " -> ".join(str(c.get("name")) for c in m.source_chain) or m.profile_name
         desired_groups = [g.id for g in m.groups if g.working.is_desired]
         desired_comps = [c.id for c in m.components if c.working.is_desired]
+        desired_pkgs = [p.id for p in m.explicit_packages if p.working.is_desired]
+        active = m.current_active_profile()
+        active_name = str((active or {}).get("name") or m.profile_name)
 
         lines = [
             f"DOTS v{st.version}",
@@ -45,18 +48,20 @@ class OverviewPane(Vertical):
             f"Shell:           {st.shell}",
             f"Multiplexer:     {m.runtime.get('multiplexer') or st.multiplexer or 'tmux'}",
             "",
-            f"Active profile:  {m.profile_name} ({m.profile_kind or 'none'})",
-            f"Profile file:    {m.profile_file or '(none)'}",
+            f"Active profile:  {active_name}",
+            f"Editing profile: {m.profile_name} ({m.profile_kind or 'none'})",
             f"Source chain:    {chain_names}",
             "",
-            f"Selected groups ({len(desired_groups)}):",
-            f"  {', '.join(desired_groups) if desired_groups else '(none)'}",
+            "Desired state:",
+            f"  {len(desired_groups)} package groups",
+            f"  {len(desired_comps)} components",
+            f"  {len(desired_pkgs)} explicit packages",
             "",
-            f"Selected components ({len(desired_comps)}):",
-            f"  {', '.join(desired_comps) if desired_comps else '(none)'}",
-            "",
-            f"Pending changes: {m.pending_summary()}",
+            f"Pending edits:   {m.pending_summary()}",
+            "Updates:         Review Upgrades lists outdated managed packages.",
             f"Backups:         {st.backup_count} (latest: {st.backup_latest or 'none'})",
+            "",
+            "Next: Edit Profile, Add Software, or Review Upgrades.",
         ]
         self.query_one("#overview-body", Static).update("\n".join(lines))
 
@@ -64,6 +69,9 @@ class OverviewPane(Vertical):
         bid = event.button.id
         if bid == "ov-software":
             self.app.switch_tab("tab-software")  # type: ignore[attr-defined]
+        elif bid == "ov-search":
+            self.app.switch_tab("tab-software")  # type: ignore[attr-defined]
+            self.app.action_search()  # type: ignore[attr-defined]
         elif bid == "ov-profile":
             self.app.switch_tab("tab-profile")  # type: ignore[attr-defined]
         elif bid == "ov-upgrade":

@@ -21,14 +21,17 @@ description = "Preview without mutating."
 
 [[commands]]
 name = "tui"
-usage = "dots tui"
+usage = "dots tui [--profile NAME|PATH] [--dry-run]"
 category = "lifecycle"
-description = "Launch dynamic Textual desired-state TUI (groups, components, upgrades)."
+description = "Interactive profile editor for individual software, package groups, components, bundles, and upgrades."
 mutating = true
 related = ["setup", "install", "profile", "upgrade", "help"]
 [[commands.examples]]
 command = "dots tui"
-description = "Open interactive desired-state dashboard."
+description = "Open the profile editor for the active profile."
+[[commands.examples]]
+command = "dots tui --profile work"
+description = "Edit work without activating it."
 [[commands.examples]]
 command = "dots tui --help"
 description = "Show TUI usage and noninteractive alternatives."

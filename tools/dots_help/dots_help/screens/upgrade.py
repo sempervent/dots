@@ -40,15 +40,31 @@ class UpgradePane(Vertical):
             self.load_preview()
 
     def load_preview(self) -> None:
+        """Query outdated packages off the UI thread. The preview can take long enough to stall the TUI."""
         self._loaded_once = True
-        body = self.query_one("#upgrade-body", Static)
+        self.query_one("#upgrade-body", Static).update("Checking outdated packages…")
+        self.run_worker(self._fetch_preview, thread=True, exclusive=True, group="upgrade-preview")
+
+    def _fetch_preview(self) -> None:
         try:
             data = self.model.backend.upgrade_preview(profile=self.model.profile_file or None)
         except Exception as exc:
-            body.update(f"Unable to check outdated packages: {exc}")
+            self.app.call_from_thread(self._show_preview_error, str(exc))
             return
+        self.app.call_from_thread(self._apply_preview, data)
+
+    def _show_preview_error(self, message: str) -> None:
+        try:
+            self.query_one("#upgrade-body", Static).update(f"Unable to check outdated packages: {message}")
+        except Exception:
+            return
+
+    def _apply_preview(self, data: dict[str, Any]) -> None:
         self._last_preview = data
-        self._render_preview(data)
+        try:
+            self._render_preview(data)
+        except Exception:
+            return
 
     def _render_preview(self, data: dict[str, Any]) -> None:
         lines: list[str] = [

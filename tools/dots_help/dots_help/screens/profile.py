@@ -12,6 +12,75 @@ from ..model import DesiredStateModel
 from .modals import ApplyProgressModal, ConfirmActionModal
 
 
+def format_profile_details(data: dict[str, Any], *, editing_file: str = "") -> str:
+    """Render structured profile JSON, including explicit package deltas."""
+    name = data.get("profile") or "(none)"
+    kind = data.get("profile_kind") or "none"
+    pfile = str(data.get("profile_file") or "(none)")
+    chain = data.get("source_chain") or []
+    adds = data.get("local_additions") or {}
+    rems = data.get("local_removals") or {}
+    runtime = data.get("runtime") or {}
+    editing = bool(editing_file) and pfile == editing_file
+
+    lines = [
+        f"Profile: {name}   [{kind}]",
+        f"File:    {pfile}",
+        f"Active:  {'yes' if data.get('active') else 'no'}",
+        f"Editing: {'yes' if editing else 'no'}",
+        f"Extends: {data.get('extends') or '(none)'}",
+        "",
+        "Source chain:",
+    ]
+    if chain:
+        for idx, c in enumerate(chain):
+            if idx > 0:
+                lines.append("    ↓")
+            lines.append(f"  {c.get('name')}  [{c.get('kind')}]  ({c.get('file')})")
+    else:
+        lines.append("  (none)")
+
+    lines.extend(["", "Local additions:"])
+    any_add = False
+    for g in adds.get("groups") or []:
+        lines.append(f"  + group:{g}")
+        any_add = True
+    for c in adds.get("components") or []:
+        lines.append(f"  + component:{c}")
+        any_add = True
+    for s in adds.get("supergroups") or []:
+        lines.append(f"  + supergroup:{s}")
+        any_add = True
+    for pkg in adds.get("packages") or []:
+        lines.append(f"  + package:{pkg}")
+        any_add = True
+    if not any_add:
+        lines.append("  (none)")
+
+    lines.extend(["", "Local exclusions:"])
+    any_rem = False
+    for g in rems.get("groups") or []:
+        lines.append(f"  - group:{g}")
+        any_rem = True
+    for c in rems.get("components") or []:
+        lines.append(f"  - component:{c}")
+        any_rem = True
+    for s in rems.get("supergroups") or []:
+        lines.append(f"  - supergroup:{s}")
+        any_rem = True
+    for pkg in rems.get("packages") or []:
+        lines.append(f"  - package:{pkg}")
+        any_rem = True
+    if not any_rem:
+        lines.append("  (none)")
+
+    if runtime:
+        lines.extend(["", "Runtime overrides:"])
+        for key in sorted(runtime):
+            lines.append(f"  {key} = {runtime[key]}")
+    return "\n".join(lines)
+
+
 class ProfilePane(Vertical):
     """Inspect active or other profiles, inheritance chain, and local deltas."""
 
@@ -25,16 +94,21 @@ class ProfilePane(Vertical):
     def compose(self) -> ComposeResult:
         with Horizontal(id="profile-split"):
             with Vertical(id="profile-left"):
-                yield Label("Available Profiles (browse without mutating)", classes="pane-title")
+                yield Label("Profiles", classes="pane-title")
+                yield Static("Create new profiles with: dots profile create", id="profile-create-hint")
                 yield ListView(id="profile-catalog")
             with Vertical(id="profile-right"):
                 yield Label("Profile Details & Source Chain", classes="pane-title")
                 with VerticalScroll(id="profile-scroll"):
                     yield Static("", id="profile-details")
-        with Horizontal(id="profile-actions"):
-            yield Button("Switch + Apply", id="btn-switch-apply", variant="primary")
-            yield Button("Switch Only", id="btn-switch-only")
-            yield Button("Refresh (r)", id="btn-prof-refresh")
+        with Vertical(id="profile-actions"):
+            with Horizontal():
+                yield Button("Edit Selected", id="btn-edit-selected", variant="primary")
+                yield Button("Edit Active", id="btn-edit-active")
+                yield Button("Refresh (r)", id="btn-prof-refresh")
+            with Horizontal():
+                yield Button("Switch Only", id="btn-switch-only")
+                yield Button("Switch + Apply", id="btn-switch-apply", variant="success")
 
     def on_mount(self) -> None:
         self.refresh_view()
@@ -45,13 +119,18 @@ class ProfilePane(Vertical):
         lv.clear()
         active_idx = 0
         for i, p in enumerate(self._profiles):
-            mark = "*" if p.get("active") else " "
             kind = str(p.get("kind") or "custom")
             name = str(p.get("name") or "")
-            ext = f" -> {p['extends']}" if p.get("extends") else ""
-            lv.append(ListItem(Label(f"{mark} {name:<18} [{kind}]{ext}")))
+            flags: list[str] = []
             if p.get("active"):
+                flags.append("ACTIVE")
                 active_idx = i
+            if str(p.get("file") or "") == self.model.profile_file:
+                flags.append("EDITING")
+            mark = "*" if p.get("active") else " "
+            editing = ">" if "EDITING" in flags else " "
+            flag_s = ("  " + " · ".join(flags)) if flags else ""
+            lv.append(ListItem(Label(f"{mark}{editing} {name:<16} [{kind}]{flag_s}")))
         if self._profiles:
             lv.index = active_idx
             self._inspect_profile(str(self._profiles[active_idx].get("file") or ""))
@@ -84,52 +163,8 @@ class ProfilePane(Vertical):
         self.query_one("#profile-details", Static).update("\n".join(lines))
 
     def _render_profile_dict(self, data: dict[str, Any]) -> None:
-        name = data.get("profile") or "(none)"
-        kind = data.get("profile_kind") or "none"
-        pfile = data.get("profile_file") or "(none)"
-        chain = data.get("source_chain") or []
-        adds = data.get("local_additions") or {}
-        rems = data.get("local_removals") or {}
-
-        lines = [
-            f"Profile: {name}   [{kind}]",
-            f"File:    {pfile}",
-            f"Active:  {'YES' if data.get('active') else 'NO (browsing only)'}",
-            "",
-            "Source chain:",
-        ]
-        if chain:
-            for idx, c in enumerate(chain):
-                if idx > 0:
-                    lines.append("    ↓")
-                lines.append(f"  {c.get('name')}  [{c.get('kind')}]  ({c.get('file')})")
-        else:
-            lines.append("  (none)")
-
-        lines.extend(["", "Local desired-state changes:"])
-        any_delta = False
-        for g in adds.get("groups") or []:
-            lines.append(f"  + group:{g}")
-            any_delta = True
-        for c in adds.get("components") or []:
-            lines.append(f"  + component:{c}")
-            any_delta = True
-        for s in adds.get("supergroups") or []:
-            lines.append(f"  + supergroup:{s}")
-            any_delta = True
-        for g in rems.get("groups") or []:
-            lines.append(f"  - group:{g}")
-            any_delta = True
-        for c in rems.get("components") or []:
-            lines.append(f"  - component:{c}")
-            any_delta = True
-        for s in rems.get("supergroups") or []:
-            lines.append(f"  - supergroup:{s}")
-            any_delta = True
-        if not any_delta:
-            lines.append("  (none)")
-
-        self.query_one("#profile-details", Static).update("\n".join(lines))
+        text = format_profile_details(data, editing_file=self.model.profile_file)
+        self.query_one("#profile-details", Static).update(text)
 
     def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
         if event.list_view.id != "profile-catalog":
@@ -151,7 +186,19 @@ class ProfilePane(Vertical):
         if bid == "btn-prof-refresh":
             self.app.action_refresh()  # type: ignore[attr-defined]
             return
+        if bid == "btn-edit-active":
+            active = self.model.current_active_profile()
+            if not active:
+                self.app.notify("No active profile is recorded.", severity="warning")
+                return
+            self.app.request_edit_profile(str(active.get("file") or active.get("name") or ""))  # type: ignore[attr-defined]
+            return
         entry = self._selected_profile_entry()
+        if bid == "btn-edit-selected":
+            if not entry:
+                return
+            self.app.request_edit_profile(str(entry.get("file") or entry.get("name") or ""))  # type: ignore[attr-defined]
+            return
         if not entry:
             return
         target = str(entry.get("file") or entry.get("name") or "")

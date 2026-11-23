@@ -154,6 +154,16 @@ class SearchHit:
     external: bool = False
     install_method: str = ""
     unsupported_reason: str = ""
+    state_tag: str = ""
+
+
+@dataclass
+class SearchAction:
+    """Explicit search result. Buttons stage desired state; they do not merely focus a row."""
+
+    selector: str
+    action: str  # "add" | "remove" | "focus"
+    note: str = ""
 
 
 class DesiredStateModel:
@@ -362,6 +372,52 @@ class DesiredStateModel:
     def get(self, selector: str) -> CapabilityItem | None:
         return self._by_selector.get(selector)
 
+    def current_active_profile(self) -> dict[str, Any] | None:
+        for entry in self.profiles_catalog:
+            if entry.get("active"):
+                return entry
+        return None
+
+    def editing_profile_entry(self) -> dict[str, Any] | None:
+        for entry in self.profiles_catalog:
+            if str(entry.get("file") or "") == self.profile_file:
+                return entry
+        return None
+
+    def set_desired(self, selector: str, desired: bool) -> tuple[bool, str]:
+        """Set working desired-state without cycling. Search actions use this."""
+        item = self._by_selector.get(selector)
+        if item is None:
+            return False, f"Unknown item: {selector}"
+        if desired:
+            if item.kind == "package" and not item.leaf_selectable:
+                reason = item.leaf_reason or item.unsupported_reason or "requires component lifecycle"
+                return False, f"{item.label} cannot be selected independently: {reason}"
+            unavailable = (not item.supported) or item.persisted == SelectionState.UNSUPPORTED
+            if unavailable and not item.working.is_desired:
+                reason = item.unsupported_reason or "unsupported on this platform"
+                return False, f"{item.label} is unavailable: {reason}"
+            if item.working.is_desired:
+                return True, f"{item.label} is already desired"
+            if item.working == SelectionState.LOCAL_EXCLUDE:
+                item.working = SelectionState.INHERITED
+            else:
+                item.working = SelectionState.LOCAL_ADD
+            return True, f"Added {item.label} ({item.working.tag})"
+        if not item.working.is_desired:
+            return True, f"{item.label} is already absent"
+        if item.working == SelectionState.INHERITED:
+            item.working = SelectionState.LOCAL_EXCLUDE
+        else:
+            item.working = SelectionState.NOT_SELECTED
+        return True, f"Removed {item.label} from desired state ({item.working.tag})"
+
+    def selected_items(self) -> list[CapabilityItem]:
+        return [item for item in self.all_items() if item.working.is_desired]
+
+    def modified_items(self) -> list[CapabilityItem]:
+        return [item for item in self.all_items() if item.modified]
+
     def all_items(self) -> list[CapabilityItem]:
         return [*self.groups, *self.supergroups, *self.components, *self.explicit_packages]
 
@@ -377,23 +433,7 @@ class DesiredStateModel:
         item = self._by_selector.get(selector)
         if item is None:
             return False, f"Unknown item: {selector}"
-        cur = item.working
-        if item.kind == "package" and not item.leaf_selectable:
-            reason = item.leaf_reason or item.unsupported_reason or "requires component lifecycle"
-            return False, f"{item.label} cannot be selected independently: {reason}"
-        if (not item.supported or item.persisted == SelectionState.UNSUPPORTED) and not cur.is_desired:
-            reason = item.unsupported_reason or "unsupported on this platform"
-            return False, f"{item.label} is unavailable: {reason}"
-
-        if cur == SelectionState.INHERITED:
-            item.working = SelectionState.LOCAL_EXCLUDE
-        elif cur == SelectionState.LOCAL_EXCLUDE:
-            item.working = SelectionState.INHERITED
-        elif cur == SelectionState.NOT_SELECTED:
-            item.working = SelectionState.LOCAL_ADD
-        elif cur == SelectionState.LOCAL_ADD:
-            item.working = SelectionState.NOT_SELECTED
-        return True, f"{item.id}: {item.working.tag}"
+        return self.set_desired(selector, not item.working.is_desired)
 
     def discard(self) -> None:
         for item in self.all_items():
@@ -440,17 +480,30 @@ class DesiredStateModel:
             or self.pending_package_removes()
         )
 
-    def pending_summary(self) -> str:
-        adds = self.pending_adds()
-        rems = self.pending_removes()
-        if not adds and not rems:
-            return "none"
-        tokens = [f"+{x.split(':', 1)[1]}" for x in adds] + [
-            f"-{x.split(':', 1)[1]}" for x in rems
-        ]
+    def pending_tokens(self) -> list[str]:
+        tokens = [f"+{x.split(':', 1)[1]}" for x in self.pending_adds()]
+        tokens += [f"-{x.split(':', 1)[1]}" for x in self.pending_removes()]
         tokens += [f"+package:{x}" for x in self.pending_package_adds()]
         tokens += [f"-package:{x}" for x in self.pending_package_removes()]
+        return tokens
+
+    def pending_summary(self) -> str:
+        tokens = self.pending_tokens()
+        if not tokens:
+            return "none"
         return " ".join(tokens)
+
+    def pending_bar_text(self) -> str:
+        """Human pending line. Package-only edits must not read as 'none'."""
+        tokens = self.pending_tokens()
+        note = "Removing desired state does not uninstall software."
+        if not tokens:
+            return f"Pending: none   |   {note}"
+        shown = tokens[:3]
+        extra = len(tokens) - len(shown)
+        more = f" +{extra} more" if extra else ""
+        noun = "change" if len(tokens) == 1 else "changes"
+        return f"{len(tokens)} pending {noun}: {' '.join(shown)}{more}   |   {note}"
 
     def search(self, query: str) -> list[SearchHit]:
         q = (query or "").strip().lower()
@@ -613,4 +666,22 @@ class DesiredStateModel:
                     )
                 )
 
-        return hits
+        for hit in hits:
+            selector = hit.owner_selector if hit.kind != "package" else f"package:{hit.target_id}"
+            item = self._by_selector.get(selector or "")
+            if item is not None:
+                hit.state_tag = item.working.tag
+
+        def _rank(hit: SearchHit) -> tuple[int, str]:
+            title = hit.title.lower()
+            tid = (hit.target_id or "").lower()
+            if tid == q or title == q:
+                bucket = 0
+            elif tid.startswith(q) or title.startswith(q):
+                bucket = 1
+            else:
+                bucket = 2
+            return (bucket, title)
+
+        hits.sort(key=_rank)
+        return hits[:40]

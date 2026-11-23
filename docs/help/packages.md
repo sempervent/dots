@@ -3,7 +3,7 @@
 Package groups live in `configs/packages/groups.toml`.
 
 ```bash
-./dots tui                             # dynamic desired-state TUI
+./dots tui                             # add individual software or its owner from Profile Editor
 ./dots install hyperfine               # resolve owner, persist overlay, apply
 ./dots upgrade                         # upgrade outdated managed software
 ./dots packages groups [--json]
@@ -17,3 +17,8 @@ Package groups live in `configs/packages/groups.toml`.
 
 Ownership states include managed, inactive, undeclared, missing, and external.
 Removing desired state never uninstalls software or runs `brew bundle cleanup`.
+
+Individual Software in the profile editor is explicit leaf desired state
+(`packages.include`). It is not the same as enabling the owning group or
+component. The owner stays the package's home; desired-via records why it is
+selected.

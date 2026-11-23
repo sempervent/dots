@@ -82,10 +82,17 @@ dots_cmd_tui() {
 		case "${arg}" in
 		-h | --help | help)
 			cat <<'EOF'
-Usage: ./dots tui
+Usage:
+  ./dots tui [--profile NAME|PATH] [--dry-run]
 
-Launch the dynamic Textual desired-state TUI (front-end over DOTS registries,
-structured state APIs, and helpers/profile_edit.sh).
+Options:
+  --profile PROFILE    Open the profile editor targeting PROFILE.
+                       Does not activate PROFILE merely by opening it.
+  --dry-run            Simulate profile saves and applies.
+
+Launch the Textual profile editor for individual software, package groups,
+components, bundles, and upgrades. It is a front-end over DOTS registries
+and helpers/profile_edit.sh.
 
 Noninteractive fallback commands remain available without Textual:
   ./dots install   ./dots upgrade   ./dots profile   ./dots setup   ./dots status
@@ -922,7 +929,7 @@ _dots_profile_package_subcmd() {
 }
 
 _dots_profile_mutate_subcmd() {
-	local profile_arg="" expected_hash="" apply=0 dry=0 yes=0
+	local profile_arg="" expected_hash="" apply=0 dry=0 yes=0 preserve_active=0
 	local -a add_raws=() rem_raws=() add_pkgs=() rem_pkgs=()
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
@@ -979,8 +986,16 @@ _dots_profile_mutate_subcmd() {
 		--apply) apply=1 ;;
 		--dry-run) dry=1 ;;
 		--yes | -y) yes=1 ;;
+		--preserve-active) preserve_active=1 ;;
 		-h | --help)
-			echo "Usage: ./dots profile mutate [--profile NAME|PATH] [--add SEL]... [--remove SEL]... [--add-package PKG]... [--remove-package PKG]... [--expected-hash SHA] [--apply] [--dry-run] [--yes]"
+			cat <<'EOF'
+Usage: ./dots profile mutate [--profile NAME|PATH] [--add SEL]... [--remove SEL]... [--add-package PKG]... [--remove-package PKG]... [--expected-hash SHA] [--preserve-active] [--apply] [--dry-run] [--yes]
+
+--preserve-active
+    Update the requested profile without changing the active-profile pointer.
+    Intended for profile editors and offline profile maintenance.
+    Cannot be combined with --apply.
+EOF
 			return 0
 			;;
 		*)
@@ -993,6 +1008,10 @@ _dots_profile_mutate_subcmd() {
 
 	if [[ ${#add_raws[@]} -eq 0 && ${#rem_raws[@]} -eq 0 && ${#add_pkgs[@]} -eq 0 && ${#rem_pkgs[@]} -eq 0 ]]; then
 		echo "Error: profile mutate requires at least one --add, --remove, --add-package, or --remove-package" >&2
+		return 1
+	fi
+	if [[ ${preserve_active} -eq 1 && ${apply} -eq 1 ]]; then
+		echo "Error: --preserve-active cannot be combined with --apply. Applying a profile activates it." >&2
 		return 1
 	fi
 
@@ -1089,13 +1108,21 @@ _dots_profile_mutate_subcmd() {
 		fi
 	fi
 
-	if ! dots_profile_edit_commit_atomic "${DOTS_PE_OVERLAY_FILE}" "${tmp_toml}"; then
+	local activate_flag=1
+	if [[ ${preserve_active} -eq 1 ]]; then
+		activate_flag=0
+	fi
+	if ! dots_profile_edit_commit_atomic "${DOTS_PE_OVERLAY_FILE}" "${tmp_toml}" "${activate_flag}"; then
 		rm -f "${tmp_toml}" "${tmp_diff}"
 		return 1
 	fi
 	rm -f "${tmp_toml}" "${tmp_diff}"
 
-	echo "OK: updated ${DOTS_PE_OVERLAY_FILE} (active: ${DOTS_PE_OVERLAY_NAME})"
+	if [[ ${preserve_active} -eq 1 ]]; then
+		echo "OK: updated ${DOTS_PE_OVERLAY_FILE} (active profile unchanged)"
+	else
+		echo "OK: updated ${DOTS_PE_OVERLAY_FILE} (active: ${DOTS_PE_OVERLAY_NAME})"
+	fi
 	[[ ${#resolved_rems[@]} -gt 0 ]] && echo "Note: removing desired state does not uninstall already-installed packages."
 
 	if [[ ${apply} -eq 1 ]]; then

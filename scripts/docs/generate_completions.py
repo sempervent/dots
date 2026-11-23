@@ -255,7 +255,14 @@ def build_zsh() -> str:
         "      _values 'completion' ${completion_subs[@]}",
         "      ;;",
         "    tui)",
-        "      _values 'tui flags' --help",
+        "      case ${words[CURRENT-1]} in",
+        "      --profile|--profile=*)",
+        "        _dots_profiles",
+        "        ;;",
+        "      *)",
+        "        _values 'tui flags' --profile --dry-run --help",
+        "        ;;",
+        "      esac",
         "      ;;",
         "    install)",
         "      case ${words[CURRENT-1]} in",
@@ -288,6 +295,15 @@ def build_zsh() -> str:
         "        _dots_profiles",
         "      elif [[ ${words[2]} == show || ${words[2]} == diff || ${words[2]} == apply || ${words[2]} == switch ]]; then",
         "        _dots_profiles",
+        "      elif [[ ${words[2]} == mutate || ${words[2]} == plan ]]; then",
+        "        case ${words[CURRENT-1]} in",
+        "        --profile|--profile=*)",
+        "          _dots_profiles",
+        "          ;;",
+        "        *)",
+        "          _values 'profile mutate flags' --profile --add --remove --add-package --remove-package --expected-hash --preserve-active --apply --dry-run --yes --json --help",
+        "          ;;",
+        "        esac",
         "      elif [[ ${words[2]} == add || ${words[2]} == remove ]]; then",
         "        if [[ ${words[CURRENT]} == -* ]]; then",
         "          _values 'profile edit flags' --profile --apply --dry-run --yes --add --remove --add-package --remove-package --expected-hash --json --help",
@@ -426,7 +442,14 @@ _dots_complete() {{
     esac
     ;;
   tui)
-    COMPREPLY=($(compgen -W "--help" -- "${{cur}}"))
+    case "${{prev}}" in
+    --profile)
+      COMPREPLY=($(compgen -W "${{profiles}} $(_dots_custom_profiles)" -- "${{cur}}"))
+      ;;
+    *)
+      COMPREPLY=($(compgen -W "--profile --dry-run --help" -- "${{cur}}"))
+      ;;
+    esac
     ;;
   help)
     if [[ ${{cur}} == -* ]]; then
@@ -508,6 +531,15 @@ _dots_complete() {{
       COMPREPLY=($(compgen -W "${{profile_subs}} ${{profiles}} $(_dots_custom_profiles)" -- "${{cur}}"))
     elif [[ ${{sub}} == show || ${{sub}} == diff || ${{sub}} == apply || ${{sub}} == switch ]]; then
       COMPREPLY=($(compgen -W "${{profiles}} $(_dots_custom_profiles)" -- "${{cur}}"))
+    elif [[ ${{sub}} == mutate || ${{sub}} == plan ]]; then
+      case "${{prev}}" in
+      --profile)
+        COMPREPLY=($(compgen -W "${{profiles}} $(_dots_custom_profiles)" -- "${{cur}}"))
+        ;;
+      *)
+        COMPREPLY=($(compgen -W "--profile --add --remove --add-package --remove-package --expected-hash --preserve-active --apply --dry-run --yes --json --help" -- "${{cur}}"))
+        ;;
+      esac
     elif [[ ${{sub}} == add || ${{sub}} == remove ]]; then
       if [[ ${{cur}} == -* ]]; then
         COMPREPLY=($(compgen -W "--profile --apply --dry-run --yes --help" -- "${{cur}}"))
