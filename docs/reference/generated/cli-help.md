@@ -11,11 +11,11 @@ Captured from safe `--help` / `help` invocations. If a binary is missing or help
 ## `./dots`
 
 ```text
-DOTS — machine environment manager  (v1.13.2)
+DOTS — machine environment manager  (v1.13.3)
 
 Usage:
   ./dots setup [options]            Interactive or noninteractive setup / reconfigure...
-  ./dots tui                        Launch dynamic Textual desired-state TUI (groups...
+  ./dots tui [--profile NAME|PATH] [--dry-run] Interactive profile editor for individual software...
   ./dots install SELECTOR [--dry-run] [--yes] [--only] [--no-apply] [--profile NAME] Persist a known DOTS capability to desired profile...
   ./dots upgrade [--dry-run] [--yes] [--profile NAME] [--all] Upgrade outdated Homebrew software in the active...
   ./dots status                     Show current DOTS state (profile, packages summary...
@@ -290,10 +290,17 @@ User overrides: ~/.config/dots/models.toml
 ## `./dots tui`
 
 ```text
-Usage: ./dots tui
+Usage:
+  ./dots tui [--profile NAME|PATH] [--dry-run]
 
-Launch the dynamic Textual desired-state TUI (front-end over DOTS registries,
-structured state APIs, and helpers/profile_edit.sh).
+Options:
+  --profile PROFILE    Open the profile editor targeting PROFILE.
+                       Does not activate PROFILE merely by opening it.
+  --dry-run            Simulate profile saves and applies.
+
+Launch the Textual profile editor for individual software, package groups,
+components, bundles, and upgrades. It is a front-end over DOTS registries
+and helpers/profile_edit.sh.
 
 Noninteractive fallback commands remain available without Textual:
   ./dots install   ./dots upgrade   ./dots profile   ./dots setup   ./dots status

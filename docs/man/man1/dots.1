@@ -1,7 +1,7 @@
 .\" GENERATED — DO NOT EDIT.
 .\" Source: configs/help/commands.toml + scripts/docs/generate_manpages.py
 .
-.TH DOTS 1 "2026-11-02" "DOTS 1.13.2" "User Commands"
+.TH DOTS 1 "2026-11-02" "DOTS 1.13.3" "User Commands"
 .SH NAME
 dots \- desired\-state environment manager
 .SH SYNOPSIS
@@ -18,8 +18,9 @@ for machine\-aware documentation.
 .B dots setup [options]
 Interactive or noninteractive setup / reconfigure toward desired state.
 .TP
-.B dots tui
-Launch dynamic Textual desired\-state TUI (groups, components, upgrades).
+.B dots tui [\-\-profile NAME|PATH] [\-\-dry\-run]
+Interactive profile editor for individual software, package groups,
+components, bundles, and upgrades.
 .TP
 .B dots install SELECTOR [\-\-dry\-run] [\-\-yes] [\-\-only] [\-\-no\-apply] [\-\-profile NAME]
 Persist a known DOTS capability to desired profile and apply.

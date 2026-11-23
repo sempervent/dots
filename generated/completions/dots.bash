@@ -65,7 +65,14 @@ _dots_complete() {
     esac
     ;;
   tui)
-    COMPREPLY=($(compgen -W "--help" -- "${cur}"))
+    case "${prev}" in
+    --profile)
+      COMPREPLY=($(compgen -W "${profiles} $(_dots_custom_profiles)" -- "${cur}"))
+      ;;
+    *)
+      COMPREPLY=($(compgen -W "--profile --dry-run --help" -- "${cur}"))
+      ;;
+    esac
     ;;
   help)
     if [[ ${cur} == -* ]]; then
@@ -147,6 +154,15 @@ _dots_complete() {
       COMPREPLY=($(compgen -W "${profile_subs} ${profiles} $(_dots_custom_profiles)" -- "${cur}"))
     elif [[ ${sub} == show || ${sub} == diff || ${sub} == apply || ${sub} == switch ]]; then
       COMPREPLY=($(compgen -W "${profiles} $(_dots_custom_profiles)" -- "${cur}"))
+    elif [[ ${sub} == mutate || ${sub} == plan ]]; then
+      case "${prev}" in
+      --profile)
+        COMPREPLY=($(compgen -W "${profiles} $(_dots_custom_profiles)" -- "${cur}"))
+        ;;
+      *)
+        COMPREPLY=($(compgen -W "--profile --add --remove --add-package --remove-package --expected-hash --preserve-active --apply --dry-run --yes --json --help" -- "${cur}"))
+        ;;
+      esac
     elif [[ ${sub} == add || ${sub} == remove ]]; then
       if [[ ${cur} == -* ]]; then
         COMPREPLY=($(compgen -W "--profile --apply --dry-run --yes --help" -- "${cur}"))
