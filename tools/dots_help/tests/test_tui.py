@@ -467,12 +467,16 @@ def test_upgrade_screen_and_small_terminal_and_unsaved_quit(isolated_env):
             assert app_sm.query_one("#main-tabs").styles.display == "none"
 
         # Upgrade tab uses --dry-run --json and distinguishes managed vs excluded/undeclared
-        app = DotsTuiApp(backend=backend, dry_run=True, initial_tab="tab-upgrade")
-        async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
-            app.query_one("#upgrade-pane").ensure_loaded()
-            await pilot.pause()
-            body = str(app.query_one("#upgrade-body").render())
+            app = DotsTuiApp(backend=backend, dry_run=True, initial_tab="tab-upgrade")
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                app.query_one("#upgrade-pane").ensure_loaded()
+                body = ""
+                for _ in range(100):
+                    await pilot.pause(0.5)
+                    body = str(app.query_one("#upgrade-body").render())
+                    if "Managed updates" in body or "Unable to check" in body:
+                        break
             assert "Managed updates" in body
             assert "jq" in body
             assert "Excluded" in body
