@@ -17,6 +17,7 @@ Authoritative registry: `configs/components.toml`.
 | archify | Archify | skills | darwin, linux | brew/Brewfile.archify | yes | Archify skill only (also included in --with skills) |
 | skills | Engineering skills | skills | darwin, linux | brew/Brewfile.archify | no | Curated engineering skill pack (includes Archify) |
 | ai-skills | AI skills | skills | darwin, linux | brew/Brewfile.archify | no | Curated AI/agent engineering skill pack |
+| frontend-skills | Frontend skills | skills | darwin, linux | brew/Brewfile.archify | yes | Optional frontend design skill. Not selected by the ai supergroup or headless profiles. |
 | drawthings | Draw Things | image_ai | darwin, linux | brew/Brewfile.drawthings | no | Draw Things CLI + MCP bridge + img (GUI/models are macOS-oriented) |
 | opencode | OpenCode | ai_client | darwin, linux | brew/Brewfile.opencode | no | Local/general coding adapter |
 | codex | Codex | ai_client | darwin | brew/Brewfile.codex | no | Frontier coding via Homebrew cask Codex |

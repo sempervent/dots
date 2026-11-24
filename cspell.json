@@ -359,7 +359,12 @@
     "findutils",
     "moreutils",
     "fastfetch",
-    "earendil"
+    "earendil",
+    "UNREVIEWED",
+    "streamable",
+    "getsentry",
+    "huggingface",
+    "anthropics"
   ],
   "ignorePaths": [
     "**/*.svg",

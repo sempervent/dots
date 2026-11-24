@@ -10,6 +10,7 @@ frozen release snapshot. Narrative overview:
 | Diagram | What it shows |
 |---------|----------------|
 | [System overview](../diagrams/dots-agent-system-overview.html) | Local Pi, sandbox, scout/evals, budget/LiteLLM, OpenRig, autonomy |
+| [Capability plane](../diagrams/src/dots-capability-plane.architecture.json) | Profiles to resolver to client projection |
 | [Trust boundary](../diagrams/dots-agent-trust-boundary.html) | Safe default, worktree, env scrub, MCP allowlist, unsafe-host opt-in |
 | [Routing and eval](../diagrams/dots-agent-routing-eval.html) | Local-first → Wilson floor → expected cost → remote consult |
 | [OpenRig teams](../diagrams/dots-openrig-teams.html) | DOTS vs OpenRig ownership; seat projection into sandboxed Pi |

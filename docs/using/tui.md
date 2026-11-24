@@ -12,6 +12,14 @@ front-end over the authoritative DOTS desired-state engine.
 ./dots help                # documentation browser (dots-help); separate from this editor
 ```
 
+## Agent Capabilities
+
+The tab between Profile Editor and Profiles reads `dots agent capabilities`. It does not scan skill or MCP files itself.
+
+Filters: Skills, MCP, Clients, All, Problems, Updates.
+
+Enable and Disable stage a profile change. Preview shows the skill or MCP delta, client support, the resolved Node runtime, and a warning when a server can write remotely or to the filesystem. Save writes one profile mutation. Cancel drops the stage. The TUI does not start OAuth or create credentials.
+
 ## Profile editor workflow
 
 `./dots help` and `./dots tui` stay separate. The lifecycle TUI is the profile editor.

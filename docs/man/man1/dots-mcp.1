@@ -1,0 +1,26 @@
+.\" GENERATED — DO NOT EDIT.
+.\" Source: configs/help/commands.toml + scripts/docs/generate_manpages.py
+.
+.TH DOTS\-MCP 1 "2026-11-02" "DOTS 1.14.0" "User Commands"
+.SH NAME
+dots\-mcp \- Curated MCP registry, discovery, health, and client projection.
+.SH SYNOPSIS
+.B dots mcp [list|show|status|doctor|search|inspect|enable|disable|plan|sync|audit]
+.SH DESCRIPTION
+Curated MCP registry, discovery, health, and client projection.
+.SH EXAMPLES
+.TP
+.B dots mcp list
+List curated MCP servers and their trust labels.
+.TP
+.B dots mcp search QUERY
+Query the MCP registry without installing or trusting results.
+.TP
+.B dots mcp audit
+Check the curated registry for policy errors.
+.TP
+.B dots mcp sync \-\-dry\-run
+Preview DOTS\-owned client projection.
+.SH SEE ALSO
+.BR dots (1),
+.BR dots\-help (1)

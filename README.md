@@ -29,6 +29,9 @@ ground traditionally. Expert scripts remain available underneath for automation.
 ```bash
 ./dots                     # interactive TUI (when bootstrapped) or setup wizard
 ./dots tui                 # profile editor: software, groups, components, bundles
+./dots skills list         # curated Agent Skills
+./dots mcp list            # curated MCP servers and permissions
+./dots agent capabilities  # skills, MCP, clients, and runtime together
 ./dots install hyperfine   # persist owning group (or prompt leaf vs owner)
 ./dots install raycast --only --yes   # explicit leaf only; does not enable mactools
 ./dots upgrade             # upgrade managed software in active profile

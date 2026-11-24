@@ -13,6 +13,7 @@ Overview: `docs/agents/architecture.md`. Diagrams: `docs/agents/diagrams.md`.
 
 ```bash
 ./dots agent status
+./dots agent capabilities
 ./dots agent doctor
 ./dots agent sandbox status
 ./dots agent models

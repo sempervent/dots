@@ -81,7 +81,7 @@ Curated engineering skill pack (includes Archify)
 - **category:** skills
 - **platforms:** darwin, linux
 - **brewfile:** `brew/Brewfile.archify`
-- **skills:** `skill-security-review`, `systematic-debugging`, `verification-methodology`, `implementation-planning`, `spec-driven-development`, `software-architecture`, `software-architecture-analysis`, `secure-software-engineering`, `technical-documentation`, `adr-authoring`, `cli-builder`, `docker-compose`, `kubernetes`, `terraform`, `release-engineering`, `playwright`, `archify`
+- **skills:** `skill-security-review`, `systematic-debugging`, `verification-methodology`, `implementation-planning`, `spec-driven-development`, `software-architecture`, `software-architecture-analysis`, `secure-software-engineering`, `technical-documentation`, `adr-authoring`, `cli-builder`, `docker-compose`, `kubernetes`, `terraform`, `release-engineering`, `playwright`, `archify`, `security-audit`, `agents-md`, `code-simplifier`, `skill-authoring`
 - **pack:** Engineering pack (reproducible, security-reviewed)
 - **activate:** `./dots setup --with skills`
 
@@ -93,9 +93,22 @@ Curated AI/agent engineering skill pack
 - **category:** skills
 - **platforms:** darwin, linux
 - **brewfile:** `brew/Brewfile.archify`
-- **skills:** `skill-security-review`, `agent-evals-and-observability`, `agent-production-operations`, `litellm`, `ml-engineering`, `workflow-architect`, `capacity-and-cost-engineering`, `privacy-engineering`, `product-analytics-and-measurement`, `telemetry`
+- **skills:** `skill-security-review`, `agent-evals-and-observability`, `agent-production-operations`, `litellm`, `ml-engineering`, `workflow-architect`, `capacity-and-cost-engineering`, `privacy-engineering`, `product-analytics-and-measurement`, `telemetry`, `hf-cli`
 - **pack:** AI/agent engineering pack for operating and evaluating the harness
 - **activate:** `./dots setup --with ai-skills`
+
+### `frontend-skills`
+
+Optional frontend design skill. Not selected by the ai supergroup or headless profiles.
+
+- **label:** Frontend skills
+- **category:** skills
+- **platforms:** darwin, linux
+- **brewfile:** `brew/Brewfile.archify`
+- **omit_from_all:** yes
+- **skills:** `frontend-design`
+- **pack:** Optional frontend design and review skills. Not part of the ai supergroup.
+- **activate:** `./dots setup --with frontend-skills`
 
 ### `drawthings`
 

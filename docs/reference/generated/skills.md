@@ -14,6 +14,7 @@ Manifest: `dots-skill-packs` — Declarative curated skill packs with groups and
 | --- | --- | --- |
 | skills | security, core, engineering, infrastructure, testing, visualization | Engineering pack (reproducible, security-reviewed) |
 | ai-skills | security, ai | AI/agent engineering pack for operating and evaluating the harness |
+| frontend-skills | frontend | Optional frontend design and review skills. Not part of the ai supergroup. |
 
 ## Skills
 
@@ -45,3 +46,9 @@ Manifest: `dots-skill-packs` — Declarative curated skill packs with groups and
 | privacy-engineering | magnus919/agent-skills | ai | yes |
 | product-analytics-and-measurement | magnus919/agent-skills | ai | yes |
 | telemetry | magnus919/agent-skills | ai | yes |
+| security-audit | cloudflare/security-audit-skill | engineering | yes |
+| agents-md | getsentry/skills | engineering | yes |
+| code-simplifier | getsentry/skills | engineering | yes |
+| skill-authoring | local:skills/skill-authoring | engineering | yes |
+| hf-cli | huggingface/skills | ai | yes |
+| frontend-design | anthropics/skills | frontend | yes |

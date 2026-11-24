@@ -119,7 +119,7 @@ description = "Show AI server stack status."
 
 [[commands]]
 name = "agent"
-usage = "dots agent [status|doctor|sandbox|models|scout|eval|team|run|…]"
+usage = "dots agent [status|doctor|capabilities|sandbox|models|scout|eval|team|run|…]"
 category = "ai"
 description = "Local-first agent harness (Pi, OpenRig, evals, guarded autonomy)."
 mutating = true
@@ -130,6 +130,9 @@ description = "Show local executor, gateway, sandbox, autonomy, and budget polic
 [[commands.examples]]
 command = "dots agent doctor"
 description = "Read-only harness diagnostics including sandbox FAIL/WARN/OK."
+[[commands.examples]]
+command = "dots agent capabilities --json"
+description = "Versioned inventory of skills, MCP, clients, and runtime resolution."
 [[commands.examples]]
 command = "dots agent sandbox status"
 description = "Sandbox provider, OS backends, and MCP allowlist."
@@ -197,6 +200,43 @@ command = "dots packages explain bat"
 description = "Explain one package's ownership and installability state."
 
 [[commands]]
+name = "skills"
+usage = "dots skills [list|status|show|find|check|audit|update]"
+category = "ai"
+description = "Curated Agent Skills inventory, audit, and explicit updates."
+mutating = true
+related = ["agent", "mcp", "profile", "setup"]
+[[commands.examples]]
+command = "dots skills list"
+description = "List curated skills."
+[[commands.examples]]
+command = "dots skills audit"
+description = "Validate manifests and installed skills without executing them."
+[[commands.examples]]
+command = "dots skills update NAME --plan"
+description = "Show a staged update diff and static review."
+
+[[commands]]
+name = "mcp"
+usage = "dots mcp [list|show|status|doctor|search|inspect|enable|disable|plan|sync|audit]"
+category = "ai"
+description = "Curated MCP registry, discovery, health, and client projection."
+mutating = true
+related = ["agent", "skills", "profile"]
+[[commands.examples]]
+command = "dots mcp list"
+description = "List curated MCP servers and their trust labels."
+[[commands.examples]]
+command = "dots mcp search QUERY"
+description = "Query the MCP registry without installing or trusting results."
+[[commands.examples]]
+command = "dots mcp audit"
+description = "Check the curated registry for policy errors."
+[[commands.examples]]
+command = "dots mcp sync --dry-run"
+description = "Preview DOTS-owned client projection."
+
+[[commands]]
 name = "backup"
 usage = "dots backup [--name N]"
 category = "recovery"
@@ -256,7 +296,7 @@ description = "Read-only inventory (no downloads)."
 
 [[commands]]
 name = "check"
-usage = "dots check [--profile NAME] | dots check fast|workflows|docs|all-local|act|release-notes|security|containers|k8s|dev|data|geo|media|backup|network|hardware|infra"
+usage = "dots check [--profile NAME] | dots check fast|workflows|docs|all-local|act|release-notes|runtimes|security|containers|k8s|dev|data|geo|media|backup|network|hardware|infra"
 category = "diagnostics"
 description = "Machine health plus local CI, docs, security, containers, k8s, data, geo, media, backup, network, hardware, and infra checks."
 mutating = false

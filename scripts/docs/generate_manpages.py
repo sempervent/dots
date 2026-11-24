@@ -241,6 +241,8 @@ def generate() -> dict[str, str]:
             "completion",
             "help",
             "agent",
+            "skills",
+            "mcp",
         }:
             out[f"dots-{name}.1"] = write_subcommand_1(name, c, ver)
     return out

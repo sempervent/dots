@@ -7,6 +7,8 @@ are not declared in `configs/components.toml`, `configs/agents/*.toml`, or
 
 Consent: configure AI only when the profile / `--with` lists the component.
 
+Capability inventory: `./dots agent capabilities`. Skill and MCP desired state are not extra members of the `ai` supergroup.
+
 ## Components (install selectors)
 
 | Component | Role | Platforms |

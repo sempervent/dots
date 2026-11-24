@@ -8,7 +8,7 @@ helpers execute it.
 
 | Script | Role |
 |--------|------|
-| `dots` | Unified CLI (wizard, status, packages, models, check, update) |
+| `dots` | Unified CLI (wizard, status, packages, skills, mcp, models, check, update) |
 | `bootstrap.sh` | Profile resolution → Stage 0 → setup → health gate |
 | `setup.sh` | Install / refresh (packages, links, optional components) |
 | `configure.sh` | Create/edit profile TOML only (no installs) |
