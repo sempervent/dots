@@ -114,6 +114,15 @@ def cmd_status(_: argparse.Namespace) -> int:
         + " → ".join(a.value for a in ap.ladder)
     )
     print()
+    from dots_agent.capabilities.inventory import build_inventory
+
+    summary = build_inventory()["summary"]
+    print("Capabilities")
+    print(f"  skills desired   {summary['skills']['desired']}")
+    print(f"  skills installed {summary['skills']['installed']}")
+    print(f"  mcp desired      {summary['mcp']['desired']}")
+    print(f"  trust errors     {summary['trust']['errors']}")
+    print()
     print("Default runs use sandboxed safe mode. Bypass only with --unsafe-host.")
     return 0
 
@@ -125,6 +134,12 @@ def cmd_doctor(_: argparse.Namespace) -> int:
     print()
     print("Sandbox / trust")
     for k, v in doctor_sandbox_checks():
+        print(f"{k:28} {v}")
+    print()
+    print("Capability registry")
+    from dots_agent.capabilities.inventory import doctor_lines
+
+    for k, v in doctor_lines():
         print(f"{k:28} {v}")
     print()
     print("OpenRig / teams")
@@ -797,6 +812,12 @@ def cmd_discard(args: argparse.Namespace) -> int:
     return 0 if result.get("ok") else 1
 
 
+def cmd_capabilities(args: argparse.Namespace) -> int:
+    from dots_agent.capabilities.cli import cmd_capabilities as render
+
+    return render(bool(getattr(args, "json", False)))
+
+
 def cmd_mcp(args: argparse.Namespace) -> int:
     action = args.mcp_cmd
     if action == "status":
@@ -921,6 +942,9 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("run_id")
     dc = sub.add_parser("discard", help="Remove worktree and agent branch")
     dc.add_argument("run_id")
+
+    cap = sub.add_parser("capabilities", help="Unified capability inventory")
+    cap.add_argument("--json", action="store_true")
 
     mcp = sub.add_parser("mcp", help="Trusted MCP status / Inspector")
     mcp_sub = mcp.add_subparsers(dest="mcp_cmd", required=True)
@@ -1108,6 +1132,7 @@ def main(argv: list[str] | None = None) -> int:
         "apply": cmd_apply,
         "discard": cmd_discard,
         "mcp": cmd_mcp,
+        "capabilities": cmd_capabilities,
         "eval": cmd_eval,
         "route": cmd_route,
         "team": cmd_team,
