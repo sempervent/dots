@@ -14,5 +14,7 @@ source "${DIR}/helpers/skills_pack.sh"
 ensure_dir() { mkdir -p "$1"; }
 
 echo "=== DOTS skills update (curated pack only) ==="
+echo "Staged review: ./dots skills update NAME --plan"
+echo "This wrapper still refreshes packs already selected. It does not run during setup."
 dots_update_skills_pack
 echo "Done. Re-run ./scripts/check.sh to verify discovery."

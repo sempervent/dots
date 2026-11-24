@@ -10,7 +10,7 @@
 # Union (--with skills,ai-skills): install each skill once (set semantics).
 # Do NOT install the entire magnus919 catalog.
 
-version = 2
+version = 3
 name = "dots-skill-packs"
 description = "Declarative curated skill packs with groups and provenance"
 
@@ -22,6 +22,52 @@ groups = ["security", "core", "engineering", "infrastructure", "testing", "visua
 [packs.ai-skills]
 description = "AI/agent engineering pack for operating and evaluating the harness"
 groups = ["security", "ai"]
+
+[packs.frontend-skills]
+description = "Optional frontend design and review skills. Not part of the ai supergroup."
+groups = ["frontend"]
+
+# Reviewed sources. Install from the pinned ref, not a moving branch.
+[[skill_sources]]
+id = "cloudflare-security-audit"
+repo = "cloudflare/security-audit-skill"
+ref = "c1c8a8c1471069fb0e188eeaff69b8e8db6564a8"
+reviewed_date = "2026-11-24"
+license = "MIT"
+bundle = "cloudflare"
+
+[[skill_sources]]
+id = "getsentry-skills"
+repo = "getsentry/skills"
+ref = "a582c51ee29d0f35e6ac321340796f77d43da733"
+reviewed_date = "2026-11-24"
+license = "Apache-2.0"
+bundle = "getsentry"
+
+[[skill_sources]]
+id = "huggingface-skills"
+repo = "huggingface/skills"
+ref = "d67b12054923df5bbfa07c5ff1331412deebdf4f"
+reviewed_date = "2026-11-24"
+license = "Apache-2.0"
+bundle = "huggingface"
+
+[[skill_sources]]
+id = "anthropics-skills"
+repo = "anthropics/skills"
+ref = "e4bb5d960d87126ff3b3a8af1a104b7db67560ba"
+reviewed_date = "2026-11-24"
+license = "Apache-2.0"
+bundle = "anthropic"
+
+[[skill_sources]]
+id = "dots-local"
+repo = "local"
+ref = "dots-v1.14.0"
+path = "skills/skill-authoring"
+reviewed_date = "2026-11-24"
+license = "MIT"
+bundle = "dots"
 
 # ---------------------------------------------------------------------------
 # security
@@ -191,4 +237,46 @@ enabled = true
 name = "telemetry"
 source = "magnus919/agent-skills"
 group = "ai"
+enabled = true
+
+[[skills]]
+name = "security-audit"
+source_id = "cloudflare-security-audit"
+source = "cloudflare/security-audit-skill"
+group = "engineering"
+enabled = true
+
+[[skills]]
+name = "agents-md"
+source_id = "getsentry-skills"
+source = "getsentry/skills"
+group = "engineering"
+enabled = true
+
+[[skills]]
+name = "code-simplifier"
+source_id = "getsentry-skills"
+source = "getsentry/skills"
+group = "engineering"
+enabled = true
+
+[[skills]]
+name = "skill-authoring"
+source_id = "dots-local"
+source = "local:skills/skill-authoring"
+group = "engineering"
+enabled = true
+
+[[skills]]
+name = "hf-cli"
+source_id = "huggingface-skills"
+source = "huggingface/skills"
+group = "ai"
+enabled = true
+
+[[skills]]
+name = "frontend-design"
+source_id = "anthropics-skills"
+source = "anthropics/skills"
+group = "frontend"
 enabled = true

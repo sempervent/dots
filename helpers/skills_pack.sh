@@ -64,26 +64,33 @@ for s in data.get("skills") or []:
     name = (s.get("name") or "").strip()
     source = (s.get("source") or "").strip()
     group = (s.get("group") or "").strip()
+    source_id = (s.get("source_id") or "").strip()
+    ref = ""
+    if source_id:
+        for src in data.get("skill_sources") or []:
+            if (src.get("id") or "").strip() == source_id:
+                ref = (src.get("ref") or "").strip()
+                break
     if not name or not source:
         continue
     if wanted_groups is not None and group not in wanted_groups:
         continue
-    skills.append((name, source, group))
+    skills.append((name, source, group, ref))
 
 # Dedupe by name; prefer security group first in ordering
 seen = set()
 ordered = []
-for name, source, group in skills:
+for name, source, group, ref in skills:
     if group == "security" and name not in seen:
-        ordered.append((name, source, group))
+        ordered.append((name, source, group, ref))
         seen.add(name)
-for name, source, group in skills:
+for name, source, group, ref in skills:
     if name not in seen:
-        ordered.append((name, source, group))
+        ordered.append((name, source, group, ref))
         seen.add(name)
 
-for name, source, group in ordered:
-    print(f"{name}\t{source}\t{group}")
+for name, source, group, ref in ordered:
+    print(f"{name}\t{source}\t{group}\t{ref}")
 PY
 }
 
@@ -218,8 +225,8 @@ _dots_skill_result_fail() {
 }
 
 install_skill_from_source() {
-	local name="$1" source="$2" group="${3:-}"
-	local min_node=18
+	local name="$1" source="$2" group="${3:-}" ref="${4:-}"
+	local node_constraint=">=22.20.0"
 	local hermes_link="${HOME}/.hermes/skills/${name}"
 	local need_install=1
 	local expose_hermes=0
@@ -292,9 +299,56 @@ install_skill_from_source() {
 		return 0
 	fi
 
-	ensure_node_major "${min_node}" || return 1
+	if declare -F dots_runtime_node_constraint >/dev/null 2>&1; then
+		node_constraint="$(dots_runtime_node_constraint skills-cli 2>/dev/null || printf '%s' "${node_constraint}")"
+	fi
+	if declare -F dots_ensure_node_requirement >/dev/null 2>&1; then
+		dots_ensure_node_requirement "${node_constraint}" || return 1
+	else
+		ensure_node_major 22 || return 1
+	fi
 
-	if [[ ${source} == *"/skill-security-review" ]] || [[ ${source} == "tt-a1i/archify" ]]; then
+	if [[ ${ref} =~ ^[0-9a-f]{40}$ && ${source} != local:* ]]; then
+		local stage skill_md origin
+		stage="$(mktemp -d "${TMPDIR:-/tmp}/dots-skill-src.XXXXXX")"
+		echo "INSTALL: '${name}' from ${source}@${ref}..."
+		if ! git clone --quiet "https://github.com/${source}.git" "${stage}"; then
+			echo "ERROR: could not clone ${source}" >&2
+			rm -rf "${stage}"
+			_dots_skill_result_fail "${name}" "clone failed"
+			return 1
+		fi
+		if ! git -C "${stage}" checkout --quiet "${ref}"; then
+			echo "ERROR: ref ${ref} not in ${source}" >&2
+			rm -rf "${stage}"
+			_dots_skill_result_fail "${name}" "ref missing"
+			return 1
+		fi
+		skill_md="$(find "${stage}" -path "*/${name}/SKILL.md" -print -quit)"
+		if [[ -z ${skill_md} ]]; then
+			echo "ERROR: ${name}/SKILL.md not in ${source}@${ref}" >&2
+			rm -rf "${stage}"
+			_dots_skill_result_fail "${name}" "skill path missing"
+			return 1
+		fi
+		origin="$(dirname "${skill_md}")"
+		local dest="${HOME}/.agents/skills/${name}"
+		mkdir -p "${HOME}/.agents/skills"
+		rm -rf "${dest}"
+		cp -R "${origin}" "${dest}"
+		rm -rf "${stage}"
+		found="${dest}"
+	elif [[ ${source} == local:* ]]; then
+		local rel="${source#local:}"
+		local origin="${rel}"
+		[[ ${origin} == /* ]] || origin="${DIR}/${origin}"
+		local dest="${HOME}/.agents/skills/${name}"
+		echo "INSTALL: '${name}' from local ${origin}..."
+		mkdir -p "${HOME}/.agents/skills"
+		rm -rf "${dest}"
+		cp -R "${origin}" "${dest}"
+		found="${dest}"
+	elif [[ ${source} == *"/skill-security-review" ]] || [[ ${source} == "tt-a1i/archify" ]]; then
 		echo "INSTALL: '${name}' from ${source}..."
 		set +e
 		# Bash 3.2 + set -u: empty arrays must use ${arr[@]+...} expansion
@@ -360,7 +414,7 @@ install_skill_from_source() {
 # Install union of selected packs (skills / ai-skills). Dedupes by skill name.
 dots_install_skill_packs() {
 	local packs=("$@")
-	local manifest line name source group
+	local manifest line name source group ref
 	local -a plan_names=()
 	manifest="$(dots_skills_manifest_path)"
 	if [[ ! -f ${manifest} ]]; then
@@ -423,9 +477,9 @@ dots_install_skill_packs() {
 	fi
 
 	local pack_rc=0
-	while IFS=$'\t' read -r name source group; do
+	while IFS=$'\t' read -r name source group ref; do
 		[[ -z ${name} ]] && continue
-		if ! install_skill_from_source "${name}" "${source}" "${group}"; then
+		if ! install_skill_from_source "${name}" "${source}" "${group}" "${ref}"; then
 			pack_rc=1
 		fi
 	done < <(dots_skills_manifest_entries_for_packs "${packs[@]}")
@@ -485,7 +539,11 @@ dots_install_ai_skills_pack() {
 
 # Update curated skills from selected packs (opt-in)
 dots_update_skills_pack() {
-	ensure_node_major 18 || return 1
+	if declare -F dots_ensure_node_requirement >/dev/null 2>&1; then
+		dots_ensure_node_requirement "$(dots_runtime_node_constraint skills-cli 2>/dev/null || echo '>=22.20.0')" || return 1
+	else
+		ensure_node_major 22 || return 1
+	fi
 	local packs=()
 	if has_component skills 2>/dev/null || [[ ${1:-} == "skills" ]]; then
 		packs+=(skills)
