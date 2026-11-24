@@ -129,7 +129,7 @@ file = Path(os.environ["FILE"]).resolve()
 builtin_dir = Path(os.environ["BUILTIN_DIR"]).resolve()
 user_dir = Path(os.environ.get("USER_DIR", "")).expanduser()
 
-ALLOWED_TOP = {"profile", "runtime", "packages", "components"}
+ALLOWED_TOP = {"profile", "runtime", "packages", "components", "skills", "mcp"}
 ALLOWED_PROFILE = {
     "name", "description", "extends", "with", "without", "packages",
     "open_apps", "include_all_optional",
@@ -137,6 +137,7 @@ ALLOWED_PROFILE = {
 ALLOWED_RUNTIME = {"multiplexer", "greeting", "prompt_stats", "auto_tmux"}
 ALLOWED_PACKAGES = {"add", "remove", "groups", "include", "exclude"}
 ALLOWED_COMPONENTS = {"with", "without"}
+ALLOWED_NAMED = {"include", "exclude"}
 KNOWN_MUX = {"tmux", "herdr", "none"}
 
 # Load package group ids from registry (configs/packages/groups.toml).
@@ -193,6 +194,51 @@ def load_toml(path: Path) -> dict:
         fail("malformed TOML (%s): %s" % (path, exc))
 
 
+def registry_ids(path: Path, table: str, field: str) -> set:
+    if not path.is_file():
+        return set()
+    try:
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return set()
+    found = set()
+    for row in data.get(table) or []:
+        if isinstance(row, dict):
+            ident = str(row.get(field) or "").strip()
+            if ident:
+                found.add(ident)
+    return found
+
+
+def skill_ids() -> set:
+    return registry_ids(builtin_dir.parent.parent / "skills" / "manifest.toml", "skills", "name")
+
+
+def mcp_ids() -> set:
+    return registry_ids(builtin_dir.parent.parent / "agents" / "mcp-trust.toml", "mcp_servers", "id")
+
+
+def validate_named(data: dict, key: str, path: Path, known: set) -> None:
+    table = data.get(key) or {}
+    if table and not isinstance(table, dict):
+        fail("[%s] must be a table in %s" % (key, path))
+    for item_key in table:
+        if item_key not in ALLOWED_NAMED:
+            fail("unknown %s key '%s' in %s" % (key, item_key, path))
+    for field in ("include", "exclude"):
+        values = table.get(field)
+        if values is None:
+            continue
+        if not isinstance(values, list):
+            fail("%s.%s must be an array in %s" % (key, field, path))
+        if not known:
+            fail("%s registry unreadable while %s selects ids in %s" % (key, key, path))
+        for raw in values:
+            ident = str(raw).strip()
+            if ident and ident not in known:
+                fail("unknown %s id '%s' in %s" % (key, ident, path))
+
+
 def validate_keys(data: dict, path: Path) -> None:
     for k in data:
         if k not in ALLOWED_TOP:
@@ -222,6 +268,8 @@ def validate_keys(data: dict, path: Path) -> None:
     for k in comps:
         if k not in ALLOWED_COMPONENTS:
             fail("unknown components key '%s' in %s" % (k, path))
+    validate_named(data, "skills", path, skill_ids())
+    validate_named(data, "mcp", path, mcp_ids())
 
 
 def resolve_extends_path(extends: str, from_path: Path) -> Path:

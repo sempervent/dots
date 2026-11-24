@@ -159,6 +159,35 @@ DOTS_FORCE_OS=darwin DOTS_FORCE_DARWIN_MAJOR=15 \
 printf '%s\n' "$(cat "${HOME}/.config/dots/active-profile")" | grep -q 'base-local' \
 	&& ok "legacy mutate still activates" || bad "legacy mutate did not activate"
 
+echo "=== 6d. skill and mcp tables pass profile validation and write once ==="
+home_ov="${HOME}/.config/dots/profiles/home-local.toml"
+ov_before_cap="$(cksum <"${home_ov}")"
+marker_before_cap="$(cat "${HOME}/.config/dots/active-profile")"
+set +e
+unknown_skill="$("${ROOT}/dots" profile mutate --profile home --add-skill not-a-skill --add-mcp dots-model-scout --preserve-active --yes 2>&1)"
+unknown_rc=$?
+set -e
+[[ ${unknown_rc} -ne 0 ]] && printf '%s\n' "${unknown_skill}" | grep -q "unknown skill" \
+	&& ok "unknown skill rejected" || bad "unknown skill: ${unknown_skill}"
+[[ "$(cksum <"${home_ov}")" == "${ov_before_cap}" ]] && ok "unknown skill wrote nothing" || bad "unknown skill mutated overlay"
+DOTS_FORCE_OS=darwin DOTS_FORCE_DARWIN_MAJOR=15 \
+	"${ROOT}/dots" profile mutate --profile home --add-skill hf-cli --add-mcp dots-model-scout --add-package raycast --preserve-active --yes
+grep -q 'hf-cli' "${home_ov}" && grep -q 'dots-model-scout' "${home_ov}" && grep -q 'raycast' "${home_ov}" \
+	&& ok "skill, mcp, and package written together" || bad "overlay missing capability rows: $(cat "${home_ov}")"
+[[ "$(cat "${HOME}/.config/dots/active-profile")" == "${marker_before_cap}" ]] \
+	&& ok "capability mutate preserved the active profile" || bad "capability mutate changed active profile"
+cap_show="$("${ROOT}/dots" profile show home-local --json)"
+printf '%s\n' "${cap_show}" | python3 -c '
+import json, sys
+d = json.load(sys.stdin)
+assert d["skills"]["hf-cli"]["state"] == "local", d["skills"]
+assert d["skills"]["hf-cli"]["desired_via"] == ["explicit-skill"], d["skills"]
+assert d["mcp"]["dots-model-scout"]["state"] == "local", d["mcp"]
+assert "hf-cli" in d["local_additions"]["skills"], d["local_additions"]
+assert "dots-model-scout" in d["local_additions"]["mcp"], d["local_additions"]
+assert d["explicit_packages"]["raycast"]["state"] == "local", d["explicit_packages"]
+' && ok "profile show --json reports skill and mcp desired state" || bad "capability show json"
+
 echo "=== 6. dots tui --help and non-TTY safety ==="
 tui_help="$("${ROOT}/dots" tui --help 2>&1)"
 echo "${tui_help}" | grep -q 'dots tui' && ok "dots tui --help" || bad "dots tui --help"
