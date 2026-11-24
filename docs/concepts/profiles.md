@@ -88,6 +88,9 @@ A `file-tank` profile extending `server` (ZFS / SMART / nvme tooling) is
 Ordinary lifecycle edits never modify `configs/bootstrap/profiles/*.toml` or
 overwrite user-authored custom profiles. Instead, DOTS writes sparse
 DOTS-managed overlays (`~/.config/dots/profiles/<name>-local.toml`).
+Skill and MCP desired state use the same overlay. `[skills]` and `[mcp]`
+accept only `include` and `exclude` arrays, and every id must already exist
+in the curated skill manifest or MCP trust registry.
 
 ```bash
 ./dots install dev             # resolve owner, update sparse overlay, apply
