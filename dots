@@ -930,7 +930,7 @@ _dots_profile_package_subcmd() {
 
 _dots_profile_mutate_subcmd() {
 	local profile_arg="" expected_hash="" apply=0 dry=0 yes=0 preserve_active=0
-	local -a add_raws=() rem_raws=() add_pkgs=() rem_pkgs=()
+	local -a add_raws=() rem_raws=() add_pkgs=() rem_pkgs=() add_skills=() rem_skills=() add_mcps=() rem_mcps=()
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
 		--profile)
@@ -978,6 +978,42 @@ _dots_profile_mutate_subcmd() {
 			shift
 			;;
 		--remove-package=*) rem_pkgs+=("${1#*=}") ;;
+		--add-skill)
+			[[ -n ${2:-} ]] || {
+				echo "Error: --add-skill requires a skill name" >&2
+				return 1
+			}
+			add_skills+=("${2}")
+			shift
+			;;
+		--add-skill=*) add_skills+=("${1#*=}") ;;
+		--remove-skill)
+			[[ -n ${2:-} ]] || {
+				echo "Error: --remove-skill requires a skill name" >&2
+				return 1
+			}
+			rem_skills+=("${2}")
+			shift
+			;;
+		--remove-skill=*) rem_skills+=("${1#*=}") ;;
+		--add-mcp)
+			[[ -n ${2:-} ]] || {
+				echo "Error: --add-mcp requires an MCP id" >&2
+				return 1
+			}
+			add_mcps+=("${2}")
+			shift
+			;;
+		--add-mcp=*) add_mcps+=("${1#*=}") ;;
+		--remove-mcp)
+			[[ -n ${2:-} ]] || {
+				echo "Error: --remove-mcp requires an MCP id" >&2
+				return 1
+			}
+			rem_mcps+=("${2}")
+			shift
+			;;
+		--remove-mcp=*) rem_mcps+=("${1#*=}") ;;
 		--expected-hash)
 			expected_hash="${2:-}"
 			shift
@@ -989,7 +1025,7 @@ _dots_profile_mutate_subcmd() {
 		--preserve-active) preserve_active=1 ;;
 		-h | --help)
 			cat <<'EOF'
-Usage: ./dots profile mutate [--profile NAME|PATH] [--add SEL]... [--remove SEL]... [--add-package PKG]... [--remove-package PKG]... [--expected-hash SHA] [--preserve-active] [--apply] [--dry-run] [--yes]
+Usage: ./dots profile mutate [--profile NAME|PATH] [--add SEL]... [--remove SEL]... [--add-package PKG]... [--remove-package PKG]... [--add-skill NAME]... [--remove-skill NAME]... [--add-mcp ID]... [--remove-mcp ID]... [--expected-hash SHA] [--preserve-active] [--apply] [--dry-run] [--yes]
 
 --preserve-active
     Update the requested profile without changing the active-profile pointer.
@@ -1006,8 +1042,8 @@ EOF
 		shift
 	done
 
-	if [[ ${#add_raws[@]} -eq 0 && ${#rem_raws[@]} -eq 0 && ${#add_pkgs[@]} -eq 0 && ${#rem_pkgs[@]} -eq 0 ]]; then
-		echo "Error: profile mutate requires at least one --add, --remove, --add-package, or --remove-package" >&2
+	if [[ ${#add_raws[@]} -eq 0 && ${#rem_raws[@]} -eq 0 && ${#add_pkgs[@]} -eq 0 && ${#rem_pkgs[@]} -eq 0 && ${#add_skills[@]} -eq 0 && ${#rem_skills[@]} -eq 0 && ${#add_mcps[@]} -eq 0 && ${#rem_mcps[@]} -eq 0 ]]; then
+		echo "Error: profile mutate requires at least one --add, --remove, --add-package, --remove-package, --add-skill, --remove-skill, --add-mcp, or --remove-mcp" >&2
 		return 1
 	fi
 	if [[ ${preserve_active} -eq 1 && ${apply} -eq 1 ]]; then
@@ -1047,6 +1083,19 @@ EOF
 	done
 	for pkg in "${rem_pkgs[@]+"${rem_pkgs[@]}"}"; do
 		resolved_rems+=("package:${pkg}")
+	done
+	local cap
+	for cap in "${add_skills[@]+"${add_skills[@]}"}"; do
+		resolved_adds+=("skill:${cap}")
+	done
+	for cap in "${rem_skills[@]+"${rem_skills[@]}"}"; do
+		resolved_rems+=("skill:${cap}")
+	done
+	for cap in "${add_mcps[@]+"${add_mcps[@]}"}"; do
+		resolved_adds+=("mcp:${cap}")
+	done
+	for cap in "${rem_mcps[@]+"${rem_mcps[@]}"}"; do
+		resolved_rems+=("mcp:${cap}")
 	done
 
 	dots_profile_edit_resolve_target "${profile_arg}" 0 || return 1
@@ -1223,7 +1272,7 @@ PY
 		;;
 	plan)
 		local p="" json=0
-		local -a add_sels=() rem_sels=() add_pkgs=() rem_pkgs=()
+		local -a add_sels=() rem_sels=() add_pkgs=() rem_pkgs=() add_skills=() rem_skills=() add_mcps=() rem_mcps=()
 		while [[ $# -gt 0 ]]; do
 			case "$1" in
 			--json) json=1 ;;
@@ -1252,8 +1301,28 @@ PY
 				shift || true
 				;;
 			--remove-package=*) rem_pkgs+=("${1#*=}") ;;
+			--add-skill)
+				add_skills+=("${2:-}")
+				shift || true
+				;;
+			--add-skill=*) add_skills+=("${1#*=}") ;;
+			--remove-skill)
+				rem_skills+=("${2:-}")
+				shift || true
+				;;
+			--remove-skill=*) rem_skills+=("${1#*=}") ;;
+			--add-mcp)
+				add_mcps+=("${2:-}")
+				shift || true
+				;;
+			--add-mcp=*) add_mcps+=("${1#*=}") ;;
+			--remove-mcp)
+				rem_mcps+=("${2:-}")
+				shift || true
+				;;
+			--remove-mcp=*) rem_mcps+=("${1#*=}") ;;
 			-h | --help)
-				echo "Usage: ./dots profile plan [--profile NAME] [--add SEL]... [--remove SEL]... [--add-package PKG]... [--remove-package PKG]... [--json]"
+				echo "Usage: ./dots profile plan [--profile NAME] [--add SEL]... [--remove SEL]... [--add-package PKG]... [--remove-package PKG]... [--add-skill NAME]... [--add-mcp ID]... [--json]"
 				return 0
 				;;
 			*)
@@ -1293,6 +1362,23 @@ PY
 		for pkg in "${rem_pkgs[@]+"${rem_pkgs[@]}"}"; do
 			[[ -z ${pkg} ]] && continue
 			r_rems+=("package:${pkg}")
+		done
+		local cap
+		for cap in "${add_skills[@]+"${add_skills[@]}"}"; do
+			[[ -z ${cap} ]] && continue
+			r_adds+=("skill:${cap}")
+		done
+		for cap in "${rem_skills[@]+"${rem_skills[@]}"}"; do
+			[[ -z ${cap} ]] && continue
+			r_rems+=("skill:${cap}")
+		done
+		for cap in "${add_mcps[@]+"${add_mcps[@]}"}"; do
+			[[ -z ${cap} ]] && continue
+			r_adds+=("mcp:${cap}")
+		done
+		for cap in "${rem_mcps[@]+"${rem_mcps[@]}"}"; do
+			[[ -z ${cap} ]] && continue
+			r_rems+=("mcp:${cap}")
 		done
 		local adds_nl="" rems_nl=""
 		[[ ${#r_adds[@]} -gt 0 ]] && adds_nl="$(printf '%s\n' "${r_adds[@]}")"
@@ -1615,6 +1701,11 @@ EOF
 dots_cmd_check() {
 	# Local CI modes (Phase 1) — distinct from machine health check below.
 	case "${1:-}" in
+	runtimes)
+		shift || true
+		dots_py_capabilities runtimes "$@"
+		return $?
+		;;
 	fast | workflows | all-local | act | release-notes)
 		exec "${DIR}/scripts/ci/local_validate.sh" "$@"
 		;;
@@ -2335,6 +2426,20 @@ EOF
 	exec "${helper}" "$@"
 }
 
+dots_py_capabilities() {
+	PYTHONPATH="${DIR}/tools/dots_agent${PYTHONPATH:+:${PYTHONPATH}}" \
+		DOTS_DIR="${DIR}" \
+		python3 -m dots_agent.capabilities "$@"
+}
+
+dots_cmd_skills() {
+	dots_py_capabilities skills "$@"
+}
+
+dots_cmd_mcp() {
+	dots_py_capabilities mcp "$@"
+}
+
 # --- dispatch ---
 cmd="${1:-}"
 case "${cmd}" in
@@ -2385,6 +2490,14 @@ ai)
 agent)
 	shift || true
 	dots_cmd_agent "$@"
+	;;
+skills)
+	shift || true
+	dots_cmd_skills "$@"
+	;;
+mcp)
+	shift || true
+	dots_cmd_mcp "$@"
 	;;
 packages | package)
 	shift || true
