@@ -1,21 +1,76 @@
-# DOTS-owned MCP server trust metadata (Phase 2).
-# Safe harness runs expose only servers listed under [agent.mcp].safe_servers
-# (see configs/agents/defaults.toml). Interactive `pi` keeps the user's MCP config.
+# DOTS-owned MCP server trust metadata.
+# Safe harness runs expose only servers that pass the safe-mode filter
+# (desired ∩ registry ∩ client ∩ mode ∩ permissions). Interactive clients
+# keep their own config; `dots mcp sync` merges only DOTS-owned entries.
+#
+# Protocol target: MCP 2026-07-28. Transports: stdio and streamable HTTP.
+# Do not store tokens or API key values here.
 
-version = 1
+version = 2
+protocol = "2026-07-28"
 
 [[mcp_servers]]
 id = "dots-model-scout"
+label = "DOTS Model Scout"
+source = "local"
+transport = "stdio"
+command = "dots-model-scout"
+protocol_min = "2026-07-28"
 trust = "read_only_network"
 filesystem = false
+filesystem_read = false
+filesystem_write = false
 shell = false
+network = true
+remote_write = false
 billable = false
+auth_mode = "env"
+required_env = ["OPENROUTER_API_KEY"]
+allowed_clients = ["pi", "hermes", "codex", "opencode", "cursor"]
+allowed_modes = ["safe", "in_place", "interactive"]
+safe_default = true
 description = "OpenRouter catalog metadata selection only"
 
 [[mcp_servers]]
 id = "dots-expert"
+label = "DOTS Expert"
+source = "local"
+transport = "stdio"
+command = "dots-expert"
+protocol_min = "2026-07-28"
 trust = "billable_remote"
 filesystem = false
+filesystem_read = false
+filesystem_write = false
 shell = false
+network = true
+remote_write = false
 billable = true
-description = "LiteLLM → OpenRouter consultation; no FS/shell"
+auth_mode = "env"
+required_env = ["OPENROUTER_API_KEY"]
+allowed_clients = ["pi", "hermes", "codex", "opencode", "cursor"]
+allowed_modes = ["safe", "in_place", "interactive"]
+safe_default = true
+description = "LiteLLM to OpenRouter consultation; no filesystem or shell"
+
+[[mcp_servers]]
+id = "drawthings"
+label = "Draw Things"
+source = "local"
+transport = "stdio"
+command = "python3"
+args = ["tools/drawthings_mcp/server.py"]
+protocol_min = "2026-07-28"
+trust = "local_media"
+filesystem = true
+filesystem_read = true
+filesystem_write = true
+shell = false
+network = true
+remote_write = false
+billable = false
+auth_mode = "none"
+allowed_clients = ["pi", "hermes"]
+allowed_modes = ["interactive"]
+safe_default = false
+description = "Local Draw Things bridge. Writes images. Not a safe-mode default."

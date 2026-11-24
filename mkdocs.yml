@@ -104,6 +104,8 @@ nav:
   - Agents and AI:
       - Agent harness: agents/harness.md
       - Architecture: agents/architecture.md
+      - Capabilities: agents/capabilities.md
+      - MCP: agents/mcp.md
       - Architecture diagrams: agents/diagrams.md
       - Security: agents/security.md
       - Model Scout: agents/model-scout.md

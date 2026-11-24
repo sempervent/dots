@@ -8,7 +8,7 @@ _dots() {
   typeset -A opt_args
   local -a commands topics selectors groups profiles providers tiers
   local -a lsp_subs model_subs shell_subs completion_subs pkg_subs profile_subs
-  local -a component_subs ai_subs agent_subs lsp_ids
+  local -a component_subs ai_subs agent_subs lsp_ids skill_subs skill_ids mcp_subs mcp_ids
 
   commands=(
     'setup:Interactive or noninteractive setup / reconfigure towar…'
@@ -21,6 +21,8 @@ _dots() {
     'ai:AI inference server (Compose + Open WebUI) control plan…'
     'agent:Local-first agent harness (Pi, OpenRig, evals, guarded…'
     'packages:Package ownership, installability audit, drift, groups,…'
+    'skills:Curated Agent Skills inventory, audit, and explicit upd…'
+    'mcp:Curated MCP registry, discovery, health, and client pro…'
     'backup:Snapshot managed targets under ~/.local/state/dots/back…'
     'backups:List recoverable DOTS snapshots.'
     'restore:Restore a snapshot (creates a safety snapshot first).'
@@ -73,6 +75,7 @@ _dots() {
     'archify:Archify'
     'skills:Engineering skills'
     'ai-skills:AI skills'
+    'frontend-skills:Frontend skills'
     'drawthings:Draw Things'
     'opencode:OpenCode'
     'codex:Codex'
@@ -120,10 +123,14 @@ _dots() {
   shell_subs=('status' 'keys' 'startup')
   completion_subs=('status' 'paths')
   pkg_subs=('groups' 'group' 'leaves' 'leaf-packages' 'plan' 'status' 'explain' 'outdated' 'upgrade' 'adopt' 'audit' 'help')
-  profile_subs=('list' 'show' 'plan' 'resolve' 'add' 'remove' 'add-package' 'remove-package' 'mutate' 'diff' 'apply' 'create' 'switch' 'help')
+  profile_subs=('list' 'show' 'plan' 'resolve' 'add' 'remove' 'add-package' 'remove-package' 'add-skill' 'remove-skill' 'add-mcp' 'remove-mcp' 'mutate' 'diff' 'apply' 'create' 'switch' 'help')
   component_subs=('list' 'active' 'show' 'help')
   ai_subs=('status' 'doctor' 'up' 'down' 'help')
-  agent_subs=('status' 'doctor' 'sandbox' 'models' 'scout' 'route' 'eval' 'team' 'run' 'worktrees' 'diff' 'apply' 'discard' 'mcp' 'costs' 'gateway')
+  agent_subs=('status' 'doctor' 'sandbox' 'models' 'scout' 'route' 'eval' 'team' 'run' 'worktrees' 'diff' 'apply' 'discard' 'mcp' 'capabilities' 'costs' 'gateway')
+  skill_subs=('list' 'status' 'show' 'find' 'check' 'audit' 'update')
+  skill_ids=('skill-security-review' 'systematic-debugging' 'verification-methodology' 'implementation-planning' 'spec-driven-development' 'software-architecture' 'software-architecture-analysis' 'secure-software-engineering' 'technical-documentation' 'adr-authoring' 'cli-builder' 'docker-compose' 'kubernetes' 'terraform' 'release-engineering' 'playwright' 'archify' 'agent-evals-and-observability' 'agent-production-operations' 'litellm' 'ml-engineering' 'workflow-architect' 'capacity-and-cost-engineering' 'privacy-engineering' 'product-analytics-and-measurement' 'telemetry' 'security-audit' 'agents-md' 'code-simplifier' 'skill-authoring' 'hf-cli' 'frontend-design')
+  mcp_subs=('list' 'show' 'status' 'doctor' 'search' 'inspect' 'enable' 'disable' 'plan' 'sync' 'audit')
+  mcp_ids=('dots-model-scout' 'dots-expert' 'drawthings')
   lsp_ids=('rust-analyzer' 'basedpyright' 'gopls' 'bash-language-server' 'yaml-language-server' 'vscode-json-language-server' 'lua-language-server' 'markdown-oxide' 'taplo' 'terraform-ls' 'dockerfile-language-server' 'r-languageserver')
 
   _arguments -C \
@@ -199,6 +206,20 @@ _dots() {
       ;;
     ai)
       _values 'ai' ${ai_subs[@]}
+      ;;
+    skills)
+      if (( CURRENT == 3 )); then
+        _values 'skill' ${skill_subs[@]}
+      else
+        _values 'skill-id' ${skill_ids[@]}
+      fi
+      ;;
+    mcp)
+      if (( CURRENT == 3 )); then
+        _values 'mcp' ${mcp_subs[@]}
+      else
+        _values 'mcp-id' ${mcp_ids[@]}
+      fi
       ;;
     agent)
       if (( CURRENT == 3 )) && [[ ${words[2]} == eval ]]; then

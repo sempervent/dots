@@ -9,9 +9,9 @@ _dots_complete() {
   local cmd="${COMP_WORDS[1]:-}"
   local sub="${COMP_WORDS[2]:-}"
 
-  local commands='setup tui install upgrade status components lsp ai agent packages backup backups restore profile models check update help shell completion'
+  local commands='setup tui install upgrade status components lsp ai agent packages skills mcp backup backups restore profile models check update help shell completion'
   local topics='overview getting-started shell completion keybindings profiles components supergroups packages ai models lsp skills backup data agent network agent-security hardware infra docs-tooling geo diagnostics media update commands files agent-evals agent-routing agent-teams'
-  local selectors='ai herdr hermes ollama llamacpp archify skills ai-skills drawthings opencode codex cursor fluidvoice images tex mactools karabiner-elements orbstack davinci-resolve mitmproxy syncthing lsp ai-server pi litellm agent-sandbox openrig'
+  local selectors='ai herdr hermes ollama llamacpp archify skills ai-skills frontend-skills drawthings opencode codex cursor fluidvoice images tex mactools karabiner-elements orbstack davinci-resolve mitmproxy syncthing lsp ai-server pi litellm agent-sandbox openrig'
   local groups='core modern workstation infra media gui server dev security network hardware data backup geo containers k8s docs'
   local profiles='base home work server all'
   local providers='ollama llamacpp drawthings fluidvoice all'
@@ -22,10 +22,14 @@ _dots_complete() {
   local shell_subs='status keys startup'
   local completion_subs='status paths'
   local pkg_subs='groups group leaves leaf-packages plan status explain outdated upgrade adopt audit help'
-  local profile_subs='list show plan resolve add remove add-package remove-package mutate diff apply create switch help'
+  local profile_subs='list show plan resolve add remove add-package remove-package add-skill remove-skill add-mcp remove-mcp mutate diff apply create switch help'
   local component_subs='list active show help'
   local ai_subs='status doctor up down help'
-  local agent_subs='status doctor sandbox models scout route eval team run worktrees diff apply discard mcp costs gateway'
+  local agent_subs='status doctor sandbox models scout route eval team run worktrees diff apply discard mcp capabilities costs gateway'
+  local skill_subs='list status show find check audit update'
+  local skill_ids='skill-security-review systematic-debugging verification-methodology implementation-planning spec-driven-development software-architecture software-architecture-analysis secure-software-engineering technical-documentation adr-authoring cli-builder docker-compose kubernetes terraform release-engineering playwright archify agent-evals-and-observability agent-production-operations litellm ml-engineering workflow-architect capacity-and-cost-engineering privacy-engineering product-analytics-and-measurement telemetry security-audit agents-md code-simplifier skill-authoring hf-cli frontend-design'
+  local mcp_subs='list show status doctor search inspect enable disable plan sync audit'
+  local mcp_ids='dots-model-scout dots-expert drawthings'
 
   _dots_custom_profiles() {
     local d="${HOME}/.config/dots/profiles" f
@@ -118,6 +122,20 @@ _dots_complete() {
     ;;
   agent)
     COMPREPLY=($(compgen -W "${agent_subs}" -- "${cur}"))
+    ;;
+  skills)
+    if [[ ${COMP_CWORD} -eq 2 ]]; then
+      COMPREPLY=($(compgen -W "${skill_subs}" -- "${cur}"))
+    else
+      COMPREPLY=($(compgen -W "${skill_ids}" -- "${cur}"))
+    fi
+    ;;
+  mcp)
+    if [[ ${COMP_CWORD} -eq 2 ]]; then
+      COMPREPLY=($(compgen -W "${mcp_subs}" -- "${cur}"))
+    else
+      COMPREPLY=($(compgen -W "${mcp_ids}" -- "${cur}"))
+    fi
     ;;
   shell)
     COMPREPLY=($(compgen -W "${shell_subs}" -- "${cur}"))

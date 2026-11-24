@@ -12,6 +12,10 @@ dots agent run (safe)
   → trusted MCP allowlist only
 ```
 
+Safe mode admits an MCP server only when it is desired, curated, allowed for the client and mode, and free of shell, filesystem write, and remote write. A profile that desires a dangerous server does not put that server on the safe run. Interactive `dots mcp sync` may merge DOTS-owned entries into a client config; that config is not passed into a safe run.
+
+MCP server processes are a separate trust boundary. v1.14 does not wrap them in a new container runtime. See [mcp](mcp.md).
+
 `pi-sandbox` is part of the **trusted computing base**. Installing a Pi package
 executes code with your privileges; the extension cannot sandbox itself.
 Provenance: `configs/agents/pi-sandbox-provenance.toml`.

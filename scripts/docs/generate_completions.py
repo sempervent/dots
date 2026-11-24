@@ -23,6 +23,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import metadata as meta  # noqa: E402
 
 ROOT = meta.ROOT
+
+
+def _capability_words() -> tuple[str, str]:
+    import tomllib
+
+    skills = tomllib.loads((ROOT / "configs/skills/manifest.toml").read_text(encoding="utf-8"))
+    servers = tomllib.loads((ROOT / "configs/agents/mcp-trust.toml").read_text(encoding="utf-8"))
+    skill_names = " ".join(str(row.get("name")) for row in skills.get("skills") or [] if row.get("name"))
+    mcp_ids = " ".join(str(row.get("id")) for row in servers.get("mcp_servers") or [] if row.get("id"))
+    return skill_names, mcp_ids
 OUT_DIR = ROOT / "generated" / "completions"
 ZSH_OUT = OUT_DIR / "_dots"
 BASH_OUT = OUT_DIR / "dots.bash"
@@ -101,7 +111,7 @@ def build_zsh() -> str:
     shell_subs = ["status", "keys", "startup"]
     completion_subs = ["status", "paths"]
     pkg_subs = ["groups", "group", "leaves", "leaf-packages", "plan", "status", "explain", "outdated", "upgrade", "adopt", "audit", "help"]
-    profile_subs = ["list", "show", "plan", "resolve", "add", "remove", "add-package", "remove-package", "mutate", "diff", "apply", "create", "switch", "help"]
+    profile_subs = ["list", "show", "plan", "resolve", "add", "remove", "add-package", "remove-package", "add-skill", "remove-skill", "add-mcp", "remove-mcp", "mutate", "diff", "apply", "create", "switch", "help"]
     component_subs = ["list", "active", "show", "help"]
     ai_subs = ["status", "doctor", "up", "down", "help"]
     agent_subs = [
@@ -119,9 +129,24 @@ def build_zsh() -> str:
         "apply",
         "discard",
         "mcp",
+        "capabilities",
         "costs",
         "gateway",
     ]
+    import tomllib
+
+    skill_names = [
+        str(row.get("name"))
+        for row in tomllib.loads((ROOT / "configs/skills/manifest.toml").read_text(encoding="utf-8")).get("skills") or []
+        if row.get("name")
+    ]
+    mcp_ids = [
+        str(row.get("id"))
+        for row in tomllib.loads((ROOT / "configs/agents/mcp-trust.toml").read_text(encoding="utf-8")).get("mcp_servers") or []
+        if row.get("id")
+    ]
+    skill_subs = ["list", "status", "show", "find", "check", "audit", "update"]
+    mcp_subs = ["list", "show", "status", "doctor", "search", "inspect", "enable", "disable", "plan", "sync", "audit"]
 
     lines = [
         HEADER_ZSH.rstrip(),
@@ -131,7 +156,7 @@ def build_zsh() -> str:
         "  typeset -A opt_args",
         "  local -a commands topics selectors groups profiles providers tiers",
         "  local -a lsp_subs model_subs shell_subs completion_subs pkg_subs profile_subs",
-        "  local -a component_subs ai_subs agent_subs lsp_ids",
+        "  local -a component_subs ai_subs agent_subs lsp_ids skill_subs skill_ids mcp_subs mcp_ids",
         "",
         "  commands=(",
         *cmd_pairs,
@@ -157,6 +182,10 @@ def build_zsh() -> str:
         "  component_subs=(" + " ".join(f"'{s}'" for s in component_subs) + ")",
         "  ai_subs=(" + " ".join(f"'{s}'" for s in ai_subs) + ")",
         "  agent_subs=(" + " ".join(f"'{s}'" for s in agent_subs) + ")",
+        "  skill_subs=(" + " ".join(f"'{s}'" for s in skill_subs) + ")",
+        "  skill_ids=(" + " ".join(f"'{s}'" for s in skill_names) + ")",
+        "  mcp_subs=(" + " ".join(f"'{s}'" for s in mcp_subs) + ")",
+        "  mcp_ids=(" + " ".join(f"'{s}'" for s in mcp_ids) + ")",
         "  lsp_ids=(" + " ".join(f"'{s}'" for s in lsp_ids) + ")",
         "",
         "  _arguments -C \\",
@@ -232,6 +261,20 @@ def build_zsh() -> str:
         "      ;;",
         "    ai)",
         "      _values 'ai' ${ai_subs[@]}",
+        "      ;;",
+        "    skills)",
+        "      if (( CURRENT == 3 )); then",
+        "        _values 'skill' ${skill_subs[@]}",
+        "      else",
+        "        _values 'skill-id' ${skill_ids[@]}",
+        "      fi",
+        "      ;;",
+        "    mcp)",
+        "      if (( CURRENT == 3 )); then",
+        "        _values 'mcp' ${mcp_subs[@]}",
+        "      else",
+        "        _values 'mcp-id' ${mcp_ids[@]}",
+        "      fi",
         "      ;;",
         "    agent)",
         "      if (( CURRENT == 3 )) && [[ ${words[2]} == eval ]]; then",
@@ -378,6 +421,7 @@ def build_bash() -> str:
     prof_names = " ".join(profiles)
     prov_names = " ".join(providers)
     tier_names = " ".join(tiers)
+    skill_id_names, mcp_id_names = _capability_words()
 
     return f"""{HEADER_BASH}
 _dots_complete() {{
@@ -399,10 +443,14 @@ _dots_complete() {{
   local shell_subs='status keys startup'
   local completion_subs='status paths'
   local pkg_subs='groups group leaves leaf-packages plan status explain outdated upgrade adopt audit help'
-  local profile_subs='list show plan resolve add remove add-package remove-package mutate diff apply create switch help'
+  local profile_subs='list show plan resolve add remove add-package remove-package add-skill remove-skill add-mcp remove-mcp mutate diff apply create switch help'
   local component_subs='list active show help'
   local ai_subs='status doctor up down help'
-  local agent_subs='status doctor sandbox models scout route eval team run worktrees diff apply discard mcp costs gateway'
+  local agent_subs='status doctor sandbox models scout route eval team run worktrees diff apply discard mcp capabilities costs gateway'
+  local skill_subs='list status show find check audit update'
+  local skill_ids='{skill_id_names}'
+  local mcp_subs='list show status doctor search inspect enable disable plan sync audit'
+  local mcp_ids='{mcp_id_names}'
 
   _dots_custom_profiles() {{
     local d="${{HOME}}/.config/dots/profiles" f
@@ -495,6 +543,20 @@ _dots_complete() {{
     ;;
   agent)
     COMPREPLY=($(compgen -W "${{agent_subs}}" -- "${{cur}}"))
+    ;;
+  skills)
+    if [[ ${{COMP_CWORD}} -eq 2 ]]; then
+      COMPREPLY=($(compgen -W "${{skill_subs}}" -- "${{cur}}"))
+    else
+      COMPREPLY=($(compgen -W "${{skill_ids}}" -- "${{cur}}"))
+    fi
+    ;;
+  mcp)
+    if [[ ${{COMP_CWORD}} -eq 2 ]]; then
+      COMPREPLY=($(compgen -W "${{mcp_subs}}" -- "${{cur}}"))
+    else
+      COMPREPLY=($(compgen -W "${{mcp_ids}}" -- "${{cur}}"))
+    fi
     ;;
   shell)
     COMPREPLY=($(compgen -W "${{shell_subs}}" -- "${{cur}}"))

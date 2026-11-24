@@ -1,0 +1,38 @@
+# Capability runtime requirements.
+#
+# This is the authority for which runtime a selected capability needs.
+# It is not a second inventory of skills, MCP servers, or components.
+# Node is installed only through fnm (see helpers/fnm.sh). DOTS does not
+# install nvm, asdf, or mise.
+#
+# Verified at v1.14 authoring:
+#   skills CLI (vercel-labs/skills 1.5.19): engines.node >=22.20.0
+#   Pi (@earendil-works/pi-coding-agent): Node 22+; DOTS floor 22.19.0
+#   OpenRig (@openrig/cli 0.7.7): accepted majors 22 and 24, preferred 22
+# Default DOTS Node major: configs/node/default.toml version 24
+
+version = 1
+
+[[requirements]]
+id = "skills-cli"
+runtime = "node"
+constraint = ">=22.20.0"
+consumers = [
+  "component:skills",
+  "component:ai-skills",
+  "component:archify",
+  "component:frontend-skills",
+]
+
+[[requirements]]
+id = "pi"
+runtime = "node"
+constraint = ">=22.19.0"
+consumers = ["component:pi"]
+
+[[requirements]]
+id = "openrig"
+runtime = "node"
+accepted_majors = [22, 24]
+preferred_major = 22
+consumers = ["component:openrig"]

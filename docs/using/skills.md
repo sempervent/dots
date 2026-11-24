@@ -100,6 +100,34 @@ No new component.
 Prefer `brewfile =` on the component (shared file allowed, e.g. Archify). Apply
 path is resolved by `dots_component_brewfile` — see [Extending](extending.md).
 
+## Lifecycle
+
+```bash
+./dots skills list
+./dots skills status
+./dots skills show NAME
+./dots skills find QUERY
+./dots skills audit
+./dots skills update NAME --plan
+./dots skills update NAME --yes
+```
+
+`./scripts/update-skills.sh` remains a compatibility wrapper. Setup does not update installed skills.
+
+Reviewed sources live in `[[skill_sources]]` with a pinned `ref`. When a ref is a commit, install clones that commit instead of a moving branch. Machine-local hashes live under `~/.config/dots/skills/`, not in the git manifest.
+
+Profiles can add individual curated skills:
+
+```toml
+[skills]
+include = ["hf-cli"]
+exclude = []
+```
+
+Effective skills are the selected packs plus `include`, minus `exclude`. A skill selected by both a pack and `include` is desired once. Removing it from desired state leaves the installed files in place.
+
+The skills CLI requires Node `>=22.20.0` (`configs/runtime-requirements.toml`). DOTS checks that with fnm and does not install nvm.
+
 ## Updates
 
 ```bash

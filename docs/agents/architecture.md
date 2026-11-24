@@ -7,6 +7,9 @@ frozen release snapshot. Delivery history lives in the
 [roadmap](v1.6-roadmap.md). Explorable diagrams:
 [Architecture diagrams](diagrams.md).
 
+Capability control plane: [capabilities](capabilities.md). MCP permissions and
+projection: [mcp](mcp.md).
+
 ## End-to-end control flow
 
 ```text

@@ -107,7 +107,7 @@ dots_skill_is_installed() {
 install_agent_skill() {
   local name="$1"
   local spec
-  local min_node=18
+  local node_constraint=">=22.20.0"
 
   if ! spec="$(agent_skill_package "${name}")"; then
     echo "Error: unknown agent skill: ${name}" >&2
@@ -117,7 +117,7 @@ install_agent_skill() {
   echo "=== Agent skill: ${name} ==="
 
   if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
-    echo "[dry-run] ensure Node >= ${min_node} and npx"
+    echo "[dry-run] ensure Node ${node_constraint} and npx"
     if agent_skill_is_installed "${name}"; then
       echo "[dry-run] would skip install (${name} already at $(dots_skill_find "${name}"))"
     else
@@ -126,7 +126,11 @@ install_agent_skill() {
     return 0
   fi
 
-  ensure_node_major "${min_node}" || return 1
+  if declare -F dots_ensure_node_requirement >/dev/null 2>&1; then
+    dots_ensure_node_requirement "${node_constraint}" || return 1
+  else
+    ensure_node_major 22 || return 1
+  fi
 
   local found=""
   if found="$(dots_skill_find "${name}")"; then

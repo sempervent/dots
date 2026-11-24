@@ -9,6 +9,7 @@ from textual.widgets import Button, Footer, Header, Input, Static, TabbedContent
 from .backend import BackendError, CommandResult, DotsBackend
 from .model import DesiredStateModel, SearchAction
 from .registry import Registry
+from .screens.capabilities import CapabilitiesPane
 from .screens.help_pane import HelpPane
 from .screens.manage import SoftwarePane
 from .screens.modals import (
@@ -225,6 +226,8 @@ class DotsTuiApp(App[None]):
                 yield OverviewPane(self.model, id="overview-pane")
             with TabPane("Profile Editor", id="tab-software"):
                 yield SoftwarePane(self.model, id="software-pane")
+            with TabPane("Agent Capabilities", id="tab-capabilities"):
+                yield CapabilitiesPane(id="capabilities-pane")
             with TabPane("Profiles", id="tab-profile"):
                 yield ProfilePane(self.model, dry_run=self.dry_run, id="profile-pane")
             with TabPane("Upgrade", id="tab-upgrade"):

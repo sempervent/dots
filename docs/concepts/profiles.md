@@ -1,7 +1,8 @@
 # Profiles
 
 A **profile** is a machine-role preset: package groups, optional components,
-runtime defaults (multiplexer, greeting), and optional `open_apps`.
+runtime defaults (multiplexer, greeting), optional `open_apps`, and optional
+skill and MCP desired state.
 
 Authority: `configs/bootstrap/profiles/*.toml`
 ([generated reference](../reference/generated/profiles.md)).

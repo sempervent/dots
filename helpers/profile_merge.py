@@ -64,6 +64,10 @@ def effective_state(
     pkgs: list[str] = []
     pkg_include: list[str] = []
     pkg_exclude: set[str] = set()
+    skill_include: list[str] = []
+    skill_exclude: set[str] = set()
+    mcp_include: list[str] = []
+    mcp_exclude: set[str] = set()
     with_raw: list[str] = []
     without_raw: set[str] = set()
     include_all = False
@@ -95,6 +99,8 @@ def effective_state(
         for p in str_list(ptbl.get("exclude")):
             pkg_exclude.add(p)
             pkg_include = [x for x in pkg_include if x != p]
+        skill_include, skill_exclude = _named_layer(data.get("skills") or {}, skill_include, skill_exclude)
+        mcp_include, mcp_exclude = _named_layer(data.get("mcp") or {}, mcp_include, mcp_exclude)
         for w in str_list(prof.get("with")):
             if w not in with_raw:
                 with_raw.append(w)
@@ -142,5 +148,25 @@ def effective_state(
         "expanded_without": expanded_without,
         "pkg_include": pkg_include,
         "pkg_exclude": pkg_exclude,
+        "skill_include": skill_include,
+        "skill_exclude": skill_exclude,
+        "mcp_include": mcp_include,
+        "mcp_exclude": mcp_exclude,
         "supergroups": supergroups,
     }
+
+
+def _named_layer(
+    section: dict[str, Any],
+    include: list[str],
+    exclude: set[str],
+) -> tuple[list[str], set[str]]:
+    """Parent include, plus local include, minus local exclude. Re-include clears an exclusion."""
+    for item in str_list(section.get("include")):
+        exclude.discard(item)
+        if item not in include:
+            include.append(item)
+    for item in str_list(section.get("exclude")):
+        exclude.add(item)
+        include = [x for x in include if x != item]
+    return include, exclude

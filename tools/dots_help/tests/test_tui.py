@@ -1088,3 +1088,55 @@ def test_save_activate_apply_bootstraps_once(isolated_env, tmp_path):
     marker = (isolated_env / ".config" / "dots" / "active-profile").read_text(encoding="utf-8")
     assert "work-local.toml" in marker
 
+
+def test_agent_capabilities_tab_stages_without_writing(isolated_env):
+    from dots_help.backend import DotsBackend
+    from dots_help.tui import DotsTuiApp
+
+    backend = DotsBackend(root=ROOT)
+
+    async def _run() -> None:
+        app = DotsTuiApp(backend=backend, dry_run=True, initial_tab="tab-capabilities")
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            summary = str(app.query_one("#cap-summary").render())
+            assert "Agent Capabilities" in summary
+            assert "Skills" in summary
+            assert "MCP" in summary
+            await pilot.click("#cap-view-skills")
+            await pilot.pause()
+            detail = str(app.query_one("#cap-detail").render())
+            assert "systematic-debugging" in detail
+            await pilot.click("#cap-view-mcp")
+            await pilot.pause()
+            detail = str(app.query_one("#cap-detail").render())
+            assert "remote_write=" in detail
+            assert "dots-model-scout" in detail
+            await pilot.click("#cap-view-problems")
+            await pilot.pause()
+            await pilot.click("#cap-view-updates")
+            await pilot.pause()
+            app.query_one("#cap-id").value = "hf-cli"
+            await pilot.click("#cap-enable")
+            await pilot.pause()
+            staged = str(app.query_one("#cap-detail").render())
+            assert "add skill:hf-cli" in staged
+            app.query_one("#cap-id").value = "drawthings"
+            await pilot.click("#cap-view-mcp")
+            await pilot.click("#cap-enable")
+            await pilot.pause()
+            await pilot.click("#cap-preview")
+            await pilot.pause()
+            preview = str(app.query_one("#cap-detail").render())
+            assert "hf-cli" in preview
+            assert "drawthings" in preview
+            assert "Warnings" in preview
+            await pilot.click("#cap-cancel")
+            await pilot.pause()
+            cleared = str(app.query_one("#cap-detail").render())
+            assert "Staged" not in cleared
+
+    asyncio.run(_run())
+    overlay = isolated_env / ".config" / "dots" / "profiles"
+    assert not any(overlay.glob("*.toml"))
+

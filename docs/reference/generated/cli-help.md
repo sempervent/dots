@@ -11,7 +11,7 @@ Captured from safe `--help` / `help` invocations. If a binary is missing or help
 ## `./dots`
 
 ```text
-DOTS — machine environment manager  (v1.13.3)
+DOTS — machine environment manager  (v1.14.0)
 
 Usage:
   ./dots setup [options]            Interactive or noninteractive setup / reconfigure...
@@ -22,14 +22,16 @@ Usage:
   ./dots components [list|active|show ID] Inspect optional components and --with selectors.
   ./dots lsp [status|check|install|list] Language-server install, status, and checks.
   ./dots ai [status|doctor|up|down|…] AI inference server (Compose + Open WebUI) control...
-  ./dots agent [status|doctor|sandbox|models|scout|eval|team|run|…] Local-first agent harness (Pi, OpenRig, evals...
+  ./dots agent [status|doctor|capabilities|sandbox|models|scout|eval|team|run|…] Local-first agent harness (Pi, OpenRig, evals...
   ./dots packages [groups|group|leaves|plan|status|explain|outdated|upgrade|adopt|audit] Package ownership, installability audit, drift...
+  ./dots skills [list|status|show|find|check|audit|update] Curated Agent Skills inventory, audit, and explicit...
+  ./dots mcp [list|show|status|doctor|search|inspect|enable|disable|plan|sync|audit] Curated MCP registry, discovery, health, and client...
   ./dots backup [--name N]          Snapshot managed targets under...
   ./dots backups                    List recoverable DOTS snapshots.
   ./dots restore [ID]               Restore a snapshot (creates a safety snapshot first).
   ./dots profile [list|show|plan|resolve|add|remove|add-package|remove-package|mutate|diff|apply|create|switch] Inspect, edit via sparse overlays, switch, or apply...
   ./dots models [discover|pull|…]   Local model plan, discovery, and pull workflows.
-  ./dots check [--profile NAME] | dots check fast|workflows|docs|all-local|act|release-notes|security|containers|k8s|dev|data|geo|media|backup|network|hardware|infra Machine health plus local CI, docs, security...
+  ./dots check [--profile NAME] | dots check fast|workflows|docs|all-local|act|release-notes|runtimes|security|containers|k8s|dev|data|geo|media|backup|network|hardware|infra Machine health plus local CI, docs, security...
   ./dots update                     Pull latest DOTS repo and optionally reapply setup...
   ./dots help [topic] [--plain] [--search QUERY] [--cheatsheet] Interactive Textual help (dots-help) for this machine.
   ./dots shell [status|keys|startup] Inspect shell, prompt, and keybinding ownership.
@@ -80,6 +82,7 @@ Selectors (--with / --without):
     archify      Archify skill only (also included in --with skills)
     skills       Curated engineering skill pack (includes Archify)
     ai-skills    Curated AI/agent engineering skill pack
+    frontend-skills Optional frontend design skill. Not selected by the ai supergroup or headless profiles.
     drawthings   Draw Things CLI + MCP bridge + img (GUI/models are macOS-oriented)
     opencode     Local/general coding adapter
     codex        Frontier coding via Homebrew cask Codex
@@ -144,6 +147,7 @@ Options:
                       archify      Archify skill only (also included in --with skills)
                       skills       Curated engineering skill pack (includes Archify)
                       ai-skills    Curated AI/agent engineering skill pack
+                      frontend-skills Optional frontend design skill. Not selected by the ai supergroup or headless profiles.
                       drawthings   Draw Things CLI + MCP bridge + img (GUI/models are macOS-oriented)
                       opencode     Local/general coding adapter
                       codex        Frontier coding via Homebrew cask Codex

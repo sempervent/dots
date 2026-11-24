@@ -792,6 +792,8 @@ prof_sec = dict(overlay_data.get("profile") or {})
 pkg_sec = dict(overlay_data.get("packages") or {})
 comp_sec = dict(overlay_data.get("components") or {})
 rt_sec = dict(overlay_data.get("runtime") or {})
+skill_sec = dict(overlay_data.get("skills") or {})
+mcp_sec = dict(overlay_data.get("mcp") or {})
 
 if not prof_sec.get("name"):
     prof_sec["name"] = overlay_name
@@ -803,12 +805,24 @@ pkg_remove = str_list(pkg_sec.get("remove"))
 pkg_groups = str_list(pkg_sec.get("groups")) if pkg_sec.get("groups") is not None else None
 pkg_include = str_list(pkg_sec.get("include"))
 pkg_exclude = str_list(pkg_sec.get("exclude"))
+skill_include = str_list(skill_sec.get("include"))
+skill_exclude = str_list(skill_sec.get("exclude"))
+mcp_include = str_list(mcp_sec.get("include"))
+mcp_exclude = str_list(mcp_sec.get("exclude"))
 prof_pkgs = str_list(prof_sec.get("packages")) if prof_sec.get("packages") is not None else None
 
 prof_with = str_list(prof_sec.get("with"))
 prof_without = str_list(prof_sec.get("without"))
 comp_with = str_list(comp_sec.get("with"))
 comp_without = str_list(comp_sec.get("without"))
+
+def known_ids(kind):
+    root = Path(os.environ["DOTS_DIR"])
+    if kind == "skill":
+        data = tomllib.loads((root / "configs/skills/manifest.toml").read_text(encoding="utf-8"))
+        return {str(s.get("name") or "") for s in data.get("skills") or []}
+    data = tomllib.loads((root / "configs/agents/mcp-trust.toml").read_text(encoding="utf-8"))
+    return {str(s.get("id") or "") for s in data.get("mcp_servers") or []}
 
 def unique_add(lst, val):
     if val not in lst:
@@ -958,6 +972,41 @@ elif kind == "package":
         if canon in par_pkg_inc and canon not in pkg_exclude:
             unique_add(pkg_exclude, canon)
         diff_lines.append(f"- package:{canon}")
+elif kind in ("skill", "mcp"):
+    include = skill_include if kind == "skill" else mcp_include
+    exclude = skill_exclude if kind == "skill" else mcp_exclude
+    eff_inc = eff.get("skill_include" if kind == "skill" else "mcp_include", [])
+    par_inc = par.get("skill_include" if kind == "skill" else "mcp_include", [])
+    if item_id not in known_ids(kind):
+        raise SystemExit(f"Error: unknown {kind} id '{item_id}' (not in DOTS registry)")
+    if action == "add":
+        if item_id in eff_inc:
+            print("changed=0")
+            print(f"msg={kind}:{item_id} is already desired. No profile change required.")
+            sys.exit(0)
+        changed = True
+        if item_id in exclude:
+            exclude = list_del(exclude, item_id)
+            diff_lines.append(f"- remove exclusion: {kind}:{item_id}")
+        if item_id not in par_inc:
+            unique_add(include, item_id)
+            diff_lines.append(f"+ {kind}:{item_id}")
+        else:
+            diff_lines.append(f"+ {kind}:{item_id} (restored from parent)")
+    elif action == "remove":
+        if item_id not in eff_inc:
+            print("changed=0")
+            print(f"msg={kind}:{item_id} is not currently desired. No profile change required.")
+            sys.exit(0)
+        changed = True
+        include = list_del(include, item_id)
+        if item_id in par_inc and item_id not in exclude:
+            unique_add(exclude, item_id)
+        diff_lines.append(f"- {kind}:{item_id}")
+    if kind == "skill":
+        skill_include, skill_exclude = include, exclude
+    else:
+        mcp_include, mcp_exclude = include, exclude
 else:
     raise SystemExit(f"Error: unsupported owner kind '{kind}'")
 
@@ -1008,6 +1057,22 @@ if need_pkg_tbl:
         lines.append(f"include = {fmt_val(pkg_include)}")
     if pkg_exclude:
         lines.append(f"exclude = {fmt_val(pkg_exclude)}")
+
+if skill_include or skill_exclude:
+    lines.append("")
+    lines.append("[skills]")
+    if skill_include:
+        lines.append(f"include = {fmt_val(skill_include)}")
+    if skill_exclude:
+        lines.append(f"exclude = {fmt_val(skill_exclude)}")
+
+if mcp_include or mcp_exclude:
+    lines.append("")
+    lines.append("[mcp]")
+    if mcp_include:
+        lines.append(f"include = {fmt_val(mcp_include)}")
+    if mcp_exclude:
+        lines.append(f"exclude = {fmt_val(mcp_exclude)}")
 
 if comp_with or comp_without:
     lines.append("")
@@ -1516,8 +1581,10 @@ if not file_arg:
         "components": comps_map,
         "supergroups": sgs_map,
         "explicit_packages": {},
-        "local_additions": {"groups": [], "components": [], "supergroups": [], "packages": []},
-        "local_removals": {"groups": [], "components": [], "supergroups": [], "packages": []},
+        "skills": {},
+        "mcp": {},
+        "local_additions": {"groups": [], "components": [], "supergroups": [], "packages": [], "skills": [], "mcp": []},
+        "local_removals": {"groups": [], "components": [], "supergroups": [], "packages": [], "skills": [], "mcp": []},
     }, indent=2))
     raise SystemExit(0)
 
@@ -1645,6 +1712,44 @@ for pid in sorted(all_explicit):
 loc_add_pkgs = [p for p, v in explicit_map.items() if v["state"] == "local"]
 loc_rem_pkgs = [p for p, v in explicit_map.items() if v["state"] == "excluded"]
 
+def named_effective(rows, table):
+    inc, exc = [], set()
+    for _p, data in rows:
+        sec = data.get(table) or {}
+        for item in str_list(sec.get("include")):
+            exc.discard(item)
+            if item not in inc:
+                inc.append(item)
+        for item in str_list(sec.get("exclude")):
+            inc = [x for x in inc if x != item]
+            exc.add(item)
+    return inc, exc
+
+def named_map(rows, parent_rows, table, via):
+    eff_inc, eff_exc = named_effective(rows, table)
+    par_inc, _par_exc = named_effective(parent_rows, table) if parent_rows else ([], set())
+    out = {}
+    for ident in sorted(set(eff_inc) | set(par_inc) | set(eff_exc)):
+        if ident not in eff_inc:
+            state = "excluded"
+            desired_via = []
+        elif ident in par_inc:
+            state = "inherited"
+            desired_via = ["profile"]
+        else:
+            state = "local"
+            desired_via = [via]
+        out[ident] = {"state": state, "desired_via": desired_via}
+    return out
+
+parent_rows = chain[:-1]
+skills_map = named_map(chain, parent_rows, "skills", "explicit-skill")
+mcp_map = named_map(chain, parent_rows, "mcp", "profile")
+loc_add_skills = [k for k, v in skills_map.items() if v["state"] == "local"]
+loc_rem_skills = [k for k, v in skills_map.items() if v["state"] == "excluded"]
+loc_add_mcp = [k for k, v in mcp_map.items() if v["state"] == "local"]
+loc_rem_mcp = [k for k, v in mcp_map.items() if v["state"] == "excluded"]
+
 print(json.dumps({
     "schema_version": 1,
     "active": active_flag,
@@ -1659,17 +1764,23 @@ print(json.dumps({
     "components": comps_map,
     "supergroups": sgs_map,
     "explicit_packages": explicit_map,
+    "skills": skills_map,
+    "mcp": mcp_map,
     "local_additions": {
         "groups": loc_add_groups,
         "components": loc_add_comps,
         "supergroups": loc_add_sgs,
         "packages": loc_add_pkgs,
+        "skills": loc_add_skills,
+        "mcp": loc_add_mcp,
     },
     "local_removals": {
         "groups": loc_rem_groups,
         "components": loc_rem_comps,
         "supergroups": loc_rem_sgs,
         "packages": loc_rem_pkgs,
+        "skills": loc_rem_skills,
+        "mcp": loc_rem_mcp,
     },
 }, indent=2))
 PY
@@ -1703,6 +1814,7 @@ dots_profile_edit_compute_batch() {
 			GROUPS_REG="$(_dots_pe_groups_registry)" \
 			COMPS_REG="$(_dots_pe_components_registry)" \
 			MARKER="${DOTS_OVERLAY_MARKER}" \
+			DOTS_DIR="${DIR}" \
 			HOME="${pyhome}" \
 			PYTHONDONTWRITEBYTECODE=1 \
 			PYTHONNOUSERSITE=1 \
@@ -1872,10 +1984,38 @@ if parent_chain:
 else:
     par_pkgs, par_with_raw, par_without_raw, par_with, par_pkg_inc, par_pkg_exc = ([], [], set(), [], [], set())
 
+def named_effective(chain, table):
+    inc, exc = [], set()
+    for _p, data in chain:
+        sec = data.get(table) or {}
+        for item in str_list(sec.get("include")):
+            exc.discard(item)
+            if item not in inc:
+                inc.append(item)
+        for item in str_list(sec.get("exclude")):
+            inc = [x for x in inc if x != item]
+            exc.add(item)
+    return inc, exc
+
+par_skill_inc, _par_skill_exc = named_effective(parent_chain, "skills")
+par_mcp_inc, _par_mcp_exc = named_effective(parent_chain, "mcp")
+eff_skill_inc, _eff_skill_exc = named_effective(eff_chain, "skills")
+eff_mcp_inc, _eff_mcp_exc = named_effective(eff_chain, "mcp")
+
+def known_ids(kind):
+    root = Path(os.environ["DOTS_DIR"])
+    if kind == "skill":
+        data = tomllib.loads((root / "configs/skills/manifest.toml").read_text(encoding="utf-8"))
+        return {str(s.get("name") or "") for s in data.get("skills") or []}
+    data = tomllib.loads((root / "configs/agents/mcp-trust.toml").read_text(encoding="utf-8"))
+    return {str(s.get("id") or "") for s in data.get("mcp_servers") or []}
+
 prof_sec = dict(overlay_data.get("profile") or {})
 pkg_sec = dict(overlay_data.get("packages") or {})
 comp_sec = dict(overlay_data.get("components") or {})
 rt_sec = dict(overlay_data.get("runtime") or {})
+skill_sec = dict(overlay_data.get("skills") or {})
+mcp_sec = dict(overlay_data.get("mcp") or {})
 
 if not prof_sec.get("name"):
     prof_sec["name"] = overlay_name
@@ -1887,6 +2027,10 @@ pkg_remove = str_list(pkg_sec.get("remove"))
 pkg_groups = str_list(pkg_sec.get("groups")) if pkg_sec.get("groups") is not None else None
 pkg_include = str_list(pkg_sec.get("include"))
 pkg_exclude = str_list(pkg_sec.get("exclude"))
+skill_include = str_list(skill_sec.get("include"))
+skill_exclude = str_list(skill_sec.get("exclude"))
+mcp_include = str_list(mcp_sec.get("include"))
+mcp_exclude = str_list(mcp_sec.get("exclude"))
 prof_pkgs = str_list(prof_sec.get("packages")) if prof_sec.get("packages") is not None else None
 
 prof_with = str_list(prof_sec.get("with"))
@@ -1989,6 +2133,28 @@ for owner in adds_raw:
             diff_lines.append(f"+ package:{canon}")
         else:
             diff_lines.append(f"+ package:{canon} (restored from parent)")
+    elif kind in ("skill", "mcp"):
+        if item_id not in known_ids(kind):
+            raise SystemExit(f"Error: unknown {kind} id '{item_id}' (not in DOTS registry)")
+        eff_inc = eff_skill_inc if kind == "skill" else eff_mcp_inc
+        par_inc = par_skill_inc if kind == "skill" else par_mcp_inc
+        include = skill_include if kind == "skill" else mcp_include
+        exclude = skill_exclude if kind == "skill" else mcp_exclude
+        if item_id in eff_inc and item_id not in exclude:
+            continue
+        changed = True
+        if item_id in exclude:
+            exclude = list_del(exclude, item_id)
+            diff_lines.append(f"- remove exclusion: {kind}:{item_id}")
+        if item_id not in par_inc:
+            unique_add(include, item_id)
+            diff_lines.append(f"+ {kind}:{item_id}")
+        else:
+            diff_lines.append(f"+ {kind}:{item_id} (restored from parent)")
+        if kind == "skill":
+            skill_include, skill_exclude = include, exclude
+        else:
+            mcp_include, mcp_exclude = include, exclude
 
 for owner in rems_raw:
     kind, item_id = owner.split(":", 1)
@@ -2038,6 +2204,24 @@ for owner in rems_raw:
         if canon in par_pkg_inc and canon not in pkg_exclude:
             unique_add(pkg_exclude, canon)
         diff_lines.append(f"- package:{canon}")
+    elif kind in ("skill", "mcp"):
+        if item_id not in known_ids(kind):
+            raise SystemExit(f"Error: unknown {kind} id '{item_id}' (not in DOTS registry)")
+        eff_inc = eff_skill_inc if kind == "skill" else eff_mcp_inc
+        par_inc = par_skill_inc if kind == "skill" else par_mcp_inc
+        include = skill_include if kind == "skill" else mcp_include
+        exclude = skill_exclude if kind == "skill" else mcp_exclude
+        if item_id not in eff_inc:
+            continue
+        changed = True
+        include = list_del(include, item_id)
+        if item_id in par_inc and item_id not in exclude:
+            unique_add(exclude, item_id)
+        diff_lines.append(f"- {kind}:{item_id}")
+        if kind == "skill":
+            skill_include, skill_exclude = include, exclude
+        else:
+            mcp_include, mcp_exclude = include, exclude
 
 if not changed:
     print("changed=0")
@@ -2090,6 +2274,22 @@ if pkg_add or pkg_remove or pkg_groups is not None or pkg_include or pkg_exclude
         lines.append(f"include = {fmt_val(pkg_include)}")
     if pkg_exclude:
         lines.append(f"exclude = {fmt_val(pkg_exclude)}")
+
+if skill_include or skill_exclude:
+    lines.append("")
+    lines.append("[skills]")
+    if skill_include:
+        lines.append(f"include = {fmt_val(skill_include)}")
+    if skill_exclude:
+        lines.append(f"exclude = {fmt_val(skill_exclude)}")
+
+if mcp_include or mcp_exclude:
+    lines.append("")
+    lines.append("[mcp]")
+    if mcp_include:
+        lines.append(f"include = {fmt_val(mcp_include)}")
+    if mcp_exclude:
+        lines.append(f"exclude = {fmt_val(mcp_exclude)}")
 
 if comp_with or comp_without:
     lines.append("")

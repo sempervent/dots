@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "DOTS capability plane",
+    "output": "docs/diagrams/dots-capability-plane.html",
+    "quality_profile": "reference",
+    "views": [
+      {
+        "id": "desired-state",
+        "label": "Desired state",
+        "focus": ["profiles", "software", "skills", "mcp"],
+        "note": "Profiles select software, skills, and MCP servers."
+      },
+      {
+        "id": "resolve",
+        "label": "Resolve",
+        "focus": ["resolver", "trust", "runtime", "clients", "sandbox"],
+        "note": "The resolver checks trust, runtime, client support, and sandbox policy."
+      }
+    ]
+  },
+  "components": [
+    { "id": "profiles", "type": "frontend", "label": "Profiles", "sublabel": "desired state", "pos": [40, 180], "size": [130, 56] },
+    { "id": "software", "type": "database", "label": "Software", "sublabel": "packages", "pos": [230, 80], "size": [130, 56] },
+    { "id": "skills", "type": "database", "label": "Skills", "sublabel": "manifest", "pos": [230, 180], "size": [130, 56] },
+    { "id": "mcp", "type": "database", "label": "MCP", "sublabel": "trust registry", "pos": [230, 280], "size": [130, 56] },
+    { "id": "resolver", "type": "backend", "label": "Resolver", "sublabel": "capabilities", "pos": [430, 180], "size": [140, 56] },
+    { "id": "trust", "type": "security", "label": "Trust", "sublabel": "permissions", "pos": [640, 80], "size": [130, 56] },
+    { "id": "runtime", "type": "backend", "label": "Runtime", "sublabel": "Node via fnm", "pos": [640, 180], "size": [130, 56] },
+    { "id": "clients", "type": "frontend", "label": "Clients", "sublabel": "support", "pos": [640, 280], "size": [130, 56] },
+    { "id": "sandbox", "type": "security", "label": "Sandbox", "sublabel": "safe mode", "pos": [820, 180], "size": [130, 56] },
+    { "id": "projection", "type": "backend", "label": "Projection", "sublabel": "merge only", "pos": [1020, 180], "size": [140, 56] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "DOTS capability plane", "wraps": ["profiles", "software", "skills", "mcp", "resolver", "trust", "runtime", "clients", "sandbox", "projection"], "pad": 18 }
+  ],
+  "connections": [
+    { "id": "p-soft", "from": "profiles", "to": "software" },
+    { "id": "p-skills", "from": "profiles", "to": "skills" },
+    { "id": "p-mcp", "from": "profiles", "to": "mcp" },
+    { "id": "soft-r", "from": "software", "to": "resolver" },
+    { "id": "skills-r", "from": "skills", "to": "resolver" },
+    { "id": "mcp-r", "from": "mcp", "to": "resolver" },
+    { "id": "r-trust", "from": "resolver", "to": "trust" },
+    { "id": "r-run", "from": "resolver", "to": "runtime" },
+    { "id": "r-cli", "from": "resolver", "to": "clients" },
+    { "id": "trust-s", "from": "trust", "to": "sandbox" },
+    { "id": "s-proj", "from": "sandbox", "to": "projection", "label": "safe filter" },
+    { "id": "cli-proj", "from": "clients", "to": "projection", "label": "sync" }
+  ]
+}

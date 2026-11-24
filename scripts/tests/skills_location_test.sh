@@ -65,7 +65,7 @@ chmod +x "${TMP}/bin/npx"
 # Also fake node
 cat >"${TMP}/bin/node" <<'EOF'
 #!/usr/bin/env bash
-echo "v20.0.0"
+echo "v24.0.0"
 EOF
 chmod +x "${TMP}/bin/node"
 export PATH="${TMP}/bin:${PATH}"
