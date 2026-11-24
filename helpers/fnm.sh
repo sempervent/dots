@@ -277,3 +277,98 @@ dots_setup_fnm_node() {
 		echo "      PATH hygiene should retire it on the next setup run."
 	fi
 }
+
+# Semantic Node comparison. fnm remains the only Node manager.
+dots_node_version_tuple() {
+	local raw="${1#v}"
+	raw="${raw%%-*}"
+	local major minor patch
+	IFS=. read -r major minor patch <<<"${raw}"
+	major="${major:-0}"
+	minor="${minor:-0}"
+	patch="${patch:-0}"
+	major="${major%%[!0-9]*}"
+	minor="${minor%%[!0-9]*}"
+	patch="${patch%%[!0-9]*}"
+	printf '%d %d %d\n' "${major:-0}" "${minor:-0}" "${patch:-0}"
+}
+
+dots_node_version_cmp() {
+	local left right
+	left="$(dots_node_version_tuple "$1")"
+	right="$(dots_node_version_tuple "$2")"
+	local l1 l2 l3 r1 r2 r3
+	# shellcheck disable=SC2086
+	read -r l1 l2 l3 <<<"${left}"
+	# shellcheck disable=SC2086
+	read -r r1 r2 r3 <<<"${right}"
+	if [[ ${l1} -lt ${r1} || (${l1} -eq ${r1} && ${l2} -lt ${r2}) || (${l1} -eq ${r1} && ${l2} -eq ${r2} && ${l3} -lt ${r3}) ]]; then
+		printf '%s\n' -1
+		return 0
+	fi
+	if [[ ${l1} -eq ${r1} && ${l2} -eq ${r2} && ${l3} -eq ${r3} ]]; then
+		printf '%s\n' 0
+		return 0
+	fi
+	printf '%s\n' 1
+}
+
+dots_node_version_satisfies() {
+	local current="$1" constraint="$2" op bound cmp
+	current="${current#v}"
+	op="${constraint%%[0-9]*}"
+	bound="${constraint#"${op}"}"
+	bound="${bound#"${bound%%[![:space:]]*}"}"
+	cmp="$(dots_node_version_cmp "${current}" "${bound}")"
+	case "${op}" in
+	">=") [[ ${cmp} -ge 0 ]] ;;
+	"<=") [[ ${cmp} -le 0 ]] ;;
+	">") [[ ${cmp} -gt 0 ]] ;;
+	"<") [[ ${cmp} -lt 0 ]] ;;
+	"==") [[ ${cmp} -eq 0 ]] ;;
+	*)
+		echo "Error: unsupported Node constraint: ${constraint}" >&2
+		return 2
+		;;
+	esac
+}
+
+dots_runtime_node_constraint() {
+	local id="$1"
+	local policy="${DIR}/configs/runtime-requirements.toml"
+	python3 - "${id}" "${policy}" <<'PY'
+import sys
+import tomllib
+from pathlib import Path
+
+rid, path = sys.argv[1], Path(sys.argv[2])
+data = tomllib.loads(path.read_text(encoding="utf-8"))
+for row in data.get("requirements") or []:
+    if row.get("id") == rid and row.get("constraint"):
+        print(row["constraint"])
+        raise SystemExit(0)
+raise SystemExit(1)
+PY
+}
+
+dots_ensure_node_requirement() {
+	local constraint="$1"
+	local current=""
+	if [[ ${DRY_RUN:-0} -eq 1 ]]; then
+		echo "[dry-run] ensure Node ${constraint} via fnm"
+		return 0
+	fi
+	if ! command -v node >/dev/null 2>&1; then
+		echo "Error: Node.js is required (${constraint}) but 'node' was not found on PATH." >&2
+		echo "       Install via ./setup.sh (fnm + configs/node/default.toml) then re-run." >&2
+		return 1
+	fi
+	current="$(node -v 2>/dev/null || true)"
+	if dots_node_version_satisfies "${current}" "${constraint}"; then
+		echo "OK: Node ${current} satisfies ${constraint}"
+		return 0
+	fi
+	echo "Error: Node ${current} does not satisfy ${constraint}." >&2
+	echo "       Upgrade via fnm (configs/node/default.toml). DOTS does not install nvm." >&2
+	return 1
+}

@@ -1,6 +1,8 @@
 # OpenRig runtime desired-state (v1.6.1).
 # Reviewed: openrig.dev docs + @openrig/cli 0.7.7 (2026-11-03).
 # Upstream supports Node 22 or 24; Apple silicon prefers 22.
+# Node majors for the capability resolver live in configs/runtime-requirements.toml
+# (id = openrig). This table remains the fallback mirror and must match it.
 # DOTS installs/activates the preferred major via fnm (never nvm).
 
 version = 1

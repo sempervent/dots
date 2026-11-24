@@ -76,6 +76,7 @@ SCRIPTS=(
 	scripts/tests/backup_test.sh
 	scripts/tests/skills_location_test.sh
 	scripts/tests/skills_desired_state_test.sh
+	scripts/tests/node_requirement_test.sh
 	scripts/tests/mactools_test.sh
 	scripts/tests/v171_creative_desktop_test.sh
 	scripts/tests/media_mactools_validate_test.sh
